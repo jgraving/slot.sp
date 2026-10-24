@@ -8,7 +8,7 @@ permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -57,6 +57,6 @@ jobs:
           cp /tmp/slot-readme/out/lava.png previews/lava-gradient.png
           git add previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
-            git commit -m "Capture slot.sp README animations [skip ci]"
+            git commit -m "Capture slot.sp README animations"
             git push origin HEAD:integrate-upstream-default-wallpaper
           fi
