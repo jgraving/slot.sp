@@ -24,7 +24,6 @@ Browse a shelf of cartridges, choose a game, and watch it slide into the slot. *
 <img src="previews/readme-shutdown.gif" width="48%" alt="slot.sp's Graphite power switch sliding to OFF before the screen fades">
 </p>
 
-*Captured from this fork's production frontend and OpenGL compositor using synthetic cartridge fixtures. The link preview renders the real cable animation; it does not show a multiplayer session. [Reproduce the previews](previews/README.md).*
 
 ## What makes slot.sp different
 

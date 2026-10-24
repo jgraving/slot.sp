@@ -1,0 +1,52 @@
+{
+  "Emerald": {
+    "url": "https://images.launchbox-app.com/r2_70a5c41e-b3fa-4025-9e2c-6dda453ce0d4.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/2243-pokemon-emerald-version",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  },
+  "Fusion": {
+    "url": "https://images.launchbox-app.com/r2_4a638eed-a8ca-4a82-8a45-238c0fac999b.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/2497-metroid-fusion",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  },
+  "Golden Sun": {
+    "url": "https://images.launchbox-app.com/r2_eb0ca6ab-e767-4b88-984a-385ab8e47bf6.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/3569-golden-sun",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  },
+  "Minish Cap": {
+    "url": "https://images.launchbox-app.com/r2_c646f9e2-8d0c-42ac-b54e-3e8311582b0a.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/5681-the-legend-of-zelda-the-minish-cap",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  },
+  "WarioWare": {
+    "url": "https://images.launchbox-app.com/r2_9aad9fc6-2f50-4e92-92ee-15e8f3876044.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/3917-warioware-inc-mega-microgame",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  }
+}

@@ -197,6 +197,13 @@ pub fn draw_link_art(
             let (x, y) = ((centre - PLUG_TIP_X).round(), (tip - PLUG_H as f32).round());
             let turn = plug_turn(menu, now);
             if turn == 0.0 {
+                // Continue the cable's straight upper section beyond the panel.
+                // Sampling its opaque rows avoids stretching the connector or its shadow.
+                out.push(Draw::Part {
+                    x, y: -canvas.h, w: plug.w as f32, h: canvas.h + y + 45.0,
+                    tex: plug.tex, alpha,
+                    uv: [0.0, 40.0 / plug.h as f32, 1.0, 2.0 / plug.h as f32],
+                });
                 tex(out, plug, x, y, alpha);
             } else {
                 out.push(Draw::Turned {
