@@ -1,14 +1,14 @@
 name: Capture README previews
 on:
   push:
-    branches: [readme-colored-carts]
+    branches: [power-switch-closeup]
     paths: ['previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/readme-colored-carts'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/power-switch-closeup'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -49,5 +49,5 @@ jobs:
           git add previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
             git commit -m "Capture slot.sp README animations [skip ci]"
-            git push origin HEAD:readme-colored-carts
+            git push origin HEAD:power-switch-closeup
           fi

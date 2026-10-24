@@ -109,7 +109,7 @@ pub fn draw_power_switch(
     let t = ((elapsed - 150.0) / 180.0).clamp(0.0, 1.0);
     let off = t * t * (3.0 - 2.0 * t);
     let alpha = ((POWER_SWITCH_MS as f32 - elapsed) / 100.0).clamp(0.0, 1.0);
-    let scale = (canvas.w + 120.0) / 1000.0;
+    let scale = canvas.w / 300.0;
     let w = 1000.0 * scale;
     let h = 400.0 * scale;
     let x = canvas.centred(w);
