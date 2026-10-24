@@ -25,8 +25,11 @@ wait 45
 tap b
 wait 60
 cut
+wait 45
+down power
+wait 61
 rec shutdown
 wait 45
-hold power 75
-wait 120
+up power
+wait 60
 cut
