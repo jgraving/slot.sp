@@ -16,6 +16,7 @@ fn main() {
         shelf_cart: Some(Recent { platform: Platform::Gba, stem: "Emerald".into() }),
         favorites: names.into_iter().map(|name| Recent { platform: Platform::Gba, stem: name.into() }).collect(),
         shell_colour: slot_store::ShellColour::Graphite,
+        wallpaper: slot_store::WallpaperPick::File("twilight.png".into()),
         ..SlotState::default()
     }).unwrap();
 }

@@ -1,14 +1,14 @@
 name: Capture README previews
 on:
   push:
-    branches: [readme-own-ui-animations]
-    paths: ['previews/**', '.github/workflows/readme-previews.yml']
+    branches: [readme-polish]
+    paths: ['previews/**', 'crates/slot/src/link_screen.rs', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/readme-own-ui-animations'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/readme-polish'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -27,11 +27,13 @@ jobs:
           cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
           cp previews/link_capture.rs crates/slot/examples/link_capture.rs
           cp previews/fixture.rs crates/slot/examples/readme_fixture.rs
+          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder
           cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture
       - name: Record production compositor and encode opaque GIFs
         run: |
           mkdir -p /tmp/slot-readme/out
           target/debug/examples/readme_fixture /tmp/slot-readme/card
+          python3 previews/prepare_art.py /tmp/slot-readme/card
           target/debug/examples/readme_capture /tmp/slot-readme/card previews/readme.script /tmp/slot-readme/out
           for clip in carousel core-picker link shutdown; do
             mkdir -p "/tmp/slot-readme/$clip"
@@ -46,5 +48,5 @@ jobs:
           git add previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
             git commit -m "Capture slot.sp README animations [skip ci]"
-            git push origin HEAD:readme-own-ui-animations
+            git push origin HEAD:readme-polish
           fi

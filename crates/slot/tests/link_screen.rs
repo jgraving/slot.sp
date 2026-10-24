@@ -328,3 +328,23 @@ fn the_adapter_calls_out_with_its_arcs_while_working() {
         "no arcs while working"
     );
 }
+
+#[test]
+fn cable_reaches_beyond_the_panel_in_every_straight_pose() {
+    let s = sprites();
+    for canvas in [Canvas::FRAMED, Canvas { w: 640.0, h: 480.0 }] {
+        for menu in [GameMenu::Pick(LinkRow::Host), working(LinkRow::Host, 0),
+            GameMenu::Unplug { role: LinkRow::Host, since: 0 }] {
+            for now in [0, 100, 250, 1000] {
+                let mut out = vec![];
+                draw_link_art(canvas, menu, LinkKind::Cable, now, &s, &mut out);
+                let tail = out.iter().find_map(|d| match d {
+                    Draw::Part { y, h, tex, .. } if *tex == s.plug_host.tex => Some((*y, *h)),
+                    _ => None,
+                }).expect("cable must continue past the top edge");
+                assert!(tail.0 < 0.0);
+                assert!(tail.0 + tail.1 >= plug_tip(menu, now) - PLUG_H as f32);
+            }
+        }
+    }
+}

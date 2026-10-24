@@ -211,5 +211,5 @@ fn main() {
     if let Some(done) = clip.take() {
         done.finish();
     }
-    link_capture::capture(&mut compositor, out);
+    link_capture::capture(&mut compositor, root, out);
 }

@@ -11,7 +11,7 @@ assert frames
 sample = Image.new('RGB', (frames[0].width, frames[0].height * min(12, len(frames))))
 for i in range(min(12, len(frames))):
     sample.paste(frames[i * (len(frames)-1) // 11], (0, i*frames[0].height))
-palette = sample.quantize(colors=192)
+palette = sample.quantize(colors=256, method=Image.Quantize.MAXCOVERAGE)
 encoded = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
 encoded[0].save(sys.argv[2], save_all=True, append_images=encoded[1:], duration=50,
                 loop=0, optimize=False, disposal=1)
