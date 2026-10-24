@@ -5,6 +5,10 @@ tap right
 wait 45
 tap right
 wait 45
+tap right
+wait 45
+tap left
+wait 45
 tap left
 wait 45
 tap left

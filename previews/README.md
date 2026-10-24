@@ -29,3 +29,5 @@ rm crates/slot/examples/readme_capture.rs crates/slot/examples/egl_surface.rs cr
 GIFs use a shared palette, opaque frames and 50 ms frame intervals. The carousel returns to its starting cartridge, the picker closes before restarting, and the cable returns to its initial pose. Shutdown retains the actual switch/fade timing, followed by a black pause before the next demonstration. Inspect generated clips before replacing the README assets.
 
 Label scans: LaunchBox Games Database and its contributors; original game artwork belongs to its publishers. Exact source pages and image URLs are listed in `art-sources.json`. Used only for the interface previews.
+
+The showcase uses Emerald, Ruby and Sapphire in translucent green, red and blue shells. Metroid Fusion and WarioWare retain their standard dark shells. The fixture writes the same `cart_shell.txt` overrides used by the application.
