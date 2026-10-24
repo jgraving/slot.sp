@@ -3,8 +3,9 @@ import json
 import math
 import sys
 import shutil
+import random
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 root = Path(sys.argv[1])
 sources = json.loads(Path(__file__).with_name('art-sources.json').read_text())
@@ -13,23 +14,20 @@ for name in sources:
     shutil.copyfile(source, root / 'Labels/GBA' / (name + '.png'))
 
 w, h = 720, 480
-im = Image.new('RGBA', (w,h))
+im = Image.new('RGBA', (w, h))
 pixels = []
+rng = random.Random(720480)
 for y in range(h):
+    t = min(1.0, max(0.0, (y - 260) / 170))
+    glow = 1.0 - t*t*(3.0 - 2.0*t)
     for x in range(w):
-        blue = math.exp(-((x-110)/340)**2 - ((y-120)/290)**2)
-        warm = math.exp(-((x-740)/310)**2 - ((y+40)/310)**2)
-        purple = math.exp(-((x-460)/370)**2 - ((y-420)/250)**2)
-        pixels.append((round(17+11*blue+68*warm+16*purple),round(23+37*blue+20*warm+5*purple),round(40+50*blue+17*warm+27*purple),255))
+        teal = math.exp(-((x-70)/370)**2 - ((y-80)/300)**2)
+        violet = math.exp(-((x-670)/370)**2 - ((y-90)/300)**2)
+        rose = math.exp(-((x-500)/330)**2 - ((y+130)/290)**2)
+        grain = rng.uniform(-0.65, 0.65)
+        rgb = (14 + glow*(4*teal+40*violet+24*rose),
+               21 + glow*(34*teal+6*violet+5*rose),
+               35 + glow*(48*teal+51*violet+14*rose))
+        pixels.append(tuple(round(v + grain) for v in rgb) + (255,))
 im.putdata(pixels)
-lines = Image.new('RGBA', (w*2,h*2))
-draw = ImageDraw.Draw(lines)
-for n in range(22):
-    points=[]
-    for x in range(-30,760,4):
-        y=355+n*18 + 32*math.sin(x/175+n*.11) - x*.29
-        points.append((x*2,y*2))
-    draw.line(points,fill=(146,171,209,28),width=1)
-lines=lines.resize((w,h),Image.Resampling.LANCZOS)
-im=Image.alpha_composite(im,lines)
 im.save(root/'Wallpapers/twilight.png')

@@ -58,12 +58,12 @@ pub fn power_switch_faces(light: bool) -> [UndoFace; 2] {
 
 /// The switch shares the carousel's extracted paint grain and shell palette.
 pub fn power_switch_faces_for(colour: slot_store::ShellColour) -> [UndoFace; 2] {
-    let mut rgba = crate::art::render_svg(include_str!("../assets/power_switch.svg"), 600, 240)
+    let mut rgba = crate::art::render_svg(include_str!("../assets/power_switch.svg"), 1000, 400)
         .expect("embedded power switch housing");
     let base = crate::material::shell_rgb(colour);
-    for y in 0..240usize {
-        for x in 0..600usize {
-            let i = (y * 600 + x) * 4;
+    for y in 0..400usize {
+        for x in 0..1000usize {
+            let i = (y * 1000 + x) * 4;
             let r = rgba[i] as f32;
             if r > rgba[i + 1] as f32 * 1.5 && rgba[i + 3] != 0 {
                 let relief = (r - 174.0) * 0.68;
@@ -71,24 +71,27 @@ pub fn power_switch_faces_for(colour: slot_store::ShellColour) -> [UndoFace; 2] 
                 for c in 0..3 {
                     rgba[i + c] = (base[c] as f32 + grain + relief).clamp(0.0, 255.0) as u8;
                 }
+            } else if rgba[i] > rgba[i + 1] {
+                let neutral = rgba[i + 1].max(rgba[i + 2]);
+                rgba[i..i + 3].fill(neutral);
             }
         }
     }
     [
         UndoFace {
             rgba,
-            w: 600,
-            h: 240,
+            w: 1000,
+            h: 400,
         },
         UndoFace {
             rgba: crate::art::render_svg(
                 include_str!("../assets/power_switch_slider.svg"),
-                324,
-                102,
+                180,
+                78,
             )
             .expect("embedded power switch slider"),
-            w: 324,
-            h: 102,
+            w: 180,
+            h: 78,
         },
     ]
 }
@@ -106,9 +109,9 @@ pub fn draw_power_switch(
     let t = ((elapsed - 150.0) / 180.0).clamp(0.0, 1.0);
     let off = t * t * (3.0 - 2.0 * t);
     let alpha = ((POWER_SWITCH_MS as f32 - elapsed) / 100.0).clamp(0.0, 1.0);
-    let scale = (canvas.w / 720.0).min(1.0);
-    let w = 600.0 * scale;
-    let h = 240.0 * scale;
+    let scale = (canvas.w + 120.0) / 1000.0;
+    let w = 1000.0 * scale;
+    let h = 400.0 * scale;
     let x = canvas.centred(w);
     let y = (crate::OUT_H as f32 - h) * 0.5;
     out.push(crate::Draw::Tex {
@@ -120,10 +123,10 @@ pub fn draw_power_switch(
         alpha,
     });
     out.push(crate::Draw::Tex {
-        x: x + (286.0 + 94.0 * (1.0 - off)) * 0.6 * scale,
-        y: y + 140.0 * 0.6 * scale,
-        w: 324.0 * 0.6 * scale,
-        h: 102.0 * 0.6 * scale,
+        x: x + (432.0 + 48.0 * (1.0 - off)) * scale,
+        y: y + 189.0 * scale,
+        w: 90.0 * scale,
+        h: 39.0 * scale,
         tex: faces[1],
         alpha,
     });

@@ -1,40 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="400" viewBox="0 0 1000 400" role="img" aria-labelledby="title desc">
-<title id="title">Game Boy Advance SP power switch — shell material template</title>
-<desc id="desc">Red inks identify shell material for the carousel finish applied at rasterisation. Editable vector reconstruction from the side-on photograph in iFixit's Nintendo Game Boy Advance SP Power Switch Cover Replacement guide. Proportions estimated from the photograph, not engineering measurements. Horizontal orientation: OFF left, ON right. Move the slider group 94 units right for ON. All artwork is vector; no fonts, raster images or external dependencies.</desc>
-<metadata>Reference: https://documents.cdn.ifixit.com/pdf/ifixit/guide_12889_en.pdf (cover photograph). Original reconstruction, 2026-10-13.</metadata>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="400" viewBox="0 0 1000 400">
+<title>SP side close-up in satin shell material</title>
 <defs>
- <linearGradient id="shell" x1="0.0%" y1="0.0%" x2="0.0%" y2="100.0%"><stop offset="0.0%" stop-color="#7d211a"/><stop offset="8.0%" stop-color="#b83a25"/><stop offset="19.0%" stop-color="#d36340"/><stop offset="27.0%" stop-color="#b93e28"/><stop offset="70.0%" stop-color="#a53224"/><stop offset="88.0%" stop-color="#bd4930"/><stop offset="96.0%" stop-color="#d5744c"/><stop offset="100.0%" stop-color="#84261e"/></linearGradient>
- <linearGradient id="rim" x1="0.0%" y1="0.0%" x2="10.0%" y2="100.0%"><stop offset="0.0%" stop-color="#75251d"/><stop offset="38.0%" stop-color="#9a2f22"/><stop offset="84.0%" stop-color="#d16c49"/><stop offset="100.0%" stop-color="#e38c60"/></linearGradient>
- <linearGradient id="inset" x1="0.0%" y1="0.0%" x2="0.0%" y2="100.0%"><stop offset="0.0%" stop-color="#8b291f"/><stop offset="30.0%" stop-color="#a63727"/><stop offset="100.0%" stop-color="#ad3928"/></linearGradient>
- <linearGradient id="well" x1="0.0%" y1="0.0%" x2="0.0%" y2="100.0%"><stop offset="0.0%" stop-color="#101013"/><stop offset="35.0%" stop-color="#202024"/><stop offset="100.0%" stop-color="#34343a"/></linearGradient>
- <g id="labels"><path transform="translate(-12 0)" d="M351 280h13q4 0 4 4v24q0 4-4 4h-13q-4 0-4-4v-24q0-4 4-4zm30 32v-32h20m-20 14h16m13 18v-32h20m-20 14h16"/><path d="M571 280h13q4 0 4 4v24q0 4-4 4h-13q-4 0-4-4v-24q0-4 4-4zm29 32v-32l20 32v-32"/></g>
- <linearGradient id="pip" x2="0" y2="1"><stop stop-color="#f96f44"/><stop offset=".48" stop-color="#b34a30"/><stop offset="1" stop-color="#75241c"/></linearGradient>
+ <linearGradient id="paint" x2="0" y2="1">
+  <stop stop-color="#8d3025"/><stop offset=".08" stop-color="#bb432f"/>
+  <stop offset=".19" stop-color="#c34a32"/><stop offset=".31" stop-color="#b23c29"/>
+  <stop offset=".55" stop-color="#ae3828"/><stop offset=".84" stop-color="#aa3627"/>
+  <stop offset=".96" stop-color="#a03225"/><stop offset="1" stop-color="#852a21"/>
+ </linearGradient>
+ <linearGradient id="well" x2="0" y2="1"><stop stop-color="#101216"/><stop offset="1" stop-color="#282c32"/></linearGradient>
+ <path id="off" d="M467 247h5v12h-5z M477 259v-12h6 M477 253h5 M487 259v-12h6 M487 253h5"/>
+ <path id="on" d="M517 247h5v12h-5z M527 259v-12l7 12v-12"/>
+ <g id="marks"><use href="#off"/><use href="#on"/></g>
 </defs>
-<!-- A small section of the real shell gives the recess and parting line context. -->
-<g id="housing">
- <rect x="16" y="32" width="968" height="336" rx="54" fill="url(#shell)"/>
- <path d="M62 56h876" fill="none" stroke="#e3895b" stroke-opacity=".25" stroke-width="3"/>
- <rect x="240" y="82" width="520" height="268" rx="28" fill="url(#rim)"/>
- <rect x="246" y="88" width="508" height="256" rx="23" fill="none" stroke="#e08559" stroke-opacity=".58" stroke-width="2"/>
- <rect x="250" y="92" width="500" height="248" rx="20" fill="url(#inset)" stroke="#81271f" stroke-width="3"/>
- <path d="M16 140h270m418 0h280" fill="none" stroke="#581d18" stroke-width="4"/>
- <path d="M17 144h268m420 0h278" fill="none" stroke="#dd6a45" stroke-opacity=".65" stroke-width="2"/>
-</g>
-<g id="switch-well">
- <rect x="282" y="137" width="426" height="111" rx="6" fill="#d4734c"/>
- <rect x="284" y="138" width="422" height="107" rx="5" fill="#552019"/>
- <rect x="286" y="140" width="418" height="102" rx="3" fill="url(#well)" stroke="#1c1c20" stroke-width="2"/>
- <path d="M289 243h412" stroke="#ef9471" stroke-opacity=".66" stroke-width="2"/>
-</g>
-
-
-<!-- Molded lettering is paths, so appearance does not depend on installed fonts. -->
-<g id="molded-markings" fill="none" stroke-linejoin="round" stroke-linecap="round">
- <use href="#labels" transform="translate(1.4 1.8)" stroke="#502019" stroke-opacity=".98" stroke-width="5.8"/>
- <use href="#labels" transform="translate(-.9 -1.2)" stroke="#ff7449" stroke-opacity=".98" stroke-width="5.0"/>
- <use href="#labels" stroke="#952d20" stroke-width="2.7"/>
- <g fill="#502019" opacity=".95" transform="translate(1.3 1.8)"><circle cx="445.5" cy="295" r="9.5"/><circle cx="539.5" cy="295" r="9.5"/></g>
- <g fill="url(#pip)"><circle cx="445.5" cy="295" r="9"/><circle cx="539.5" cy="295" r="9"/></g>
- <path d="M437 295a8.5 8.5 0 0 1 14 -6.4M531 295a8.5 8.5 0 0 1 14 -6.4" stroke="#ff7449" stroke-width="1.1"/>
+<!-- The ends continue beyond the camera crop: this is the side of a handheld. -->
+<rect x="-120" y="118" width="1240" height="190" rx="30" fill="url(#paint)"/>
+<!-- A faint lid/body joint, without a framed panel around the switch. -->
+<path d="M-120 173H1120" stroke="#73261e" stroke-opacity=".28" stroke-width="1.5"/>
+<path d="M-120 175H1120" stroke="#bf462e" stroke-opacity=".23" stroke-width="1"/>
+<rect x="429" y="186" width="144" height="45" rx="7" fill="#862b21"/>
+<rect x="431" y="188" width="140" height="41" rx="5" fill="url(#well)"/>
+<path d="M435 230H567" stroke="#c84f34" stroke-opacity=".22" fill="none"/>
+<g fill="none" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+ <use href="#marks" transform="translate(0 .6)" stroke="#76271f" opacity=".7"/>
+ <use href="#marks" transform="translate(0 -.5)" stroke="#c84c32" opacity=".55"/>
+ <use href="#marks" stroke="#a63526"/>
 </g>
 </svg>

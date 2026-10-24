@@ -48,5 +48,25 @@
       0.865,
       0.881
     ]
+  },
+  "Ruby": {
+    "url": "https://images.launchbox-app.com/r2_4f3ed4e7-16ae-4442-ba37-932f641f5c40.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/2241-pokemon-ruby-version",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
+  },
+  "Sapphire": {
+    "url": "https://images.launchbox-app.com/r2_a2cb40b0-2ced-4acf-aa93-4a12deccfd83.png",
+    "page": "https://gamesdb.launchbox-app.com/games/images/2242-pokemon-sapphire-version",
+    "crop": [
+      0.135,
+      0.226,
+      0.865,
+      0.881
+    ]
   }
 }
