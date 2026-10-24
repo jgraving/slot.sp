@@ -34,6 +34,8 @@ Browse a shelf of cartridges, choose a game, and watch it slide into the slot. *
 - **Your choice of audio.** Speaker, wired headphones, Bluetooth and detected USB audio, with separate volume and mute settings for each output. Saved Bluetooth headphones can reconnect automatically; disconnect volume defaults to silent.
 - **Comfortable controls and power options.** Remappable shortcuts, scrolling menus, readable button hints, top-corner status indicators, favorite removal confirmation, and configurable lid-close sleep/shutdown behavior.
 
+**General → Wallpaper** offers **Flowing Gradient** and **Static Gradient**. Choose static for a motion-free background; your preference is remembered.
+
 **Menu + X** takes a screenshot in game; **Select + X** remains the day/night shortcut. Both can be remapped.
 
 Upstream updates bring screenshot capture and a gallery with zoom and multi-select, save/load undo, configurable loading and saving of states on insertion/ejection, periodic saves, core-load timeouts, SD-card repair, and emulator fixes. Favorites, Recents, the circuit-board core picker, mGBA/gpSP emulation and link play remain at the heart of it.

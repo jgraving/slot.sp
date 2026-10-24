@@ -16,6 +16,7 @@ mod headless;
 #[cfg(feature = "host")]
 mod host;
 mod layout;
+mod lava;
 mod lcd3x;
 mod pipeline;
 mod power;
@@ -33,6 +34,7 @@ pub use headless::HeadlessSurface;
 #[cfg(feature = "host")]
 pub use host::HostSurface;
 pub use layout::Canvas;
+pub use lava::{lava_centres, lava_phase, LAVA_PERIOD_MS};
 pub use lcd3x::{lcd3x_factors, lcd3x_mask, ScreenEffect};
 pub use pipeline::{SCALE, SRC_H, SRC_W, WHOLE_TEXTURE};
 pub use power::{screen_brightness, screen_rect_above, screen_scale, screen_width};

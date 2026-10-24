@@ -538,7 +538,7 @@ fn shift_down(draws: &mut [Draw], dy: f32) {
             | Draw::Tex { y, .. }
             | Draw::Part { y, .. }
             | Draw::Turned { y, .. } => *y += dy,
-            Draw::Game | Draw::Shot { .. } | Draw::Capture => {}
+            Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => {}
         }
     }
 }
@@ -1449,6 +1449,7 @@ impl App {
             WallpaperPick::None,
             WallpaperPick::Random,
             WallpaperPick::Default,
+            WallpaperPick::Static,
             WallpaperPick::Blur,
         ];
         choices.extend(self.wallpaper_files().into_iter().map(WallpaperPick::File));
@@ -1477,7 +1478,7 @@ impl App {
         let [_, blur, own] = self.grounds();
         match &self.state.wallpaper {
             WallpaperPick::None => None,
-            WallpaperPick::Default | WallpaperPick::Blur => blur,
+            WallpaperPick::Default | WallpaperPick::Static | WallpaperPick::Blur => blur,
             WallpaperPick::Random if !self.random_drawn() => blur,
             WallpaperPick::File(_) | WallpaperPick::Random => own,
         }
@@ -1487,12 +1488,16 @@ impl App {
         let [ground, blur, own] = self.grounds();
         let face = match &self.state.wallpaper {
             WallpaperPick::None => None,
-            WallpaperPick::Default => ground,
+            WallpaperPick::Default | WallpaperPick::Static => ground,
             WallpaperPick::Random if !self.random_drawn() => ground,
             WallpaperPick::Blur => blur,
             WallpaperPick::File(_) | WallpaperPick::Random => own,
         };
-        draw_ground(self.canvas(), face, out);
+        if face.is_some() && !self.shows_game() && matches!(self.state.wallpaper, WallpaperPick::Default) {
+            out.push(Draw::Lava { w: self.canvas().w, h: self.canvas().h, phase: slot_gfx::lava_phase(self.now()) });
+        } else {
+            draw_ground(self.canvas(), face, out);
+        }
         let alpha = tint_alpha(self.state.wallpaper_tint);
         if alpha > 0.0 && self.own_wallpaper_shown() {
             out.push(Draw::Rect {

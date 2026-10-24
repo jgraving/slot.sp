@@ -119,9 +119,27 @@ pub const SPRITE_FRAG: &str = r#"
 precision mediump float;
 uniform sampler2D u_tex;
 uniform vec4 u_colour;
+uniform float u_lava;
+uniform vec4 u_flow0;
+uniform vec4 u_flow1;
+uniform vec4 u_flow2;
 varying vec2 v_uv;
+float pool(vec2 p, vec4 flow) {
+    vec2 q = (p - flow.xy) / flow.zw;
+    float d = dot(q, q);
+    return 1.0 / (1.0 + d + 0.48 * d * d);
+}
 void main() {
-    FRAG_COLOR = texture2D(u_tex, v_uv) * u_colour;
+    if (u_lava < 0.5) {
+        FRAG_COLOR = texture2D(u_tex, v_uv) * u_colour;
+    } else {
+        float calm = 1.0 - smoothstep(0.54, 0.90, v_uv.y);
+        vec3 light = vec3(4.0, 34.0, 48.0) * pool(v_uv, u_flow0)
+                   + vec3(40.0, 6.0, 51.0) * pool(v_uv, u_flow1)
+                   + vec3(24.0, 5.0, 14.0) * pool(v_uv, u_flow2);
+        float grain = fract(dot(floor(v_uv * vec2(720.0, 480.0)), vec2(0.75487766, 0.56984029))) - 0.5;
+        FRAG_COLOR = vec4((vec3(14.0, 21.0, 35.0) + calm * light + grain * 0.8) / 255.0, 1.0);
+    }
 }
 "#;
 

@@ -111,6 +111,7 @@ pub enum WallpaperPick {
     Random,
     #[default]
     Default,
+    Static,
     Blur,
     File(String),
 }
@@ -121,6 +122,7 @@ impl WallpaperPick {
             WallpaperPick::None => "none".to_string(),
             WallpaperPick::Random => "random".to_string(),
             WallpaperPick::Default => "default".to_string(),
+            WallpaperPick::Static => "static_gradient".to_string(),
             WallpaperPick::Blur => "default_blur".to_string(),
             WallpaperPick::File(name) => name.clone(),
         }
@@ -130,7 +132,8 @@ impl WallpaperPick {
         match self {
             WallpaperPick::None => "None".to_string(),
             WallpaperPick::Random => "Random".to_string(),
-            WallpaperPick::Default => "Default".to_string(),
+            WallpaperPick::Default => "Flowing Gradient".to_string(),
+            WallpaperPick::Static => "Static Gradient".to_string(),
             WallpaperPick::Blur => "DEFAULT BLUR".to_string(),
             WallpaperPick::File(name) => name
                 .rsplit_once('.')
@@ -145,6 +148,7 @@ impl WallpaperPick {
             "none" => WallpaperPick::None,
             "random" => WallpaperPick::Random,
             "" | "default" => WallpaperPick::Default,
+            "static_gradient" => WallpaperPick::Static,
             "default_blur" => WallpaperPick::Blur,
             other => WallpaperPick::File(other.to_string()),
         }

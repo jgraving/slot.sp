@@ -1,14 +1,14 @@
 name: Capture README previews
 on:
   push:
-    branches: [power-switch-closeup]
-    paths: ['previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
+    branches: [integrate-upstream-default-wallpaper]
+    paths: ['crates/**', 'assets/**', 'previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/power-switch-closeup'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -27,12 +27,15 @@ jobs:
           cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
           cp previews/link_capture.rs crates/slot/examples/link_capture.rs
           cp previews/fixture.rs crates/slot/examples/readme_fixture.rs
-          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder --test power --test power_click
-          cargo test --locked -p slot-ui --test power_switch
-          cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture
+          cp previews/lava_check.rs crates/slot/examples/lava_check.rs
+          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder --test power --test power_click --test wallpaper --test quick_menu
+          cargo test --locked -p slot-ui --test power_switch --test shell_material
+          cargo test --locked -p slot-gfx --no-default-features --test lava
+          cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture --example lava_check
       - name: Record production compositor and encode opaque GIFs
         run: |
           mkdir -p /tmp/slot-readme/out
+          target/debug/examples/lava_check /tmp/slot-readme/out
           target/debug/examples/readme_fixture /tmp/slot-readme/card
           python3 previews/prepare_art.py /tmp/slot-readme/card
           target/debug/examples/readme_capture /tmp/slot-readme/card previews/readme.script /tmp/slot-readme/out
@@ -41,13 +44,19 @@ jobs:
             ffmpeg -v error -y -i "/tmp/slot-readme/out/$clip.mp4" -vf fps=20 "/tmp/slot-readme/$clip/%04d.png"
             python3 tools/opaque_preview_gif.py "/tmp/slot-readme/$clip" "previews/readme-$clip.gif"
           done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lava-preview
+          path: /tmp/slot-readme/out/lava.*
       - name: Publish generated media to this branch
         run: |
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
+          cp /tmp/slot-readme/out/lava.mp4 previews/lava-gradient.mp4
+          cp /tmp/slot-readme/out/lava.png previews/lava-gradient.png
+          git add previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
             git commit -m "Capture slot.sp README animations [skip ci]"
-            git push origin HEAD:power-switch-closeup
+            git push origin HEAD:integrate-upstream-default-wallpaper
           fi

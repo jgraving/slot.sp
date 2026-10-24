@@ -14,6 +14,7 @@ impl TexId {
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Draw {
+    Lava { w: f32, h: f32, phase: f32 },
     Rect {
         x: f32,
         y: f32,
@@ -63,6 +64,8 @@ pub struct Sprites {
     u_turn: gl::types::GLint,
     u_target: gl::types::GLint,
     u_src: gl::types::GLint,
+    u_lava: gl::types::GLint,
+    u_flow: [gl::types::GLint; 3],
 }
 
 impl Sprites {
@@ -76,13 +79,15 @@ impl Sprites {
             gl::RGBA,
             Some(&[255u8; 4]),
         );
-        let (u_rect, u_colour, u_turn, u_target, u_src);
+        let (u_rect, u_colour, u_turn, u_target, u_src, u_lava, u_flow);
         unsafe {
             gl::UseProgram(prog);
             gl::Uniform1i(crate::gl::uniform_location(prog, "u_tex"), 0);
             u_target = crate::gl::uniform_location(prog, "u_target");
             gl::Uniform2f(u_target, OUT_W as f32, OUT_H as f32);
             u_src = crate::gl::uniform_location(prog, "u_src");
+            u_lava = crate::gl::uniform_location(prog, "u_lava");
+            u_flow = ["u_flow0", "u_flow1", "u_flow2"].map(|name| crate::gl::uniform_location(prog, name));
             u_rect = crate::gl::uniform_location(prog, "u_rect");
             u_colour = crate::gl::uniform_location(prog, "u_colour");
             u_turn = crate::gl::uniform_location(prog, "u_turn");
@@ -96,6 +101,8 @@ impl Sprites {
             u_turn,
             u_target,
             u_src,
+            u_lava,
+            u_flow,
         })
     }
 
@@ -157,7 +164,12 @@ impl Sprites {
         }
         for item in items {
             let whole = [0.0, 0.0, 1.0, 1.0];
+            let mut flow = None;
             let (x, y, w, h, tex, colour, turn, uv) = match *item {
+                Draw::Lava { w, h, phase } => {
+                    flow = Some(crate::lava::lava_centres(phase));
+                    (0.0, 0.0, w, h, self.white, [1.0; 4], 0.0, whole)
+                },
                 Draw::Rect { x, y, w, h, colour } => (x, y, w, h, self.white, colour, 0.0, whole),
                 Draw::Tex {
                     x,
@@ -202,6 +214,12 @@ impl Sprites {
                 (turn.cos(), turn.sin())
             };
             unsafe {
+                gl::Uniform1f(self.u_lava, if flow.is_some() { 1.0 } else { 0.0 });
+                if let Some(centres) = flow {
+                    for (location, c) in self.u_flow.iter().zip(centres) {
+                        gl::Uniform4f(*location, c[0], c[1], c[2], c[3]);
+                    }
+                }
                 gl::BindTexture(gl::TEXTURE_2D, tex);
                 gl::Uniform4f(self.u_rect, x, y, w, h);
                 gl::Uniform2f(self.u_turn, cos, sin);

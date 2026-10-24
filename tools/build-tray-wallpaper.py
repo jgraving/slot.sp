@@ -1,17 +1,26 @@
-"""A plain matte workmat: soft light and fine grain, without tray outlines or studs."""
+"""Build the default twilight wallpaper and its blurred menu companion."""
 from pathlib import Path
-import numpy as np
+import math
+import random
 from PIL import Image, ImageFilter
 
 root = Path(__file__).resolve().parents[1]
 w, h = 720, 480
-y, x = np.mgrid[:h, :w]
-# Muted petrol surface; the cartridges and selected shell supply the playful color.
-light = 5*np.exp(-((x-310)/520)**2-((y-170)/380)**2)
-light -= 5*(((x-360)/600)**2+((y-240)/500)**2)
-grain = np.asarray(Image.open(root/'assets/rgsp_paint_grain.png').convert('L'), dtype=float)-128
-grain = np.tile(grain, (4, 6))[:h, :w]*.20
-rgb = np.clip(np.array([62., 77., 81.])+light[:,:,None]+grain[:,:,None], 0, 255).astype('uint8')
-im = Image.fromarray(rgb)
+im = Image.new('RGBA', (w, h))
+pixels = []
+rng = random.Random(720480)
+for y in range(h):
+    t = min(1.0, max(0.0, (y - 260) / 170))
+    glow = 1.0 - t*t*(3.0 - 2.0*t)
+    for x in range(w):
+        teal = math.exp(-((x-70)/370)**2 - ((y-80)/300)**2)
+        violet = math.exp(-((x-670)/370)**2 - ((y-90)/300)**2)
+        rose = math.exp(-((x-500)/330)**2 - ((y+130)/290)**2)
+        grain = rng.uniform(-0.65, 0.65)
+        rgb = (14 + glow*(4*teal+40*violet+24*rose),
+               21 + glow*(34*teal+6*violet+5*rose),
+               35 + glow*(48*teal+51*violet+14*rose))
+        pixels.append(tuple(round(v + grain) for v in rgb) + (255,))
+im.putdata(pixels)
 im.save(root/'assets/background_default.png')
 im.filter(ImageFilter.GaussianBlur(6)).save(root/'assets/background_default_blur.png')
