@@ -6,31 +6,25 @@
 
 Game Boy · Game Boy Color · Game Boy Advance
 
-[Download](https://github.com/jgraving/slot/releases/latest) · [Setup guide](https://slot-cfw.fyi) · [Upstream slot](https://github.com/BrandonKowalski/slot)
+[Download](https://github.com/jgraving/slot.sp/releases/latest) · [Setup guide](https://slot-cfw.fyi) · [Upstream slot](https://github.com/BrandonKowalski/slot)
 
 </div>
 
 Browse a shelf of cartridges, choose a game, and watch it slide into the slot. **slot.sp** builds on [Brandon Kowalski's slot](https://github.com/BrandonKowalski/slot), with an SP-inspired shell, larger cartridges, saved day/night settings, and more ways to listen and play.
 
-<p align="center">
-<img src="previews/readme-carousel.png" width="48%" alt="slot.sp's Graphite shell and larger cartridge carousel">
-<img src="previews/readme-shutdown.gif" width="48%" alt="slot.sp's power switch snapping to OFF before the screen fades">
-</p>
-
-*The slot.sp shell and shutdown sequence, rendered from the production artwork and draw commands.*
-
 ## See it in motion
 
 <p align="center">
-<img src=".github/resources/screenshots/carousel.gif" width="48%" alt="Browsing the Game Boy Advance, Game Boy and Game Boy Color shelves">
-<img src=".github/resources/screenshots/core-picker.gif" width="48%" alt="Turning a cartridge over to choose mGBA or gpSP on its circuit board">
+<img src="previews/readme-carousel.gif" width="48%" alt="slot.sp's Graphite shell and larger cartridges moving through the carousel">
+<img src="previews/readme-core-picker.gif" width="48%" alt="Opening the cartridge and moving between mGBA and gpSP on its circuit board">
 </p>
 
 <p align="center">
-<img src=".github/resources/screenshots/link.gif" width="96.5%" alt="Two handhelds racing in Mario Kart through the emulated link cable">
+<img src="previews/readme-link.gif" width="48%" alt="The link-cable plug connecting to slot.sp's Graphite EXT.1 port">
+<img src="previews/readme-shutdown.gif" width="48%" alt="slot.sp's Graphite power switch sliding to OFF before the screen fades">
 </p>
 
-*Carousel, core-picker and link recordings from upstream slot. These shared features are included in slot.sp; the recordings show upstream's shell artwork.*
+*Captured from this fork's production frontend and OpenGL compositor using synthetic cartridge fixtures. The link preview renders the real cable animation; it does not show a multiplayer session. [Reproduce the previews](previews/README.md).*
 
 ## What makes slot.sp different
 
@@ -49,12 +43,12 @@ More detail: [Sound/Bluetooth](BLUETOOTH.md) · [Night display](NIGHT-DISPLAY.md
 
 ## Download and install
 
-Get the current **slot.sp** build from [Releases](https://github.com/jgraving/slot/releases/latest). Downloads are public; no GitHub account is needed.
+Get the current **slot.sp** build from [Releases](https://github.com/jgraving/slot.sp/releases/latest). Downloads are public; no GitHub account is needed.
 
 | Download | Use it for |
 | --- | --- |
-| [slot.sp-System.zip](https://github.com/jgraving/slot/releases/latest/download/slot.sp-System.zip) | Updating an existing installation. Contains only `System`. |
-| [slot.sp-SD2.zip](https://github.com/jgraving/slot/releases/latest/download/slot.sp-SD2.zip) | The full SD2 starter folder structure and defaults for a new setup. |
+| [slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip) | Updating an existing installation. Contains only `System`. |
+| [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) | The full SD2 starter folder structure and defaults for a new setup. |
 | `SHA256SUMS` / `build-info.json` | Checking downloads and identifying the exact source/build. |
 
 **Updating:** back up your card, shut down, and extract `slot.sp-System.zip` onto the root of the content card (SD2), replacing the existing `System` files. Keep your games, saves and configuration folders in place. Safely eject and boot.
@@ -67,7 +61,7 @@ Code changes are built and regression-tested on ARM64 before a release is publis
 
 ## Hardware notes
 
-The fork focuses on the SP experience. The 120 Hz carousel has been confirmed smooth on a handheld, but **an internal-speaker buzz was reported after enabling 120 Hz and remains unresolved**. To compare with 60 Hz, shut down and set `high_refresh=0` in `Config/slot.state`. Set it back to `1` to restore high refresh. Unsupported panels stay at their normal refresh rate.
+The fork focuses on the SP experience. Supported, verified panels can use high refresh; unsupported panels retain their normal refresh rate.
 
 Audio testing includes RG SP and RG35XXSP; USB-C headphone playback is confirmed on RG SP. Bluetooth volume synchronization remains experimental. Physical link play and deep sleep/wake need device-specific testing. See [audio limits](BLUETOOTH.md#tested-devices-and-known-limitations).
 
