@@ -4,7 +4,7 @@ use slot_ui::{draw_power_switch, power_switch_faces, Canvas, Draw, TexId};
 fn detents_and_fade_stay_aligned_on_each_canvas() {
     for width in [480.0, 640.0, 720.0, 854.0] {
         let canvas = Canvas { w: width, h: 480.0 };
-        let scale = (width + 120.0) / 1000.0;
+        let scale = width / 300.0;
         for (ms, mark, alpha) in [
             (0.0, 525.0, 1.0),
             (150.0, 525.0, 1.0),
@@ -39,6 +39,7 @@ fn detents_and_fade_stay_aligned_on_each_canvas() {
             };
             assert!((sx + sw * 0.5 - (x + mark * scale)).abs() < 0.001);
             assert_eq!(sa, a);
+            assert!((sw / width - 0.3).abs() < 0.001, "slider must stay prominent");
         }
     }
 }
