@@ -1,0 +1,28 @@
+wait 120
+rec carousel
+wait 45
+tap right
+wait 45
+tap right
+wait 45
+tap left
+wait 45
+tap left
+wait 45
+cut
+rec core-picker
+wait 30
+tap start
+wait 60
+tap right
+wait 45
+tap left
+wait 45
+tap b
+wait 60
+cut
+rec shutdown
+wait 45
+hold power 75
+wait 120
+cut
