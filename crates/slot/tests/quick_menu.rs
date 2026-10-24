@@ -111,7 +111,7 @@ fn the_quick_menu_is_only_on_the_carousel() {
 }
 
 #[test]
-fn wallpaper_cycles_none_random_default_blur_then_the_folder_and_saves() {
+fn wallpaper_cycles_flowing_static_blur_then_the_folder_and_saves() {
     let (d, mut a, _) = on_carousel();
     let dir = d.path().join("Wallpapers");
     std::fs::create_dir_all(&dir).unwrap();
@@ -125,6 +125,10 @@ fn wallpaper_cycles_none_random_default_blur_then_the_folder_and_saves() {
         WallpaperPick::Default,
         "a new card did not start on Default"
     );
+    press(&mut a, Btn::Right);
+    assert_eq!(a.resolved_wallpaper(), WallpaperPick::Static);
+    assert_eq!(a.resolved_wallpaper().label(), "Static Gradient");
+    assert_eq!(read_slot_state(d.path()).wallpaper, WallpaperPick::Static);
     press(&mut a, Btn::Right);
     assert_eq!(a.resolved_wallpaper(), WallpaperPick::Blur);
     assert_eq!(a.resolved_wallpaper().label(), "DEFAULT BLUR");
@@ -1191,6 +1195,7 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     );
     press(&mut a, Btn::Up);
     for (pick, shown) in [
+        (WallpaperPick::Static, false),
         (WallpaperPick::Blur, false),
         (WallpaperPick::File("a.png".into()), true),
         (WallpaperPick::None, false),

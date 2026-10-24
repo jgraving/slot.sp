@@ -18,7 +18,7 @@ fn painted_shells_preserve_geometry_and_leave_the_switch_cavity_neutral() {
         }
         let [switch, handle] = power_switch_faces_for(colour);
         assert_eq!(handle.rgba, slider.rgba);
-        let cavity = ((110*600+230)*4) as usize;
+        let cavity = ((208 * switch.w + 435) * 4) as usize;
         assert_eq!(&switch.rgba[cavity..cavity+4], &dark.rgba[cavity..cavity+4]);
         let at = ((66*SLOT_W+240)*4) as usize;
         let base = shell_rgb(colour);
@@ -117,15 +117,18 @@ fn sp_body_has_rounded_shoulders_and_recessed_corner_screws() {
 }
 
 #[test]
-fn power_labels_and_both_dots_have_readable_embossed_relief() {
+fn power_markings_keep_subtle_embossed_relief_in_each_finish() {
     for colour in ShellColour::FINISHES {
-        let face=power_switch_faces_for(colour)[0].rgba.clone();
-        for (x0,x1) in [(200,256),(338,375),(257,278),(313,334)] {
-            let mut lo=255u8;let mut hi=0u8;
-            for y in 165..191 { for x in x0..x1 {
-                let v=face[(y*600+x)*4];lo=lo.min(v);hi=hi.max(v);
+        let [face, _] = power_switch_faces_for(colour);
+        for (x0, x1) in [(465, 495), (515, 536)] {
+            let mut lo = 255u8;
+            let mut hi = 0u8;
+            for y in 245..262 { for x in x0..x1 {
+                let value = face.rgba[(y * face.w as usize + x) * 4];
+                lo = lo.min(value); hi = hi.max(value);
             }}
-            assert!(hi-lo>=65,"{colour:?} marking at {x0}: relief {}",hi-lo);
+            assert!(hi - lo >= 8, "{colour:?}: molded marking disappeared");
+            assert!(hi - lo < 60, "{colour:?}: marking became a heavy outline");
         }
     }
 }

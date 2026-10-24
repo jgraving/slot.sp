@@ -150,3 +150,46 @@ fn only_pngs_are_picked() {
         "an upper case extension was skipped"
     );
 }
+
+
+#[test]
+fn static_gradient_survives_reboot_and_never_draws_motion() {
+    use slot_store::{write_slot_state, SlotState, WallpaperPick};
+    use slot_ui::{Draw, TexId};
+    let d = common::tmp_root_with_carts(&["Emerald"]);
+    write_slot_state(d.path(), &SlotState { clock_set: true, wallpaper: WallpaperPick::Static, ..SlotState::default() }).unwrap();
+    let mut app = common::boot(d.path());
+    assert_eq!(app.wallpaper(), WallpaperPick::Static);
+    app.set_ground(TexId::from_raw(800));
+    let mut before = vec![];
+    app.tick_ms(1000); app.draw(&mut before);
+    let mut after = vec![];
+    app.tick_ms(9000); app.draw(&mut after);
+    for draws in [&before, &after] {
+        assert!(!draws.iter().any(|draw| matches!(draw, Draw::Lava { .. })));
+        assert!(draws.iter().any(|draw| matches!(draw, Draw::Part { tex, .. } if *tex == TexId::from_raw(800))));
+    }
+}
+
+#[test]
+fn flowing_gradient_advances_while_custom_wallpapers_remain_still() {
+    use slot_store::{write_slot_state, SlotState, WallpaperPick};
+    use slot_ui::{Draw, TexId};
+    let d = common::tmp_root_with_carts(&["Emerald"]);
+    for wallpaper in [WallpaperPick::Default, WallpaperPick::File("custom.png".into()), WallpaperPick::Blur, WallpaperPick::None] {
+        write_slot_state(d.path(), &SlotState { clock_set: true, wallpaper: wallpaper.clone(), ..SlotState::default() }).unwrap();
+        let mut app = common::boot(d.path());
+        app.set_ground(TexId::from_raw(800));
+        app.set_blur(TexId::from_raw(801));
+        app.set_wallpaper(TexId::from_raw(802));
+        let mut phases = vec![];
+        for now in [1000, 9000] {
+            app.tick_ms(now);
+            let mut draws = vec![]; app.draw(&mut draws);
+            let phase = draws.iter().find_map(|draw| if let Draw::Lava { phase, .. } = draw { Some(*phase) } else { None });
+            if wallpaper == WallpaperPick::Default { phases.push(phase.expect("flowing gradient is missing")); }
+            else { assert!(phase.is_none(), "a still wallpaper acquired motion"); }
+        }
+        if wallpaper == WallpaperPick::Default { assert_ne!(phases[0], phases[1]); }
+    }
+}
