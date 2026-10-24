@@ -27,7 +27,8 @@ jobs:
           cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
           cp previews/link_capture.rs crates/slot/examples/link_capture.rs
           cp previews/fixture.rs crates/slot/examples/readme_fixture.rs
-          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder
+          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder --test power --test power_click
+          cargo test --locked -p slot-ui --test power_switch
           cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture
       - name: Record production compositor and encode opaque GIFs
         run: |
