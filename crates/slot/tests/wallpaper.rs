@@ -156,7 +156,7 @@ fn only_pngs_are_picked() {
 fn static_gradient_survives_reboot_and_never_draws_motion() {
     use slot_store::{write_slot_state, SlotState, WallpaperPick};
     use slot_ui::{Draw, TexId};
-    let d = common::tmp_root_with_carts(&["Emerald"]);
+    let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
     write_slot_state(d.path(), &SlotState { clock_set: true, wallpaper: WallpaperPick::Static, ..SlotState::default() }).unwrap();
     let mut app = common::boot(d.path());
     assert_eq!(app.wallpaper(), WallpaperPick::Static);
@@ -175,7 +175,7 @@ fn static_gradient_survives_reboot_and_never_draws_motion() {
 fn flowing_gradient_advances_while_custom_wallpapers_remain_still() {
     use slot_store::{write_slot_state, SlotState, WallpaperPick};
     use slot_ui::{Draw, TexId};
-    let d = common::tmp_root_with_carts(&["Emerald"]);
+    let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
     for wallpaper in [WallpaperPick::Default, WallpaperPick::File("custom.png".into()), WallpaperPick::Blur, WallpaperPick::None] {
         write_slot_state(d.path(), &SlotState { clock_set: true, wallpaper: wallpaper.clone(), ..SlotState::default() }).unwrap();
         let mut app = common::boot(d.path());
