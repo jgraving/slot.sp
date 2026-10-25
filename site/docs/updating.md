@@ -1,39 +1,23 @@
 ---
+title: Updating
 hide:
   - navigation
   - toc
 ---
 
-# Updating slot.
+# Update slot.sp
 
-!!! warning "Updating from a version before 1.4.0?"
+1. Back up your content card and shut down the handheld.
+2. Download and extract **[slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)**.
+3. Copy its `System` folder to the root of your content card, replacing the existing folder's files.
+4. Safely eject the card, put it back in the handheld and power on.
 
-    Older versions kept settings in `System/`. They now live in `Config/`.
+Your `Games`, `Saves`, `States`, `Labels` and `Config` folders stay in place. With two cards, update **SD2**; with one card, update the content partition on **SD1**.
 
-    For this update only, copy the new `System/` over the old one instead of deleting it. slot will move your settings into a new `Config/` folder, so future updates can delete `System/` as normal.
+!!! tip
 
-    Your games, saves and save states aren't affected.
+    `System` should sit alongside `Games` and `Config`, rather than inside another `System` folder.
 
-    Sorry for the hassle! slot started as a throwaway project and I never expected it to need an update procedure.
+If you are moving from a version of slot older than 1.4.0, copy over the existing `System` folder without deleting it first. The launcher moves the old settings into `Config`.
 
-<div class="install-steps" markdown>
-
-1.  Download the latest release
-    { .step-title role="heading" aria-level="3" }
-
-    Go fetch the [latest slot release](https://github.com/BrandonKowalski/slot/releases/latest) from GitHub and unzip it.
-
-2.  Replace the `System/` folder
-    { .step-title role="heading" aria-level="3" }
-
-    Connect the card that holds slot to your computer. That is the card in `SD1` if you use a single card, or the card in `SD2` if you use two.
-
-    Delete the `System/` folder on the card and copy the new `System/` folder from the release in its place.
-    Your games, saves, save states, labels and wallpapers all live outside `System/` and are left alone.
-
-3.  Put the card back and boot!
-    { .step-title role="heading" aria-level="3" }
-
-    I hope you continue to enjoy using slot!
-
-</div>
+[All downloads & release notes](https://github.com/jgraving/slot.sp/releases/latest) · [First installation](installing.md) · [User guide](features/guide.md)

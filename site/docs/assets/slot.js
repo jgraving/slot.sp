@@ -35,28 +35,44 @@
   var MEDIA = new URL("../media/", document.currentScript.src).href;
 
   var SHELLS = [
-    { name:"silver",     light:"#e2e5e9", base:"#b8bcc2", shade:"#7e838b", btn:"#c2c6cc", btnHi:"#e9ecf0", etch:"rgba(0,0,0,.46)" },
-    { name:"pink",       light:"#f6d3dd", base:"#e6a6b8", shade:"#a76d7e", btn:"#dbd1d5", btnHi:"#f2eaed", etch:"rgba(0,0,0,.44)" },
-    { name:"light blue", light:"#dbe9f2", base:"#a8c4d8", shade:"#6d8ba1", btn:"#d0dae3", btnHi:"#edf3f8", etch:"rgba(0,0,0,.44)" },
-    { name:"black",      light:"#5a5d64", base:"#34363b", shade:"#16171a", btn:"#3c3e43", btnHi:"#5c5f66", etch:"rgba(255,255,255,.42)" }
+    { name:"platinum",     light:"#e2e5e9", base:"#b8bcc2", shade:"#7e838b", btn:"#c2c6cc", btnHi:"#e9ecf0", etch:"rgba(0,0,0,.46)" },
+    { name:"pearl pink",       light:"#f6d3dd", base:"#e6a6b8", shade:"#a76d7e", btn:"#dbd1d5", btnHi:"#f2eaed", etch:"rgba(0,0,0,.44)" },
+    { name:"pearl blue", light:"#dbe9f2", base:"#a8c4d8", shade:"#6d8ba1", btn:"#d0dae3", btnHi:"#edf3f8", etch:"rgba(0,0,0,.44)" },
+    { name:"graphite",      light:"#5a5d64", base:"#34363b", shade:"#16171a", btn:"#3c3e43", btnHi:"#5c5f66", etch:"rgba(255,255,255,.42)" }
   ];
 
   var want = (location.search.match(/[?&]shell=([^&]+)/) || [])[1];
-  var shell = SHELLS[Math.floor(Math.random() * SHELLS.length)];
+  var shell = SHELLS[0];
   if (want) {
     want = decodeURIComponent(want).replace(/\+/g, " ").toLowerCase();
+    want = ({silver:"platinum",pink:"pearl pink","light blue":"pearl blue",black:"graphite"})[want] || want;
     for (var si = 0; si < SHELLS.length; si++) {
       if (SHELLS[si].name === want) { shell = SHELLS[si]; break; }
     }
   }
 
-  var root = document.documentElement.style;
-  root.setProperty("--shell-light", shell.light);
-  root.setProperty("--shell-base",  shell.base);
-  root.setProperty("--shell-shade", shell.shade);
-  root.setProperty("--btn",         shell.btn);
-  root.setProperty("--btn-hi",      shell.btnHi);
-  root.setProperty("--etch",        shell.etch);
+  function setShell(chosen){
+    shell = chosen;
+    var root = document.documentElement.style;
+    root.setProperty("--shell-light", shell.light);
+    root.setProperty("--shell-base", shell.base);
+    root.setProperty("--shell-shade", shell.shade);
+    root.setProperty("--btn", shell.btn);
+    root.setProperty("--btn-hi", shell.btnHi);
+    root.setProperty("--etch", shell.etch);
+    document.querySelectorAll("[data-shell]").forEach(function(button){
+      button.setAttribute("aria-pressed", String(button.dataset.shell === shell.name));
+    });
+    var label = document.getElementById("shell-name");
+    if (label) label.textContent = shell.name.replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+  }
+  setShell(shell);
+  document.querySelectorAll("[data-shell]").forEach(function(button){
+    button.addEventListener("click", function(){
+      var chosen = SHELLS.find(function(s){ return s.name === button.dataset.shell; });
+      if (chosen) setShell(chosen);
+    });
+  });
 
   var pose = (location.search.match(/[?&]pose=(flat|hero)/) || [])[1];
   if (pose) {
@@ -96,19 +112,13 @@
 
   var heroVid = document.querySelector(".hero-screen");
   if (heroVid) {
-    if (reduced) {
-      heroVid.style.opacity = "1";
-    } else {
-      setTimeout(function(){
-        heroVid.style.opacity = "1";
-        var p = heroVid.play();
-        if (p && p.catch) p.catch(function(){});
-      }, 1900);
-      heroVid.src = MEDIA + "main.mp4";
-      heroVid.load();
-    }
+    heroVid.style.opacity = "1";
+    heroVid.setAttribute("data-fork-loop", "");
+    var heroSource = document.createElement("source");
+    heroSource.dataset.src = MEDIA + "fork/carousel.mp4";
+    heroSource.type = "video/mp4";
+    heroVid.appendChild(heroSource);
   }
-
 
   var source = document.querySelector(".guide-steps");
   if (source) {
@@ -540,4 +550,40 @@
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && stage) insert();
   });
+})();
+
+// Quiet, lazy previews. A single control pauses every looping home-page clip.
+(function(){
+  "use strict";
+  var videos = Array.from(document.querySelectorAll("[data-fork-loop]"));
+  if (!videos.length) return;
+  var preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var paused = preference.matches;
+  var control = document.querySelector(".motion-control");
+  function sync(video){
+    if (paused || document.hidden || video.dataset.inView !== "true") {
+      video.pause(); return;
+    }
+    var source = video.querySelector("source[data-src]");
+    if (source) { source.src = source.dataset.src; source.removeAttribute("data-src"); video.load(); }
+    var promise = video.play();
+    if (promise && promise.catch) promise.catch(function(){});
+  }
+  function update(){
+    videos.forEach(sync);
+    if (control) {
+      control.textContent = paused ? "Play animations" : "Pause animations";
+      control.setAttribute("aria-pressed", String(paused));
+    }
+  }
+  if (control) control.addEventListener("click", function(){ paused = !paused; update(); });
+  preference.addEventListener("change", function(e){ paused = e.matches; update(); });
+  document.addEventListener("visibilitychange", update);
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){ entry.target.dataset.inView = String(entry.isIntersecting); sync(entry.target); });
+    }, { threshold: 0.1 });
+    videos.forEach(function(video){ observer.observe(video); });
+  } else { videos.forEach(function(video){ video.dataset.inView = "true"; }); }
+  update();
 })();

@@ -1,18 +1,31 @@
 [project]
-site_url = "https://jgraving.github.io/slot/"
+site_url = "https://jgraving.github.io/slot.sp/"
 site_name = "slot.sp"
-site_description = "A bespoke, Game Boy-centric frontend for the Anbernic RG SP."
-repo_url = "https://github.com/jgraving/slot"
-repo_name = "jgraving/slot"
+site_description = "Game Boy games. SP style. A game launcher by Jake Graving, with four SP colors, kid mode, Bluetooth audio and more."
+repo_url = "https://github.com/jgraving/slot.sp"
+repo_name = "jgraving/slot.sp"
 docs_dir = "docs"
 site_dir = "public"
 
 nav = [
   { "Home" = "index.md" },
-  { "Installing" = "installing.md" },
-  { "Updating" = "updating.md" },
-  { "Tour" = "tour.md" },
+  { "Get started" = ["installing.md", "updating.md"] },
+  { "Features" = [
+    { "Appearance & screen" = "features/display.md" },
+    { "Kid mode" = "features/kid-mode.md" },
+    { "Audio & headphones" = "features/bluetooth.md" },
+    { "Day & night" = "features/night-display.md" },
+    { "Games & artwork" = "features/library.md" },
+    { "Buttons & shortcuts" = "features/controls.md" },
+    { "Playing & saving" = "features/playing.md" },
+    { "Screenshots" = "features/screenshots.md" },
+    { "Sleep & power" = "features/power-options.md" },
+    { "Link play" = "features/link-play.md" },
+  ] },
   { "Guide" = [
+    { "All guides" = "features/guide.md" },
+    { "Installation & updates" = "features/getting-started.md" },
+    { "Interactive tour" = "tour.md" },
     { "Playing" = [
       "guide/shelf.md",
       "guide/playing.md",
@@ -33,18 +46,17 @@ nav = [
       "guide/troubleshooting.md",
     ] },
   ] },
-  { "Questions" = "questions.md" },
-  { "Credits" = "credits.md" },
-  { "Cart Studio" = "https://studio.slot-cfw.fyi" },
+  { "About" = ["questions.md", "credits.md", "ai.md"] },
 ]
 
-extra_css = ["assets/slot.css"]
+extra_css = ["assets/slot.css", "assets/fork.css"]
 extra_javascript = ["assets/slot.js"]
 
 [project.theme]
 custom_dir = "overrides"
 favicon = "favicon.svg"
 language = "en"
+font = false
 features = [
   "content.tabs.link",
   "navigation.indexes",
@@ -55,9 +67,6 @@ features = [
   "search.highlight",
   "toc.follow",
 ]
-
-[project.theme.font]
-text = "Open Sans"
 
 [project.theme.icon]
 repo = "fontawesome/brands/github"

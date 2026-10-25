@@ -1,51 +1,40 @@
 ---
+title: Questions
 hide:
   - navigation
   - toc
 ---
 
-# Anticipated Questions Answered
+# Questions
 
-### Which devices does slot run on?
+### What is slot.sp?
 
-<div class="devices" markdown>
+A game launcher by Jake Graving, based on [slot by Brandon T. Kowalski](https://github.com/BrandonKowalski/slot). It keeps the Game Boy Advance SP artwork and adds four SP colors, kid mode, audio choices, day/night presets and more.
 
-| Device | Supported | Since Version |
-| --- | --- | --- |
-| Anbernic RG&nbsp;SP | **Yes** | Always |
-| Anbernic RG34XX | Yes (untested) | 1.4.0 |
-| Anbernic RG34XXSP | Yes (untested) | 1.4.0 |
-| Anbernic RG35XXSP | **Yes** | 1.5.0 |
-| Anbernic RG35XX Plus | **Yes** | 1.5.0 |
-| Anbernic RG28XX | **Yes** | 1.6.0 |
-| Anbernic RG35XX-H | **Yes** | 1.7.0 |
+### Which games can I play?
 
-</div>
+Game Boy, Game Boy Color and Game Boy Advance. Bring your own game files and copy them into the matching folders. The [installation guide](features/getting-started.md#add-games) shows where everything goes.
 
-If you have one of the untested devices, or have tried slot on a device not listed, please [open an issue on GitHub](https://github.com/BrandonKowalski/slot/issues) and let me know how it went.
+### Which handheld is this for?
 
-### Will slot run anything other than GBA?
+The Anbernic RG SP is the focus of this fork. The project also includes the upstream device support; see [BaseOS](https://slot-cfw.fyi/installing/) for the operating-system setup for your handheld.
 
-Yes. You can bring your GB and GBC carts to the party.
+### Can I update from slot?
 
-### Where do the games come from?
+Yes. Use this fork's **[System ZIP](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** and follow the [update steps](updating.md). Your games, artwork, saves and settings remain on the card.
 
-Your own legally obtained backups.
+### Can I use Bluetooth headphones?
 
-### This is almost perfect but needs more systems. Will you add them?
+Yes. Bluetooth, USB audio, wired headphones and the internal speaker are available. Each output keeps its own volume. See [Audio & headphones](features/bluetooth.md).
 
-No. I want to recreate the feeling I had playing my GBA SP as a child.
+### What does kid mode change?
 
-### RetroAchievements and cheats would make this perfect. Will you add them?
+Children see the games you approve in the normal carousels. You can set time and volume limits. They can still resume, change brightness, adjust volume within the cap and leave a game. See [Kid mode](features/kid-mode.md).
 
-No. These are two features I do not want to support. If they matter to you, a few of the forks have added them.
+### Where do I find the buttons and settings?
 
-### Does slot allow you to pair Bluetooth headphones?
+Start with [Buttons & shortcuts](features/controls.md), or browse the [user guide](features/guide.md).
 
-No. Use the headphone jack.
+### Where can I report a problem or suggest a change?
 
-### Do you accept contributions?
-
-I am not opposed to accepting pull requests. I just ask that you come discuss planned work in an issue on GitHub ahead of time.
-
-slot is intentionally light on features. I am not looking to add the kitchen sink. If this form of collaboration doesn't appeal to you, several individuals have forked slot and gone off to make it their own.
+Open an issue in **[jgraving/slot.sp](https://github.com/jgraving/slot.sp/issues)**. Include the device, the release you installed and the steps to reproduce a problem.

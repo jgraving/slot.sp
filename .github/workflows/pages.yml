@@ -1,47 +1,72 @@
 name: pages
 
 on:
+  pull_request:
+    paths:
+      - 'site/**'
+      - '*.md'
+      - 'previews/**'
+      - 'licenses/GoogleSansFlex-OFL.txt'
+      - 'crates/slot-ui/assets/fonts/profiles.json'
+      - 'tools/prepare-site.py'
+      - 'tools/check-site.py'
+      - '.github/workflows/pages.yml'
   push:
     branches: [main]
     paths:
       - 'site/**'
+      - '*.md'
+      - 'previews/**'
+      - 'licenses/GoogleSansFlex-OFL.txt'
+      - 'crates/slot-ui/assets/fonts/profiles.json'
+      - 'tools/prepare-site.py'
+      - 'tools/check-site.py'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  deploy:
-    # Forks can opt in after configuring their own GitHub Pages site.
-    if: github.repository == 'BrandonKowalski/slot' || vars.ENABLE_PAGES == 'true'
-    name: site
+  build:
+    name: Build and check website
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/configure-pages@v5
-
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-
-      - run: pip install zensical==0.0.71
-
-      - run: zensical build --clean --strict -f site/zensical.toml
-
+      - name: Install website dependencies
+        run: |
+          python -m pip install zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Prepare feature guides, font and fork previews
+        run: python tools/prepare-site.py
+      - name: Build website
+        run: zensical build --clean --strict -f site/zensical.toml
+      - name: Check published links and assets
+        run: python tools/check-site.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/public
 
+  deploy:
+    name: Publish website
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == 'jgraving/slot.sp' || vars.ENABLE_PAGES == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
       - id: deploy
         uses: actions/deploy-pages@v4
