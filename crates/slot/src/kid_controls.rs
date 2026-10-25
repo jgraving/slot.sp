@@ -89,9 +89,20 @@ impl App {
             let child_action = menu.child_action.take();
             let close = !menu.visible;
             if let Some(policy) = changed {
-                self.stop_for_parent();
                 self.kids = policy;
                 self.kid_error = false;
+                // Ordinary parent adjustments must not eject an approved game.
+                // Stop only if the new policy actually disallows this session.
+                let blocked = self.kids.active && (
+                    self.kids.remaining(self.wall_secs()) == 0
+                    || match &self.phase {
+                        Phase::Playing { cart } | Phase::Inserting { cart, .. } => {
+                            !self.catalog.iter().any(|c| c.platform == self.platform
+                                && c.stem == *cart && self.kids.allows(c))
+                        }
+                        _ => false,
+                    });
+                if blocked { self.stop_for_parent(); }
                 self.apply_kid_scope();
             }
             if close { self.kid_menu = None; }

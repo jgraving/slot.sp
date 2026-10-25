@@ -647,3 +647,25 @@ fn kid_can_exit_when_only_one_game_is_approved() {
     assert!(matches!(app.phase(), Phase::Shelf));
     assert!(app.kid_mode());
 }
+
+#[test]
+fn parent_can_adjust_the_volume_cap_and_resume_the_same_game() {
+    let d = card();
+    let mut app = App::boot(d.path());
+    app.apply(Action::Insert);
+    app.set_snapshot(common::StubSnapshot::boxed());
+    app.on_core_ready();
+    for _ in 0..120 { app.update(1.0 / 60.0); }
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    app.apply(Action::QuickMenu);
+    unlock(&mut app);
+    press(&mut app, Btn::Down);
+    press(&mut app, Btn::Down);
+    press(&mut app, Btn::Left);
+    assert_eq!(app.kid_volume_limit(), 40);
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    press(&mut app, Btn::B);
+    assert!(app.kid_menu.is_none());
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    assert!(app.output_volume() <= 40);
+}
