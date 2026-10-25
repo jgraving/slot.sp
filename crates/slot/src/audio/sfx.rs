@@ -1,4 +1,5 @@
 const INSERT: &[u8] = include_bytes!("../../assets/insert.pcm");
+const POWER_SWITCH: &[u8] = include_bytes!("../../assets/power-switch.pcm");
 const EJECT: &[u8] = include_bytes!("../../assets/eject.pcm");
 const ASSET_HZ: f32 = 48_000.0;
 
@@ -22,7 +23,7 @@ impl Sfx {
 
     pub fn tail(self) -> f32 {
         let pcm = match self {
-            Sfx::PowerSwitch => return 0.060,
+            Sfx::PowerSwitch => POWER_SWITCH,
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
             Sfx::Cartridge(_) => return 0.028,
@@ -35,7 +36,7 @@ impl Sfx {
             return tactile(self, sample_rate);
         }
         let pcm = match self {
-            Sfx::PowerSwitch => return power_click(sample_rate),
+            Sfx::PowerSwitch => POWER_SWITCH,
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
             Sfx::Cartridge(_) => unreachable!(),
@@ -115,39 +116,3 @@ fn tactile(sound: Sfx, rate: u32) -> Vec<i16> {
     out
 }
 
-// Short band-limited noise impulses excite two damped plastic resonances.
-// The restored firm switch detent uses a fixed seed for reproducible previews.
-fn power_click(rate: u32) -> Vec<i16> {
-    use std::f32::consts::TAU;
-    if rate == 0 {
-        return Vec::new();
-    }
-    let (duration, pitch, gain, taps): (f32, f32, f32, &[(f32, f32)]) =
-        (0.060, 1.0, 0.90, &[(0.0, 1.0), (0.012, 0.55)]);
-    let mut rng = 0x724a_35b1u32;
-    let mut low = 0.0f32;
-    let mut out = Vec::with_capacity((duration * rate as f32) as usize * 2);
-    for i in 0..(duration * rate as f32) as usize {
-        rng ^= rng << 13;
-        rng ^= rng >> 17;
-        rng ^= rng << 5;
-        let noise = (rng as f32 / u32::MAX as f32) * 2.0 - 1.0;
-        low += (1.0 - (-TAU * 4200.0 / rate as f32).exp()) * (noise - low);
-        let t = i as f32 / rate as f32;
-        let mut sample = 0.0;
-        for &(start, strength) in taps {
-            let age = t - start;
-            if age < 0.0 {
-                continue;
-            }
-            let attack = (age / 0.0006).min(1.0);
-            let body = (TAU * 1480.0 * pitch * age).sin() * (-age / 0.0038).exp()
-                + 0.35 * (TAU * 2630.0 * pitch * age).sin() * (-age / 0.0024).exp();
-            sample += strength * attack * (0.58 * body + 0.42 * low * (-age / 0.0017).exp());
-        }
-        let fade = ((duration - t) / 0.004).clamp(0.0, 1.0);
-        let value = (sample * fade * gain * 32767.0).clamp(-32767.0, 32767.0) as i16;
-        out.extend([value, value]);
-    }
-    out
-}
