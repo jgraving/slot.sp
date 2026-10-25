@@ -236,6 +236,7 @@ pub struct SlotState {
     pub show_recents: bool,
     pub show_titles: bool,
     pub boot_animation: bool,
+    pub carousel_sounds: bool,
     pub left_stick_dpad: bool,
     pub lid_off_min: Option<u8>,
     pub bezel_gba: BezelPick,
@@ -384,6 +385,7 @@ impl Default for SlotState {
             show_recents: false,
             show_titles: false,
             boot_animation: true,
+            carousel_sounds: true,
             left_stick_dpad: true,
             lid_off_min: None,
             bezel_gba: BezelPick::Ags102,
@@ -485,6 +487,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
     text.push_str(&format!("boot_animation={}\n", s.boot_animation as u8));
+    text.push_str(&format!("carousel_sounds={}\n", s.carousel_sounds as u8));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
     text.push_str(&format!("auto_load={}\n", s.auto_load as u8));
     if let Some(min) = s.lid_off_min {
@@ -547,6 +550,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut show_recents = None;
     let mut show_titles = None;
     let mut boot_animation = None;
+    let mut carousel_sounds = None;
     let mut left_stick_dpad = None;
     let mut lid_off_min = None;
     let mut bezel_gba = None;
@@ -601,6 +605,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "show_recents" => show_recents = flag(value),
             "show_titles" => show_titles = flag(value),
             "boot_animation" => boot_animation = flag(value),
+            "carousel_sounds" => carousel_sounds = flag(value),
             "left_stick_dpad" => left_stick_dpad = flag(value),
             "lid_off_min" => lid_off_min = value.parse().ok().filter(|m| LID_OFF_MIN.contains(m)),
             "bezel_gba" => bezel_gba = Some(BezelPick::parse(value)),
@@ -660,6 +665,7 @@ fn parse(text: &str) -> Option<SlotState> {
         show_recents: show_recents.unwrap_or(fallback.show_recents),
         show_titles: show_titles.unwrap_or(fallback.show_titles),
         boot_animation: boot_animation.unwrap_or(fallback.boot_animation),
+        carousel_sounds: carousel_sounds.unwrap_or(fallback.carousel_sounds),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
         lid_off_min,
         bezel_gba: bezel_gba.unwrap_or(fallback.bezel_gba),

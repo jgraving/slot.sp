@@ -31,6 +31,7 @@ pub enum QuickRow {
     Recents,
     ShowTitles,
     BootAnimation,
+    CarouselSounds,
     WallpaperTint,
     GbcShader,
     GbcColourCorrection,
@@ -107,7 +108,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 93] = [
+    pub const ALL: [QuickRow; 94] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -128,6 +129,7 @@ impl QuickRow {
         QuickRow::Recents,
         QuickRow::ShowTitles,
         QuickRow::BootAnimation,
+        QuickRow::CarouselSounds,
         QuickRow::WallpaperTint,
         QuickRow::GbcShader,
         QuickRow::GbcColourCorrection,
@@ -220,7 +222,7 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 8] = [
+    pub const GENERAL: [QuickRow; 9] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
@@ -228,6 +230,7 @@ impl QuickRow {
         QuickRow::Recents,
         QuickRow::ShowTitles,
         QuickRow::BootAnimation,
+        QuickRow::CarouselSounds,
         QuickRow::DateTime,
     ];
 
@@ -383,7 +386,8 @@ impl QuickRow {
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
-            | QuickRow::BootAnimation => &QuickRow::GENERAL,
+            | QuickRow::BootAnimation
+            | QuickRow::CarouselSounds => &QuickRow::GENERAL,
             QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -523,6 +527,7 @@ impl QuickRow {
             QuickRow::Recents => "Recents",
             QuickRow::ShowTitles => "Game Titles",
             QuickRow::BootAnimation => "Boot Animation",
+            QuickRow::CarouselSounds => "Carousel Sounds",
             QuickRow::WallpaperTint => "Wallpaper Tint",
             QuickRow::Resume => "Resume",
             QuickRow::UndoSave => "Undo Save",

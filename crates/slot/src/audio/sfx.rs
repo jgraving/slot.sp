@@ -46,7 +46,18 @@ impl Sfx {
             Sfx::Cartridge(v) => CAROUSEL[v as usize % CAROUSEL.len()],
         };
         let mut out = Vec::with_capacity(pcm.len());
-        for v in resampled(pcm, sample_rate) {
+        // Carousel impacts should suggest quiet plastic movement, not a sharp
+        // tabletop strike. Two gentle low-pass poles and -6 dB gain soften only
+        // these clips; the power switch and insert/eject samples stay unchanged.
+        let soft = matches!(self, Sfx::Cartridge(_));
+        let pole = 1.0 - (-std::f32::consts::TAU * 3200.0 / sample_rate.max(1) as f32).exp();
+        let (mut first, mut second) = (0.0, 0.0);
+        for mut v in resampled(pcm, sample_rate) {
+            if soft {
+                first += pole * (v - first);
+                second += pole * (first - second);
+                v = second * 0.5;
+            }
             let s = v.clamp(-32768.0, 32767.0) as i16;
             out.push(s);
             out.push(s);

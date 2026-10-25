@@ -852,7 +852,7 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
         press(&mut a, Btn::Up);
     }
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::ShowTitles.position(&a.hidden_rows()) {
+    for _ in 0..QuickRow::CarouselSounds.position(&a.hidden_rows()) {
         press(&mut a, Btn::Down);
     }
     let out = frame(&a);
