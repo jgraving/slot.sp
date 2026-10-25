@@ -224,7 +224,7 @@ impl Menu {
         }
         if self.page == Page::Games {
             let rows: Vec<_> = self.games.iter().map(|cart| (
-                cart.title.clone(), if self.draft.allows(cart) { "Yes" } else { "No" }.into(), false
+                if cart.title.is_empty() { cart.stem.clone() } else { cart.title.clone() }, if self.draft.allows(cart) { "Yes" } else { "No" }.into(), false
             )).collect();
             let confirming = self.game_removal.is_some_and(|(at, since, _)|
                 at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));

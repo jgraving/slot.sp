@@ -1173,7 +1173,8 @@ fn parent_label_face(label: &str, lit: bool, has_value: bool) -> UndoFace {
     let Some(font) = text::label_font() else { return quick_value_face(label, lit); };
     let max = if has_value { OUT_W as f32 - 290.0 } else { OUT_W as f32 - 130.0 };
     let layout = text::fit(font, label, max, 1, MENU_PX, MENU_PX);
-    let width = text::line_width(font, &layout.lines[0], layout.px, layout.tracking).ceil() as u32 + 2 * MENU_PAD;
+    let width = layout.lines.first().map_or(0.0, |line|
+        text::line_width(font, line, layout.px, layout.tracking)).ceil() as u32 + 2 * MENU_PAD;
     let mut rgba = vec![0; (width * MENU_H * 4) as usize];
     text::draw_centred(&mut rgba, width, MENU_H, &layout, if lit { MENU_INK } else { DIM_INK });
     UndoFace { rgba, w: width, h: MENU_H }
