@@ -28,6 +28,7 @@ jobs:
     container: rust:1-bullseye
     env:
       SLOT_SILENT: '1'
+      SLOT_STICKER_PREVIEW: /tmp/slot-about-sticker.png
     steps:
       - uses: actions/checkout@v7
 
@@ -53,6 +54,12 @@ jobs:
           cargo test -p slot-power --lib --tests
           task test:card
           python3 card/test-bluetooth.py
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: about-sticker-preview
+          path: /tmp/slot-about-sticker.png
+          if-no-files-found: error
 
       - name: Check emulator source materials
         run: |
