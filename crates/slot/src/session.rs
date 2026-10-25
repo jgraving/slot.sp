@@ -11,8 +11,8 @@ pub const RUMBLE_MIN_MS: Millis = 100;
 pub const RUMBLE_MAX_MS: Millis = 150;
 
 use crate::app::{App, Phase};
-use crate::audio::{opened_sink, AudioSink, Ring, Sfx};
-use crate::core::{open_core, Opened};
+use crate::audio::{AudioSink, Ring, Sfx, opened_sink};
+use crate::core::{Opened, open_core};
 use crate::emu::{CoreState, EmuHandle, Speed};
 use crate::frames::FrameRef;
 use crate::input::Pad;
@@ -86,10 +86,12 @@ impl Session {
     }
 
     fn software_volume(&self) -> u8 {
-        self.bluetooth_volume.software_volume(
-            self.app.bluetooth_volume_address(),
-            self.app.output_volume(),
-        )
+        self.bluetooth_volume
+            .software_volume(
+                self.app.bluetooth_volume_address(),
+                self.app.output_volume(),
+            )
+            .min(self.app.kid_volume_limit())
     }
 
     pub fn play_sfx(&mut self, sfx: Sfx) {
@@ -219,11 +221,37 @@ impl Session {
                 },
             );
         }
+        if self.app.kid_mode() {
+            // Remove unsafe shortcuts before gesture matching so their button
+            // combinations remain ordinary game input, rather than swallowed.
+            entries.retain(|entry| self.app.kid_action_allowed(entry.action));
+        }
         if self.entries != entries {
             self.gestures.set_entries(entries.clone());
             self.entries = entries;
         }
         for ev in events {
+            // Parent controls are literal button entry, never game shortcuts or
+            // delayed modifier gestures. Apply each edge before the next event.
+            let button = match ev { RawEvent::Down(b) | RawEvent::Up(b) => b };
+            if self.app.parent_controls_open()
+                && !self.dozing()
+                && !matches!(button, Btn::Power | Btn::Lid | Btn::VolUp | Btn::VolDown)
+            {
+                self.gestures.observe(ev);
+                match ev {
+                    RawEvent::Down(b) if !self.captured.contains(&b) => {
+                        self.captured.push(b);
+                        self.act(if b == Btn::Menu { Action::QuickMenu } else { Action::GbaDown(b) });
+                    }
+                    RawEvent::Up(b) => {
+                        self.captured.retain(|held| *held != b);
+                        self.act(Action::GbaUp(b));
+                    }
+                    _ => {}
+                }
+                continue;
+            }
             if self.app.capturing() {
                 match ev {
                     RawEvent::Down(b) => self.captured.push(b),
@@ -240,7 +268,11 @@ impl Session {
                     continue;
                 }
             }
+            self.gestures.set_context(self.app.input_context());
             actions.extend(self.gestures.feed(ev, now));
+            for action in actions.drain(..) {
+                self.act(action);
+            }
         }
         actions.extend(self.gestures.tick(now));
         if !latched && self.app.in_game_menu().is_some() {
@@ -279,6 +311,9 @@ impl Session {
     fn act(&mut self, action: Action) {
         if trace() {
             eprintln!("slot: {action:?} in {:?}", self.app.phase());
+        }
+        if !self.app.kid_action_allowed(action) {
+            return;
         }
         let menu_open = self.app.in_game_menu().is_some();
         match action {
@@ -382,7 +417,9 @@ impl Session {
         self.bridge_link(|app| app.update(dt));
         // Open the lazy PCM during the slide, rather than spending the short
         // click waking the DAC at the detent. Keep it awake through shutdown.
-        self.sink.ring().set_warm(self.app.powering_off() && self.software_volume() > 0);
+        self.sink
+            .ring()
+            .set_warm(self.app.powering_off() && self.software_volume() > 0);
 
         if let Some(output) = self
             .app
@@ -543,11 +580,11 @@ impl Session {
     }
 
     fn actually_rewinding(&self) -> bool {
-        self.rewinding && self.playing() && self.app.may_rewind()
+        !self.app.kid_mode() && self.rewinding && self.playing() && self.app.may_rewind()
     }
 
     fn actually_fast_forwarding(&self) -> bool {
-        self.fast && self.playing() && self.app.may_fast_forward()
+        !self.app.kid_mode() && self.fast && self.playing() && self.app.may_fast_forward()
     }
 
     fn inserting(&self) -> bool {
@@ -567,7 +604,8 @@ impl Session {
     }
 
     fn held(&self) -> bool {
-        self.app.game_menu_open()
+        self.app.parent_controls_open()
+            || self.app.game_menu_open()
             || self.app.in_game_menu().is_some()
             || self.app.repair_prompt()
             || self.app.shutting_down()
@@ -798,4 +836,52 @@ pub(crate) fn trace() -> bool {
 
 fn launch(step: &str) {
     eprintln!("slot: launch: {step} at {:.1} ms", crate::boot_time::ms());
+}
+
+#[cfg(test)]
+mod kid_shortcut_tests {
+    use super::*;
+    #[test]
+    fn child_shortcuts_cannot_arm_fast_or_rewind_latches() {
+        let d = tempfile::tempdir().unwrap();
+        let mut sink = crate::audio::StubSink::new();
+        sink.open(48000).unwrap();
+        let mut session = Session::boot_with(d.path().to_path_buf(), Box::new(sink));
+        session.app.kids.active = true;
+        session.feed(
+            [
+                RawEvent::Down(Btn::Select),
+                RawEvent::Down(Btn::X),
+                RawEvent::Up(Btn::X),
+                RawEvent::Up(Btn::Select),
+            ],
+            0,
+        );
+        assert!(
+            session
+                .entries
+                .iter()
+                .all(|entry| session.app.kid_action_allowed(entry.action))
+        );
+        assert!(!session.entries.iter().any(|entry| matches!(
+            entry.action,
+            Action::SaveState | Action::LoadState | Action::FfStart | Action::RewindStart
+        )));
+        for action in [Action::FfStart, Action::RewindStart] {
+            session.act(action);
+        }
+        assert!(!session.fast && !session.rewinding);
+        session.app.kid_menu = Some(crate::kid_menu::Menu::new(
+            d.path().to_path_buf(),
+            session.app.kids.clone(),
+        ));
+        for action in [Action::FfStart, Action::RewindStart] {
+            session.act(action);
+        }
+        assert!(!session.fast && !session.rewinding);
+        session.fast = true;
+        session.rewinding = true;
+        assert!(!session.actually_fast_forwarding());
+        assert!(!session.actually_rewinding());
+    }
 }

@@ -17,8 +17,8 @@ mod draw;
 mod favorite;
 mod favorite_remove;
 mod footer;
-pub use favorite::draw_star;
-pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, FAVORITE_REMOVE_MS};
+pub use favorite::{draw_star, draw_kid};
+pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
 mod icon;
 mod link_art;
@@ -71,7 +71,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    badge_face, icon_box, icon_face, sound_device_icon, star_face, warm_fonts, Badge, Icon,
+    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, warm_fonts, Badge, Icon,
 };
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
@@ -97,7 +97,7 @@ pub use quick_menu::{
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
     quick_value_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
-    sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
+    parent_settings_face, parent_footer_face, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
 };
@@ -126,3 +126,6 @@ pub use sticker::{
     CREDITS, DC, HOME, ORIGIN, STICKER_H, STICKER_W,
 };
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
+
+mod button_code;
+pub use button_code::button_code_face;
