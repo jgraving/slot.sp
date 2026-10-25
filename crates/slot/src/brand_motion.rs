@@ -15,6 +15,13 @@ pub fn frame_at(ms: u64) -> usize {
     (ms.min(REVEAL_MS) * (FRAMES as u64 - 1) / REVEAL_MS) as usize
 }
 
+/// The device intro plays the reveal backwards: it opens on the finished
+/// mark, so it matches the firmware's static boot logo, and dissolves to
+/// nothing instead of revealing the glass from empty.
+pub fn boot_frame_at(ms: u64) -> usize {
+    FRAMES - 1 - frame_at(ms)
+}
+
 pub fn boot_opacity(ms: u64) -> f32 {
     let t = (ms.saturating_sub(REVEAL_MS + HOLD_MS) as f32 / FADE_MS as f32).clamp(0.0, 1.0);
     1.0 - t * t * (3.0 - 2.0 * t)
@@ -35,6 +42,10 @@ impl BrandMotion {
 
     pub fn draw(&self, ms: u64, x: f32, y: f32, width: f32, alpha: f32, out: &mut Vec<Draw>) {
         let frame = frame_at(ms);
+        self.part(frame, x, y, width, alpha, out);
+    }
+
+    fn part(&self, frame: usize, x: f32, y: f32, width: f32, alpha: f32, out: &mut Vec<Draw>) {
         out.push(Draw::Part { x, y, w: width, h: width * TILE_H as f32 / TILE_W as f32,
             tex: self.tex, alpha,
             uv: [(frame % COLS) as f32 / COLS as f32,
@@ -47,7 +58,7 @@ impl BrandMotion {
         out.push(Draw::Rect { x:0., y:0., w:canvas.w, h:canvas.h,
             colour:[11./255.,14./255.,17./255.,alpha] });
         let width = 480.0_f32.min(canvas.w - 32.0);
-        self.draw(ms, canvas.centred(width), (canvas.h - width * 128. / 480.) / 2., width, alpha, out);
+        self.part(boot_frame_at(ms), canvas.centred(width), (canvas.h - width * 128. / 480.) / 2., width, alpha, out);
     }
 
     // Return the atlas's 11.8 MB of GPU storage as soon as the intro is over.
