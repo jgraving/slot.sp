@@ -801,7 +801,7 @@ fn settings_meter_is_present_only_while_kid_mode_is_on() {
 
 #[test]
 fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
-    let (_d, mut app, clock) = warning_game(slot::kid_policy::Rule::Daily, 5);
+    let (_d, mut app, _clock) = warning_game(slot::kid_policy::Rule::Daily, 5);
     app.apply(Action::QuickMenu);
     press(&mut app, Btn::Up);
     press(&mut app, Btn::A);
@@ -828,7 +828,6 @@ fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
                     &still.rgba[row..row + still.w as usize * 4]);
             }
         }
-        clock.set(clock.get() + 17);
         app.update(1.0 / 60.0);
     }
     assert!(offsets.iter().any(|x| *x > 0) && offsets.iter().any(|x| *x < 0));

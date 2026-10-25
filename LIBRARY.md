@@ -27,7 +27,7 @@ Press <kbd>Y</kbd> on a starred game. A prompt appears above it. Release <kbd>Y<
 
 With kid mode off, press <kbd>X</kbd> on a cartridge to approve it. A gold smiley appears at the top left. Removing approval uses the same release-and-press-again confirmation.
 
-You can also manage approvals in **Menu → Kid Mode → Approved games**. See the [kid-mode guide](KID-MODE.md) for the parent code and limits.
+Manage approvals directly on the carousel with kid mode off. See the [kid-mode guide](KID-MODE.md) for the parent code and limits.
 
 ## Game artwork
 

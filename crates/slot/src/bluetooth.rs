@@ -1059,7 +1059,7 @@ mod menu_tests {
         assert_eq!(calls, vec![("connect".into(), Some("AA:BB:CC:DD:EE:FF".into())),
             ("restart".into(), None), ("connect".into(), Some("AA:BB:CC:DD:EE:FF".into()))]);
         assert!(!result.status.starts_with("Error:"));
-        calls.clear();
+        let mut calls = Vec::new();
         let result = run_with_recovery("on", None, || {}, |verb, _| {
             calls.push(verb.to_owned());
             ResultMessage { devices: None, output: None, status: "Error: unavailable".into() }
