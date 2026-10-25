@@ -80,7 +80,7 @@ fn the_fast_forward_row_offers_off_and_the_four_ceilings_the_card_can_hold() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power", "Controls", "Kid Mode", "About"]
+        ["General", "Screen", "Sound", "Gameplay", "Power", "Controls", "About"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -158,7 +158,6 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Bluetooth,
             QuickRow::PlaySound,
             QuickRow::Power,
-            QuickRow::Kids,
             QuickRow::SleepNow,
             QuickRow::ShutDown,
             QuickRow::General,

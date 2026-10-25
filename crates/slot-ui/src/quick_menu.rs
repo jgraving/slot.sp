@@ -1,11 +1,11 @@
-use crate::bitmaps::{ButtonLegend, button_legend};
-use crate::draw::{Canvas, Draw, OUT_H, OUT_W, TexId};
+use crate::bitmaps::{button_legend, ButtonLegend};
+use crate::draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 use crate::icon::{Icon, WARNING_INK};
 use crate::plate::{
-    CAP_GAP, HINT_EDGE, LEGEND_GAP, UndoFace, blit, centred_hints, word_face, word_ink,
+    blit, centred_hints, word_face, word_ink, UndoFace, CAP_GAP, HINT_EDGE, LEGEND_GAP,
 };
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
-use crate::slot_chrome::{MOUTH_H, opening};
+use crate::slot_chrome::{opening, MOUTH_H};
 use crate::text;
 use slot_store::{CarouselAction, GameButton, Shortcut};
 
@@ -55,7 +55,6 @@ pub enum QuickRow {
     Bluetooth,
     PlaySound,
     Power,
-    Kids,
     LidClose,
     SleepTimeout,
     SleepNow,
@@ -109,7 +108,7 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
-    pub const ALL: [QuickRow; 95] = [
+    pub const ALL: [QuickRow; 94] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -154,7 +153,6 @@ impl QuickRow {
         QuickRow::Bluetooth,
         QuickRow::PlaySound,
         QuickRow::Power,
-        QuickRow::Kids,
         QuickRow::LidClose,
         QuickRow::SleepTimeout,
         QuickRow::SleepNow,
@@ -207,14 +205,13 @@ impl QuickRow {
         QuickRow::UndoLoad,
     ];
 
-    pub const MAIN: [QuickRow; 8] = [
+    pub const MAIN: [QuickRow; 7] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Bluetooth,
         QuickRow::Game,
         QuickRow::Power,
         QuickRow::Controls,
-        QuickRow::Kids,
         QuickRow::About,
     ];
 
@@ -497,7 +494,6 @@ impl QuickRow {
     pub fn label(self) -> &'static str {
         match self {
             QuickRow::Power => "Power",
-            QuickRow::Kids => "Kid Mode",
             QuickRow::LidClose => "Lid Close",
             QuickRow::SleepTimeout => "Shut Down After",
             QuickRow::SleepNow => "Sleep Now",
@@ -595,7 +591,6 @@ impl QuickRow {
         matches!(
             self,
             QuickRow::Power
-                | QuickRow::Kids
                 | QuickRow::SleepNow
                 | QuickRow::ShutDown
                 | QuickRow::DateTime
@@ -874,7 +869,11 @@ impl QuickValue {
     }
 
     pub fn flag(on: bool) -> QuickValue {
-        if on { QuickValue::On } else { QuickValue::Off }
+        if on {
+            QuickValue::On
+        } else {
+            QuickValue::Off
+        }
     }
 }
 
