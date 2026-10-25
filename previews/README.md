@@ -32,7 +32,7 @@ Label scans: LaunchBox Games Database and its contributors; original game artwor
 
 The showcase uses Emerald, Ruby and Sapphire in translucent green, red and blue shells. Metroid Fusion and WarioWare retain their standard dark shells. The fixture writes the same `cart_shell.txt` overrides used by the application.
 
-The opening hero uses the production App insertion/ejection clock, SlotChrome geometry and compositor with a single Emerald cartridge. It adds a wordmark rendered from the site's Google Sans Flex font and a restrained fixed lighting overlay. It is an art-directed product view, not AI-generated video or a multiplayer/gameplay recording. `make_hero_art.py` and `insertion_hero.rs` reproduce it.
+The opening hero uses the production App insertion/ejection clock, SlotChrome geometry and compositor with a single Emerald cartridge. The background uses the production fluid shader with an eased two-second excursion and return so this short hero loops cleanly. It adds a wordmark rendered from the site's Google Sans Flex font and a restrained fixed lighting overlay. It is an art-directed product view, not AI-generated video or a multiplayer/gameplay recording. `make_hero_art.py` and `insertion_hero.rs` reproduce it.
 
 To reproduce the hero after preparing the fixture above (requires FontTools and Brotli):
 
