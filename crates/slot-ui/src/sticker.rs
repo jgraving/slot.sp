@@ -42,8 +42,7 @@ pub struct StickerFields<'a> {
     pub model: &'a str,
 }
 
-pub const CREDITS: [&str; 12] = [
-    COPYRIGHT,
+pub const CREDITS: [&str; 11] = [
     "THE EXQUISITE SKEUOMORPHIC",
     "ARTWORK MADE BY MARKUS.",
     "EMULATION POWERED BY MGBA",
@@ -52,7 +51,7 @@ pub const CREDITS: [&str; 12] = [
     "OPEN SANS AND NERD FONTS",
     "SYMBOLS BY RYAN L MCINTYRE.",
     "THE PANEL MASK IS DERIVED",
-    "FROM GIGAHERZ'S LCD3X. THE",
+    "FROM GIGAHERZ'S LCD3X.",
     "BASED ON SLOT BY",
     "BRANDON T. KOWALSKI.",
 ];
@@ -89,6 +88,7 @@ pub fn sticker_lines(f: &StickerFields) -> Vec<String> {
     out.extend(ORIGIN.iter().map(|s| s.to_string()));
     let (body, check) = split_check(f.serial);
     out.push(format!("{body} {check}"));
+    out.push(COPYRIGHT.to_string());
     out.push(version_line(f));
     out.push(HOME.to_string());
     out
@@ -320,7 +320,7 @@ pub fn sticker_face(f: &StickerFields) -> UndoFace {
         ry += mh as f32 + 4.0;
     }
     let version = version_line(f);
-    for line in [version.as_str(), HOME] {
+    for line in [COPYRIGHT, version.as_str(), HOME] {
         let lw = c.print_measure(line, SMALL_PX);
         ry = c.print(right_edge - lw - 10.0, ry, line, SMALL_PX, WHITE);
     }
