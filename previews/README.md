@@ -42,15 +42,27 @@ cargo build -p slot --no-default-features --example insertion_hero
 python3 previews/make_hero_art.py /tmp/slot-readme/out
 target/debug/examples/insertion_hero /tmp/slot-readme/card /tmp/slot-readme/out
 mkdir -p /tmp/slot-readme/hero
-ffmpeg -v error -y -i /tmp/slot-readme/out/hero-insertion.mp4 -vf fps=20 /tmp/slot-readme/hero/%04d.png
-python3 tools/opaque_preview_gif.py /tmp/slot-readme/hero previews/hero-insertion.gif
+ffmpeg -v error -y -i /tmp/slot-readme/out/hero-glass.mp4 -vf fps=20 /tmp/slot-readme/hero/%04d.png
+python3 tools/opaque_preview_gif.py /tmp/slot-readme/hero previews/hero-glass.gif --width 480
 rm crates/slot/examples/insertion_hero.rs
 ```
 
-The hero and device boot overlay share the baked, wordmark-only Google Sans Flex reveal in `assets/brand-motion.png`. The committed hero GIF shows the cartridge seating before the teal/violet lettering resolves to warm white. No separate cartridge/cradle symbol is used.
+The hero and device boot overlay share the baked, wordmark-only Google Sans Flex reveal in `assets/brand-motion.png`. The newly rendered `hero-glass.gif` shows the cartridge seating before the teal/violet lettering resolves to warm white. No separate cartridge/cradle symbol is used.
 
 The device overlay uses a 900 ms reveal, 220 ms hold and 180 ms fade while normal app updates continue. A button press dismisses it. Static Gradient and automatic game resume skip atlas upload; GPU storage is released when the overlay ends. The earlier firmware screen uses `card/System/bootlogo.bmp`.
 
-For future optical renders, `tools/build-brand-geometry.py` exports only the variable-font wordmark and matching SVGs. `tools/render-brand-glass.py` renders the contours with Blender Cycles; `tools/build-brand-motion.py` packs the 48 frames into the existing 4 × 12 atlas. Run `python3 tools/build-brand-motion.py assets/brand-motion.png --blender /path/to/blender` with Blender 4.5, Pillow, FontTools and Brotli installed. This optional Cycles pipeline has not been used for the committed atlas or GIF; those retain the existing baked glass animation.
+To regenerate the committed optical reveal, `tools/build-brand-geometry.py` exports only the variable-font wordmark and matching SVGs. `tools/render-brand-glass.py` renders the contours with Blender Cycles; `tools/build-brand-motion.py` packs the 48 frames into the existing 4 × 12 atlas and updates the firmware boot BMP. Run `python3 tools/build-brand-motion.py assets/brand-motion.png --blender /path/to/blender` with Blender 4.5, Pillow, FontTools, Brotli and skia-pathops installed. The committed atlas is rendered at 960 × 256 with 256 samples, then downsampled to 480 × 128. Use `--samples 256` to match. Glyph components are united before extrusion to prevent false holes in overlapping crossbars. Denoising is disabled so the renderer also works in restricted environments without `/proc/self/maps`.
 
 `assets/slot-sp-logo.svg` and `previews/hero-static.svg` provide the matching wordmark without a font dependency. README visitors requesting reduced motion receive the static SVG.
+
+To record the matching boot preview after rebuilding the atlas:
+
+```sh
+cp previews/boot_brand.rs crates/slot/examples/boot_brand.rs
+cargo build -p slot --no-default-features --example boot_brand
+target/debug/examples/boot_brand /tmp/slot-readme/out
+mkdir -p /tmp/slot-readme/boot
+ffmpeg -v error -y -i /tmp/slot-readme/out/boot-brand.mp4 -vf fps=20 /tmp/slot-readme/boot/%04d.png
+python3 tools/opaque_preview_gif.py /tmp/slot-readme/boot previews/boot-brand.gif --width 480
+rm crates/slot/examples/boot_brand.rs
+```

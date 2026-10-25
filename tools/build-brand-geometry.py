@@ -1,5 +1,6 @@
 """Export actual variable-font contours for the physically rendered brand reveal."""
 import io,json,math,sys,urllib.request
+import pathops
 import xml.etree.ElementTree as ET
 from fontTools.svgLib.path import parse_path
 from pathlib import Path
@@ -27,6 +28,14 @@ class Contours(BasePen):
         self.points=[]
     def _endPath(self):self._closePath()
 
+def draw_clean(glyph, glyphset, pen):
+    # Blender fills intersecting contours with even/odd winding. Union the font
+    # components first so crossbars and bowls remain solid, retaining counters.
+    outline=pathops.Path()
+    glyph.draw(outline.getPen(glyphSet=glyphset))
+    outline.simplify()
+    outline.draw(pen)
+
 def generate(path,font_path=None):
     data=Path(font_path).read_bytes() if font_path else urllib.request.urlopen('https://jakegraving.com/assets/fonts/google-sans-flex-v5-web.woff2',timeout=60).read()
     font=TTFont(io.BytesIO(data));cmap=font.getBestCmap();em=font['head'].unitsPerEm
@@ -42,7 +51,7 @@ def generate(path,font_path=None):
         if t>=.82:loc=final.copy()
         gs=font.getGlyphSet(location=loc);glyphs=[];advance=0.
         for i,ch in enumerate('slot.sp'):
-            glyph=gs[cmap[ord(ch)]];pen=Contours(gs);glyph.draw(pen)
+            glyph=gs[cmap[ord(ch)]];pen=Contours(gs);draw_clean(glyph,gs,pen)
             glyphs.append({'name':ch,'contours':[[[(x+advance)/em,y/em] for x,y in c] for c in pen.contours]})
             advance+=glyph.width
         # Centre each optical width. Use a fixed final baseline centre, avoiding bobbing.
@@ -63,7 +72,7 @@ def generate(path,font_path=None):
             matrix=(scale/em/.933,0,0,-scale/em/.933,
                     width/2+(advance_x/em-total/em/2)/.933*scale,
                     height/2+.25/.933*scale)
-            glyph=finalset[cmap[ord(ch)]];glyph.draw(TransformPen(pen,matrix));advance_x+=glyph.width
+            glyph=finalset[cmap[ord(ch)]];draw_clean(glyph,finalset,TransformPen(pen,matrix));advance_x+=glyph.width
             paths.append('<path d="'+pen.getCommands()+'"/>')
         return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="slot.sp">'+background+'<g fill="#f6f7f2">'+''.join(paths)+'</g></svg>'
     (root/'assets/slot-sp-logo.svg').write_text(lockup_svg(800,200,145))

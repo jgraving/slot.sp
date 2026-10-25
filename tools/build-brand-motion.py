@@ -1,6 +1,6 @@
 """Render the slot.sp optical identity with Blender Cycles, then pack its runtime atlas.
 
-Requires Blender4.5, Pillow and FontTools (+Brotli for the site-hosted WOFF2).
+Requires Blender4.5, Pillow, FontTools, skia-pathops (+Brotli for the site-hosted WOFF2).
 The device only reads the baked PNG; no renderer or font ships at runtime.
 """
 from pathlib import Path
