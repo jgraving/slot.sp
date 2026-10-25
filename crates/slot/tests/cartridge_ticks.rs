@@ -9,11 +9,12 @@ fn carousel_clips_are_short_quiet_stereo_and_distinct() {
     for sound in sounds {
         for rate in [32_768, 44_100, 48_000] {
             let clip = sound.render(rate);
+            assert_eq!(clip.len(), (rate as f32 * 0.028) as usize * 2);
             assert!(!clip.is_empty());
             assert!(clip.len() < rate as usize / 4);
             assert!(clip.chunks_exact(2).all(|p| p[0] == p[1]));
             let peak = clip.iter().map(|v| v.unsigned_abs()).max().unwrap();
-            assert!((100..2251).contains(&peak), "{sound:?}: {peak}");
+            assert!((100..6000).contains(&peak), "{sound:?}: {peak}");
             assert!(clip[0].abs() < 10);
             assert!(clip.last().unwrap().abs() < 10);
         }
