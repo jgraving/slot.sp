@@ -231,6 +231,27 @@ impl Session {
             self.entries = entries;
         }
         for ev in events {
+            // Parent controls are literal button entry, never game shortcuts or
+            // delayed modifier gestures. Apply each edge before the next event.
+            let button = match ev { RawEvent::Down(b) | RawEvent::Up(b) => b };
+            if self.app.parent_controls_open()
+                && !self.dozing()
+                && !matches!(button, Btn::Power | Btn::Lid | Btn::VolUp | Btn::VolDown)
+            {
+                self.gestures.observe(ev);
+                match ev {
+                    RawEvent::Down(b) if !self.captured.contains(&b) => {
+                        self.captured.push(b);
+                        self.act(if b == Btn::Menu { Action::QuickMenu } else { Action::GbaDown(b) });
+                    }
+                    RawEvent::Up(b) => {
+                        self.captured.retain(|held| *held != b);
+                        self.act(Action::GbaUp(b));
+                    }
+                    _ => {}
+                }
+                continue;
+            }
             if self.app.capturing() {
                 match ev {
                     RawEvent::Down(b) => self.captured.push(b),
@@ -247,7 +268,11 @@ impl Session {
                     continue;
                 }
             }
+            self.gestures.set_context(self.app.input_context());
             actions.extend(self.gestures.feed(ev, now));
+            for action in actions.drain(..) {
+                self.act(action);
+            }
         }
         actions.extend(self.gestures.tick(now));
         if !latched && self.app.in_game_menu().is_some() {

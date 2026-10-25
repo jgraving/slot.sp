@@ -770,6 +770,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
     };
     let label_w = screen_w - 96;
     let compact = lines.get(2).is_some_and(|line| line == "COMPACT");
+    let row_pitch = if compact && lines.len() > 10 { 44 } else { 48 };
     let clean = lines.iter().take(3).all(String::is_empty);
     let row_count = lines.len().saturating_sub(4) as u32;
     // Reserve six row positions so status text and new scan results cannot
@@ -795,7 +796,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                 line.strip_prefix("SELECTED ")
                     .or_else(|| line.strip_prefix("ROW "))
                     .unwrap_or(line),
-                row_top + (i as u32 - 3) * 48 + 4,
+                row_top + (i as u32 - 3) * row_pitch + 4,
                 40u32,
                 30.0,
                 1,
@@ -813,17 +814,24 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             blit(&mut rgba, &pointer, 18, top.saturating_sub(4));
         }
         if i == lines.len() - 1 {
-            if matches!(line.as_str(), "PARENT CODE HINTS" | "PARENT HOME HINTS" | "PARENT NOTICE HINTS") {
-                let keys: &[(&str, &str)] = match line.as_str() {
-                    "PARENT CODE HINTS" => &[("SELECT", "Delete"), ("START", "Done"), ("MENU", "Cancel")],
-                    "PARENT HOME HINTS" => &[("B", "Back"), ("L/R", "Change"), ("A", "Select")],
-                    _ => &[("B", "Games"), ("A", "Parents")],
+            if line.starts_with("PARENT ") && line.ends_with(" HINTS") {
+                let page = match line.as_str() {
+                    "PARENT CODE HINTS" => 1,
+                    "PARENT NOTICE HINTS" => 2,
+                    "PARENT GAMES HINTS" => 3,
+                    _ => 0,
                 };
-                let hints: Vec<_> = keys.iter().map(|(key, label)| slot_ui::hint_face(key, label)).collect();
-                let gap = slot_ui::LEGEND_GAP as u32;
-                let total = hints.iter().map(|h| h.w).sum::<u32>() + gap * hints.len().saturating_sub(1) as u32;
-                let mut x = (screen_w - total) / 2;
-                for hint in hints { blit(&mut rgba, &hint, x, 427); x += hint.w + gap; }
+                let hints = slot_ui::parent_button_legends(page, footer_ink);
+                let gap = 16;
+                let seen = |h: &UndoFace| h.w.saturating_sub(slot_ui::HINT_EDGE);
+                blit(&mut rgba, &hints[0], 16, 427);
+                let total = hints[1..].iter().map(seen).sum::<u32>()
+                    + gap * hints.len().saturating_sub(2) as u32;
+                let mut x = screen_w.saturating_sub(16 + total);
+                for hint in &hints[1..] {
+                    blit(&mut rgba, hint, x, 427);
+                    x += seen(hint) + gap;
+                }
                 continue;
             }
             let faces = slot_ui::sound_button_legends(footer_ink);

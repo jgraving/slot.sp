@@ -41,9 +41,10 @@ Game Boy · Game Boy Color · Game Boy Advance
 
 Kid mode keeps the familiar **Recents, Favorites and system carousels**, showing only games you approve. There is no extra Kids shelf, and your own Favorites and Recents stay intact.
 
-1. With kid mode off, press **X** on a cartridge to approve it. A **gold smiley in the top-left corner** marks approved games. Press X again to remove approval.
-2. Open **Menu → Kid Mode** and choose a four-button parent code using **A/B/X/Y or the D-pad**. Repeat it to confirm; **Start** submits and **Select** removes the last button.
-3. Choose **Daily allowance**, **Play for** or **Play until**, adjust the time and volume limit, then select **Start kid mode**.
+1. Open **Menu → Kid Mode**. On first use, this opens the settings screen so you can configure everything before setting a code.
+2. Open **Approved games** and press **A** to toggle each game. Approved cartridges show a **gold smiley in the top-left corner**. With kid mode off, X on a cartridge also toggles approval, without a permanent carousel hint.
+3. Choose **Daily allowance**, **Play for** or **Play until**, then adjust the time and volume limit.
+4. Select **Start kid mode**. If you have not set a parent code, enter four buttons using **A/B/X/Y or the D-pad**, press **Start**, and enter the same code again to confirm. Each press fills a slot with the actual button artwork and updates the entry count. **Select** deletes the last button; **Menu** cancels. You can also choose **Set parent code** separately from settings.
 
 | Limit | How it works |
 | --- | --- |
@@ -101,7 +102,7 @@ Code releases run an ARM64 build and device regression checks before publication
 
 The fork focuses on the SP. Upstream also supports RG34XX, RG34XXSP, RG35XXSP, RG35XX Plus, RG28XX and RG35XX-H; fork additions have not all been tested on every model. Unsupported panels retain normal refresh rates. USB-C headphone playback has been reported working on RG SP; Bluetooth volume synchronization remains experimental. Physical link play and deep sleep/wake need device-specific testing.
 
-Intermittent shutdown speaker static/pop, an unreliable power-switch click and boot-logo jumping have been reported. They are not confirmed fixed. The latest kid-mode changes still need RG SP testing. See [audio testing and limitations](BLUETOOTH.md#tested-devices-and-known-limitations).
+The latest kid-mode changes still need RG SP testing. See [audio testing and limitations](BLUETOOTH.md#tested-devices-and-known-limitations).
 
 ## Credits
 

@@ -346,7 +346,6 @@ pub struct App {
     pub kid_menu: Option<crate::kid_menu::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
-    kid_hints: Vec<(TexId, u32, u32)>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
     bluetooth_supported: bool,
     pub audio_indicator: Option<TexId>,
@@ -567,7 +566,6 @@ impl App {
             kid_menu: None,
             kid_error: false,
             catalog,
-            kid_hints: Vec::new(),
             bluetooth: None,
             bluetooth_supported: false,
             audio_indicator: None,
@@ -1692,9 +1690,6 @@ impl App {
         matches!(self.random_wallpaper, Some(Some(_)))
     }
 
-    pub fn set_kid_hints(&mut self, hints: Vec<(TexId, u32, u32)>) {
-        self.kid_hints = hints;
-    }
 
     pub fn set_sticker_face(&mut self, face: TexId) {
         self.sticker_face = Some(face);
@@ -4821,33 +4816,6 @@ impl App {
         }
         if let Some(menu) = self.game_menu {
             self.draw_game_menu(menu, out);
-        }
-        if matches!(self.phase, Phase::Shelf) && self.core_picker.is_none() {
-            let hints = if self.kids.active && self.selected_stem().is_none() {
-                self.kid_hints.get(2..3)
-            } else if self.kids.active {
-                self.kid_hints.get(..3)
-            } else if self.selected_stem().is_some() {
-                self.kid_hints.get(3..)
-            } else {
-                None
-            };
-            if let Some(hints) = hints {
-                let width = hints.iter().map(|(_, w, _)| *w as f32).sum::<f32>()
-                    + 12.0 * hints.len().saturating_sub(1) as f32;
-                let mut x = self.canvas().centred(width);
-                for &(tex, w, h) in hints {
-                    out.push(Draw::Tex {
-                        x,
-                        y: 42.0,
-                        w: w as f32,
-                        h: h as f32,
-                        tex,
-                        alpha: 0.85,
-                    });
-                    x += w as f32 + 12.0;
-                }
-            }
         }
         self.hud.draw(self.canvas(), self.now(), out);
     }

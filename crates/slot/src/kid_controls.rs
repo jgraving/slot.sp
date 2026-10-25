@@ -54,7 +54,9 @@ impl App {
         self.play_held = None;
         self.held_dir = None;
         self.shelf_mut().release_hold();
-        self.kid_menu = Some(crate::kid_menu::Menu::new(root, self.kids.clone()));
+        let mut menu = crate::kid_menu::Menu::new(root, self.kids.clone());
+        menu.set_games(self.catalog.clone());
+        self.kid_menu = Some(menu);
     }
 
     pub(super) fn kid_input(&mut self, action: Action) -> bool {
@@ -232,7 +234,7 @@ impl App {
         {
             self.stop_for_parent();
             self.apply_kid_scope();
-            self.kid_menu = Some(crate::kid_menu::Menu::notice(
+            let mut menu = crate::kid_menu::Menu::notice(
                 root,
                 self.kids.clone(),
                 if self.kid_error {
@@ -240,7 +242,9 @@ impl App {
                 } else {
                     "Ask a parent for more play time"
                 },
-            ));
+            );
+            menu.set_games(self.catalog.clone());
+            self.kid_menu = Some(menu);
         }
     }
 

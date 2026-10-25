@@ -1071,6 +1071,31 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
     ]
 }
 
+/// Parent controls share the production bitmap legends and footer typography.
+pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
+    let hint = Some(ink);
+    match page {
+        1 => vec![
+            with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
+            with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
+            with_hint(button_face(ButtonLegend::Start), "Confirm", hint, false),
+        ],
+        2 => vec![
+            with_hint(button_face(ButtonLegend::B), "Games", hint, true),
+            with_hint(button_face(ButtonLegend::A), "Parents", hint, false),
+        ],
+        3 => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_face(ButtonLegend::A), "Approve", hint, false),
+        ],
+        _ => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_pair(ButtonLegend::Left, ButtonLegend::Right), "Change", hint, false),
+            with_hint(button_face(ButtonLegend::A), "Select", hint, false),
+        ],
+    }
+}
+
 pub fn sound_forget_confirmation() -> UndoFace {
     with_hint(
         button_face(ButtonLegend::Y),
@@ -1196,7 +1221,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
     UndoFace { rgba, w, h }
 }
 
-fn button_face(which: ButtonLegend) -> UndoFace {
+pub(crate) fn button_face(which: ButtonLegend) -> UndoFace {
     let (rgba, w, h) = button_legend(which);
     let target_h = MENU_HINT_H;
     let target_w = (w as f32 * target_h as f32 / h as f32).round() as u32;

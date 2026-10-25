@@ -310,19 +310,6 @@ impl Frontend {
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture(star.w, star.h, &star.rgba);
         self.session.app_mut().set_star_face(id, star.w, star.h);
-        let hints = [
-            ("A", "Play"),
-            ("L/R", "Carousels"),
-            ("MENU", "Parents"),
-            ("X", "Kid-friendly"),
-        ]
-        .iter()
-        .map(|(key, label)| {
-            let f = slot_ui::hint_face(key, label);
-            (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
-        })
-        .collect();
-        self.session.app_mut().set_kid_hints(hints);
         let smiley = slot_ui::kid_smiley_face();
         let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);

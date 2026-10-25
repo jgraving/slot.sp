@@ -394,3 +394,111 @@ fn daily_allowance_does_not_count_suspend_without_intervening_frames() {
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     assert_eq!(app.kids.remaining(now() + 600), before);
 }
+
+// Exercise the production Session::feed path, with one persistent gesture state.
+// Direct App::apply tests cannot catch swallowed/reordered physical button edges.
+fn raw_tap(s: &mut slot::session::Session, time: &mut u64, button: Btn) {
+    use slot_input::RawEvent;
+    *time += 20;
+    s.feed([RawEvent::Down(button)], *time);
+    *time += 20;
+    s.feed([RawEvent::Up(button)], *time);
+}
+fn preview_menu(s: &slot::session::Session, name: &str) {
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, name, s.app().kid_menu.as_ref().unwrap().screen_face());
+    }
+}
+#[test]
+fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirmation() {
+    use slot::session::Session;
+    let d = card();
+    let dir = Policy::directory(d.path());
+    std::fs::remove_dir_all(&dir).unwrap();
+    let mut s = Session::boot(d.path().to_owned());
+    let mut time = 0;
+    s.app_mut().apply(Action::QuickMenu);
+    for _ in 0..12 {
+        if s.app().quick_menu() == Some(slot_ui::QuickRow::Kids) { break; }
+        raw_tap(&mut s, &mut time, Btn::Down);
+    }
+    assert_eq!(s.app().quick_menu(), Some(slot_ui::QuickRow::Kids));
+    raw_tap(&mut s, &mut time, Btn::A);
+    assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
+    assert!(s.app().kid_menu.as_ref().unwrap().lines().iter().any(|l| l.contains("Volume limit")));
+    preview_menu(&s, "parent-first-settings.png");
+    // Select Set parent code. Merely opening settings must not create a code.
+    assert!(!dir.join("code").exists());
+    for _ in 0..5 { raw_tap(&mut s, &mut time, Btn::Down); }
+    raw_tap(&mut s, &mut time, Btn::A);
+    assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
+    let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
+    for (i, b) in [Btn::A, Btn::B, Btn::X, Btn::Y].into_iter().enumerate() {
+        raw_tap(&mut s, &mut time, b);
+        let menu = s.app().kid_menu.as_ref().unwrap();
+        assert_eq!(menu.entered_buttons().len(), i + 1);
+        assert!(menu.lines()[1].contains(&format!("{} of 4", i + 1)));
+        assert_ne!(menu.screen_face().rgba, empty);
+        preview_menu(&s, &format!("parent-code-{}.png", i + 1));
+    }
+    raw_tap(&mut s, &mut time, Btn::Start);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Repeat your code");
+    assert!(!dir.join("code").exists());
+    preview_menu(&s, "parent-confirm-empty.png");
+    for b in [Btn::A; 4] { raw_tap(&mut s, &mut time, b); }
+    raw_tap(&mut s, &mut time, Btn::Start);
+    assert!(!dir.join("code").exists(), "mismatched confirmation created a code");
+    for _ in 0..2 {
+        for b in [Btn::A, Btn::B, Btn::X, Btn::Y] { raw_tap(&mut s, &mut time, b); }
+        raw_tap(&mut s, &mut time, Btn::Start);
+    }
+    assert!(dir.join("code").exists());
+    assert!(!s.app().kid_mode());
+    assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
+    let mut gate = Gate::new(dir.join("code"));
+    assert!(gate.verify(&[0, 1, 2, 3], std::time::Instant::now()).unwrap());
+    assert!(std::fs::read_to_string(dir.join("parent-code.txt")).unwrap().contains("A B X Y"));
+}
+
+#[test]
+fn raw_unlock_and_delete_accept_dpad_and_ignore_repeated_down_edges() {
+    use slot::{session::Session, kid_menu::Menu};
+    use slot_input::RawEvent;
+    let d = card();
+    let mut gate = Gate::new(Policy::directory(d.path()).join("code"));
+    gate.verify(&[0, 1, 2, 3], std::time::Instant::now()).unwrap();
+    gate.set(&[4, 5, 6, 7]).unwrap();
+    let mut s = Session::boot(d.path().to_owned());
+    let policy = s.app().kids.clone();
+    s.app_mut().kid_menu = Some(Menu::new(d.path().to_owned(), policy));
+    let mut time = 0;
+    s.feed([RawEvent::Down(Btn::A), RawEvent::Down(Btn::A)], time);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(), &[0]);
+    s.feed([RawEvent::Up(Btn::A)], time);
+    raw_tap(&mut s, &mut time, Btn::Select);
+    assert!(s.app().kid_menu.as_ref().unwrap().entered_buttons().is_empty());
+    for b in [Btn::Up, Btn::Down, Btn::Left, Btn::Right] { raw_tap(&mut s, &mut time, b); }
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(), &[4, 5, 6, 7]);
+    preview_menu(&s, "parent-dpad-code.png");
+    raw_tap(&mut s, &mut time, Btn::Start);
+    assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
+    assert!(s.app().kid_mode(), "unlock alone must not disable kid mode");
+}
+
+#[test]
+fn approvals_can_be_edited_from_parent_settings() {
+    let d = card();
+    let mut app = App::boot(d.path());
+    app.apply(Action::QuickMenu);
+    unlock(&mut app);
+    for _ in 0..6 { press(&mut app, Btn::Down); }
+    press(&mut app, Btn::A);
+    let before = app.kid_menu.as_ref().unwrap().draft.approved.clone();
+    press(&mut app, Btn::A);
+    assert_ne!(app.kid_menu.as_ref().unwrap().draft.approved, before);
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "parent-approved-games.png", app.kid_menu.as_ref().unwrap().screen_face());
+    }
+    press(&mut app, Btn::B);
+    assert!(app.kid_menu.as_ref().unwrap().lines().iter().any(|l| l.contains("Volume limit")));
+}

@@ -28,6 +28,7 @@ jobs:
     container: rust:1-bullseye
     env:
       SLOT_SILENT: '1'
+      SLOT_KID_UI_PREVIEW: /tmp/slot-parent-previews
     steps:
       - uses: actions/checkout@v7
 
@@ -45,6 +46,7 @@ jobs:
       - name: Run device regression checks
         run: |
           set -eu
+          mkdir -p "$SLOT_KID_UI_PREVIEW"
           cargo test -p slot --no-default-features --test kid_controls --test kid_policy --test parent_code --test button_code --test brand_motion --test loading_mark --test boot --test play --test resume --test fastforward --test levels --test card_log --test screenshot --test shot_loader --test shot_writer --test undo --test bootlogo --test flush --test delete --test audio --test core_options --test gb_palettes --lib --test refresh --test label_cache --test emu --test bindings --test left_stick --test card_repair --test evdev --test core --test eject --test recents --test clock --test show_titles --test in_game_menu --test favorites --test power --test cartridge_ticks --test power_click --test sfx --test sleep --test quick_menu --test wallpaper --test menu_repeat --test night_display --test link_ui --test link_screen --test link_art_builder --test core_picker --test sound_menu_style -- --test-threads=1
           cargo test -p slot-ui --lib --test kid_smiley --test favorite --test power_switch --test quick_menu --test toast --test shelf --test native_shelf --test chrome --test board --test shell_material --test shot_viewer --test polaroids --test hud --test sticker --test cart --test legend --test link_art
           cargo test -p slot-store --lib --tests
@@ -53,6 +55,12 @@ jobs:
           cargo test -p slot-power --lib --tests
           task test:card
           python3 card/test-bluetooth.py
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: parent-controls-previews
+          path: /tmp/slot-parent-previews/*.png
+          if-no-files-found: error
 
       - name: Check emulator source materials
         run: |

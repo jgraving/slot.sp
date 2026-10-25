@@ -9,6 +9,7 @@ use std::{path::PathBuf, time::Instant};
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
     Home,
+    Games,
     Unlock,
     Set,
     Confirm,
@@ -22,6 +23,9 @@ pub struct Menu {
     selected: usize,
     code: Vec<u8>,
     first: Vec<u8>,
+    games: Vec<slot_store::Cart>,
+    game_at: usize,
+    start_after_code: bool,
     status: String,
     pub visible: bool,
     pub face: Option<TexId>,
@@ -33,7 +37,7 @@ impl Menu {
         let page = if gate.enabled() || policy.active {
             Page::Unlock
         } else {
-            Page::Set
+            Page::Home
         };
         Self {
             root,
@@ -43,15 +47,27 @@ impl Menu {
             selected: 0,
             code: Vec::new(),
             first: Vec::new(),
+            games: Vec::new(),
+            game_at: 0,
+            start_after_code: false,
             status: if page == Page::Unlock {
                 "Recovery: Config/kids/parent-code.txt".into()
             } else {
-                "Use A/B/X/Y or the D-pad".into()
+                String::new()
             },
             visible: true,
             face: None,
             changed: None,
         }
+    }
+    pub fn set_games(&mut self, games: Vec<slot_store::Cart>) {
+        self.games = games;
+    }
+    pub fn entered_buttons(&self) -> &[u8] {
+        &self.code
+    }
+    pub fn entering_code(&self) -> bool {
+        matches!(self.page, Page::Set | Page::Confirm | Page::Unlock)
     }
     pub fn notice(root: PathBuf, policy: Policy, message: &str) -> Self {
         let mut menu = Self::new(root, policy);
@@ -65,8 +81,23 @@ impl Menu {
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home => "",
+            Page::Home | Page::Games => "",
         };
+        if self.page == Page::Games {
+            let mut lines = vec![String::new(), "Approved games · A toggles approval".into(), "COMPACT".into()];
+            if self.games.is_empty() {
+                lines.push("ROW No games on the content card".into());
+            }
+            let first = self.game_at.saturating_sub(2).min(self.games.len().saturating_sub(6));
+            for (i, cart) in self.games.iter().enumerate().skip(first).take(6) {
+                lines.push(format!("{} {} {} / {}",
+                    if i == self.game_at { "SELECTED" } else { "ROW" },
+                    if self.draft.allows(cart) { "+" } else { "−" },
+                    cart.platform.dir_name(), cart.stem));
+            }
+            lines.push("PARENT GAMES HINTS".into());
+            return lines;
+        }
         if self.page == Page::Home {
             let value = if self.draft.rule == Rule::Until {
                 format!(
@@ -93,7 +124,8 @@ impl Menu {
                     "Back to games"
                 }
                 .into(),
-                "Change parent code".into(),
+                if self.gate.enabled() { "Change parent code" } else { "Set parent code" }.into(),
+                "Approved games".into(),
             ];
             let status = if self.status.is_empty() {
                 format!(
@@ -124,7 +156,13 @@ impl Menu {
                 self.gate.remaining(Instant::now())
             )
         } else {
-            self.status.clone()
+            if self.entering_code() && self.status.is_empty() {
+                format!("{} of 4 buttons · A/B/X/Y or D-pad", self.code.len())
+            } else if self.entering_code() {
+                format!("{} · {} of 4 buttons", self.status, self.code.len())
+            } else {
+                self.status.clone()
+            }
         };
         vec![
             title.into(),
@@ -173,11 +211,35 @@ impl Menu {
             }
             return;
         }
+        if self.page == Page::Games {
+            match action {
+                Action::GbaDown(Btn::B) => self.page = Page::Home,
+                Action::GbaDown(Btn::Up) if !self.games.is_empty() => {
+                    self.game_at = (self.game_at + self.games.len() - 1) % self.games.len();
+                }
+                Action::GbaDown(Btn::Down) if !self.games.is_empty() => {
+                    self.game_at = (self.game_at + 1) % self.games.len();
+                }
+                Action::GbaDown(Btn::A) => {
+                    if let Some(cart) = self.games.get(self.game_at) {
+                        self.draft.toggle(cart);
+                    }
+                }
+                _ => {}
+            }
+            return;
+        }
         if self.page == Page::Home {
             match action {
-                Action::GbaDown(Btn::B) => self.visible = false,
-                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 5) % 6,
-                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 6,
+                Action::GbaDown(Btn::B) => {
+                    if self.draft.active {
+                        self.visible = false;
+                    } else {
+                        self.save(self.draft.clone());
+                    }
+                }
+                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 6) % 7,
+                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 7,
                 Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
                     let by = if action == Action::GbaDown(Btn::Left) {
                         -1
@@ -204,6 +266,12 @@ impl Menu {
                 Action::GbaDown(Btn::A) => match self.selected {
                     0 => self.draft.rule = self.draft.rule.next(1),
                     1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
+                    3 if !self.gate.enabled() => {
+                        self.start_after_code = true;
+                        self.page = Page::Set;
+                        self.status = "Use A/B/X/Y or the D-pad".into();
+                        self.code.clear();
+                    }
                     3 => {
                         let mut next = self.draft.clone();
                         match next.begin(wall) {
@@ -217,10 +285,12 @@ impl Menu {
                         self.save(next);
                     }
                     5 => {
+                        self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();
                         self.code.clear();
                     }
+                    6 => self.page = Page::Games,
                     _ => {}
                 },
                 _ => {}
@@ -261,7 +331,15 @@ impl Menu {
                         .is_ok()
                     {
                         self.page = Page::Home;
-                        self.status.clear();
+                        self.status = "Parent code saved".into();
+                        if self.start_after_code {
+                            let mut next = self.draft.clone();
+                            match next.begin(wall) {
+                                Ok(()) => self.save(next),
+                                Err(e) => self.status = e.to_string(),
+                            }
+                        }
+                        self.start_after_code = false;
                     } else {
                         self.status = "Could not save parent code".into();
                     }
