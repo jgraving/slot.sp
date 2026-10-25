@@ -103,6 +103,10 @@ impl Session {
         ring.mix(&samples);
     }
 
+    pub fn prepare_poweroff(&mut self) {
+        self.sink.shutdown();
+    }
+
     pub fn audio_queued(&self) -> usize {
         self.sink.ring().queued_frames()
     }
@@ -376,6 +380,10 @@ impl Session {
         }
 
         self.bridge_link(|app| app.update(dt));
+        // Open the lazy PCM during the slide, rather than spending the short
+        // click waking the DAC at the detent. Keep it awake through shutdown.
+        self.sink.ring().set_warm(self.app.powering_off() && self.software_volume() > 0);
+
         if let Some(output) = self
             .app
             .bluetooth

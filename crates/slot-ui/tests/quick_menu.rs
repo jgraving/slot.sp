@@ -91,6 +91,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Theme",
             "Recents",
             "Game Titles",
+            "Boot Animation",
             "Date & Time"
         ]
     );

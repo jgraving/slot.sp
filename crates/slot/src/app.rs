@@ -1229,6 +1229,7 @@ impl App {
             } else {
                 QuickValue::Hide
             }),
+            QuickRow::BootAnimation => Some(QuickValue::flag(self.state.boot_animation)),
             QuickRow::ShowTitles => Some(if self.state.show_titles {
                 QuickValue::Show
             } else {
@@ -1409,6 +1410,10 @@ impl App {
 
     pub fn wallpaper_files(&self) -> Vec<String> {
         self.root().map(crate::wallpaper::list).unwrap_or_default()
+    }
+
+    pub fn boot_animation_enabled(&self) -> bool {
+        self.state.boot_animation
     }
 
     pub fn wallpaper(&self) -> WallpaperPick {
@@ -3052,6 +3057,7 @@ impl App {
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::BootAnimation
             | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Resume
@@ -3184,6 +3190,11 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::BootAnimation {
+            self.state.boot_animation = !self.state.boot_animation;
+            self.persist();
+            return;
+        }
         if row == QuickRow::ShowTitles {
             self.state.show_titles = !self.state.show_titles;
             self.persist();
@@ -3249,6 +3260,7 @@ impl App {
             | QuickRow::Wallpaper
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::BootAnimation
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About

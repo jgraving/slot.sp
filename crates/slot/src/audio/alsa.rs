@@ -74,6 +74,7 @@ struct Alsa {
     writei: PcmWritei,
     recover: PcmRecover,
     drop: PcmDrop,
+    drain: PcmDrop,
     close: PcmClose,
     strerror: StrError,
     _lib: Library,
@@ -97,6 +98,7 @@ impl Alsa {
                 writei: get!("snd_pcm_writei"),
                 recover: get!("snd_pcm_recover"),
                 drop: get!("snd_pcm_drop"),
+                drain: get!("snd_pcm_drain"),
                 close: get!("snd_pcm_close"),
                 strerror: get!("snd_strerror"),
                 _lib: lib,
@@ -223,6 +225,12 @@ impl AudioSink for AlsaSink {
         }
     }
 
+    fn shutdown(&mut self) {
+        self.ring.set_warm(false);
+        self.ring.set_muted(true);
+        self.close();
+    }
+
     fn ring(&self) -> Arc<Ring> {
         self.ring.clone()
     }
@@ -272,7 +280,7 @@ impl Playback {
                 route_check = Instant::now();
             }
             ring.fill(&mut buf);
-            let hold = silence.hear(&buf, span);
+            let hold = silence.hear(&buf, span) || ring.warm();
             match (self.pcm, hold) {
                 (Some(_), false) => {
                     self.release();
@@ -304,6 +312,17 @@ impl Playback {
                 }
                 None => std::thread::sleep(pace.wait(Instant::now())),
             }
+        }
+        // Finish with actual zero PCM before closing the DAC. Abruptly dropping
+        // an active stream at process shutdown can truncate its last period.
+        if let Some(pcm) = self.pcm.take() {
+            buf.fill(0);
+            if self.write(pcm, &buf) {
+                unsafe { (self.alsa.drain)(pcm); }
+            } else {
+                unsafe { (self.alsa.drop)(pcm); }
+            }
+            unsafe { (self.alsa.close)(pcm); }
         }
     }
 

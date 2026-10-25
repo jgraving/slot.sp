@@ -153,3 +153,23 @@ fn the_title_hides_while_a_cart_goes_in() {
         "the title showed over a cart going in"
     );
 }
+
+#[test]
+fn boot_animation_can_be_disabled_in_general_and_survives_boot() {
+    let d = card();
+    let mut a = boot(d.path(), false);
+    tick(&mut a, 3.0);
+    assert!(a.boot_animation_enabled());
+    a.apply(Action::QuickMenu);
+    for _ in 0..QuickRow::General.position(&[]) { press(&mut a, Btn::Down); }
+    press(&mut a, Btn::A);
+    for _ in 0..QuickRow::BootAnimation.position(&a.hidden_rows()) { press(&mut a, Btn::Down); }
+    assert_eq!(a.quick_menu(), Some(QuickRow::BootAnimation));
+    assert_eq!(a.quick_value(QuickRow::BootAnimation), Some(QuickValue::On));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::BootAnimation), Some(QuickValue::Off));
+    assert!(!read_slot_state(d.path()).boot_animation);
+    assert!(!App::boot(d.path()).boot_animation_enabled());
+    press(&mut a, Btn::Left);
+    assert!(read_slot_state(d.path()).boot_animation);
+}

@@ -66,3 +66,22 @@ fn shutdown_click_reaches_the_output_before_poweroff_and_respects_mute() {
         assert_eq!(samples.iter().any(|v| *v != 0), !muted);
     }
 }
+
+#[test]
+fn output_warms_during_slide_before_click_and_is_muted_before_teardown() {
+    use slot::{audio::{AudioSink, StubSink}, session::Session};
+    let d = common::tmp_root_with_carts(&["Alpha"]);
+    common::clocked(d.path());
+    let mut sink = StubSink::new();
+    sink.open(48000).unwrap();
+    let ring = sink.ring();
+    let mut session = Session::boot_with(d.path().to_path_buf(), Box::new(sink));
+    assert!(!ring.warm());
+    session.app_mut().apply(Action::PowerHold);
+    session.update(0.010);
+    assert!(ring.warm());
+    assert!(!session.app().ready_to_power_off());
+    session.prepare_poweroff();
+    assert!(!ring.warm());
+    assert!(ring.muted());
+}
