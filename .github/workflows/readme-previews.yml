@@ -1,14 +1,14 @@
 name: Capture README previews
 on:
   push:
-    branches: [integrate-upstream-default-wallpaper]
+    branches: [integrate-upstream-calm-lava]
     paths: ['crates/**', 'assets/**', 'previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper' && github.actor != 'github-actions[bot]'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-calm-lava' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -19,10 +19,11 @@ jobs:
       - name: Install capture dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri python3-pil
+          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri python3-pil python3-fonttools python3-brotli
       - uses: dtolnay/rust-toolchain@1.96.0
       - name: Build capture tools
         run: |
+          cp previews/insertion_hero.rs crates/slot/examples/insertion_hero.rs
           cp previews/capture.rs crates/slot/examples/readme_capture.rs
           cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
           cp previews/link_capture.rs crates/slot/examples/link_capture.rs
@@ -31,7 +32,7 @@ jobs:
           cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder --test power --test power_click --test wallpaper --test quick_menu
           cargo test --locked -p slot-ui --test power_switch --test shell_material
           cargo test --locked -p slot-gfx --no-default-features --test lava
-          cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture --example lava_check
+          cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture --example lava_check --example insertion_hero
       - name: Record production compositor and encode opaque GIFs
         run: |
           mkdir -p /tmp/slot-readme/out
@@ -39,11 +40,14 @@ jobs:
           target/debug/examples/readme_fixture /tmp/slot-readme/card
           python3 previews/prepare_art.py /tmp/slot-readme/card
           target/debug/examples/readme_capture /tmp/slot-readme/card previews/readme.script /tmp/slot-readme/out
-          for clip in carousel core-picker link shutdown; do
+          python3 previews/make_hero_art.py /tmp/slot-readme/out
+          target/debug/examples/insertion_hero /tmp/slot-readme/card /tmp/slot-readme/out
+          for clip in carousel core-picker link shutdown hero-insertion; do
             mkdir -p "/tmp/slot-readme/$clip"
             ffmpeg -v error -y -i "/tmp/slot-readme/out/$clip.mp4" -vf fps=20 "/tmp/slot-readme/$clip/%04d.png"
             python3 tools/opaque_preview_gif.py "/tmp/slot-readme/$clip" "previews/readme-$clip.gif"
           done
+          mv previews/readme-hero-insertion.gif previews/hero-insertion.gif
       - uses: actions/upload-artifact@v4
         with:
           name: lava-preview
@@ -55,8 +59,10 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           cp /tmp/slot-readme/out/lava.mp4 previews/lava-gradient.mp4
           cp /tmp/slot-readme/out/lava.png previews/lava-gradient.png
-          git add previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
+          cp /tmp/slot-readme/out/hero-insertion.mp4 previews/hero-insertion.mp4
+          cp /tmp/slot-readme/out/hero-insertion.png previews/hero-insertion.png
+          git add previews/hero-insertion.gif previews/hero-insertion.mp4 previews/hero-insertion.png previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
             git commit -m "Capture slot.sp README animations"
-            git push origin HEAD:integrate-upstream-default-wallpaper
+            git push origin HEAD:integrate-upstream-calm-lava
           fi

@@ -25,7 +25,6 @@ fn main(){
  let star=slot_ui::star_face(3,[246,195,44]);let (sw,sh)=(star.w as f32,star.h as f32);let star=texture(&mut c,star);
  let [back,front]=slot_ui::shell_slot_faces(slot_store::ShellColour::Graphite);
  let back=c.create_texture(720,slot_ui::SLOT_H,back);let front=c.create_texture(720,slot_ui::SLOT_H,front);
- let ground=c.create_texture(720,480,slot_ui::default_background().unwrap());
  let logo=png(&mut c,&format!("{out}/hero-wordmark.png"));let light=png(&mut c,&format!("{out}/hero-light.png"));
  let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
  let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-insertion.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
@@ -35,7 +34,10 @@ fn main(){
   if frame==150 {clock.apply(Action::Eject);}
   clock.tick_ms(frame*1000/60);clock.update(1.0/60.0);
   let seat=clock.seat();seated|=seat>=0.999;trace.push(seat);
-  let mut draws=Vec::new();slot_ui::draw_ground(Canvas::FRAMED,Some((ground,720)),&mut draws);
+  // A short, eased excursion through the production wallpaper keeps this
+  // brief insertion loop calm and makes its endpoints exactly identical.
+  let drift=(1000.0 * (1.0-(std::f64::consts::TAU * frame as f64 / 269.0).cos())).round() as u64;
+  let mut draws=vec![Draw::Lava{w:720.,h:480.,phase:slot_gfx::lava_phase(drift)}];
   SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_star(Some((star,sw,sh)),&mut draws);
   draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:light,alpha:1.});
   draws.push(Draw::Tex{x:0.,y:8.,w:720.,h:96.,tex:logo,alpha:1.});
