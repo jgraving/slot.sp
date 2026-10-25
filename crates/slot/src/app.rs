@@ -5554,7 +5554,7 @@ impl App {
     }
 
     fn eject(&mut self) {
-        if self.single_cart() {
+        if self.single_cart() && !self.kids.active {
             return self.refuse();
         }
         self.shot_wanted = false;

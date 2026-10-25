@@ -625,3 +625,25 @@ fn parent_settings_apply_volume_immediately_and_use_transparent_menu_artwork() {
     assert!(app.kid_mode());
     assert_eq!(app.kid_volume_limit(), 40);
 }
+
+#[test]
+fn kid_can_exit_when_only_one_game_is_approved() {
+    let d = card();
+    let mut policy = Policy::read(d.path()).unwrap();
+    policy.approved = vec![(Platform::Gba, "Approved".into())];
+    policy.save(d.path()).unwrap();
+    let mut app = App::boot(d.path());
+    assert_eq!(app.carts().count(), 1);
+    app.apply(Action::Insert);
+    app.set_snapshot(common::StubSnapshot::boxed());
+    app.on_core_ready();
+    for _ in 0..120 { app.update(1.0 / 60.0); }
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    app.apply(Action::QuickMenu);
+    for _ in 0..3 { press(&mut app, Btn::Down); }
+    press(&mut app, Btn::A);
+    assert!(matches!(app.phase(), Phase::Ejecting { .. }));
+    for _ in 0..120 { app.update(1.0 / 60.0); }
+    assert!(matches!(app.phase(), Phase::Shelf));
+    assert!(app.kid_mode());
+}
