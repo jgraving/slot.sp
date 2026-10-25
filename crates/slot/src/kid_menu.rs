@@ -371,16 +371,19 @@ impl Menu {
     }
 }
 fn blit(dst: &mut UndoFace, src: &UndoFace, left: u32, top: u32) {
-    for y in 0..src.h {
-        for x in 0..src.w {
+    for y in 0..src.h.min(dst.h.saturating_sub(top)) {
+        for x in 0..src.w.min(dst.w.saturating_sub(left)) {
             let s = ((y * src.w + x) * 4) as usize;
             let d = (((y + top) * dst.w + x + left) * 4) as usize;
-            let alpha = u32::from(src.rgba[s + 3]);
+            let a = u32::from(src.rgba[s + 3]);
+            let behind = u32::from(dst.rgba[d + 3]) * (255 - a) / 255;
+            let alpha = a + behind;
+            if alpha == 0 { continue; }
             for c in 0..3 {
-                dst.rgba[d + c] = ((u32::from(src.rgba[s + c]) * alpha
-                    + u32::from(dst.rgba[d + c]) * (255 - alpha))
-                    / 255) as u8;
+                dst.rgba[d + c] = ((u32::from(src.rgba[s + c]) * a
+                    + u32::from(dst.rgba[d + c]) * behind) / alpha) as u8;
             }
+            dst.rgba[d + 3] = alpha as u8;
         }
     }
 }

@@ -439,6 +439,13 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
         assert_eq!(menu.entered_buttons().len(), i + 1);
         assert!(menu.lines()[1].contains(&format!("{} of 4", i + 1)));
         assert_ne!(menu.screen_face().rgba, empty);
+        let face = menu.screen_face();
+        let x0 = (face.w - 320) / 2 + i as u32 * 80;
+        let visible = (208..272).any(|y| (x0..x0 + 80).any(|x| {
+            let at = ((y * face.w + x) * 4) as usize;
+            face.rgba[at + 3] > 0 && face.rgba[at..at + 3].iter().any(|c| *c > 150)
+        }));
+        assert!(visible, "entered button slot {i} is transparent or invisible");
         preview_menu(&s, &format!("parent-code-{}.png", i + 1));
     }
     raw_tap(&mut s, &mut time, Btn::Start);
