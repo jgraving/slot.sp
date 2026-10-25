@@ -530,7 +530,8 @@ impl Frontend {
         self.boot_intro_requested = true;
         // Avoid decoding/uploading the atlas when motion is disabled, input has
         // already dismissed the intro, or a game is resuming automatically.
-        if self.boot_intro_cancelled
+        if !self.session.app().boot_animation_enabled()
+            || self.boot_intro_cancelled
             || self.session.app().wallpaper() == slot_store::WallpaperPick::Static
             || !matches!(self.session.app().phase(), crate::app::Phase::Shelf)
         {
@@ -930,6 +931,7 @@ impl Frontend {
     }
 
     pub fn poweroff(&mut self) {
+        self.session.prepare_poweroff();
         self.session.app_mut().poweroff();
     }
 

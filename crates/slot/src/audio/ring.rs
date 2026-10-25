@@ -32,6 +32,7 @@ pub struct Ring {
     underruns: AtomicU64,
     consuming: AtomicBool,
     priming: AtomicBool,
+    warm: AtomicBool,
 }
 
 impl Ring {
@@ -56,6 +57,7 @@ impl Ring {
             underruns: AtomicU64::new(0),
             consuming: AtomicBool::new(true),
             priming: AtomicBool::new(false),
+            warm: AtomicBool::new(false),
         }
     }
 
@@ -158,6 +160,14 @@ impl Ring {
         if self.muted() {
             out.fill(0);
         }
+    }
+
+    pub fn set_warm(&self, warm: bool) {
+        self.warm.store(warm, Ordering::Relaxed);
+    }
+
+    pub fn warm(&self) -> bool {
+        self.warm.load(Ordering::Relaxed)
     }
 
     pub fn queued_frames(&self) -> usize {
