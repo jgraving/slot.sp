@@ -3682,8 +3682,8 @@ impl App {
                     && self.click_at.is_none_or(|at| now.saturating_sub(at) >= 35)
                     && self.sfx.is_none()
                 {
-                    self.click_variant = self.click_variant.wrapping_add(1);
-                    self.sfx = Some(Sfx::Cartridge(self.click_variant % 5));
+                    self.click_variant = (self.click_variant + 1) % 5;
+                    self.sfx = Some(Sfx::Cartridge(self.click_variant));
                     self.click_at = Some(now);
                 }
                 None
