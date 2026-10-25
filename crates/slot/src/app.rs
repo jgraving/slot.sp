@@ -361,6 +361,8 @@ pub struct App {
     orphaned: Vec<TexId>,
     play_held: Option<Millis>,
     favorite_removal: Option<FavoriteRemoval>,
+    kid_removal: Option<FavoriteRemoval>,
+    kid_remove_face: Option<(TexId, u32, u32)>,
     favorite_departure: Option<Millis>,
     favorite_remove_face: Option<(TexId, u32, u32)>,
     held_dir: Option<(Btn, Millis, usize)>,
@@ -595,6 +597,8 @@ impl App {
             orphaned: Vec::new(),
             play_held: None,
             favorite_removal: None,
+            kid_removal: None,
+            kid_remove_face: None,
             favorite_departure: None,
             favorite_remove_face: None,
             held_dir: None,
@@ -4673,6 +4677,7 @@ impl App {
                     }
                 }
                 self.draw_favorite_removal(out);
+                self.draw_kid_removal(out);
             }
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);

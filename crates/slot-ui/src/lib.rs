@@ -18,7 +18,7 @@ mod favorite;
 mod favorite_remove;
 mod footer;
 pub use favorite::{draw_star, draw_kid};
-pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, FAVORITE_REMOVE_MS};
+pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
 mod icon;
 mod link_art;

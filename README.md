@@ -42,7 +42,7 @@ Game Boy · Game Boy Color · Game Boy Advance
 Kid mode keeps the familiar **Recents, Favorites and system carousels**, showing only games you approve. There is no extra Kids shelf, and your own Favorites and Recents stay intact.
 
 1. Open **Menu → Kid Mode**. On first use, this opens the settings screen so you can configure everything before setting a code.
-2. Open **Approved games** and press **A** to toggle each game. Approved cartridges show a **gold smiley in the top-left corner**. With kid mode off, X on a cartridge also toggles approval, without a permanent carousel hint.
+2. Open **Approved games** and press **A** to toggle each game. Approved cartridges show a **gold smiley in the top-left corner**. With kid mode off, X on a cartridge also toggles approval, without a permanent carousel hint. Removing approval requires a second press after releasing the button, just like removing a Favorite; moving away or waiting cancels it.
 3. Choose **Daily allowance**, **Play for** or **Play until**, then adjust the time and volume limit.
 4. Select **Start kid mode**. If you have not set a parent code, enter four buttons using **A/B/X/Y or the D-pad**, press **Start**, and enter the same code again to confirm. Each press fills a slot with the actual button artwork and updates the entry count. **Select** deletes the last button; **Menu** cancels. You can also choose **Set parent code** separately from settings.
 

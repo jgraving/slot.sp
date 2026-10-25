@@ -819,6 +819,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                     "PARENT CODE HINTS" => 1,
                     "PARENT NOTICE HINTS" => 2,
                     "PARENT GAMES HINTS" => 3,
+                    "PARENT REMOVE HINTS" => 4,
                     _ => 0,
                 };
                 let hints = slot_ui::parent_button_legends(page, footer_ink);

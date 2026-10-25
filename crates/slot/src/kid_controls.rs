@@ -60,6 +60,13 @@ impl App {
     }
 
     pub(super) fn kid_input(&mut self, action: Action) -> bool {
+        match action {
+            Action::GbaUp(Btn::X) => {
+                if let Some(pending) = &mut self.kid_removal { pending.released = true; }
+            }
+            Action::GbaDown(Btn::X) | Action::GbaUp(_) => {}
+            _ => self.kid_removal = None,
+        }
         if matches!(
             action,
             Action::LidClose
@@ -177,17 +184,53 @@ impl App {
         let Some(root) = self.root.as_ref() else {
             return;
         };
-        let Some(cart) = self.shelf().carts.get(self.shelf().index) else {
+        let Some(cart) = self.shelf().carts.get(self.shelf().index).cloned() else {
             return;
         };
+        if self.kids.allows(&cart) {
+            if self.kid_removal_pending() {
+                if !self.kid_removal.as_ref().is_some_and(|p| p.released) { return; }
+            } else {
+                self.kid_removal = Some(FavoriteRemoval {
+                    platform: cart.platform, stem: cart.stem.clone(), shelf: self.shelf_at,
+                    since: self.now(), released: false,
+                });
+                return;
+            }
+        }
+        self.kid_removal = None;
         let mut next = self.kids.clone();
-        next.toggle(cart);
+        next.toggle(&cart);
         if next.save(root).is_err() {
             self.hud.toast(Toast::CardUnwritable, self.now());
             return;
         }
         self.kids = next;
         self.mark_kid_approved();
+    }
+
+    pub fn kid_removal_pending(&self) -> bool {
+        self.kid_removal.as_ref().is_some_and(|p| {
+            !self.kids.active && self.kid_menu.is_none()
+                && matches!(self.phase, Phase::Shelf) && self.core_picker.is_none()
+                && p.shelf == self.shelf_at
+                && self.now().saturating_sub(p.since) < slot_ui::FAVORITE_REMOVE_MS
+                && self.shelf().carts.get(self.shelf().index)
+                    .is_some_and(|c| c.platform == p.platform && c.stem == p.stem)
+        })
+    }
+    pub fn set_kid_remove_face(&mut self, tex: TexId, w: u32, h: u32) {
+        self.kid_remove_face = Some((tex, w, h));
+    }
+    pub(super) fn draw_kid_removal(&self, out: &mut Vec<Draw>) {
+        if !self.kid_removal_pending() { return; }
+        let (Some(pending), Some(face)) = (&self.kid_removal, self.kid_remove_face) else { return; };
+        let (cw, ch) = slot_ui::cart_box(pending.platform);
+        let (x, scale) = self.shelf().selected_at(self.canvas());
+        let (w, h) = (cw as f32 * scale, ch as f32 * scale);
+        let body = slot_ui::Placed { x, y: slot_ui::foot_y(ch as f32) - h, w, h };
+        slot_ui::draw_favorite_remove(self.canvas(), body, face,
+            self.now().saturating_sub(pending.since), out);
     }
 
     pub(super) fn kid_can_launch(&mut self) -> bool {

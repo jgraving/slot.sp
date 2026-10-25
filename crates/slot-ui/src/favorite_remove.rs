@@ -7,7 +7,15 @@ pub const FAVORITE_REMOVE_MS: u64 = 3000;
 
 /// Upstream's sculpted Y key, paired with a quiet floating label. Raster at 2x.
 pub fn favorite_remove_face() -> CartFace {
-    let (button, bw, bh) = button_legend(ButtonLegend::Y);
+    removal_face(ButtonLegend::Y)
+}
+
+pub fn kid_remove_face() -> CartFace {
+    removal_face(ButtonLegend::X)
+}
+
+fn removal_face(key: ButtonLegend) -> CartFace {
+    let (button, bw, bh) = button_legend(key);
     let font = text::label_font().expect("bundled label font");
     let layout = text::fit(font, "Again to remove", 400.0, 1, 32.0, 32.0);
     let tw = text::line_width(font, &layout.lines[0], layout.px, layout.tracking).ceil() as u32;

@@ -1084,6 +1084,10 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
             with_hint(button_face(ButtonLegend::B), "Games", hint, true),
             with_hint(button_face(ButtonLegend::A), "Parents", hint, false),
         ],
+        4 => vec![
+            with_hint(button_face(ButtonLegend::B), "Cancel", hint, true),
+            with_hint(button_face(ButtonLegend::A), "Again to remove", hint, false),
+        ],
         3 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
             with_hint(button_face(ButtonLegend::A), "Approve", hint, false),

@@ -307,6 +307,9 @@ impl Frontend {
         self.session
             .app_mut()
             .set_favorite_remove_face(tex, removal.w, removal.h);
+        let removal = slot_ui::kid_remove_face();
+        let tex = compositor.create_texture(removal.w, removal.h, &removal.rgba);
+        self.session.app_mut().set_kid_remove_face(tex, removal.w, removal.h);
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture(star.w, star.h, &star.rgba);
         self.session.app_mut().set_star_face(id, star.w, star.h);

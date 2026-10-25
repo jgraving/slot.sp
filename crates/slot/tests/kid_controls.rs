@@ -263,6 +263,10 @@ fn approval_marking_is_persisted_but_unavailable_to_children() {
     let mut app = App::boot(d.path());
     let before = Policy::read(d.path()).unwrap().approved;
     press(&mut app, Btn::X);
+    if app.kid_removal_pending() {
+        assert_eq!(Policy::read(d.path()).unwrap().approved, before);
+        press(&mut app, Btn::X);
+    }
     let after = Policy::read(d.path()).unwrap().approved;
     assert_ne!(before, after);
     let mut policy = Policy::read(d.path()).unwrap();
@@ -502,10 +506,55 @@ fn approvals_can_be_edited_from_parent_settings() {
     press(&mut app, Btn::A);
     let before = app.kid_menu.as_ref().unwrap().draft.approved.clone();
     press(&mut app, Btn::A);
+    if app.kid_menu.as_ref().unwrap().draft.approved == before {
+        assert!(app.kid_menu.as_ref().unwrap().lines()[1].contains("again"));
+        if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+            write_preview(&dir, "parent-remove-confirm.png", app.kid_menu.as_ref().unwrap().screen_face());
+        }
+        press(&mut app, Btn::A);
+    }
     assert_ne!(app.kid_menu.as_ref().unwrap().draft.approved, before);
     if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
         write_preview(&dir, "parent-approved-games.png", app.kid_menu.as_ref().unwrap().screen_face());
     }
     press(&mut app, Btn::B);
     assert!(app.kid_menu.as_ref().unwrap().lines().iter().any(|l| l.contains("Volume limit")));
+}
+
+#[test]
+fn approval_removal_requires_release_and_a_second_press_and_cancels_on_navigation() {
+    let d = card();
+    let mut policy = Policy::read(d.path()).unwrap();
+    policy.leave();
+    policy.approved.push((Platform::Gba, "Blocked".into()));
+    policy.save(d.path()).unwrap();
+    let mut app = App::boot(d.path());
+    let before = Policy::read(d.path()).unwrap().approved;
+    for _ in 0..10 { app.apply(Action::GbaDown(Btn::X)); }
+    assert!(app.kid_removal_pending());
+    assert_eq!(Policy::read(d.path()).unwrap().approved, before);
+    app.apply(Action::GbaUp(Btn::X));
+    app.apply(Action::ShelfRight);
+    assert!(!app.kid_removal_pending());
+    assert_eq!(Policy::read(d.path()).unwrap().approved, before);
+}
+
+#[test]
+fn approval_removal_timeout_keeps_the_game_and_restarts_confirmation() {
+    let d = card();
+    let mut policy = Policy::read(d.path()).unwrap();
+    policy.leave();
+    policy.approved.push((Platform::Gba, "Blocked".into()));
+    policy.save(d.path()).unwrap();
+    let mut app = App::boot(d.path());
+    let before = Policy::read(d.path()).unwrap().approved;
+    press(&mut app, Btn::X);
+    assert!(app.kid_removal_pending());
+    app.update(3.1);
+    assert!(!app.kid_removal_pending());
+    press(&mut app, Btn::X);
+    assert!(app.kid_removal_pending());
+    assert_eq!(Policy::read(d.path()).unwrap().approved, before);
+    press(&mut app, Btn::X);
+    assert_eq!(Policy::read(d.path()).unwrap().approved.len(), before.len() - 1);
 }

@@ -25,6 +25,7 @@ pub struct Menu {
     first: Vec<u8>,
     games: Vec<slot_store::Cart>,
     game_at: usize,
+    game_removal: Option<(usize, Instant, bool)>,
     start_after_code: bool,
     status: String,
     pub visible: bool,
@@ -49,6 +50,7 @@ impl Menu {
             first: Vec::new(),
             games: Vec::new(),
             game_at: 0,
+            game_removal: None,
             start_after_code: false,
             status: if page == Page::Unlock {
                 "Recovery: Config/kids/parent-code.txt".into()
@@ -84,7 +86,11 @@ impl Menu {
             Page::Home | Page::Games => "",
         };
         if self.page == Page::Games {
-            let mut lines = vec![String::new(), "Approved games · A toggles approval".into(), "COMPACT".into()];
+            let confirming = self.game_removal.is_some_and(|(at, since, _)|
+                at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));
+            let mut lines = vec![String::new(), if confirming {
+                "Press A again to remove approval".into()
+            } else { "Approved games · A toggles approval".into() }, "COMPACT".into()];
             if self.games.is_empty() {
                 lines.push("ROW No games on the content card".into());
             }
@@ -95,7 +101,7 @@ impl Menu {
                     if self.draft.allows(cart) { "+" } else { "−" },
                     cart.platform.dir_name(), cart.stem));
             }
-            lines.push("PARENT GAMES HINTS".into());
+            lines.push(if confirming { "PARENT REMOVE HINTS" } else { "PARENT GAMES HINTS" }.into());
             return lines;
         }
         if self.page == Page::Home {
@@ -212,6 +218,17 @@ impl Menu {
             return;
         }
         if self.page == Page::Games {
+            if self.game_removal.is_some_and(|(_, since, _)|
+                since.elapsed().as_millis() >= u128::from(slot_ui::FAVORITE_REMOVE_MS)) {
+                self.game_removal = None;
+            }
+            match action {
+                Action::GbaUp(Btn::A) => {
+                    if let Some((_, _, released)) = &mut self.game_removal { *released = true; }
+                }
+                Action::GbaDown(Btn::A) | Action::GbaUp(_) => {}
+                _ => self.game_removal = None,
+            }
             match action {
                 Action::GbaDown(Btn::B) => self.page = Page::Home,
                 Action::GbaDown(Btn::Up) if !self.games.is_empty() => {
@@ -222,6 +239,17 @@ impl Menu {
                 }
                 Action::GbaDown(Btn::A) => {
                     if let Some(cart) = self.games.get(self.game_at) {
+                        if self.draft.allows(cart) {
+                            match self.game_removal {
+                                Some((at, _, true)) if at == self.game_at => {}
+                                Some((at, _, false)) if at == self.game_at => return,
+                                _ => {
+                                    self.game_removal = Some((self.game_at, Instant::now(), false));
+                                    return;
+                                }
+                            }
+                        }
+                        self.game_removal = None;
                         self.draft.toggle(cart);
                     }
                 }
