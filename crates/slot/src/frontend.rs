@@ -70,6 +70,7 @@ pub struct Frontend {
     link_shot_size: (u32, u32),
     link_shot_shown: bool,
     boot_intro_cancelled: bool,
+    boot_intro_requested: bool,
     boot_intro: Option<(crate::brand_motion::BrandMotion, Option<Instant>)>,
 }
 
@@ -216,6 +217,7 @@ impl Frontend {
             link_shot_shown: false,
             boot_intro: None,
             boot_intro_cancelled: false,
+            boot_intro_requested: false,
         }
     }
 
@@ -522,9 +524,19 @@ impl Frontend {
     }
 
     pub fn enable_boot_intro(&mut self, compositor: &mut Compositor) {
-        if self.session.app().wallpaper() != slot_store::WallpaperPick::Static {
-            self.boot_intro = crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
+        if self.boot_intro_requested {
+            return;
         }
+        self.boot_intro_requested = true;
+        // Avoid decoding/uploading the atlas when motion is disabled, input has
+        // already dismissed the intro, or a game is resuming automatically.
+        if self.boot_intro_cancelled
+            || self.session.app().wallpaper() == slot_store::WallpaperPick::Static
+            || !matches!(self.session.app().phase(), crate::app::Phase::Shelf)
+        {
+            return;
+        }
+        self.boot_intro = crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
     }
 
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {

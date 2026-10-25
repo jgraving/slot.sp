@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="previews/hero-insertion.gif" width="480" alt="slot.sp — a translucent Emerald cartridge sliding into the SP slot">
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="previews/hero-static.svg">
+  <img src="previews/hero-insertion.gif" width="480" height="320" alt="slot.sp — a cartridge seats, then its glass cartridge-and-slot symbol and wordmark resolve into place">
+</picture>
 
 **Your Game Boy shelf, made for the SP.**
 
