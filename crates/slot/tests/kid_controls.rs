@@ -897,3 +897,32 @@ fn bedtime_editor_wraps_at_midnight_in_one_minute_steps() {
     tap(&mut menu, Btn::Right);
     assert_eq!(menu.draft.bedtime, 59);
 }
+
+#[test]
+fn holding_time_arrows_repeats_and_stops_on_release_sleep_and_long_frames() {
+    let d = card();
+    let mut app = App::boot(d.path());
+    app.apply(Action::QuickMenu);
+    unlock(&mut app);
+    for _ in 0..2 { press(&mut app, Btn::Down); }
+    app.apply(Action::GbaDown(Btn::Right));
+    assert_eq!(app.kids.minutes, 6);
+    for _ in 0..20 { app.update(0.05); }
+    assert!(app.kids.minutes >= 12 && app.kids.minutes <= 15);
+    app.apply(Action::GbaUp(Btn::Right));
+    let stopped = app.kids.minutes;
+    for _ in 0..20 { app.update(0.05); }
+    assert_eq!(app.kids.minutes, stopped);
+    app.apply(Action::GbaDown(Btn::Right));
+    let before_stall = app.kids.minutes;
+    app.update(2.0);
+    for _ in 0..20 { app.update(0.05); }
+    assert_eq!(app.kids.minutes, before_stall);
+    app.apply(Action::GbaUp(Btn::Right));
+    app.apply(Action::GbaDown(Btn::Right));
+    let before_sleep = app.kids.minutes;
+    app.apply(Action::LidClose);
+    app.apply(Action::LidOpen);
+    for _ in 0..20 { app.update(0.05); }
+    assert_eq!(app.kids.minutes, before_sleep);
+}

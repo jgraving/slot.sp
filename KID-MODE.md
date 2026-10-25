@@ -40,7 +40,7 @@ On the carousel, the kid menu offers **Games**, Volume, Brightness and Parent co
 | **Play limit → Daily** | Counts active gameplay against an allowance for the day. Pauses and sleep do not use that allowance. Usage is kept across restarts and renews on the next calendar day. |
 | **Play limit → Duration** | Starts a timed session when enabled or when its time settings change. Sleep and reboot do not extend the deadline. |
 | **Play limit → Bedtime** | Allows play until the chosen time today. |
-| **Time** | Daily/Duration: 5 minutes to 4 hours, shown as hours and minutes. Left/right changes one minute. Press A to adjust Hours and Minutes separately. Bedtime uses the same controls with a 24-hour clock. |
+| **Time** | Daily/Duration: 5 minutes to 4 hours, shown as hours and minutes. Tap left/right to change one minute, or hold to keep adjusting. Press A to adjust Hours and Minutes separately. Bedtime uses the same controls with a 24-hour clock. |
 | **Volume limit** | 10–80%, in ten-point steps. Starts at 50% and applies across audio outputs while kid mode is on. |
 
 Settings save as you change them. Changing the volume cap does not restart the session timer. Normal parent adjustments keep an approved game paused in place, ready to resume.

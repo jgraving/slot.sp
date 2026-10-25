@@ -27,6 +27,7 @@ pub struct Menu {
     first: Vec<u8>,
     time_selected: usize,
     rejected: Option<f32>,
+    repeat: Option<(Btn, f32)>,
     start_after_code: bool,
     status: String,
     pub visible: bool,
@@ -56,6 +57,7 @@ impl Menu {
             first: Vec::new(),
             time_selected: 0,
             rejected: None,
+            repeat: None,
             start_after_code: false,
             status: if page == Page::Unlock {
                 "Recovery: Config/kids/parent-code.txt".into()
@@ -283,7 +285,8 @@ impl Menu {
         let u = (elapsed / 0.36).clamp(0.0, 1.0);
         ((u * std::f32::consts::TAU * 3.0).sin() * 10.0 * (1.0 - u)).round() as i32
     }
-    pub fn update(&mut self, dt: f32) {
+    pub fn stop_repeat(&mut self) { self.repeat = None; }
+    pub fn update(&mut self, dt: f32) -> Option<Action> {
         if let Some(elapsed) = &mut self.rejected {
             *elapsed += dt.max(0.0);
             if *elapsed >= 0.36 {
@@ -292,6 +295,15 @@ impl Menu {
             }
             self.face = None;
         }
+        if dt > 0.25 { self.stop_repeat(); }
+        if let Some((button, wait)) = &mut self.repeat {
+            *wait -= dt.max(0.0);
+            if *wait <= 0.0 {
+                *wait = 0.08;
+                return Some(Action::GbaDown(*button));
+            }
+        }
+        None
     }
     fn clear_code(&mut self) { self.code.fill(0); self.code.clear(); }
     fn complete_code(&mut self, wall: i64) {
@@ -385,6 +397,15 @@ impl Menu {
     }
     pub fn input(&mut self, action: Action, wall: i64) {
         self.face = None;
+        match action {
+            Action::GbaDown(button @ (Btn::Left | Btn::Right))
+                if self.page == Page::Time || (self.page == Page::Home && self.selected == 2) => {
+                if self.repeat.is_none_or(|(held, _)| held != button) { self.repeat = Some((button, 0.4)); }
+            }
+            Action::GbaUp(button) if self.repeat.is_some_and(|(held, _)| held == button) => self.stop_repeat(),
+            Action::GbaDown(_) | Action::QuickMenu => self.stop_repeat(),
+            _ => {}
+        }
         if action == Action::QuickMenu {
             self.visible = false;
             return;

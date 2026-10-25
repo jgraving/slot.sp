@@ -3726,7 +3726,8 @@ impl App {
 
     pub fn update(&mut self, dt: f32) {
         self.clock += dt as f64 * 1000.0;
-        if let Some(menu) = &mut self.kid_menu { menu.update(dt); }
+        let repeated = self.kid_menu.as_mut().and_then(|menu| menu.update(dt));
+        if let Some(action) = repeated { self.kid_input(action); }
         if self.favorite_removal.is_some() && !self.favorite_removal_pending() {
             self.favorite_removal = None;
         }
