@@ -153,11 +153,11 @@ void main() {
                   + vec3(0.49, 0.20, 0.77) * (b.x + d.x)
                   + vec3(0.85, 0.20, 0.40) * c.x
                   + vec3(0.94, 0.48, 0.18) * f.x) / max(field.x, 0.001);
-        float body = smoothstep(0.48, 1.16, field.x);
+        float body = smoothstep(0.58, 0.88, field.x);
         vec3 normal = normalize(vec3(-field.yz * 0.045, 1.0));
         float diffuse = max(dot(normal, vec3(-0.45, -0.55, 0.704)), 0.0);
         float sheen = diffuse * diffuse; sheen *= sheen;
-        vec3 liquid = dye * (0.18 + 0.36 * diffuse) + vec3(0.14, 0.16, 0.19) * sheen;
+        vec3 liquid = dye * (0.22 + 0.48 * diffuse) + vec3(0.08, 0.10, 0.13) * sheen;
         vec3 glow = dye * min(field.x, 1.8) * 0.075;
         vec3 base = vec3(14.0, 21.0, 35.0) / 255.0;
         float grain = fract(dot(floor(v_uv * vec2(720.0, 480.0)), vec2(0.75487766, 0.56984029))) - 0.5;
