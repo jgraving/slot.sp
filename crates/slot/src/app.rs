@@ -3001,6 +3001,7 @@ impl App {
     }
 
     fn open_in_game_row(&mut self, row: QuickRow) {
+        if row.toggle() { return self.change_setting(row, true); }
         match row {
             QuickRow::Resume => self.in_game_menu = None,
             QuickRow::UndoSave | QuickRow::UndoLoad => {
@@ -3058,6 +3059,7 @@ impl App {
     }
 
     fn open_quick_row(&mut self, row: QuickRow) {
+        if row.toggle() { return self.change_setting(row, true); }
         match row {
             QuickRow::SleepNow => {
                 self.doze();
@@ -3724,6 +3726,7 @@ impl App {
 
     pub fn update(&mut self, dt: f32) {
         self.clock += dt as f64 * 1000.0;
+        if let Some(menu) = &mut self.kid_menu { menu.update(dt); }
         if self.favorite_removal.is_some() && !self.favorite_removal_pending() {
             self.favorite_removal = None;
         }

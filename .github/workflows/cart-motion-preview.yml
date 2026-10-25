@@ -1,7 +1,7 @@
 name: Capture cartridge motion
 on:
   push:
-    branches: [integrate-upstream-kid-time-warnings]
+    branches: [integrate-upstream-kid-time-warnings, integrate-upstream-parent-controls]
     paths: ['crates/**', 'assets/**', 'previews/cart_motion.rs', '.github/workflows/cart-motion-preview.yml']
   workflow_dispatch:
 permissions:
@@ -27,7 +27,9 @@ jobs:
           cp previews/fixture.rs crates/slot/examples/motion_fixture.rs
           cargo build --locked -p slot --no-default-features --example cart_motion --example motion_fixture
       - name: Check cartridge interaction and sound
-        run: cargo test --locked -p slot --no-default-features --test app --test eject --test sfx -- --test-threads=1
+        run: cargo test --locked -p slot --no-default-features --lib --test app --test eject --test sfx --test kid_controls --test parent_code --test button_code --test quick_menu --test in_game_menu --test sound_menu_style -- --test-threads=1
+      - name: Check switches and menu graphics
+        run: cargo test --locked -p slot-ui --test toggle --test quick_menu
       - name: Record motion and contact sounds
         run: |
           mkdir -p /tmp/slot-motion/out

@@ -450,6 +450,7 @@ impl Frontend {
             .into_iter()
             .map(|v| v.map(&mut up))
             .collect();
+        let toggles = faces.quick_toggles.map(|pair| pair.map(&mut up));
         let carets = faces.quick_carets.map(&mut up);
         let descriptions = faces.descriptions.map(&mut up);
         let mut pack_legend = |faces: [UndoFace; 8]| {
@@ -499,6 +500,7 @@ impl Frontend {
             labels,
             pointer,
             values,
+            toggles,
             carets,
             legend,
             legend_light,
@@ -991,6 +993,7 @@ struct UiFaces {
     quick_labels: Vec<[UndoFace; 2]>,
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
+    quick_toggles: [[UndoFace; 2]; 2],
     quick_carets: [UndoFace; 2],
     quick_legend: [UndoFace; 8],
     quick_legend_light: [UndoFace; 8],
@@ -1045,6 +1048,7 @@ impl UiFaces {
                 .iter()
                 .map(|v| [false, true].map(|lit| quick_value_face(v.text(), lit)))
                 .collect(),
+            quick_toggles: [false, true].map(|on| [false, true].map(|lit| slot_ui::toggle_face(on, lit))),
             quick_carets: [false, true].map(quick_caret_face),
             quick_legend: quick_legend_faces(footer_ink(false)),
             quick_legend_light: quick_legend_faces(footer_ink(true)),

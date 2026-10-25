@@ -40,6 +40,8 @@ mod slot_chrome;
 mod sticker;
 pub mod text;
 mod toast;
+mod toggle;
+pub use toggle::toggle_face;
 
 pub use art::decode as decode_png;
 pub use backdrop::{

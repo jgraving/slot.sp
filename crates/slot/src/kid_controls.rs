@@ -55,7 +55,6 @@ impl App {
         self.held_dir = None;
         self.shelf_mut().release_hold();
         let mut menu = crate::kid_menu::Menu::new(root, self.kids.clone());
-        menu.set_games(self.catalog.clone());
         menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
         self.kid_menu = Some(menu);
     }
@@ -128,7 +127,6 @@ impl App {
                     let mut menu = crate::kid_menu::Menu::child(root, self.kids.clone(),
                         matches!(self.phase, Phase::Playing { .. }), self.volume(),
                         (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
-                    menu.set_games(self.catalog.clone());
                     menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
                     self.kid_menu = Some(menu);
                 }
@@ -341,7 +339,6 @@ impl App {
             if self.kid_error { "Ask a parent to check the settings" }
             else { "Ask a parent for more play time" },
         );
-        menu.set_games(self.catalog.clone());
         self.kid_menu = Some(menu);
     }
 

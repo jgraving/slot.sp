@@ -113,7 +113,7 @@ impl Gate {
             .collect::<Vec<_>>()
             .join(" ");
         let text = format!(
-            "Parent button code: {sequence}\n\nEnter these four buttons on the Parent code screen, then press START.\nSELECT deletes the last button; MENU cancels.\n"
+            "Parent button code: {sequence}\n\nEnter these four buttons on the Parent code screen. The fourth button checks the code automatically.\nSELECT deletes the last button; MENU cancels.\n"
         );
         let mut committed = false;
         let result = (|| {

@@ -584,6 +584,7 @@ fn long_pages_scroll_six_rows_with_the_selection_and_keep_clear_of_status_and_hi
             .collect(),
         pointer: (id(1000), 32, 48),
         values: vec![],
+        toggles: [[(id(1005), 116, 40); 2]; 2],
         carets: [(id(1001), 20, 40), (id(1002), 20, 40)],
         legend: [(id(1003), 80); 8],
         legend_light: [(id(1003), 80); 8],
