@@ -259,7 +259,7 @@ fn detail_h(toast: Toast) -> u32 {
 }
 
 pub fn toast_face(toast: Toast) -> CartFace {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Detail) else {
         return CartFace {
             rgba: Vec::new(),
             w: 0,
@@ -323,7 +323,7 @@ mod tests {
     use super::*;
 
     fn ink_width(toast: Toast) -> u32 {
-        let font = text::label_font().expect("label font");
+        let font = text::font(text::Role::Detail).expect("label font");
         let s = setting(toast);
         let layout = text::fit(font, &toast.text(), s.w as f32, 1, s.px, s.min_px);
         let cov = text::coverage(s.w, s.h, &layout);
@@ -350,7 +350,7 @@ mod tests {
     }
 
     fn ink_height_at(toast: Toast, px: f32) -> u32 {
-        let font = text::label_font().expect("label font");
+        let font = text::font(text::Role::Detail).expect("label font");
         let layout = text::fit(font, &toast.text(), TOAST_W as f32, 1, px, px);
         let cov = text::coverage(TOAST_W, TOAST_H, &layout);
         let rows: Vec<u32> = (0..TOAST_H)
@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn every_toast_is_set_at_full_size() {
-        let font = text::label_font().expect("label font");
+        let font = text::font(text::Role::Detail).expect("label font");
         for t in Toast::all() {
             let s = setting(t);
             let room = t

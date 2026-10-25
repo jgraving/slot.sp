@@ -1,0 +1,74 @@
+{
+  "family": "Google Sans Flex",
+  "source_url": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/googlesansflex/GoogleSansFlex%5BROND%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf",
+  "source_blob": "1d8d8ae5a7c6d0e48312d2a0a478bad92caee73a",
+  "source_sha256": "a9ac770798857d5e8ac593ced42b22e40a7c08cec98319f92b0eccc2783a77ba",
+  "profiles": {
+    "menu": {
+      "axes": {
+        "wght": 520,
+        "wdth": 92,
+        "opsz": 30,
+        "ROND": 20,
+        "slnt": 0
+      },
+      "sha256": "d7b19199cee6c7c4e33cdecf738ae34c8fb5e263e0d814e46d9e9e3e4183f6fb",
+      "tabular": false
+    },
+    "focus": {
+      "axes": {
+        "wght": 650,
+        "wdth": 96,
+        "opsz": 30,
+        "ROND": 30,
+        "slnt": 0
+      },
+      "sha256": "a0317172a67ed36247fa7ae1e24b5a23c0834ac6b75b659476af965fad57acc1",
+      "tabular": false
+    },
+    "display": {
+      "axes": {
+        "wght": 680,
+        "wdth": 100,
+        "opsz": 36,
+        "ROND": 55,
+        "slnt": 0
+      },
+      "sha256": "4459a82bdff1f86a4c64996826fb5cdd1c6573cd9900881cd5ea184058a538f4",
+      "tabular": false
+    },
+    "value": {
+      "axes": {
+        "wght": 600,
+        "wdth": 94,
+        "opsz": 24,
+        "ROND": 10,
+        "slnt": 0
+      },
+      "sha256": "472500b6f70477199b22229c535cd46ecf585b2efd4cb523788a416d8b8e7f9a",
+      "tabular": true
+    },
+    "detail": {
+      "axes": {
+        "wght": 480,
+        "wdth": 100,
+        "opsz": 14,
+        "ROND": 0,
+        "slnt": 0
+      },
+      "sha256": "60162fe39a7285509a2c3b1652362675151061a836ca322f554bb036e8271b39",
+      "tabular": false
+    },
+    "print": {
+      "axes": {
+        "wght": 550,
+        "wdth": 85,
+        "opsz": 9,
+        "ROND": 0,
+        "slnt": 0
+      },
+      "sha256": "215f8ac531620541d5a3a9d0577037cc88686bf48e5a8ad95e5ef289713c1f2c",
+      "tabular": false
+    }
+  }
+}

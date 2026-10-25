@@ -19,6 +19,7 @@ Game Boy · Game Boy Color · Game Boy Advance
 
 | | What you get |
 | :--- | :--- |
+| 🔤 **[Google Sans Flex](DISPLAY.md#type)** | Bolder selections, steady numbers and readable small text. |
 | 🎨 **[Four SP colors](DISPLAY.md#colors)** | Graphite, Platinum, Pearl Blue and Pearl Pink, with matching power-switch and link-screen artwork. |
 | 🖼️ **[Larger game artwork](LIBRARY.md#game-artwork)** | Bigger cartridges and labels, with automatic cleanup around rounded label corners. |
 | ⭐ **[Favorites & Recents](LIBRARY.md#favorites--recents)** | Keep favorite games together and return to the ones you played last. |

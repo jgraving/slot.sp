@@ -197,7 +197,7 @@ impl ClockPicker {
                 continue;
             }
             let mut buf = vec![0u8; (cell * PICKER_H * 4) as usize];
-            if let Some(font) = text::label_font() {
+            if let Some(font) = text::font(text::Role::Value) {
                 let layout = text::fit(font, &text, *cell as f32, 1, PICKER_PX, PICKER_MIN_PX);
                 text::draw_centred(&mut buf, *cell, PICKER_H, &layout, INK);
             }

@@ -48,7 +48,7 @@ pub const CREDITS: [&str; 11] = [
     "EMULATION POWERED BY MGBA",
     "AND GPSP. UNDERLYING OS IS",
     "BASEOS BY PVAIBHAV. TYPE IS",
-    "OPEN SANS AND NERD FONTS",
+    "GOOGLE SANS FLEX. NERD FONTS",
     "SYMBOLS BY RYAN L MCINTYRE.",
     "THE PANEL MASK IS DERIVED",
     "FROM GIGAHERZ'S LCD3X.",
@@ -94,6 +94,10 @@ pub fn sticker_lines(f: &StickerFields) -> Vec<String> {
     out
 }
 
+fn print_font(px: f32) -> Option<&'static fontdue::Font> {
+    text::font(if px >= SERIAL_PX { text::Role::Value } else { text::Role::Print })
+}
+
 struct Canvas {
     px: Vec<u8>,
     w: u32,
@@ -127,7 +131,7 @@ impl Canvas {
     }
 
     fn print_measure(&self, s: &str, px: f32) -> f32 {
-        let Some(font) = text::label_font() else {
+        let Some(font) = print_font(px) else {
             return 0.0;
         };
         let layout = text::fit(font, s, f32::MAX, 1, px, px);
@@ -189,7 +193,7 @@ impl Canvas {
     }
 
     fn print(&mut self, x: f32, y: f32, s: &str, px: f32, c: [u8; 3]) -> f32 {
-        let Some(font) = text::label_font() else {
+        let Some(font) = print_font(px) else {
             return y;
         };
         let layout = text::fit(font, s, f32::MAX, 1, px, px);

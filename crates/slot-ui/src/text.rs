@@ -2,18 +2,51 @@ use std::sync::OnceLock;
 
 use fontdue::{Font, FontSettings};
 
-const LABEL_TTF: &[u8] = include_bytes!("../assets/label.ttf");
+const FALLBACK_TTF: &[u8] = include_bytes!("../assets/label.ttf");
+const FONTS: [&[u8]; 6] = [
+    include_bytes!("../assets/fonts/menu.ttf"),
+    include_bytes!("../assets/fonts/focus.ttf"),
+    include_bytes!("../assets/fonts/display.ttf"),
+    include_bytes!("../assets/fonts/value.ttf"),
+    include_bytes!("../assets/fonts/detail.ttf"),
+    include_bytes!("../assets/fonts/print.ttf"),
+];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Role { Menu, Focus, Display, Value, Detail, Print }
+
+impl Role {
+    pub const ALL: [Self; 6] = [Self::Menu, Self::Focus, Self::Display, Self::Value, Self::Detail, Self::Print];
+}
+
+fn fonts() -> &'static [Option<Font>; 6] {
+    static FACES: OnceLock<[Option<Font>; 6]> = OnceLock::new();
+    FACES.get_or_init(|| FONTS.map(|bytes| Font::from_bytes(bytes, FontSettings::default()).ok()))
+}
+
+pub fn font(role: Role) -> Option<&'static Font> { fonts()[role as usize].as_ref() }
+
+fn role_of(face: &Font) -> Role {
+    Role::ALL.into_iter().find(|role| font(*role).is_some_and(|f| std::ptr::eq(f, face)))
+        .unwrap_or(Role::Menu)
+}
+
+fn glyph_font(primary: &Font, ch: char) -> &Font {
+    if primary.lookup_glyph_index(ch) != 0 { return primary; }
+    static FALLBACK: OnceLock<Option<Font>> = OnceLock::new();
+    FALLBACK.get_or_init(|| Font::from_bytes(FALLBACK_TTF, FontSettings::default()).ok())
+        .as_ref().filter(|f| f.lookup_glyph_index(ch) != 0).unwrap_or(primary)
+}
 
 pub struct Layout {
     pub lines: Vec<String>,
     pub px: f32,
     pub tracking: f32,
+    pub role: Role,
 }
 
 pub fn label_font() -> Option<&'static Font> {
-    static FONT: OnceLock<Option<Font>> = OnceLock::new();
-    FONT.get_or_init(|| Font::from_bytes(LABEL_TTF, FontSettings::default()).ok())
-        .as_ref()
+    font(Role::Menu)
 }
 
 pub fn fit(
@@ -38,9 +71,10 @@ pub fn fit_box(
     min_px: f32,
 ) -> Layout {
     let upper = text.to_uppercase();
+    let role = role_of(font);
     let mut px = max_px;
     while px > min_px {
-        let tracking = tracking_for(px);
+        let tracking = tracking_for_role(role, px);
         let lines = wrap(font, &upper, px, tracking, max_w, false);
         if lines.len() <= max_lines
             && lines
@@ -52,11 +86,12 @@ pub fn fit_box(
                 lines,
                 px,
                 tracking,
+                role,
             };
         }
         px -= 1.0;
     }
-    let tracking = tracking_for(min_px);
+    let tracking = tracking_for_role(role, min_px);
     Layout {
         lines: wrap(font, &upper, min_px, tracking, max_w, true)
             .into_iter()
@@ -64,6 +99,7 @@ pub fn fit_box(
             .collect(),
         px: min_px,
         tracking,
+        role,
     }
 }
 
@@ -77,7 +113,7 @@ pub fn draw_centred(dst: &mut [u8], dst_w: u32, dst_h: u32, layout: &Layout, col
 
 pub fn coverage(dst_w: u32, dst_h: u32, layout: &Layout) -> Vec<u8> {
     let mut out = vec![0u8; (dst_w * dst_h) as usize];
-    let Some(font) = label_font() else { return out };
+    let Some(font) = font(layout.role) else { return out };
     let Some(vm) = font.horizontal_line_metrics(layout.px) else {
         return out;
     };
@@ -88,7 +124,7 @@ pub fn coverage(dst_w: u32, dst_h: u32, layout: &Layout) -> Vec<u8> {
     for line in &layout.lines {
         let mut pen = (dst_w as f32 - line_width(font, line, layout.px, layout.tracking)) / 2.0;
         for ch in line.chars() {
-            let (m, cov) = font.rasterize(ch, layout.px);
+            let (m, cov) = glyph_font(font, ch).rasterize(ch, layout.px);
             stamp(
                 &mut out,
                 dst_w,
@@ -117,14 +153,18 @@ pub fn line_width(font: &Font, line: &str, px: f32, tracking: f32) -> f32 {
     let mut w = 0.0;
     let mut n = 0;
     for ch in line.chars() {
-        w += font.metrics(ch, px).advance_width;
+        w += glyph_font(font, ch).metrics(ch, px).advance_width;
         n += 1;
     }
     w + tracking * (n as f32 - 1.0).max(0.0)
 }
 
+fn tracking_for_role(role: Role, px: f32) -> f32 {
+    if role == Role::Print { (px * 0.10).round() } else { tracking_for(px) }
+}
+
 pub(crate) fn tracking_for(px: f32) -> f32 {
-    (px * 0.10).round()
+    (px * 0.04).round()
 }
 
 fn wrap(

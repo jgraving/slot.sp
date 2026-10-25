@@ -930,6 +930,10 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                 top + (center - icon.h as f32 / 2.).round().max(0.) as u32,
             );
         }
+        let role = if row {
+            if highlight { slot_ui::text::Role::Focus } else { slot_ui::text::Role::Menu }
+        } else { slot_ui::text::Role::Detail };
+        let font = slot_ui::text::font(role).unwrap_or(font);
         let layout = slot_ui::text::fit(
             font,
             label,

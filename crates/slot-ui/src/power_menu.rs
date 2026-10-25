@@ -27,7 +27,7 @@ pub const MENU_PAD: u32 = 18;
 pub(crate) const MENU_INK: [u8; 3] = [0xf6, 0xf4, 0xef];
 
 pub fn menu_face(label: &str) -> UndoFace {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Display) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,
@@ -136,7 +136,7 @@ const DETAIL_PX: f32 = 20.0;
 const DETAIL_H: u32 = 28;
 
 pub fn menu_detail_face(label: &str) -> UndoFace {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,

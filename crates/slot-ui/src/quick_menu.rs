@@ -909,7 +909,7 @@ const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
-    quick_text_face(row.label(), if lit { MENU_INK } else { DIM_INK })
+    quick_text_face(row.label(), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
 fn cap_centre(label: &fontdue::Font, h: u32) -> f32 {
@@ -926,7 +926,7 @@ pub fn quick_pointer_face() -> UndoFace {
     let s = POINTER_SCALE;
     let w = POINTER[0].len() * s;
     let h = (MENU_H + 2 * POINTER_BLEED) as usize;
-    let centre = match text::label_font() {
+    let centre = match text::font(text::Role::Focus) {
         Some(label) => cap_centre(label, MENU_H),
         None => MENU_H as f32 / 2.0,
     } + POINTER_BLEED as f32;
@@ -956,7 +956,13 @@ pub fn quick_pointer_face() -> UndoFace {
 }
 
 pub fn quick_value_face(text: &str, lit: bool) -> UndoFace {
-    quick_text_face(text, if lit { MENU_INK } else { DIM_INK })
+    let role = if text.chars().next().is_some_and(|c| c.is_ascii_digit()) || text.contains(':') { text::Role::Value }
+        else if lit { text::Role::Focus } else { text::Role::Menu };
+    quick_text_face(text, if lit { MENU_INK } else { DIM_INK }, role)
+}
+
+pub fn quick_heading_face(label: &str) -> UndoFace {
+    quick_text_face(label, MENU_INK, text::Role::Display)
 }
 
 pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
@@ -992,8 +998,8 @@ pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
     UndoFace { rgba, w, h }
 }
 
-fn quick_text_face(label: &str, colour: [u8; 3]) -> UndoFace {
-    let Some(font) = text::label_font() else {
+fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
+    let Some(font) = text::font(role) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,
@@ -1014,7 +1020,7 @@ fn quick_text_face(label: &str, colour: [u8; 3]) -> UndoFace {
 
 pub fn quick_caret_face(right: bool) -> UndoFace {
     let glyph = if right { '\u{f0da}' } else { '\u{f0d9}' };
-    let (Some(symbols), Some(label)) = (crate::icon::symbols_font(), text::label_font()) else {
+    let (Some(symbols), Some(label)) = (crate::icon::symbols_font(), text::font(text::Role::Focus)) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,
@@ -1215,7 +1221,7 @@ pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
 }
 
 fn parent_label_face(label: &str, lit: bool, has_value: bool) -> UndoFace {
-    let Some(font) = text::label_font() else { return quick_value_face(label, lit); };
+    let Some(font) = text::font(if lit { text::Role::Focus } else { text::Role::Menu }) else { return quick_value_face(label, lit); };
     let max = if has_value { OUT_W as f32 - 290.0 } else { OUT_W as f32 - 130.0 };
     let layout = text::fit(font, label, max, 1, MENU_PX, MENU_PX);
     let width = layout.lines.first().map_or(0.0, |line|
@@ -1253,13 +1259,13 @@ pub fn sound_forget_confirmation() -> UndoFace {
 }
 
 pub fn quick_text_centre() -> f32 {
-    text::label_font()
+    text::font(text::Role::Focus)
         .map(|f| cap_centre(f, MENU_H))
         .unwrap_or(MENU_H as f32 / 2.)
 }
 
 pub fn quick_description_face(lines: &[&str]) -> UndoFace {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,

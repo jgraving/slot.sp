@@ -216,7 +216,7 @@ impl Menu {
     pub fn screen_face(&self) -> UndoFace {
         if self.page == Page::Warning {
             let mut face = slot_ui::parent_footer_face(5, false);
-            let title = slot_ui::quick_value_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)), true);
+            let title = slot_ui::quick_heading_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)));
             let x = face.w.saturating_sub(title.w) / 2;
             blit(&mut face, &title, x, 190);
             return face;
@@ -256,7 +256,7 @@ impl Menu {
             Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
             Page::Notice => "Time for a break", _ => "Parent code",
         };
-        let title = slot_ui::quick_value_face(title, true);
+        let title = slot_ui::quick_heading_face(title);
         let left = (face.w - title.w) / 2;
         blit(&mut face, &title, left, 112);
         if self.entering_code() {

@@ -4,6 +4,12 @@
 
 [Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
 
+## Type
+
+Google Sans Flex is used across menus, cartridge captions, notices and settings. Selected rows gain weight and a little width. Headings use rounder letterforms, while hints and small text use an optical size chosen for readability. Numeric values use equal-width digits so changing a clock or percentage does not make the text jump.
+
+The About sticker credits the typeface alongside the artwork and symbols.
+
 ## Colors
 
 Open **Menu → General → Shell Color** to choose the SP artwork's color:
