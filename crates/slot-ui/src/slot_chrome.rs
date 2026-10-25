@@ -79,10 +79,6 @@ fn catch_at(foot: f32, seated_foot: f32) -> f32 {
     (LIP_Y - foot) / (seated_foot - foot)
 }
 
-const CATCH_IN: f32 = 0.42;
-const CATCH_OUT: f32 = 0.62;
-const CREEP: f32 = 0.03;
-
 pub struct SlotChrome<'a> {
     pub cart: &'a Cart,
     pub face: Option<TexId>,
@@ -150,7 +146,7 @@ impl SlotChrome<'_> {
         let sw = seated_box(self.cart.platform).0 as f32;
         let (foot0, seated_foot) = (foot_y(ch), SEATED_FOOT);
         let catch = catch_at(foot0, seated_foot);
-        let travel = travel(seat, catch);
+        let travel = seat;
         let k = (travel / catch).min(1.0);
         // One scalar drives both axes. Never interpolate width and height independently:
         // even rounded source/seated dimensions must not squash the cartridge.
@@ -382,17 +378,6 @@ pub fn draw_plugged_slot(canvas: Canvas, plugged: Option<TexId>, out: &mut Vec<D
 pub fn draw_empty_slot(canvas: Canvas, slot: Option<(TexId, TexId)>, out: &mut Vec<Draw>) {
     draw_slot_back(canvas, slot, 1.0, out);
     draw_slot_front(canvas, slot, 1.0, out);
-}
-
-fn travel(seat: f32, catch: f32) -> f32 {
-    if seat < CATCH_IN {
-        catch * ease(seat / CATCH_IN)
-    } else if seat < CATCH_OUT {
-        catch + CREEP * catch * (seat - CATCH_IN) / (CATCH_OUT - CATCH_IN)
-    } else {
-        let caught = catch + CREEP * catch;
-        caught + (1.0 - caught) * ease((seat - CATCH_OUT) / (1.0 - CATCH_OUT))
-    }
 }
 
 pub fn ease(u: f32) -> f32 {

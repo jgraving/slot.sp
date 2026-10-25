@@ -229,53 +229,37 @@ fn the_row_closes_back_up_as_the_cart_comes_out() {
 }
 
 #[test]
-fn the_eject_is_the_insert_run_backwards() {
+fn insertion_and_ejection_have_distinct_physical_motion() {
     let d = tmp_root_with_carts(&["Emerald", "Fusion", "Metroid"]);
     let mut a = boot(d.path());
-    let dt = 1.0 / 60.0;
-
-    let steps = |a: &mut slot::app::App, done: fn(f32) -> bool| {
-        let mut out = Vec::new();
-        let mut last = a.seat();
-        while !done(a.seat()) {
-            a.update(dt);
-            out.push((a.seat() - last).abs());
-            last = a.seat();
-        }
-        out
-    };
-
+    let dt = 1.0 / 600.0;
     a.apply(Action::Insert);
-    let going_in = steps(&mut a, |s| s >= 1.0);
-    for _ in 0..120 {
-        a.update(dt);
-    }
-
+    for _ in 0..227 { a.update(dt); }
+    assert!((a.seat() - 0.86).abs() < 0.01, "most of the push should precede the snap");
+    for _ in 0..43 { a.update(dt); }
+    assert!((a.seat() - 1.0).abs() < 0.001);
+    for _ in 0..200 { a.update(dt); }
     a.apply(Action::Eject);
-    while a.seat() >= 1.0 {
-        a.update(dt);
-    }
-    let coming_out = steps(&mut a, |s| s <= 0.0);
+    // The existing picture/sound hold precedes the mechanical release.
+    while matches!(a.phase(), Phase::Ejecting { t, .. } if *t < 0.0) { a.update(dt); }
+    for _ in 0..54 { a.update(dt); }
+    assert!((a.seat() - 0.82).abs() < 0.01, "the release must leave the cartridge partly inserted");
+    for _ in 0..216 { a.update(dt); }
+    assert!(a.seat() < 0.001);
+}
 
-    assert!(
-        going_in.len() > 10,
-        "the insert took {} frames",
-        going_in.len()
-    );
-    assert!(
-        going_in.len().abs_diff(coming_out.len()) <= 1,
-        "in over {} frames, out over {}",
-        going_in.len(),
-        coming_out.len()
-    );
-    let n = going_in.len().min(coming_out.len()) - 1;
-    for i in 1..n {
-        let (a_in, a_out) = (going_in[i], coming_out[coming_out.len() - 1 - i]);
-        assert!(
-            (a_in - a_out).abs() < 0.01,
-            "frame {i}: moved {a_in} going in against {a_out} coming out"
-        );
-    }
+#[test]
+fn cancelling_an_insertion_keeps_the_cartridge_at_its_current_depth() {
+    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+    let mut a = boot(d.path());
+    a.apply(Action::Insert);
+    a.update(0.2);
+    let depth = a.seat();
+    assert!(depth > 0.0 && depth < 1.0);
+    a.apply(Action::Eject);
+    assert!((a.seat() - depth).abs() < 0.00001, "cancel jumped to the seated pose");
+    a.update(1.0 / 60.0);
+    assert!(a.seat() < depth);
 }
 
 #[test]

@@ -56,6 +56,7 @@ impl App {
         self.shelf_mut().release_hold();
         let mut menu = crate::kid_menu::Menu::new(root, self.kids.clone());
         menu.set_games(self.catalog.clone());
+        menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
         self.kid_menu = Some(menu);
     }
 
@@ -111,7 +112,9 @@ impl App {
             }
             let volume = self.volume();
             let brightness = (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8;
+            let time_left = self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget()));
             if let Some(menu) = &mut self.kid_menu {
+                menu.set_remaining(time_left);
                 menu.child_volume = volume;
                 menu.child_brightness = brightness;
             }
@@ -126,6 +129,7 @@ impl App {
                         matches!(self.phase, Phase::Playing { .. }), self.volume(),
                         (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
                     menu.set_games(self.catalog.clone());
+                    menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
                     self.kid_menu = Some(menu);
                 }
                 return true;
@@ -296,24 +300,49 @@ impl App {
         if result.as_ref().is_err() {
             self.kid_error = true;
         }
-        if !result.unwrap_or(false)
-            && self.kid_menu.is_none()
-            && !matches!(self.phase, Phase::Doze { .. })
-        {
-            self.stop_for_parent();
-            self.apply_kid_scope();
-            let mut menu = crate::kid_menu::Menu::notice(
-                root,
-                self.kids.clone(),
-                if self.kid_error {
-                    "Ask a parent to check the settings"
-                } else {
-                    "Ask a parent for more play time"
-                },
-            );
-            menu.set_games(self.catalog.clone());
-            self.kid_menu = Some(menu);
+        let allowed = result.unwrap_or(false);
+        let remaining = self.kids.remaining(wall);
+        let budget = self.kids.time_budget();
+        if let Some(menu) = &mut self.kid_menu {
+            menu.set_remaining(Some((remaining, budget)));
         }
+        let awake = !matches!(self.phase, Phase::Doze { .. }) && !self.shutting_down();
+        let child_overlay = self.kid_menu.as_ref().is_some_and(|m| m.child_menu() || m.time_warning());
+        if !allowed && awake && (self.kid_menu.is_none() || child_overlay) {
+            self.show_kid_time_end(root);
+            return;
+        }
+        let warning_open = self.kid_menu.as_ref().is_some_and(|m| m.time_warning());
+        if !allowed || !awake || (!playing && !warning_open) { return; }
+        match self.kids.take_warning(&root, wall) {
+            Ok(Some(seconds)) if !warning_open => {
+                // Enter the pause immediately; no gameplay credit is charged
+                // for time spent reading the warning, even without another frame.
+                if self.kids.tick(&root, wall, self.now(), false).is_err() {
+                    self.kid_error = true;
+                    self.show_kid_time_end(root);
+                    return;
+                }
+                self.kid_menu = Some(crate::kid_menu::Menu::warning(root, self.kids.clone(), seconds));
+            }
+            Err(_) => {
+                self.kid_error = true;
+                self.show_kid_time_end(root);
+            }
+            _ => {}
+        }
+    }
+
+    fn show_kid_time_end(&mut self, root: std::path::PathBuf) {
+        self.stop_for_parent();
+        self.apply_kid_scope();
+        let mut menu = crate::kid_menu::Menu::notice(
+            root, self.kids.clone(),
+            if self.kid_error { "Ask a parent to check the settings" }
+            else { "Ask a parent for more play time" },
+        );
+        menu.set_games(self.catalog.clone());
+        self.kid_menu = Some(menu);
     }
 
     pub fn set_kid_face(&mut self, face: TexId, w: u32, h: u32) {

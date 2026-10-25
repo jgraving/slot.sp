@@ -12,6 +12,8 @@ mod barcode;
 mod battery;
 mod board;
 mod cart;
+mod cart_motion;
+pub use cart_motion::{eject_depth, eject_progress_for_depth, insert_depth};
 mod clock;
 mod draw;
 mod favorite;
@@ -97,7 +99,7 @@ pub use quick_menu::{
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
     quick_value_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
-    parent_settings_face, parent_footer_face, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
+    kid_time_text, kid_time_meter, parent_settings_face, parent_footer_face, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
 };

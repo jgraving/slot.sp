@@ -186,6 +186,44 @@ fn each_movement_makes_one_sound() {
 }
 
 #[test]
+fn recorded_contact_peaks_align_with_the_snap_and_release() {
+    use slot::app::Phase;
+    use slot_input::Action;
+    for fps in [30, 60, 120, 240] {
+        let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
+        let mut a = common::boot(d.path());
+        let dt = 1.0 / fps as f32;
+        a.apply(Action::Insert);
+        let mut clicks = 0;
+        for _ in 0..fps {
+            a.update(dt);
+            if let Some(sound) = a.take_sfx() {
+                assert_eq!(sound, Sfx::Insert);
+                let Phase::Inserting { t, .. } = a.phase() else { panic!("late insert sound") };
+                let peak = *t + sound.lead();
+                assert!(peak >= SEATED_AT - 0.00001 && peak <= SEATED_AT + dt + 0.00001);
+                clicks += 1;
+            }
+        }
+        assert_eq!(clicks, 1);
+        a.apply(Action::Eject);
+        clicks = 0;
+        for _ in 0..fps {
+            a.update(dt);
+            if let Some(sound) = a.take_sfx() {
+                assert_eq!(sound, Sfx::Eject);
+                let Phase::Ejecting { t, .. } = a.phase() else { panic!("late eject sound") };
+                let peak = *t + sound.lead();
+                assert!(peak >= -0.00001 && peak <= dt + 0.00001);
+                assert!(a.seat() > 0.97, "the release click followed the pop");
+                clicks += 1;
+            }
+        }
+        assert_eq!(clicks, 1);
+    }
+}
+
+#[test]
 fn a_paused_core_does_not_silence_the_insert() {
     let r = Ring::new(ring_capacity(48_000));
     r.reopen(48_000);

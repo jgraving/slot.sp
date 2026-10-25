@@ -2,7 +2,7 @@
 
 [← Overview](README.md) · [All guides](GUIDE.md)
 
-[Set up](#set-it-up) · [Kid menu](#the-kid-menu) · [Limits](#time--volume-limits) · [Approvals](#approve--remove-games) · [Parent code](#the-parent-code)
+[Set up](#set-it-up) · [Kid menu](#the-kid-menu) · [Limits](#time--volume-limits) · [Time reminders](#time-reminders) · [Approvals](#approve--remove-games) · [Parent code](#the-parent-code)
 
 Choose which games children can play, set a time allowance and cap the volume. Children keep the regular system, Favorites and Recents carousels, filtered to the games you approve.
 
@@ -46,6 +46,14 @@ On the carousel, the kid menu offers **Games**, Volume, Brightness and Parent co
 Settings save as you change them. Changing the volume cap does not restart the session timer. Normal parent adjustments keep an approved game paused in place, ready to resume.
 
 When time is up, play stops and the carousel asks for a parent. Choose **Parents**, enter your code and adjust the time settings to allow more play.
+
+## Time reminders
+
+During play, the game pauses to show how much time is left at **1 hour, 30 minutes, 15 minutes, 5 minutes and 1 minute**. Short sessions skip reminders at or above their starting length. Press <kbd>A</kbd> to continue or <kbd>B</kbd> to exit the game. No parent code is needed for these choices.
+
+Each reminder appears once for the current allowance or session, including across restarts. After waking, one reminder shows the current time left if several reminders were passed while asleep.
+
+While kid mode is on, the kid menu and parent settings show a **remaining-time bar**. Daily allowance pauses while a menu or reminder is open, or while the handheld sleeps. Duration and Bedtime keep their fixed deadlines. If a deadline arrives while a reminder is open, the screen changes to the end-of-time notice.
 
 ## Approve & remove games
 

@@ -15,6 +15,7 @@ enum Page {
     Set,
     Confirm,
     Notice,
+    Warning,
 }
 pub struct Menu {
     root: PathBuf,
@@ -36,6 +37,7 @@ pub struct Menu {
     pub child_volume: u8,
     pub child_brightness: u8,
     child_in_game: bool,
+    remaining: Option<(u64, u64)>,
 }
 impl Menu {
     pub fn new(root: PathBuf, policy: Policy) -> Self {
@@ -69,6 +71,7 @@ impl Menu {
             child_volume: 0,
             child_brightness: 0,
             child_in_game: false,
+            remaining: None,
         }
     }
     pub fn child(root: PathBuf, policy: Policy, in_game: bool, volume: u8, brightness: u8) -> Self {
@@ -79,6 +82,29 @@ impl Menu {
         menu.child_volume = volume;
         menu.child_brightness = brightness;
         menu
+    }
+    pub fn time_warning(&self) -> bool { self.page == Page::Warning }
+    pub fn set_remaining(&mut self, remaining: Option<(u64, u64)>) {
+        if self.remaining != remaining { self.remaining = remaining; self.face = None; }
+    }
+    pub fn remaining_seconds(&self) -> Option<u64> { self.remaining.map(|r| r.0) }
+    pub fn warning(root: PathBuf, policy: Policy, seconds: u64) -> Self {
+        let budget = policy.time_budget();
+        let mut menu = Self::new(root, policy);
+        menu.page = Page::Warning;
+        menu.status.clear();
+        menu.remaining = Some((seconds, budget));
+        menu
+    }
+    fn add_time_meter(&self, face: &mut UndoFace) {
+        if !self.draft.active { return; }
+        if let Some((seconds, budget)) = self.remaining {
+            let meter = slot_ui::kid_time_meter(seconds, budget);
+            let x = face.w.saturating_sub(meter.w) / 2;
+            let y = (slot_ui::OUT_H as f32 - slot_ui::MOUTH_H
+                - slot_ui::MENU_HINT_H as f32 - 24.0 - meter.h as f32).max(0.0) as u32;
+            blit(face, &meter, x, y);
+        }
     }
     pub fn child_menu(&self) -> bool { self.page == Page::Child }
     fn child_rows(&self) -> Vec<(String, String, bool)> {
@@ -107,12 +133,15 @@ impl Menu {
         menu
     }
     pub fn lines(&self) -> Vec<String> {
+        if self.page == Page::Warning {
+            return vec![slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0))];
+        }
         let title = match self.page {
             Page::Set => "Choose four buttons",
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Games | Page::Child => "",
+            Page::Home | Page::Games | Page::Child | Page::Warning => "",
         };
         if self.page == Page::Child {
             return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
@@ -203,8 +232,17 @@ impl Menu {
         ]
     }
     pub fn screen_face(&self) -> UndoFace {
+        if self.page == Page::Warning {
+            let mut face = slot_ui::parent_footer_face(5, false);
+            let title = slot_ui::quick_value_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)), true);
+            let x = face.w.saturating_sub(title.w) / 2;
+            blit(&mut face, &title, x, 190);
+            return face;
+        }
         if self.page == Page::Child {
-            return slot_ui::parent_settings_face(&self.child_rows(), self.selected, 0, "");
+            let mut face = slot_ui::parent_settings_face(&self.child_rows(), self.selected, 0, "");
+            self.add_time_meter(&mut face);
+            return face;
         }
         if self.page == Page::Home {
             let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
@@ -220,7 +258,9 @@ impl Menu {
                 ("Approved games".into(), self.draft.approved.len().to_string(), false),
             ];
             let status = if self.status == "Parent code saved" { "" } else { &self.status };
-            return slot_ui::parent_settings_face(&rows, self.selected, 0, status);
+            let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
+            if status.is_empty() { self.add_time_meter(&mut face); }
+            return face;
         }
         if self.page == Page::Games {
             let rows: Vec<_> = self.games.iter().map(|cart| (
@@ -292,6 +332,14 @@ impl Menu {
         self.face = None;
         if action == Action::QuickMenu {
             self.visible = false;
+            return;
+        }
+        if self.page == Page::Warning {
+            match action {
+                Action::GbaDown(Btn::A) => self.visible = false,
+                Action::GbaDown(Btn::B) => { self.child_action = Some(Action::Eject); self.visible = false; }
+                _ => {}
+            }
             return;
         }
         if self.page == Page::Child {

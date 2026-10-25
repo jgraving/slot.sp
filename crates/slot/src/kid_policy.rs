@@ -29,6 +29,14 @@ impl Rule {
     }
 }
 
+const WARNING_SECONDS: [u64; 5] = [3600, 1800, 900, 300, 60];
+
+fn warning_mask(remaining: u64) -> u8 {
+    WARNING_SECONDS.iter().enumerate().fold(0, |mask, (i, &seconds)| {
+        mask | if remaining <= seconds { 1 << i } else { 0 }
+    })
+}
+
 #[derive(Clone, Debug)]
 pub struct Policy {
     pub active: bool,
@@ -45,6 +53,8 @@ pub struct Policy {
     credit_ms: u64,
     last_tick: Option<u64>,
     was_playing: bool,
+    warned: u8,
+    warning_budget: u64,
 }
 impl Default for Policy {
     fn default() -> Self {
@@ -63,6 +73,8 @@ impl Default for Policy {
             credit_ms: 0,
             last_tick: None,
             was_playing: false,
+            warned: 0,
+            warning_budget: 0,
         }
     }
 }
@@ -93,12 +105,13 @@ impl Policy {
             .map(str::parse::<i64>)
             .collect::<Result<Vec<_>, _>>()
             .map_err(|_| bad())?;
-        if !matches!(nums.len(), 9 | 10)
+        if !matches!(nums.len(), 9 | 10 | 12)
             || !(0..=1).contains(&nums[0])
             || !(0..=2).contains(&nums[1])
             || !(5..=240).contains(&nums[2])
             || !(0..1440).contains(&nums[3])
-            || (nums.len() == 10 && !(10..=80).contains(&nums[9]))
+            || (nums.len() >= 10 && !(10..=80).contains(&nums[9]))
+            || (nums.len() == 12 && (!(0..=31).contains(&nums[10]) || !(0..=86_400).contains(&nums[11])))
             || nums[5] < 0
             || nums[6] < 0
             || nums[7] < 0
@@ -117,6 +130,8 @@ impl Policy {
             deadline: nums[6],
             last_wall: nums[7],
             clock_blocked: nums[8] == 1,
+            warned: nums.get(10).copied().unwrap_or(0) as u8,
+            warning_budget: nums.get(11).copied().unwrap_or(0) as u64,
             ..Self::default()
         };
         for line in lines {
@@ -133,6 +148,15 @@ impl Policy {
                 p.approved.push(key);
             }
         }
+        if nums.len() < 12 {
+            // Upgrade older settings without warning at the already-reached
+            // starting amount. Deadlines crossed since the last save still warn.
+            p.warned = warning_mask(p.remaining(p.last_wall));
+            p.warning_budget = match p.rule {
+                Rule::Until => p.deadline.saturating_sub(p.last_wall).max(0) as u64,
+                _ => u64::from(p.minutes) * 60,
+            };
+        }
         if p.active && !dir.join("code").is_file() {
             return Err(bad());
         }
@@ -147,7 +171,7 @@ impl Policy {
             Rule::Until => 2,
         };
         let mut text = format!(
-            "SLKIDS01\n{} {} {} {} {} {} {} {} {} {}\n",
+            "SLKIDS01\n{} {} {} {} {} {} {} {} {} {} {} {}\n",
             u8::from(self.active),
             rule,
             self.minutes,
@@ -157,7 +181,9 @@ impl Policy {
             self.deadline,
             self.last_wall,
             u8::from(self.clock_blocked),
-            self.volume_limit
+            self.volume_limit,
+            self.warned,
+            self.warning_budget
         );
         for (platform, stem) in &self.approved {
             text.push_str(&format!("{}/{stem}\n", platform.dir_name()));
@@ -204,6 +230,11 @@ impl Policy {
         self.clock_blocked = false;
         self.last_tick = None;
         self.active = true;
+        self.warning_budget = match self.rule {
+            Rule::Until => self.remaining(wall),
+            _ => u64::from(self.minutes) * 60,
+        };
+        self.warned = warning_mask(self.remaining(wall));
         Ok(())
     }
     pub fn leave(&mut self) {
@@ -221,6 +252,24 @@ impl Policy {
             _ => self.deadline.saturating_sub(wall).max(0) as u64,
         }
     }
+    pub fn time_budget(&self) -> u64 {
+        self.warning_budget.max(1)
+    }
+
+    /// Persist crossed milestones together. A delayed frame or wake shows one
+    /// current warning, and a restart cannot repeat acknowledged milestones.
+    pub fn take_warning(&mut self, root: &Path, wall: i64) -> io::Result<Option<u64>> {
+        let remaining = self.remaining(wall);
+        if !self.active || remaining == 0 { return Ok(None); }
+        let next_mask = self.warned | warning_mask(remaining);
+        if next_mask == self.warned { return Ok(None); }
+        let mut next = self.clone();
+        next.warned = next_mask;
+        next.save(root)?;
+        *self = next;
+        Ok(Some(remaining))
+    }
+
     /// Persist a minute before granting it. Abrupt power loss cannot refund playtime.
     /// A restart can conservatively lose at most the unused portion of that minute.
     pub fn tick(
@@ -252,6 +301,8 @@ impl Policy {
             self.used = 0;
             self.credit_ms = 0;
             self.last_wall = wall;
+            self.warning_budget = u64::from(self.minutes) * 60;
+            self.warned = warning_mask(self.warning_budget);
             self.save(root)?;
         }
         if self.clock_blocked {

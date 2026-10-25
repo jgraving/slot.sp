@@ -25,7 +25,7 @@ Game Boy · Game Boy Color · Game Boy Advance
 | 🌊 **[Animation & backgrounds](DISPLAY.md#backgrounds--animation)** | Flowing gradients, an optional glass logo animation and soft carousel clicks. |
 | 🌗 **[Day & night presets](NIGHT-DISPLAY.md)** | Switch between your saved brightness and warmth settings with one shortcut. |
 | 🎧 **[Audio choices](BLUETOOTH.md)** | Speaker, wired headphones, Bluetooth and USB audio. Separate volumes, saved Bluetooth pairings and automatic reconnect. |
-| 🙂 **[Kid mode](KID-MODE.md)** | Approved games, playtime and volume limits, and a simple menu for kids to resume, adjust volume or brightness, and exit a game. |
+| 🙂 **[Kid mode](KID-MODE.md)** | Approved games, playtime warnings and limits, a volume cap, and a simple menu for kids to resume, adjust volume or brightness, and exit a game. |
 | 💾 **[Save & resume](PLAYING.md#save--resume)** | Resume when you launch, periodic saves, a save-state browser and undo for the last save or load. |
 | 📸 **[Screenshots](SCREENSHOTS.md)** | Capture a moment, browse thumbnails, zoom in and select several pictures at once. |
 | ⏩ **[Fast-forward, rewind & turbo](PLAYING.md#fast-forward-rewind--turbo)** | Speed through familiar sections, go back a few seconds or repeat a button while you hold it. |

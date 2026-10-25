@@ -1112,7 +1112,7 @@ fn resting_cart(out: &[Draw]) -> f32 {
             Draw::Rect { x, w, .. } | Draw::Tex { x, w, .. } => Some((x, w)),
             _ => None,
         })
-        .find(|(_, w)| (w - CART_W as f32).abs() < 0.01)
+        .find(|(_, w)| (w - CART_W as f32 * slot_ui::GBA_SHELF_SCALE).abs() < 0.01)
         .expect("no cart standing on the row")
         .0
 }
@@ -1217,8 +1217,8 @@ fn assert_parts_on_board(out: &[Draw], f: &PickerFaces, board: Placed, when: &st
 fn carts_standing(out: &[Draw], board: TexId) -> usize {
     out.iter()
         .filter(|d| match **d {
-            Draw::Rect { w, .. } => (w - CART_W as f32).abs() < 0.01,
-            Draw::Tex { w, tex, .. } => tex != board && (w - CART_W as f32).abs() < 0.01,
+            Draw::Rect { w, .. } => (w - CART_W as f32 * slot_ui::GBA_SHELF_SCALE).abs() < 0.01,
+            Draw::Tex { w, tex, .. } => tex != board && (w - CART_W as f32 * slot_ui::GBA_SHELF_SCALE).abs() < 0.01,
             _ => false,
         })
         .count()
@@ -1343,8 +1343,8 @@ fn the_open_cart_rests_over_the_shelf_with_its_lid_turned() {
     let [cancel, swap, choose] = f.legend;
     let at = |tex| tex_at(&out, tex).expect("a legend hint is missing").1;
     let seen = |w: u32| (w - HINT_EDGE) as f32;
-    let y = OUT_H as f32 - MOUTH_H * 2.0;
-    assert_eq!(at(cancel.0), [234.0, y, cancel.1 as f32, MOUTH_H]);
+    let y = OUT_H as f32 - MOUTH_H - slot_ui::MENU_HINT_H as f32 - 12.0;
+    assert_eq!(at(cancel.0), [234.0, y, cancel.1 as f32, slot_ui::MENU_HINT_H as f32]);
     assert_eq!(
         at(swap.0)[0] + seen(swap.1) / 2.0,
         OUT_W as f32 / 2.0,
@@ -1445,14 +1445,7 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
     app.apply(Action::GbaDown(Btn::Start));
     let out = frame(&app);
 
-    let standing = out
-        .iter()
-        .filter(|d| match **d {
-            Draw::Rect { w, .. } => (w - CART_W as f32).abs() < 0.01,
-            Draw::Tex { w, tex, .. } if tex != f.board => (w - CART_W as f32).abs() < 0.01,
-            _ => false,
-        })
-        .count();
+    let standing = carts_standing(&out, f.board);
     assert_eq!(
         standing, 0,
         "the row still draws the cart whose lid is coming off"
@@ -1460,8 +1453,8 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
 
     let (_, lid, turn) = turned_at(&out, f.lid).expect("no lid");
     let want = grown(
-        lid_from(Canvas::FRAMED, shelf_cart_at(rest, 1.0), 0.0).0,
-        TURN_PAD as f32,
+        lid_from(Canvas::FRAMED, shelf_cart_at(rest, slot_ui::GBA_SHELF_SCALE), 0.0).0,
+        TURN_PAD as f32 * slot_ui::GBA_SHELF_SCALE,
     );
     assert!(
         near(lid, [want.x, want.y, want.w, want.h]),
@@ -1473,13 +1466,13 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
     let slid = frame(&app);
     let (_, lid, turn) = turned_at(&slid, f.lid).expect("the lid vanished mid-slide");
     assert_eq!(turn, 0.0, "the lid turned while it slid");
-    let shelf = shelf_cart_at(rest, 1.0);
+    let shelf = shelf_cart_at(rest, slot_ui::GBA_SHELF_SCALE);
     let want = grown(
         Placed {
             y: shelf.y - SLIDE_UP * 0.5,
             ..shelf
         },
-        TURN_PAD as f32,
+        TURN_PAD as f32 * slot_ui::GBA_SHELF_SCALE,
     );
     assert!(
         near(lid, [want.x, want.y, want.w, want.h]),
@@ -1512,12 +1505,10 @@ fn the_highlighted_cart_becomes_the_lid_rather_than_a_second_cart() {
     );
     let (_, [bx, by, bw, bh]) = tex_at(&lifting, f.board).expect("no board mid-lift");
     let (start, rest) = (board_at(Canvas::FRAMED, 0.0), board_at(Canvas::FRAMED, 1.0));
-    assert_eq!(
-        (bw, bh),
-        (start.w, start.h),
-        "the board changed size mid-lift: {bw}x{bh}"
-    );
-    assert_eq!(bx, start.x, "the board slid sideways on the way down: {bx}");
+    assert!(bw > rest.w && bw < start.w, "the board is not settling to its open size: {bw}");
+    assert!((bh / bw - start.h / start.w).abs() < 0.0001, "the lifting board changed aspect");
+    assert!((bx + bw / 2.0 - OUT_W as f32 / 2.0).abs() < 0.01,
+        "the board slid off centre on the way down: {bx}");
     assert!(
         by > start.y && by < rest.y,
         "the board is not on its way down: {by}"
@@ -1623,12 +1614,10 @@ fn closing_puts_the_cart_back_on_the_shelf() {
     );
     let (_, [bx, by, bw, bh]) = tex_at(&partway, f.board).expect("the board vanished mid-close");
     let (start, rest) = (board_at(Canvas::FRAMED, 0.0), board_at(Canvas::FRAMED, 1.0));
-    assert_eq!(
-        (bw, bh),
-        (start.w, start.h),
-        "the board changed size mid-close: {bw}x{bh}"
-    );
-    assert_eq!(bx, start.x, "the board slid sideways on the way back: {bx}");
+    assert!(bw > rest.w && bw < start.w, "the board is not returning to carousel size: {bw}");
+    assert!((bh / bw - start.h / start.w).abs() < 0.0001, "the closing board changed aspect");
+    assert!((bx + bw / 2.0 - OUT_W as f32 / 2.0).abs() < 0.01,
+        "the board slid off centre on the way back: {bx}");
     assert!(
         by < rest.y && by > start.y,
         "the board is not on its way back up: {by}"
@@ -1662,13 +1651,7 @@ fn closing_puts_the_cart_back_on_the_shelf() {
         turned_at(&out, f.lid).is_none(),
         "the lid outlived the close"
     );
-    let standing = out
-        .iter()
-        .filter(|d| {
-            matches!(**d, Draw::Rect { w, .. } | Draw::Tex { w, .. }
-                if (w - CART_W as f32).abs() < 0.01)
-        })
-        .count();
+    let standing = carts_standing(&out, f.board);
     assert_eq!(standing, 1, "the cart did not go back on the shelf");
 }
 
@@ -1684,7 +1667,7 @@ fn the_open_waits_on_the_shelf_for_its_faces() {
     app.set_core_board_faces(f.board, f.lid);
     app.update(0.016);
     let out = frame(&app);
-    let shelf = grown(shelf_cart_at(rest, 1.0), TURN_PAD as f32);
+    let shelf = grown(shelf_cart_at(rest, slot_ui::GBA_SHELF_SCALE), TURN_PAD as f32 * slot_ui::GBA_SHELF_SCALE);
     let (_, lid, _) = turned_at(&out, f.lid).expect("no lid once the faces arrived");
     assert!(
         near(lid, [shelf.x, shelf.y, shelf.w, shelf.h]),
