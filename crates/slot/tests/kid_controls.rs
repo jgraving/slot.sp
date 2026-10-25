@@ -669,3 +669,139 @@ fn parent_can_adjust_the_volume_cap_and_resume_the_same_game() {
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     assert!(app.output_volume() <= 40);
 }
+
+fn warning_game(rule: slot::kid_policy::Rule, minutes: u32) -> (tempfile::TempDir, App, common::Clock) {
+    let d = card();
+    let start = now().div_euclid(86_400) * 86_400 + 12 * 3600;
+    let mut policy = Policy::read(d.path()).unwrap();
+    policy.rule = rule;
+    policy.minutes = minutes;
+    policy.bedtime = 12 * 60 + minutes;
+    policy.begin(start).unwrap();
+    policy.save(d.path()).unwrap();
+    let (mut app, clock) = common::app_booting_at(d.path(), start);
+    app.apply(Action::Insert);
+    app.set_snapshot(common::StubSnapshot::boxed());
+    app.on_core_ready();
+    for _ in 0..120 { app.update(1.0 / 60.0); }
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    (d, app, clock)
+}
+
+#[test]
+fn time_warning_pauses_mutes_and_accepts_a_real_continue_press_without_a_code() {
+    use slot::{kid_policy::Rule, session::Session};
+    let (d, mut app, clock) = warning_game(Rule::Session, 120);
+    clock.advance(3600);
+    app.update(0.016);
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    assert_eq!(app.output_volume(), 0);
+    assert_eq!(app.input_context(), slot_input::Context::Menu);
+    let menu = app.kid_menu.as_ref().unwrap();
+    assert!(menu.time_warning());
+    assert_eq!(menu.lines(), ["1 hour left"]);
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "kid-warning-hour.png", menu.screen_face());
+    }
+    let mut session = Session::boot(d.path().to_owned());
+    *session.app_mut() = app;
+    let mut time = 0;
+    raw_tap(&mut session, &mut time, Btn::A);
+    assert!(session.app().kid_menu.is_none());
+    assert_eq!(session.app().input_context(), slot_input::Context::Game);
+    assert!(session.app().output_volume() > 0);
+    session.app_mut().update(0.016);
+    assert!(session.app().kid_menu.is_none(), "same warning repeated after Continue");
+    session.app_mut().apply(Action::QuickMenu);
+    let menu = session.app().kid_menu.as_ref().unwrap();
+    assert!(menu.child_menu());
+    assert_eq!(menu.remaining_seconds(), Some(3600));
+    preview_menu(&session, "kid-time-meter.png");
+}
+
+#[test]
+fn daily_allowance_freezes_during_warnings_menus_and_sleep() {
+    use slot::kid_policy::Rule;
+    let (_d, mut app, clock) = warning_game(Rule::Daily, 5);
+    app.tick_ms(app.now() + 240_000);
+    assert!(app.kid_menu.as_ref().unwrap().time_warning());
+    let before = app.kids.remaining(clock.get());
+    clock.advance(120);
+    app.tick_ms(app.now() + 120_000);
+    assert_eq!(app.kids.remaining(clock.get()), before);
+    press(&mut app, Btn::A);
+    assert!(app.kid_menu.is_none());
+    app.tick_ms(app.now());
+    app.tick_ms(app.now() + 1000);
+    assert_eq!(app.kids.remaining(clock.get()), before - 1);
+    app.apply(Action::QuickMenu);
+    clock.advance(180);
+    app.tick_ms(app.now() + 180_000);
+    assert_eq!(app.kids.remaining(clock.get()), before - 1);
+    assert_eq!(app.kid_menu.as_ref().unwrap().remaining_seconds(), Some(before - 1));
+    press(&mut app, Btn::B);
+    app.apply(Action::LidClose);
+    clock.advance(180);
+    app.tick_ms(app.now() + 180_000);
+    app.apply(Action::LidOpen);
+    assert_eq!(app.kids.remaining(clock.get()), before - 1);
+    assert!(app.kid_menu.is_none());
+}
+
+#[test]
+fn wake_shows_one_current_warning_and_a_fixed_deadline_expires_while_it_is_open() {
+    use slot::kid_policy::Rule;
+    for rule in [Rule::Session, Rule::Until] {
+        let (_d, mut app, clock) = warning_game(rule, 120);
+        app.apply(Action::LidClose);
+        clock.advance(6600);
+        app.apply(Action::LidOpen);
+        let menu = app.kid_menu.as_ref().unwrap();
+        assert!(menu.time_warning());
+        assert_eq!(menu.lines(), ["10 minutes left"]);
+        clock.advance(601);
+        app.update(0.016);
+        assert!(matches!(app.phase(), Phase::Shelf));
+        assert!(!app.kid_menu.as_ref().unwrap().time_warning());
+        assert_eq!(app.kid_menu.as_ref().unwrap().lines()[0], "Time for a break");
+        app.apply(Action::Insert);
+        assert!(matches!(app.phase(), Phase::Shelf));
+    }
+}
+
+#[test]
+fn warning_allows_saving_and_exiting_without_a_parent_code() {
+    use slot::kid_policy::Rule;
+    let (_d, mut app, clock) = warning_game(Rule::Session, 120);
+    clock.advance(6300);
+    app.update(0.016);
+    assert!(app.kid_menu.as_ref().unwrap().time_warning());
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "kid-warning-15min.png", app.kid_menu.as_ref().unwrap().screen_face());
+    }
+    press(&mut app, Btn::B);
+    assert!(app.kid_menu.is_none());
+    assert!(matches!(app.phase(), Phase::Ejecting { .. }));
+    assert!(app.kid_mode());
+}
+
+#[test]
+fn settings_meter_is_present_only_while_kid_mode_is_on() {
+    let d = card();
+    let mut app = App::boot(d.path());
+    app.apply(Action::QuickMenu);
+    unlock(&mut app);
+    assert!(app.kid_menu.as_ref().unwrap().remaining_seconds().is_some());
+    let active = app.kid_menu.as_ref().unwrap().screen_face();
+    let band = |face: &slot_ui::UndoFace| (342..366).any(|y|
+        (0..face.w).any(|x| face.rgba[((y * face.w + x) * 4 + 3) as usize] != 0));
+    assert!(band(&active));
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "parent-time-meter.png", active);
+    }
+    for _ in 0..3 { press(&mut app, Btn::Down); }
+    press(&mut app, Btn::A);
+    assert!(!app.kid_mode());
+    assert_eq!(app.kid_menu.as_ref().unwrap().remaining_seconds(), None);
+    assert!(!band(&app.kid_menu.as_ref().unwrap().screen_face()));
+}

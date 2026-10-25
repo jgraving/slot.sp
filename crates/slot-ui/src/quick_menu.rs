@@ -1084,6 +1084,10 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
             with_hint(button_face(ButtonLegend::B), "Games", hint, true),
             with_hint(button_face(ButtonLegend::A), "Parents", hint, false),
         ],
+        5 => vec![
+            with_hint(button_face(ButtonLegend::B), "Exit game", hint, true),
+            with_hint(button_face(ButtonLegend::A), "Continue", hint, false),
+        ],
         4 => vec![
             with_hint(button_face(ButtonLegend::B), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::A), "Again to remove", hint, false),
@@ -1169,6 +1173,36 @@ pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
     }
     face
 }
+pub fn kid_time_text(seconds: u64) -> String {
+    if seconds == 0 { return "Time is up".into(); }
+    if seconds < 60 { return "Less than a minute left".into(); }
+    let minutes = seconds.div_ceil(60);
+    if minutes >= 60 {
+        let (hours, mins) = (minutes / 60, minutes % 60);
+        if mins != 0 { return format!("{hours} h {mins} min left"); }
+        return format!("{hours} hour{} left", if hours == 1 { "" } else { "s" });
+    }
+    format!("{minutes} minute{} left", if minutes == 1 { "" } else { "s" })
+}
+
+/// One quiet line of remaining time and a bar, above the native menu footer.
+pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
+    let label = quick_description_face(&[&kid_time_text(seconds)]);
+    let (bar_w, h) = (160, label.h.max(24));
+    let w = label.w + 16 + bar_w;
+    let mut face = UndoFace { rgba: vec![0; (w * h * 4) as usize], w, h };
+    parent_blit(&mut face, &label, 0.0, ((h - label.h) / 2) as f32);
+    let filled = ((bar_w as u64 * seconds.min(budget)) / budget.max(1)) as u32;
+    for y in h / 2 - 3..h / 2 + 3 {
+        for x in 0..bar_w {
+            let at = ((y * w + label.w + 16 + x) * 4) as usize;
+            let alpha = if x < filled { 255 } else { 64 };
+            face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, alpha]);
+        }
+    }
+    face
+}
+
 fn parent_label_face(label: &str, lit: bool, has_value: bool) -> UndoFace {
     let Some(font) = text::label_font() else { return quick_value_face(label, lit); };
     let max = if has_value { OUT_W as f32 - 290.0 } else { OUT_W as f32 - 130.0 };
