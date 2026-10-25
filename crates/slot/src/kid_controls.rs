@@ -206,7 +206,7 @@ impl App {
     }
 
     pub(super) fn tick_kid_policy(&mut self) {
-        if !self.kids.active || self.kid_error {
+        if !self.kids.active {
             return;
         }
         let Some(root) = self.root.clone() else {
@@ -218,11 +218,18 @@ impl App {
             && self.in_game_menu.is_none()
             && self.game_menu.is_none()
             && !self.shutting_down();
-        let result = self.kids.tick(&root, wall, self.now(), playing);
+        let result = if self.kid_error {
+            Err(std::io::Error::other("Parent settings need attention"))
+        } else {
+            self.kids.tick(&root, wall, self.now(), playing)
+        };
         if result.as_ref().is_err() {
             self.kid_error = true;
         }
-        if !result.unwrap_or(false) && self.kid_menu.is_none() {
+        if !result.unwrap_or(false)
+            && self.kid_menu.is_none()
+            && !matches!(self.phase, Phase::Doze { .. })
+        {
             self.stop_for_parent();
             self.apply_kid_scope();
             self.kid_menu = Some(crate::kid_menu::Menu::notice(
