@@ -10,7 +10,7 @@ use std::{path::PathBuf, time::Instant};
 enum Page {
     Home,
     Child,
-    Games,
+    Time,
     Unlock,
     Set,
     Confirm,
@@ -25,9 +25,9 @@ pub struct Menu {
     selected: usize,
     code: Vec<u8>,
     first: Vec<u8>,
-    games: Vec<slot_store::Cart>,
-    game_at: usize,
-    game_removal: Option<(usize, Instant, bool)>,
+    time_selected: usize,
+    rejected: Option<f32>,
+    repeat: Option<(Btn, f32)>,
     start_after_code: bool,
     status: String,
     pub visible: bool,
@@ -55,9 +55,9 @@ impl Menu {
             selected: 0,
             code: Vec::new(),
             first: Vec::new(),
-            games: Vec::new(),
-            game_at: 0,
-            game_removal: None,
+            time_selected: 0,
+            rejected: None,
+            repeat: None,
             start_after_code: false,
             status: if page == Page::Unlock {
                 "Recovery: Config/kids/parent-code.txt".into()
@@ -117,9 +117,6 @@ impl Menu {
         rows.push(("Parent controls".into(), String::new(), false));
         rows
     }
-    pub fn set_games(&mut self, games: Vec<slot_store::Cart>) {
-        self.games = games;
-    }
     pub fn entered_buttons(&self) -> &[u8] {
         &self.code
     }
@@ -141,30 +138,16 @@ impl Menu {
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Games | Page::Child | Page::Warning => "",
+            Page::Home | Page::Time | Page::Child | Page::Warning => "",
         };
         if self.page == Page::Child {
             return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
                 format!("{} {label} {value}", if i == self.selected { "SELECTED" } else { "ROW" })).collect();
         }
-        if self.page == Page::Games {
-            let confirming = self.game_removal.is_some_and(|(at, since, _)|
-                at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));
-            let mut lines = vec![String::new(), if confirming {
-                "Press A again to remove approval".into()
-            } else { "Approved games · A toggles approval".into() }, "COMPACT".into()];
-            if self.games.is_empty() {
-                lines.push("ROW No games on the content card".into());
-            }
-            let first = self.game_at.saturating_sub(2).min(self.games.len().saturating_sub(6));
-            for (i, cart) in self.games.iter().enumerate().skip(first).take(6) {
-                lines.push(format!("{} {} {} / {}",
-                    if i == self.game_at { "SELECTED" } else { "ROW" },
-                    if self.draft.allows(cart) { "+" } else { "−" },
-                    cart.platform.dir_name(), cart.stem));
-            }
-            lines.push(if confirming { "PARENT REMOVE HINTS" } else { "PARENT GAMES HINTS" }.into());
-            return lines;
+        if self.page == Page::Time {
+            let minutes = self.time_minutes();
+            return vec![String::new(), format!("Hours {}", minutes / 60),
+                format!("Minutes {}", minutes % 60), self.status.clone()];
         }
         if self.page == Page::Home {
             let value = if self.draft.rule == Rule::Until {
@@ -174,14 +157,13 @@ impl Menu {
                     self.draft.bedtime % 60
                 )
             } else {
-                format!("{} minutes", self.draft.minutes)
+                duration_label(self.draft.minutes)
             };
             let rows = [
+                format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
                 self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
-                format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
                 if self.gate.enabled() { "Change parent code" } else { "Set parent code" }.into(),
-                format!("Approved games {}", self.draft.approved.len()),
             ];
             let status = if self.status.is_empty() {
                 format!(
@@ -248,28 +230,26 @@ impl Menu {
             let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
             let time = if self.draft.rule == Rule::Until {
                 format!("{:02}:{:02}", self.draft.bedtime / 60, self.draft.bedtime % 60)
-            } else { format!("{} min", self.draft.minutes) };
+            } else { duration_label(self.draft.minutes) };
             let rows = vec![
+                ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
                 ("Play limit".into(), kind.into(), true),
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
-                ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
                 ("Parent code".into(), if self.gate.enabled() { "Change" } else { "Set" }.into(), false),
-                ("Approved games".into(), self.draft.approved.len().to_string(), false),
             ];
             let status = if self.status == "Parent code saved" { "" } else { &self.status };
             let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
             if status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
-        if self.page == Page::Games {
-            let rows: Vec<_> = self.games.iter().map(|cart| (
-                if cart.title.is_empty() { cart.stem.clone() } else { cart.title.clone() }, if self.draft.allows(cart) { "Yes" } else { "No" }.into(), false
-            )).collect();
-            let confirming = self.game_removal.is_some_and(|(at, since, _)|
-                at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));
-            return slot_ui::parent_settings_face(&rows, self.game_at,
-                if confirming { 4 } else { 3 }, if rows.is_empty() { "No games on the content card" } else { "" });
+        if self.page == Page::Time {
+            let minutes = self.time_minutes();
+            let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
+                ("Minutes".into(), format!("{:02}", minutes % 60), true)];
+            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, &self.status);
+            if self.status.is_empty() { self.add_time_meter(&mut face); }
+            return face;
         }
         let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
         let title = match self.page {
@@ -281,13 +261,16 @@ impl Menu {
         blit(&mut face, &title, left, 112);
         if self.entering_code() {
             let buttons = slot_ui::button_code_face(&self.code);
-            let left = (face.w - buttons.w) / 2;
+            let left = ((face.w - buttons.w) as i32 / 2 + self.code_offset()) as u32;
             blit(&mut face, &buttons, left, 208);
             let count = slot_ui::quick_description_face(&[&format!("{} / 4", self.code.len())]);
             let left = (face.w - count.w) / 2;
             blit(&mut face, &count, left, 284);
         }
-        let status = if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
+        let cooldown = self.gate.remaining(Instant::now());
+        let retry = format!("Try again in {cooldown} seconds");
+        let status = if self.page == Page::Unlock && cooldown > 0 { &retry }
+        else if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
             ""
         } else { &self.status };
         if !status.is_empty() {
@@ -296,6 +279,91 @@ impl Menu {
             blit(&mut face, &status, left, 332);
         }
         face
+    }
+    pub fn code_offset(&self) -> i32 {
+        let Some(elapsed) = self.rejected else { return 0; };
+        let u = (elapsed / 0.36).clamp(0.0, 1.0);
+        ((u * std::f32::consts::TAU * 3.0).sin() * 10.0 * (1.0 - u)).round() as i32
+    }
+    pub fn stop_repeat(&mut self) { self.repeat = None; }
+    pub fn update(&mut self, dt: f32) -> Option<Action> {
+        if let Some(elapsed) = &mut self.rejected {
+            *elapsed += dt.max(0.0);
+            if *elapsed >= 0.36 {
+                self.clear_code();
+                self.rejected = None;
+            }
+            self.face = None;
+        }
+        if dt > 0.25 { self.stop_repeat(); }
+        if let Some((button, wait)) = &mut self.repeat {
+            *wait -= dt.max(0.0);
+            if *wait <= 0.0 {
+                *wait = 0.08;
+                return Some(Action::GbaDown(*button));
+            }
+        }
+        None
+    }
+    fn clear_code(&mut self) { self.code.fill(0); self.code.clear(); }
+    fn complete_code(&mut self, wall: i64) {
+        match self.page {
+            Page::Unlock => match self.gate.verify(&self.code, Instant::now()) {
+                Ok(true) => { self.page = Page::Home; self.status.clear(); self.clear_code(); }
+                Ok(false) => { self.status.clear(); self.rejected = Some(0.0); }
+                Err(_) => { self.status = "Parent code could not be read".into(); self.rejected = Some(0.0); }
+            },
+            Page::Set => {
+                self.first = self.code.clone();
+                self.clear_code();
+                self.page = Page::Confirm;
+                self.status.clear();
+            }
+            Page::Confirm => {
+                if self.first != self.code {
+                    self.status.clear();
+                    self.rejected = Some(0.0);
+                    return;
+                }
+                if self.gate.set(&self.code).and_then(|_| self.draft.save(&self.root)).is_ok() {
+                    self.page = Page::Home;
+                    self.status.clear();
+                    if self.start_after_code {
+                        let mut next = self.draft.clone();
+                        match next.begin(wall) {
+                            Ok(()) => self.save_open(next),
+                            Err(e) => self.status = e.to_string(),
+                        }
+                    }
+                    self.start_after_code = false;
+                } else {
+                    self.status = "Could not save parent code".into();
+                    self.clear_code();
+                    return;
+                }
+                self.first.fill(0);
+                self.first.clear();
+                self.clear_code();
+            }
+            _ => {}
+        }
+    }
+    fn time_minutes(&self) -> u32 {
+        if self.draft.rule == Rule::Until { self.draft.bedtime } else { self.draft.minutes }
+    }
+    fn adjust_time(&mut self, by: i32, wall: i64) {
+        let mut next = self.draft.clone();
+        if next.rule == Rule::Until {
+            next.bedtime = (next.bedtime as i32 + by).rem_euclid(1440) as u32;
+        } else { next.minutes = (next.minutes as i32 + by).clamp(5, 240) as u32; }
+        if next.active {
+            if let Err(e) = next.begin(wall) {
+                self.stop_repeat();
+                self.status = e.to_string();
+                return;
+            }
+        }
+        self.save_open(next);
     }
     fn save(&mut self, policy: Policy) {
         match policy.save(&self.root) {
@@ -317,7 +385,10 @@ impl Menu {
             next.leave();
             self.save_open(next);
         } else {
-            if let Err(e) = next.begin(wall) { self.status = e.to_string(); return; }
+            if let Err(e) = next.begin(wall) {
+                self.status = if next.approved.is_empty() { "Mark games with X on the carousel".into() } else { e.to_string() };
+                return;
+            }
             if !self.gate.enabled() {
                 self.start_after_code = true;
                 self.page = Page::Set;
@@ -330,6 +401,15 @@ impl Menu {
     }
     pub fn input(&mut self, action: Action, wall: i64) {
         self.face = None;
+        match action {
+            Action::GbaDown(button @ (Btn::Left | Btn::Right))
+                if self.page == Page::Time || (self.page == Page::Home && self.selected == 2) => {
+                if self.repeat.is_none_or(|(held, _)| held != button) { self.repeat = Some((button, 0.4)); }
+            }
+            Action::GbaUp(button) if self.repeat.is_some_and(|(held, _)| held == button) => self.stop_repeat(),
+            Action::GbaDown(_) | Action::QuickMenu => self.stop_repeat(),
+            _ => {}
+        }
         if action == Action::QuickMenu {
             self.visible = false;
             return;
@@ -378,42 +458,13 @@ impl Menu {
             }
             return;
         }
-        if self.page == Page::Games {
-            if self.game_removal.is_some_and(|(_, since, _)|
-                since.elapsed().as_millis() >= u128::from(slot_ui::FAVORITE_REMOVE_MS)) {
-                self.game_removal = None;
-            }
+        if self.page == Page::Time {
             match action {
-                Action::GbaUp(Btn::A) => {
-                    if let Some((_, _, released)) = &mut self.game_removal { *released = true; }
-                }
-                Action::GbaDown(Btn::A) | Action::GbaUp(_) => {}
-                _ => self.game_removal = None,
-            }
-            match action {
-                Action::GbaDown(Btn::B) => self.page = Page::Home,
-                Action::GbaDown(Btn::Up) if !self.games.is_empty() => {
-                    self.game_at = (self.game_at + self.games.len() - 1) % self.games.len();
-                }
-                Action::GbaDown(Btn::Down) if !self.games.is_empty() => {
-                    self.game_at = (self.game_at + 1) % self.games.len();
-                }
-                Action::GbaDown(Btn::A) => {
-                    if let Some(cart) = self.games.get(self.game_at) {
-                        if self.draft.allows(cart) {
-                            match self.game_removal {
-                                Some((at, _, true)) if at == self.game_at => {}
-                                Some((at, _, false)) if at == self.game_at => return,
-                                _ => {
-                                    self.game_removal = Some((self.game_at, Instant::now(), false));
-                                    return;
-                                }
-                            }
-                        }
-                        self.game_removal = None;
-                        self.draft.toggle(cart);
-                        self.save_open(self.draft.clone());
-                    }
+                Action::GbaDown(Btn::B | Btn::A) => self.page = Page::Home,
+                Action::GbaDown(Btn::Up | Btn::Down) => self.time_selected = 1 - self.time_selected,
+                Action::GbaDown(Btn::Left | Btn::Right) => {
+                    let by = if action == Action::GbaDown(Btn::Left) { -1 } else { 1 };
+                    self.adjust_time(by * if self.time_selected == 0 { 60 } else { 1 }, wall);
                 }
                 _ => {}
             }
@@ -422,10 +473,10 @@ impl Menu {
         if self.page == Page::Home {
             match action {
                 Action::GbaDown(Btn::B) => self.visible = false,
-                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 5) % 6,
-                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 6,
+                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 4) % 5,
+                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 5,
                 Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
-                    if self.selected == 3 {
+                    if self.selected == 0 {
                         self.toggle_mode(wall);
                         return;
                     }
@@ -434,101 +485,44 @@ impl Menu {
                     } else {
                         1
                     };
-                    if self.selected == 0 {
-                        self.draft.rule = self.draft.rule.next(by);
-                    }
                     if self.selected == 2 {
-                        self.draft.volume_limit =
-                            (self.draft.volume_limit as i32 + 10 * by).clamp(10, 80) as u8;
+                        self.adjust_time(by, wall);
+                        return;
                     }
-                    if self.selected == 1 {
-                        if self.draft.rule == Rule::Until {
-                            self.draft.bedtime =
-                                (self.draft.bedtime as i32 + 15 * by).rem_euclid(1440) as u32;
-                        } else {
-                            self.draft.minutes =
-                                (self.draft.minutes as i32 + 5 * by).clamp(5, 240) as u32;
-                        }
+                    if self.selected == 1 { self.draft.rule = self.draft.rule.next(by); }
+                    if self.selected == 3 {
+                        self.draft.volume_limit = (self.draft.volume_limit as i32 + 10 * by).clamp(10, 80) as u8;
                     }
-                    if self.selected < 3 {
+                    if matches!(self.selected, 1 | 3) {
                         let mut next = self.draft.clone();
-                        if next.active && self.selected < 2 {
+                        if next.active && self.selected == 1 {
                             if let Err(e) = next.begin(wall) { self.status = e.to_string(); return; }
                         }
                         self.save_open(next);
                     }
                 }
                 Action::GbaDown(Btn::A) => match self.selected {
-                    0 | 1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
-                    3 => self.toggle_mode(wall),
+                    0 => self.toggle_mode(wall),
+                    1 | 3 => self.input(Action::GbaDown(Btn::Right), wall),
+                    2 => { self.time_selected = 0; self.page = Page::Time; },
                     4 => {
                         self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();
                         self.code.clear();
                     }
-                    5 => self.page = Page::Games,
                     _ => {}
                 },
                 _ => {}
             }
             return;
         }
+        if self.rejected.is_some() { return; }
         if action == Action::GbaDown(Btn::Select) {
             self.code.pop();
             return;
         }
-        if action == Action::GbaDown(Btn::Start) {
-            if self.code.len() != 4 {
-                self.status = "Enter all four buttons".into();
-                return;
-            }
-            match self.page {
-                Page::Unlock => match self.gate.verify(&self.code, Instant::now()) {
-                    Ok(true) => {
-                        self.page = Page::Home;
-                        self.status.clear();
-                    }
-                    Ok(false) => self.status = "Code not recognized".into(),
-                    Err(_) => self.status = "Parent code could not be read".into(),
-                },
-                Page::Set => {
-                    self.first = self.code.clone();
-                    self.page = Page::Confirm;
-                    self.status.clear();
-                }
-                Page::Confirm => {
-                    if self.first != self.code {
-                        self.page = Page::Set;
-                        self.status = "Codes did not match. Try again.".into();
-                    } else if self
-                        .gate
-                        .set(&self.code)
-                        .and_then(|_| self.draft.save(&self.root))
-                        .is_ok()
-                    {
-                        self.page = Page::Home;
-                        self.status.clear();
-                        if self.start_after_code {
-                            let mut next = self.draft.clone();
-                            match next.begin(wall) {
-                                Ok(()) => self.save_open(next),
-                                Err(e) => self.status = e.to_string(),
-                            }
-                        }
-                        self.start_after_code = false;
-                    } else {
-                        self.status = "Could not save parent code".into();
-                    }
-                    self.first.fill(0);
-                    self.first.clear();
-                }
-                _ => {}
-            }
-            self.code.fill(0);
-            self.code.clear();
-            return;
-        }
+        if self.page == Page::Unlock && self.gate.remaining(Instant::now()) > 0 { return; }
         let button = match action {
             Action::GbaDown(Btn::A) => Some(0),
             Action::GbaDown(Btn::B) => Some(1),
@@ -543,8 +537,16 @@ impl Menu {
         if let Some(button) = button {
             if self.code.len() < 4 {
                 self.code.push(button);
+                if self.code.len() == 4 { self.complete_code(wall); }
             }
         }
+    }
+}
+fn duration_label(minutes: u32) -> String {
+    match (minutes / 60, minutes % 60) {
+        (0, m) => format!("{m} min"),
+        (h, 0) => format!("{h} h"),
+        (h, m) => format!("{h} h {m} min"),
     }
 }
 fn blit(dst: &mut UndoFace, src: &UndoFace, left: u32, top: u32) {

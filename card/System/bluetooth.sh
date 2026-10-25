@@ -581,6 +581,23 @@ log "slot Bluetooth v3.1: verb=$VERB target=$TARGET"
 case "$VERB" in
     list) emit_list ;;
     on) start; emit_list ;;
+    restart)
+        STAGE='Bluetooth recovery'
+        keep_off=0
+        if [ -f "$OFF" ] || { [ ! -f "$ENABLED" ] && [ ! -f "$PREF" ]; }; then keep_off=1; fi
+        # Keep saved pairings, output choice and the UART transport intact.
+        bt power off >/dev/null 2>&1 || true
+        if [ -f "$INIT" ]; then
+            timeout -s KILL 10 systemctl restart bluetooth >> "$SESSION_LOG" 2>&1 || fail 'Bluetooth service restart failed'
+        fi
+        start
+        if [ "$keep_off" = 1 ]; then
+            bt power off >/dev/null 2>&1 || fail 'Bluetooth could not return to off'
+            : > "$OFF"
+            rm -f "$ENABLED"
+        fi
+        emit_list
+        ;;
     scan)
         start
         rm -f "$OFF"

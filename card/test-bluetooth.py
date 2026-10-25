@@ -648,5 +648,26 @@ esac
         self.assertEqual((self.root / 'route').read_text(), route)
         self.assertIn('OUTPUT ' + route, result.stdout)
 
+    def test_restart_preserves_pairings_output_and_on_off_preference(self):
+        config = self.root / 'Config'
+        config.mkdir(exist_ok=True)
+        pref = config / 'bluetooth-headphones'
+        pref.write_text(MAC)
+        route = 'plughw:CARD=Audio,DEV=0'
+        (self.root / 'route').write_text(route)
+        result = self.run_command('restart')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(pref.read_text(), MAC)
+        self.assertEqual((self.root / 'route').read_text(), route)
+        self.assertTrue((config / 'bluetooth-enabled').exists())
+        self.assertIn('power off', (self.root / 'calls').read_text())
+        (config / 'bluetooth-off').touch()
+        result = self.run_command('restart')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((config / 'bluetooth-off').exists())
+        self.assertFalse((config / 'bluetooth-enabled').exists())
+        self.assertEqual(pref.read_text(), MAC)
+        self.assertEqual((self.root / 'route').read_text(), route)
+
 if __name__ == '__main__':
     unittest.main()

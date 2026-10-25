@@ -55,7 +55,6 @@ impl App {
         self.held_dir = None;
         self.shelf_mut().release_hold();
         let mut menu = crate::kid_menu::Menu::new(root, self.kids.clone());
-        menu.set_games(self.catalog.clone());
         menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
         self.kid_menu = Some(menu);
     }
@@ -77,6 +76,7 @@ impl App {
                 | Action::PowerHold
                 | Action::PowerOff
         ) {
+            if let Some(menu) = &mut self.kid_menu { menu.stop_repeat(); }
             return false;
         }
         if matches!(self.phase, Phase::Doze { .. }) {
@@ -90,6 +90,7 @@ impl App {
             let child_action = menu.child_action.take();
             let close = !menu.visible;
             if let Some(policy) = changed {
+                let scope_changed = self.kids.active != policy.active || self.kids.approved != policy.approved;
                 self.kids = policy;
                 self.kid_error = false;
                 // Ordinary parent adjustments must not eject an approved game.
@@ -104,7 +105,7 @@ impl App {
                         _ => false,
                     });
                 if blocked { self.stop_for_parent(); }
-                self.apply_kid_scope();
+                if scope_changed { self.apply_kid_scope(); }
             }
             if close { self.kid_menu = None; }
             if let Some(action) = child_action {
@@ -128,7 +129,6 @@ impl App {
                     let mut menu = crate::kid_menu::Menu::child(root, self.kids.clone(),
                         matches!(self.phase, Phase::Playing { .. }), self.volume(),
                         (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
-                    menu.set_games(self.catalog.clone());
                     menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
                     self.kid_menu = Some(menu);
                 }
@@ -336,12 +336,11 @@ impl App {
     fn show_kid_time_end(&mut self, root: std::path::PathBuf) {
         self.stop_for_parent();
         self.apply_kid_scope();
-        let mut menu = crate::kid_menu::Menu::notice(
+        let menu = crate::kid_menu::Menu::notice(
             root, self.kids.clone(),
             if self.kid_error { "Ask a parent to check the settings" }
             else { "Ask a parent for more play time" },
         );
-        menu.set_games(self.catalog.clone());
         self.kid_menu = Some(menu);
     }
 

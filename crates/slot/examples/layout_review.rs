@@ -41,6 +41,8 @@ fn main(){
   let faces=QuickMenuFaces {
    labels:QuickRow::ALL.map(|r|[s.face(quick_label_face(r,false)),s.face(quick_label_face(r,true))]).to_vec(),
    values:QuickValue::ALL.map(|v|[s.face(quick_value_face(v.text(),false)),s.face(quick_value_face(v.text(),true))]).to_vec(),
+   toggles:[false,true].map(|on|[false,true].map(|lit|s.face(toggle_face(on,lit)))),
+   descriptions:[s.face(quick_description_face(&["Controls"])),s.face(quick_description_face(&["Controls"]))],
    pointer:s.face(quick_pointer_face()),carets:[s.face(quick_caret_face(false)),s.face(quick_caret_face(true))],
    legend:quick_legend_faces(footer_ink(false)).map(|f|s.hint(f)),
    legend_light:quick_legend_faces(footer_ink(true)).map(|f|s.hint(f)),

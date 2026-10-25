@@ -661,6 +661,7 @@ fn fake_faces(a: &mut App) {
         values: (0..QuickValue::ALL.len())
             .map(|i| [(id(2000 + i), 60, 40), (id(2100 + i), 60, 40)])
             .collect(),
+        toggles: [false, true].map(|on| [false, true].map(|lit| (id(4000 + on as usize * 2 + lit as usize), 116, 40))),
         carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
             (id(400), 70),
@@ -841,11 +842,11 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
         "6× is not lit"
     );
     assert!(
-        drawn(&out, value(QuickValue::Off, false)),
+        drawn(&out, 4000),
         "sound's OFF is not grey"
     );
     assert!(
-        drawn(&out, value(QuickValue::On, false)),
+        drawn(&out, 4002),
         "rumble's ON is not grey"
     );
     press(&mut a, Btn::B);
@@ -924,7 +925,7 @@ fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
         let [x, ..] = placed(&out, label(row, lit)).expect("a label was not drawn");
         assert_eq!(x + MENU_PAD as f32, QUICK_LABEL_X, "{row:?}'s label");
     }
-    let [x, _, w, _] = placed(&out, value(QuickValue::On, false)).expect("rumble's value");
+    let [x, _, w, _] = placed(&out, 4002).expect("rumble's switch");
     assert_eq!(x + w - MENU_PAD as f32, right, "an unselected value");
     let [x, _, w, _] = placed(&out, 301).expect("the right arrow");
     assert_eq!(x + w, right, "the arrow around the selected value");
@@ -1069,6 +1070,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
                 [(id(2000 + i), w, 40), (id(2100 + i), w, 40)]
             })
             .collect(),
+        toggles: [false, true].map(|on| [false, true].map(|lit| (id(4000 + on as usize * 2 + lit as usize), 116, 40))),
         carets: [false, true].map(|right| {
             let f = slot_ui::quick_caret_face(right);
             (id(300 + right as usize), f.w, f.h)

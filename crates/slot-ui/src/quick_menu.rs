@@ -109,6 +109,12 @@ pub enum QuickRow {
 }
 
 impl QuickRow {
+    pub fn toggle(self) -> bool {
+        matches!(self, Self::FastForwardSound | Self::Rumble | Self::AutoLoad | Self::EjectSave
+            | Self::Turbo | Self::Rewind | Self::BootAnimation | Self::CarouselSounds
+            | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
+            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::ShowTitles)
+    }
     pub const ALL: [QuickRow; 95] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
@@ -1078,7 +1084,6 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
         1 => vec![
             with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
-            with_hint(button_face(ButtonLegend::Start), "Confirm", hint, false),
         ],
         2 => vec![
             with_hint(button_face(ButtonLegend::B), "Games", hint, true),
@@ -1125,7 +1130,13 @@ pub fn parent_settings_face(rows: &[(String, String, bool)], selected: usize,
                 y - POINTER_BLEED as f32);
         }
         if value.is_empty() { continue; }
-        let value = quick_value_face(value, lit);
+        let toggle = matches!(value.as_str(), "On" | "Off");
+        let value = if toggle { crate::toggle_face(value == "On", lit) }
+            else { quick_value_face(value, lit) };
+        if toggle {
+            parent_blit(&mut face, &value, right + pad - value.w as f32, y);
+            continue;
+        }
         if lit && *adjustable {
             let left = quick_caret_face(false);
             let next = quick_caret_face(true);
@@ -1385,6 +1396,7 @@ pub struct QuickMenuFaces {
     pub labels: Vec<[(TexId, u32, u32); 2]>,
     pub pointer: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
+    pub toggles: [[(TexId, u32, u32); 2]; 2],
     pub carets: [(TexId, u32, u32); 2],
     pub legend: [(TexId, u32); 8],
     pub legend_light: [(TexId, u32); 8],
@@ -1463,6 +1475,11 @@ impl QuickMenu<'_> {
                 }
             }
             let value = match row {
+                _ if row.toggle() => self.values[row.index()].and_then(|value| match value {
+                    QuickValue::On | QuickValue::Show => Some(faces.toggles[1][lit as usize]),
+                    QuickValue::Off | QuickValue::Hide => Some(faces.toggles[0][lit as usize]),
+                    _ => None,
+                }),
                 QuickRow::DateTime => self.clock.map(|c| c[lit as usize]),
                 QuickRow::Wallpaper => self.wallpaper.map(|c| c[lit as usize]),
                 QuickRow::Palette | QuickRow::GbPalette => self.palette.map(|c| c[lit as usize]),
@@ -1481,7 +1498,7 @@ impl QuickMenu<'_> {
             let Some((tex, w, h)) = value else {
                 continue;
             };
-            if !lit || row.opens() || row.binds() {
+            if !lit || row.opens() || row.binds() || row.toggle() {
                 push(out, tex, right + pad - w as f32, y, w, h);
                 continue;
             }

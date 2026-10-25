@@ -577,6 +577,7 @@ fn menu_faces(a: &mut App) {
             .collect(),
         pointer: (id(700), 16, 40),
         values: Vec::new(),
+        toggles: [false, true].map(|on| [false, true].map(|lit| (id(4000 + on as usize * 2 + lit as usize), 116, 40))),
         carets: [(id(300), 10, 40), (id(301), 10, 40)],
         legend: [
             (id(400), 70),

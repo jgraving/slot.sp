@@ -9,11 +9,11 @@ Choose which games children can play, set a time allowance and cap the volume. C
 ## Set it up
 
 1. Set the handheld's clock in **Menu → General → Date & Time**.
-2. Open **Menu → Kid Mode**.
-3. Select **Approved games**. Press <kbd>A</kbd> on each game you want to allow, then <kbd>B</kbd> to return.
+2. With kid mode off, browse the carousel and press <kbd>X</kbd> on each game you want to allow. A gold smiley marks approved games.
+3. Open **Menu → Kid Mode**.
 4. Choose a **Play limit**, set the **Time**, and adjust the **Volume limit**.
-5. Turn **Kid mode → On**.
-6. If you have not set a parent code, enter four buttons, press <kbd>START</kbd>, then enter the same four buttons again and press <kbd>START</kbd> to confirm.
+5. Turn on the **Kid mode** switch at the top. Green means on; red means off.
+6. If you have not set a parent code, enter four buttons, then enter the same four buttons again to confirm. Each screen advances automatically.
 
 You can also set the code separately through **Parent code → Set**. Kid mode starts off on a new installation.
 
@@ -27,7 +27,7 @@ During a game, tapping <kbd>MENU</kbd> opens:
 | **Volume** | Adjust volume within the parent's cap. |
 | **Brightness** | Adjust screen brightness. |
 | **Exit game** | Return to the carousel through the normal save-and-exit process. |
-| **Parent controls** | Enter the parent code to change approvals or limits. |
+| **Parent controls** | Enter the parent code to change limits or turn kid mode off. |
 
 Use <kbd>Up</kbd> / <kbd>Down</kbd> to select a row and <kbd>Left</kbd> / <kbd>Right</kbd> to adjust a value. <kbd>A</kbd> selects; <kbd>B</kbd> or <kbd>MENU</kbd> closes the menu.
 
@@ -40,7 +40,7 @@ On the carousel, the kid menu offers **Games**, Volume, Brightness and Parent co
 | **Play limit → Daily** | Counts active gameplay against an allowance for the day. Pauses and sleep do not use that allowance. Usage is kept across restarts and renews on the next calendar day. |
 | **Play limit → Duration** | Starts a timed session when enabled or when its time settings change. Sleep and reboot do not extend the deadline. |
 | **Play limit → Bedtime** | Allows play until the chosen time today. |
-| **Time** | Daily/Duration: 5–240 minutes, in five-minute steps. Bedtime: a 24-hour clock, in 15-minute steps. |
+| **Time** | Daily/Duration: 5 minutes to 4 hours, shown as hours and minutes. Tap left/right to change one minute, or hold to keep adjusting. Press A to adjust Hours and Minutes separately. Bedtime uses the same controls with a 24-hour clock. |
 | **Volume limit** | 10–80%, in ten-point steps. Starts at 50% and applies across audio outputs while kid mode is on. |
 
 Settings save as you change them. Changing the volume cap does not restart the session timer. Normal parent adjustments keep an approved game paused in place, ready to resume.
@@ -57,24 +57,23 @@ While kid mode is on, the kid menu and parent settings show a **remaining-time b
 
 ## Approve & remove games
 
-In **Parent controls → Approved games**, each game shows **Yes** or **No**. Press <kbd>A</kbd> to approve a game. To remove approval, press <kbd>A</kbd>, release it and press it again within three seconds. Moving away or waiting cancels the confirmation.
+With kid mode off, browse the carousel and press <kbd>X</kbd> on a cartridge to approve it. A **gold smiley at the top left** marks approved games.
 
-With kid mode off, <kbd>X</kbd> on a cartridge also toggles approval. Removal uses the same confirmation pattern. A **gold smiley at the top left** marks approved games.
+To remove approval, press <kbd>X</kbd>, release it and press it again within three seconds. Moving away or waiting cancels the confirmation.
 
 Your full Favorites and Recents lists are kept. Turning kid mode off shows them again.
 
 ## The parent code
 
-Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd> or the D-pad. Each press shows its button picture on screen.
+Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd> or the D-pad. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
 
 | Button | Action |
 | :--- | :--- |
 | <kbd>A</kbd> / <kbd>B</kbd> / <kbd>X</kbd> / <kbd>Y</kbd> / D-pad | Enter a button in the code. |
 | <kbd>SELECT</kbd> | Delete the last entry. |
-| <kbd>START</kbd> | Submit the four entries. |
 | <kbd>MENU</kbd> | Cancel code entry. |
 
-To change the code, open **Parent controls**, unlock it and choose **Parent code → Change**. Enter and confirm the new code.
+To change the code, open **Parent controls**, unlock it and choose **Parent code → Change**. Enter and confirm the new code. A mismatched confirmation shakes and clears; re-enter the confirmation to try again.
 
 ### Turn kid mode off
 
