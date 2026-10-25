@@ -1,5 +1,5 @@
 //! Bounded robust outline fitting for opaque white-backed label scans.
-//! Fits seven numbers to at most ~1,920 boundary observations, then masks once.
+//! Fits seven numbers to sampled boundary observations, then masks once.
 
 type Shape = [f64; 7];
 
