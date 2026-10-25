@@ -9,6 +9,7 @@ use std::{path::PathBuf, time::Instant};
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
     Home,
+    Child,
     Games,
     Unlock,
     Set,
@@ -31,6 +32,10 @@ pub struct Menu {
     pub visible: bool,
     pub face: Option<TexId>,
     pub changed: Option<Policy>,
+    pub child_action: Option<Action>,
+    pub child_volume: u8,
+    pub child_brightness: u8,
+    child_in_game: bool,
 }
 impl Menu {
     pub fn new(root: PathBuf, policy: Policy) -> Self {
@@ -60,7 +65,31 @@ impl Menu {
             visible: true,
             face: None,
             changed: None,
+            child_action: None,
+            child_volume: 0,
+            child_brightness: 0,
+            child_in_game: false,
         }
+    }
+    pub fn child(root: PathBuf, policy: Policy, in_game: bool, volume: u8, brightness: u8) -> Self {
+        let mut menu = Self::new(root, policy);
+        menu.page = Page::Child;
+        menu.status.clear();
+        menu.child_in_game = in_game;
+        menu.child_volume = volume;
+        menu.child_brightness = brightness;
+        menu
+    }
+    pub fn child_menu(&self) -> bool { self.page == Page::Child }
+    fn child_rows(&self) -> Vec<(String, String, bool)> {
+        let mut rows = vec![
+            (if self.child_in_game { "Resume" } else { "Games" }.into(), String::new(), false),
+            ("Volume".into(), format!("{}%", self.child_volume), true),
+            ("Brightness".into(), format!("{}%", self.child_brightness), true),
+        ];
+        if self.child_in_game { rows.push(("Exit game".into(), String::new(), false)); }
+        rows.push(("Parent controls".into(), String::new(), false));
+        rows
     }
     pub fn set_games(&mut self, games: Vec<slot_store::Cart>) {
         self.games = games;
@@ -83,8 +112,12 @@ impl Menu {
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Games => "",
+            Page::Home | Page::Games | Page::Child => "",
         };
+        if self.page == Page::Child {
+            return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
+                format!("{} {label} {value}", if i == self.selected { "SELECTED" } else { "ROW" })).collect();
+        }
         if self.page == Page::Games {
             let confirming = self.game_removal.is_some_and(|(at, since, _)|
                 at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));
@@ -115,23 +148,11 @@ impl Menu {
                 format!("{} minutes", self.draft.minutes)
             };
             let rows = [
-                self.draft.rule.label().to_string(),
-                value,
+                self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
-                if self.draft.active {
-                    "Apply limits"
-                } else {
-                    "Start kid mode"
-                }
-                .into(),
-                if self.draft.active {
-                    "Exit kid mode"
-                } else {
-                    "Back to games"
-                }
-                .into(),
+                format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
                 if self.gate.enabled() { "Change parent code" } else { "Set parent code" }.into(),
-                "Approved games".into(),
+                format!("Approved games {}", self.draft.approved.len()),
             ];
             let status = if self.status.is_empty() {
                 format!(
@@ -182,11 +203,57 @@ impl Menu {
         ]
     }
     pub fn screen_face(&self) -> UndoFace {
-        let mut face = crate::bluetooth::screen_face(&self.lines());
-        if matches!(self.page, Page::Set | Page::Confirm | Page::Unlock) {
+        if self.page == Page::Child {
+            return slot_ui::parent_settings_face(&self.child_rows(), self.selected, 0, "");
+        }
+        if self.page == Page::Home {
+            let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
+            let time = if self.draft.rule == Rule::Until {
+                format!("{:02}:{:02}", self.draft.bedtime / 60, self.draft.bedtime % 60)
+            } else { format!("{} min", self.draft.minutes) };
+            let rows = vec![
+                ("Play limit".into(), kind.into(), true),
+                ("Time".into(), time, true),
+                ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
+                ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
+                ("Parent code".into(), if self.gate.enabled() { "Change" } else { "Set" }.into(), false),
+                ("Approved games".into(), self.draft.approved.len().to_string(), false),
+            ];
+            let status = if self.status == "Parent code saved" { "" } else { &self.status };
+            return slot_ui::parent_settings_face(&rows, self.selected, 0, status);
+        }
+        if self.page == Page::Games {
+            let rows: Vec<_> = self.games.iter().map(|cart| (
+                cart.title.clone(), if self.draft.allows(cart) { "Yes" } else { "No" }.into(), false
+            )).collect();
+            let confirming = self.game_removal.is_some_and(|(at, since, _)|
+                at == self.game_at && since.elapsed().as_millis() < u128::from(slot_ui::FAVORITE_REMOVE_MS));
+            return slot_ui::parent_settings_face(&rows, self.game_at,
+                if confirming { 4 } else { 3 }, if rows.is_empty() { "No games on the content card" } else { "" });
+        }
+        let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
+        let title = match self.page {
+            Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
+            Page::Notice => "Time for a break", _ => "Parent code",
+        };
+        let title = slot_ui::quick_value_face(title, true);
+        let left = (face.w - title.w) / 2;
+        blit(&mut face, &title, left, 112);
+        if self.entering_code() {
             let buttons = slot_ui::button_code_face(&self.code);
             let left = (face.w - buttons.w) / 2;
             blit(&mut face, &buttons, left, 208);
+            let count = slot_ui::quick_description_face(&[&format!("{} / 4", self.code.len())]);
+            let left = (face.w - count.w) / 2;
+            blit(&mut face, &count, left, 284);
+        }
+        let status = if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
+            ""
+        } else { &self.status };
+        if !status.is_empty() {
+            let status = slot_ui::quick_description_face(&[status]);
+            let left = face.w.saturating_sub(status.w) / 2;
+            blit(&mut face, &status, left, 332);
         }
         face
     }
@@ -200,10 +267,56 @@ impl Menu {
             Err(_) => self.status = "Could not save parent settings".into(),
         }
     }
+    fn save_open(&mut self, policy: Policy) {
+        self.save(policy);
+        if self.changed.is_some() { self.visible = true; self.status.clear(); }
+    }
+    fn toggle_mode(&mut self, wall: i64) {
+        let mut next = self.draft.clone();
+        if next.active {
+            next.leave();
+            self.save_open(next);
+        } else {
+            if let Err(e) = next.begin(wall) { self.status = e.to_string(); return; }
+            if !self.gate.enabled() {
+                self.start_after_code = true;
+                self.page = Page::Set;
+                self.status.clear();
+                self.code.clear();
+            } else {
+                self.save_open(next);
+            }
+        }
+    }
     pub fn input(&mut self, action: Action, wall: i64) {
         self.face = None;
         if action == Action::QuickMenu {
             self.visible = false;
+            return;
+        }
+        if self.page == Page::Child {
+            let count = self.child_rows().len();
+            match action {
+                Action::GbaDown(Btn::B) => self.visible = false,
+                Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
+                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
+                Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
+                    let up = action == Action::GbaDown(Btn::Right);
+                    self.child_action = match self.selected {
+                        1 => Some(if up { Action::VolumeUp } else { Action::VolumeDown }),
+                        2 => Some(if up { Action::BrightnessUp } else { Action::BrightnessDown }),
+                        _ => None,
+                    };
+                }
+                Action::GbaDown(Btn::A) => match self.selected {
+                    0 => self.visible = false,
+                    1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
+                    n if n == count - 1 => { self.page = Page::Unlock; self.selected = 0; self.code.clear(); self.status.clear(); }
+                    _ if self.child_in_game => { self.child_action = Some(Action::Eject); self.visible = false; }
+                    _ => {}
+                },
+                _ => {}
+            }
             return;
         }
         if self.page == Page::Notice {
@@ -251,6 +364,7 @@ impl Menu {
                         }
                         self.game_removal = None;
                         self.draft.toggle(cart);
+                        self.save_open(self.draft.clone());
                     }
                 }
                 _ => {}
@@ -259,16 +373,14 @@ impl Menu {
         }
         if self.page == Page::Home {
             match action {
-                Action::GbaDown(Btn::B) => {
-                    if self.draft.active {
-                        self.visible = false;
-                    } else {
-                        self.save(self.draft.clone());
-                    }
-                }
-                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 6) % 7,
-                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 7,
+                Action::GbaDown(Btn::B) => self.visible = false,
+                Action::GbaDown(Btn::Up) => self.selected = (self.selected + 5) % 6,
+                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 6,
                 Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
+                    if self.selected == 3 {
+                        self.toggle_mode(wall);
+                        return;
+                    }
                     let by = if action == Action::GbaDown(Btn::Left) {
                         -1
                     } else {
@@ -290,35 +402,24 @@ impl Menu {
                                 (self.draft.minutes as i32 + 5 * by).clamp(5, 240) as u32;
                         }
                     }
+                    if self.selected < 3 {
+                        let mut next = self.draft.clone();
+                        if next.active && self.selected < 2 {
+                            if let Err(e) = next.begin(wall) { self.status = e.to_string(); return; }
+                        }
+                        self.save_open(next);
+                    }
                 }
                 Action::GbaDown(Btn::A) => match self.selected {
-                    0 => self.draft.rule = self.draft.rule.next(1),
-                    1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
-                    3 if !self.gate.enabled() => {
-                        self.start_after_code = true;
-                        self.page = Page::Set;
-                        self.status = "Use A/B/X/Y or the D-pad".into();
-                        self.code.clear();
-                    }
-                    3 => {
-                        let mut next = self.draft.clone();
-                        match next.begin(wall) {
-                            Ok(()) => self.save(next),
-                            Err(e) => self.status = e.to_string(),
-                        }
-                    }
+                    0 | 1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
+                    3 => self.toggle_mode(wall),
                     4 => {
-                        let mut next = self.draft.clone();
-                        next.leave();
-                        self.save(next);
-                    }
-                    5 => {
                         self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();
                         self.code.clear();
                     }
-                    6 => self.page = Page::Games,
+                    5 => self.page = Page::Games,
                     _ => {}
                 },
                 _ => {}
@@ -359,11 +460,11 @@ impl Menu {
                         .is_ok()
                     {
                         self.page = Page::Home;
-                        self.status = "Parent code saved".into();
+                        self.status.clear();
                         if self.start_after_code {
                             let mut next = self.draft.clone();
                             match next.begin(wall) {
-                                Ok(()) => self.save(next),
+                                Ok(()) => self.save_open(next),
                                 Err(e) => self.status = e.to_string(),
                             }
                         }

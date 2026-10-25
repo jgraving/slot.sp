@@ -43,8 +43,10 @@ Kid mode keeps the familiar **Recents, Favorites and system carousels**, showing
 
 1. Open **Menu → Kid Mode**. On first use, this opens the settings screen so you can configure everything before setting a code.
 2. Open **Approved games** and press **A** to toggle each game. Approved cartridges show a **gold smiley in the top-left corner**. With kid mode off, X on a cartridge also toggles approval, without a permanent carousel hint. Removing approval requires a second press after releasing the button, just like removing a Favorite; moving away or waiting cancels it.
-3. Choose **Daily allowance**, **Play for** or **Play until**, then adjust the time and volume limit.
-4. Select **Start kid mode**. If you have not set a parent code, enter four buttons using **A/B/X/Y or the D-pad**, press **Start**, and enter the same code again to confirm. Each press fills a slot with the actual button artwork and updates the entry count. **Select** deletes the last button; **Menu** cancels. You can also choose **Set parent code** separately from settings.
+3. Choose **Daily allowance**, **Play for** or **Play until**, then adjust the time and volume limit. Changes save immediately.
+4. Turn **Kid mode → On**. If no parent code exists, enter four buttons using **A/B/X/Y or the D-pad**, press **Start**, and repeat the code to confirm. Each press shows its button artwork and entry count. **Select** deletes; **Menu** cancels. You can also set a code separately in **Parent code**.
+
+During a game, **Menu** opens a limited kid menu with **Resume, Volume, Brightness, Exit game** and **Parent controls**. Children can change comfortable display/audio levels and leave a game without a code. Only Parent controls asks for the code. Volume stays within the parent cap.
 
 | Limit | How it works |
 | --- | --- |
@@ -55,7 +57,7 @@ Kid mode keeps the familiar **Recents, Favorites and system carousels**, showing
 
 When time runs out, slot.sp uses its save paths, returns to the shelf and asks for a parent. Parent dialogs pause and mute gameplay. Settings and potentially disruptive shortcuts require parent access; approved-game browsing stays simple. Set the handheld’s clock correctly before enabling limits.
 
-To change limits or leave kid mode, open the menu and enter your code. **Applying a duration starts a new deadline; it does not reset today’s daily usage.**
+To change limits or turn kid mode off, choose **Parent controls** and enter your code. Changes save immediately. Changing a duration starts a new deadline; volume adjustments do not restart it or reset today’s daily usage.
 
 **Forgot the code?** Shut down, put the content card in a computer and read `Config/kids/parent-code.txt`. The recovery code is intentionally stored in plain text, so anyone with access to the card can read it. Kid mode starts off; damaged policy data blocks play until a parent resolves it.
 

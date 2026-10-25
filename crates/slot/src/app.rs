@@ -4475,6 +4475,7 @@ impl App {
     pub fn draw(&self, out: &mut Vec<Draw>) {
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
             if let Some(tex) = self.kid_menu.as_ref().and_then(|m| m.face) {
+                slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 out.push(Draw::Tex {
                     x: 0.0,
                     y: 0.0,
@@ -4483,6 +4484,7 @@ impl App {
                     tex,
                     alpha: 1.0,
                 });
+                self.draw_status_bar(out);
                 return;
             }
         }

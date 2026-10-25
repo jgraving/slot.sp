@@ -1100,6 +1100,103 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     }
 }
 
+/// Transparent parent menu raster, using the standard menu type, pointer,
+/// spacing, carets and bitmap footer. The app draws its normal menu ground.
+pub fn parent_settings_face(rows: &[(String, String, bool)], selected: usize,
+    footer: u8, status: &str) -> UndoFace {
+    let mut face = parent_footer_face(footer, rows.get(selected).is_some_and(|r| r.2));
+    let visible = rows.len().min(QUICK_VISIBLE);
+    let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
+    let top = (LEGEND_Y - QUICK_PITCH * visible as f32) / 2.0;
+    let pad = MENU_PAD as f32;
+    let right = OUT_W as f32 - QUICK_EDGE;
+    for (i, (label, value, adjustable)) in rows.iter().enumerate().skip(start).take(visible) {
+        let lit = i == selected;
+        let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
+        let label = parent_label_face(label, lit, !value.is_empty());
+        parent_blit(&mut face, &label, QUICK_LABEL_X - pad, y);
+        if lit {
+            let pointer = quick_pointer_face();
+            parent_blit(&mut face, &pointer, QUICK_LABEL_X - POINTER_GAP - pointer.w as f32,
+                y - POINTER_BLEED as f32);
+        }
+        if value.is_empty() { continue; }
+        let value = quick_value_face(value, lit);
+        if lit && *adjustable {
+            let left = quick_caret_face(false);
+            let next = quick_caret_face(true);
+            let rx = right - next.w as f32;
+            let vx = rx - CARET_GAP + pad - value.w as f32;
+            parent_blit(&mut face, &next, rx, y);
+            parent_blit(&mut face, &value, vx, y);
+            parent_blit(&mut face, &left, vx + pad - CARET_GAP - left.w as f32, y);
+        } else {
+            parent_blit(&mut face, &value, right + pad - value.w as f32, y);
+        }
+    }
+    if rows.len() > visible {
+        let h = QUICK_PITCH * visible as f32;
+        let thumb = h / rows.len() as f32;
+        let y = top + (h - thumb) * selected as f32 / (rows.len() - 1) as f32;
+        for yy in y as u32..(y + thumb) as u32 {
+            for x in OUT_W - 16..OUT_W - 12 {
+                let at = ((yy * OUT_W + x) * 4) as usize;
+                face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, 255]);
+            }
+        }
+    }
+    if !status.is_empty() {
+        let description = quick_description_face(&[status]);
+        parent_blit(&mut face, &description, (OUT_W - description.w) as f32 / 2.0,
+            LEGEND_Y - description.h as f32 - DESCRIPTION_GAP);
+    }
+    face
+}
+
+pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
+    let mut face = UndoFace { rgba: vec![0; (OUT_W * OUT_H * 4) as usize], w: OUT_W, h: OUT_H };
+    let hints = parent_button_legends(page, MENU_INK);
+    parent_blit(&mut face, &hints[0], 16.0, LEGEND_Y);
+    let right: Vec<_> = if page == 0 {
+        vec![&hints[if adjustable { 1 } else { 2 }]]
+    } else { hints[1..].iter().collect() };
+    let total = right.iter().map(|h| h.w - HINT_EDGE).sum::<u32>()
+        + 16 * right.len().saturating_sub(1) as u32;
+    let mut x = OUT_W.saturating_sub(16 + total);
+    for hint in right {
+        parent_blit(&mut face, hint, x as f32, LEGEND_Y);
+        x += hint.w - HINT_EDGE + 16;
+    }
+    face
+}
+fn parent_label_face(label: &str, lit: bool, has_value: bool) -> UndoFace {
+    let Some(font) = text::label_font() else { return quick_value_face(label, lit); };
+    let max = if has_value { OUT_W as f32 - 290.0 } else { OUT_W as f32 - 130.0 };
+    let layout = text::fit(font, label, max, 1, MENU_PX, MENU_PX);
+    let width = text::line_width(font, &layout.lines[0], layout.px, layout.tracking).ceil() as u32 + 2 * MENU_PAD;
+    let mut rgba = vec![0; (width * MENU_H * 4) as usize];
+    text::draw_centred(&mut rgba, width, MENU_H, &layout, if lit { MENU_INK } else { DIM_INK });
+    UndoFace { rgba, w: width, h: MENU_H }
+}
+fn parent_blit(dst: &mut UndoFace, src: &UndoFace, x: f32, y: f32) {
+    let (left, top) = (x.round().max(0.0) as u32, y.round().max(0.0) as u32);
+    for yy in 0..src.h.min(dst.h.saturating_sub(top)) {
+        for xx in 0..src.w.min(dst.w.saturating_sub(left)) {
+            let s = ((yy * src.w + xx) * 4) as usize;
+            let d = (((top + yy) * dst.w + left + xx) * 4) as usize;
+            let a = u32::from(src.rgba[s + 3]);
+            let behind = u32::from(dst.rgba[d + 3]) * (255 - a) / 255;
+            let alpha = a + behind;
+            if alpha == 0 { continue; }
+            for c in 0..3 {
+                dst.rgba[d + c] = ((u32::from(src.rgba[s + c]) * a
+                    + u32::from(dst.rgba[d + c]) * behind) / alpha) as u8;
+            }
+            dst.rgba[d + 3] = alpha as u8;
+        }
+    }
+}
+
 pub fn sound_forget_confirmation() -> UndoFace {
     with_hint(
         button_face(ButtonLegend::Y),

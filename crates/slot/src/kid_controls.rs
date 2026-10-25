@@ -86,6 +86,7 @@ impl App {
             let menu = self.kid_menu.as_mut().unwrap();
             menu.input(action, wall);
             let changed = menu.changed.take();
+            let child_action = menu.child_action.take();
             let close = !menu.visible;
             if let Some(policy) = changed {
                 self.stop_for_parent();
@@ -93,8 +94,15 @@ impl App {
                 self.kid_error = false;
                 self.apply_kid_scope();
             }
-            if close {
-                self.kid_menu = None;
+            if close { self.kid_menu = None; }
+            if let Some(action) = child_action {
+                if action == Action::Eject { self.apply(action); } else { self.adjust(action); }
+            }
+            let volume = self.volume();
+            let brightness = (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8;
+            if let Some(menu) = &mut self.kid_menu {
+                menu.child_volume = volume;
+                menu.child_brightness = brightness;
             }
             return true;
         }
@@ -102,7 +110,13 @@ impl App {
             if matches!(action, Action::QuickMenu | Action::GameMenu)
                 || (self.on_shelf() && action == Action::GbaDown(Btn::Start))
             {
-                self.open_kid_controls();
+                if let Some(root) = self.root.clone() {
+                    let mut menu = crate::kid_menu::Menu::child(root, self.kids.clone(),
+                        matches!(self.phase, Phase::Playing { .. }), self.volume(),
+                        (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
+                    menu.set_games(self.catalog.clone());
+                    self.kid_menu = Some(menu);
+                }
                 return true;
             }
             if !self.kid_action_allowed(action) {

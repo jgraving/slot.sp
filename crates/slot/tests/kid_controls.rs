@@ -58,6 +58,10 @@ fn press(app: &mut App, b: Btn) {
     common::through(app, b);
 }
 fn unlock(app: &mut App) {
+    if app.kid_menu.as_ref().unwrap().child_menu() {
+        press(app, Btn::Up);
+        press(app, Btn::A);
+    }
     for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Start] {
         press(app, b);
     }
@@ -67,7 +71,7 @@ fn unlock(app: &mut App) {
             .unwrap()
             .lines()
             .iter()
-            .any(|s| s.contains("Apply limits") || s.contains("Start kid mode"))
+            .any(|s| s.contains("Kid mode On") || s.contains("Kid mode Off"))
     );
 }
 #[test]
@@ -101,12 +105,14 @@ fn kid_mode_filters_each_existing_rack_without_erasing_parent_memberships() {
     assert_eq!(before.favorites, after.favorites);
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    // Exit kid mode is row 4; parent menu starts on row 0.
-    for _ in 0..4 {
+    // Kid mode is row 3; toggle it off without an Apply step.
+    for _ in 0..3 {
         press(&mut app, Btn::Down);
     }
     press(&mut app, Btn::A);
     assert!(!app.kid_mode());
+    assert!(app.parent_controls_open());
+    press(&mut app, Btn::B);
     assert_eq!(app.carts().count(), 3);
     assert!(app.carts().any(|c| c.stem == "Blocked"));
 }
@@ -133,6 +139,8 @@ fn blocked_shortcuts_cannot_change_rules_or_launch_parent_screens() {
         assert!(app.kid_menu.is_none());
     }
     app.apply(Action::QuickMenu);
+    press(&mut app, Btn::Up);
+    press(&mut app, Btn::A);
     for b in [Btn::A, Btn::A, Btn::A, Btn::A, Btn::Start] {
         press(&mut app, b);
     }
@@ -431,9 +439,9 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
     assert!(s.app().kid_menu.as_ref().unwrap().lines().iter().any(|l| l.contains("Volume limit")));
     preview_menu(&s, "parent-first-settings.png");
-    // Select Set parent code. Merely opening settings must not create a code.
+    // Select Parent code. Merely opening settings must not create a code.
     assert!(!dir.join("code").exists());
-    for _ in 0..5 { raw_tap(&mut s, &mut time, Btn::Down); }
+    for _ in 0..4 { raw_tap(&mut s, &mut time, Btn::Down); }
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
@@ -502,7 +510,7 @@ fn approvals_can_be_edited_from_parent_settings() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..6 { press(&mut app, Btn::Down); }
+    for _ in 0..5 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::A);
     let before = app.kid_menu.as_ref().unwrap().draft.approved.clone();
     press(&mut app, Btn::A);
@@ -557,4 +565,63 @@ fn approval_removal_timeout_keeps_the_game_and_restarts_confirmation() {
     assert_eq!(Policy::read(d.path()).unwrap().approved, before);
     press(&mut app, Btn::X);
     assert_eq!(Policy::read(d.path()).unwrap().approved.len(), before.len() - 1);
+}
+
+#[test]
+fn kid_pause_menu_allows_volume_brightness_resume_and_exit_without_a_code() {
+    use slot::session::Session;
+    let d = card();
+    let mut s = Session::boot(d.path().to_owned());
+    s.app_mut().apply(Action::Insert);
+    s.app_mut().set_snapshot(common::StubSnapshot::boxed());
+    s.app_mut().on_core_ready();
+    for _ in 0..120 { s.app_mut().update(1.0 / 60.0); }
+    assert!(matches!(s.app().phase(), Phase::Playing { .. }));
+    s.app_mut().apply(Action::QuickMenu);
+    let menu = s.app().kid_menu.as_ref().unwrap();
+    assert!(menu.child_menu());
+    assert!(!menu.entering_code());
+    assert!(menu.lines().iter().any(|l| l.contains("Exit game")));
+    preview_menu(&s, "kid-pause-menu.png");
+    let mut time = 0;
+    raw_tap(&mut s, &mut time, Btn::Down);
+    for _ in 0..30 { raw_tap(&mut s, &mut time, Btn::Right); }
+    assert_eq!(s.app().volume(), s.app().kid_volume_limit());
+    raw_tap(&mut s, &mut time, Btn::Left);
+    assert!(s.app().volume() < s.app().kid_volume_limit());
+    raw_tap(&mut s, &mut time, Btn::Down);
+    let brightness = s.app().brightness();
+    raw_tap(&mut s, &mut time, Btn::Left);
+    assert_eq!(s.app().brightness(), brightness.saturating_sub(1));
+    raw_tap(&mut s, &mut time, Btn::B);
+    assert!(s.app().kid_menu.is_none());
+    assert!(matches!(s.app().phase(), Phase::Playing { .. }));
+    s.app_mut().apply(Action::QuickMenu);
+    for _ in 0..3 { raw_tap(&mut s, &mut time, Btn::Down); }
+    raw_tap(&mut s, &mut time, Btn::A);
+    assert!(s.app().kid_menu.is_none());
+    assert!(matches!(s.app().phase(), Phase::Ejecting { .. } | Phase::Shelf));
+    assert!(s.app().kid_mode());
+}
+
+#[test]
+fn parent_settings_apply_volume_immediately_and_use_transparent_menu_artwork() {
+    let d = card();
+    let mut app = App::boot(d.path());
+    app.apply(Action::QuickMenu);
+    unlock(&mut app);
+    press(&mut app, Btn::Down);
+    press(&mut app, Btn::Down);
+    press(&mut app, Btn::Left);
+    assert_eq!(app.kid_volume_limit(), 40);
+    assert_eq!(Policy::read(d.path()).unwrap().volume_limit, 40);
+    let face = app.kid_menu.as_ref().unwrap().screen_face();
+    assert_eq!(face.rgba[3], 0, "menu background must remain transparent");
+    assert!(face.rgba.chunks_exact(4).filter(|p| p[3] == 0).count() > (face.w * face.h / 2) as usize);
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "parent-volume-arrows.png", face);
+    }
+    press(&mut app, Btn::B);
+    assert!(app.kid_mode());
+    assert_eq!(app.kid_volume_limit(), 40);
 }
