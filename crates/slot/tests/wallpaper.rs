@@ -202,8 +202,11 @@ fn flowing_gradient_is_already_moving_under_the_outgoing_game() {
     use slot_store::{write_slot_state, SlotState, WallpaperPick};
     for wallpaper in [WallpaperPick::Default, WallpaperPick::Static] {
         let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
-        write_slot_state(d.path(), &SlotState { wallpaper: wallpaper.clone(), clock_set: true, ..SlotState::default() }).unwrap();
-        let mut app = common::app_playing_in(d.path(), "Emerald");
+        write_slot_state(d.path(), &SlotState { wallpaper: wallpaper.clone(), cart: Some("Emerald".into()), clock_set: true, ..SlotState::default() }).unwrap();
+        let mut app = slot::app::App::boot(d.path());
+        app.set_snapshot(common::StubSnapshot::boxed());
+        app.on_core_ready();
+        for _ in 0..120 { app.update(1.0 / 60.0); }
         app.set_ground(TexId::from_raw(800));
         let mut out = Vec::new();
         app.draw(&mut out);
