@@ -22,11 +22,18 @@ def build(font_path, output):
     yy,xx=np.mgrid[:H,:W].astype(np.float32)
     for frame in range(N):
         t=frame/(N-1)
-        # Damped elastic approach, then an exact terminal pose and material.
-        q=min(t/.83,1.)
-        residual=math.exp(-7*q)*math.cos(10*q) if q<1 else 0.
-        loc={'opsz':18+54*max(0,residual),'wdth':100+8*residual,
-             'wght':600-250*residual,'ROND':60*max(0,residual),'slnt':-6*max(0,residual)}
+        # Travel through the actual extremes of font space before a short
+        # damped lock-in: fine/wide -> dense/narrow -> soft/round -> final.
+        knots=[0.,.24,.48,.72,.88,1.]
+        poses=[(72,108,350,60,-6),(10,95,700,0,0),(64,108,380,60,-6),
+               (28,96,690,18,0),(18,100,600,0,0),(18,100,600,0,0)]
+        segment=min(np.searchsorted(knots,t,side='right')-1,4)
+        u=(t-knots[segment])/(knots[segment+1]-knots[segment])
+        u=u*u*(3-2*u)
+        values=[a+(b-a)*u for a,b in zip(poses[segment],poses[segment+1])]
+        loc=dict(zip(['opsz','wdth','wght','ROND','slnt'],values))
+        q=min(t/.88,1.)
+        residual=(1-q)**2 * math.cos(q*9) if q<1 else 0.
         loc={a.axisTag:max(a.minValue,min(a.maxValue,loc[a.axisTag])) for a in font['fvar'].axes}
         face=ImageFont.truetype(io.BytesIO(buf.getvalue()),208)
         face.set_variation_by_axes([loc[k] for k in axes])
@@ -47,19 +54,23 @@ def build(font_path, output):
         nz=1/np.sqrt(1+(gx*4)**2+(gy*4)**2)
         nx=-gx*4*nz;ny=-gy*4*nz
         light=np.clip(-.45*nx-.55*ny+.7*nz,0,1)
-        rim=np.exp(-dist/1.2)*m
+        rim=np.exp(-np.maximum(dist-1.0,0)/1.2)*m
         sweep=np.exp(-((xx/W-(t*1.7-.25)-yy/H*.16)/.055)**2)
         broad=np.exp(-((xx/W-(t*1.2)+yy/H*.2)/.3)**2)
         mix=np.clip(xx/W*.7+yy/H*.3,0,1)[...,None]
         tint=np.array([.12,.63,.68])*(1-mix)+np.array([.50,.25,.79])*mix
-        glass=tint*(.24+.50*light[...,None]) + rim[...,None]*np.array([.30,.55,.65])
-        glass+=sweep[...,None]*(.18+.55*rim[...,None])+broad[...,None]*.10
+        # Glass transmits the scene; the bevels and moving softboxes carry color.
+        inner=np.exp(-((dist-3.0)/.9)**2)*m
+        glass=tint*(.12+.36*light[...,None]) + rim[...,None]*np.array([.38,.65,.76])
+        glass+=inner[...,None]*tint*.45
+        glass+=sweep[...,None]*(.28+.65*rim[...,None])+broad[...,None]*.15
         # The prismatic material resolves to the exact warm-white brand mark.
-        settle=np.clip((t-.64)/.22,0,1);settle=settle*settle*(3-2*settle)
+        settle=np.clip((t-.79)/.09,0,1);settle=settle*settle*(3-2*settle)
         rgb=glass*(1-settle)+np.array([246,247,242])/255*settle
-        alpha=m*np.clip(t/.07,0,1)
+        transmission=.12+.62*rim+.20*inner+.28*sweep*m
+        alpha=m*np.clip(t/.06,0,1)*((1-settle)*np.clip(transmission,0,1)+settle)
         # Thin displaced rear faces provide depth before settling flush.
-        back=shift(m,(3*(1-settle),3*(1-settle)),order=1,mode='constant')*(1-alpha)*.5*(1-settle)
+        back=shift(m,(3*(1-settle),3*(1-settle)),order=1,mode='constant')*(1-alpha)*.20*(1-settle)*np.clip(t/.06,0,1)
         rgb=np.clip(rgb,0,1)
         a=np.clip(alpha+back,0,1)
         rgb=(rgb*alpha[...,None]+np.array([.18,.28,.42])*back[...,None])/np.maximum(a[...,None],.001)
