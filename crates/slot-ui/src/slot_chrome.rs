@@ -1,7 +1,7 @@
-use slot_gfx::{Canvas, Draw, TexId, OUT_H};
+use slot_gfx::{Canvas, Draw, OUT_H, TexId};
 use slot_store::Cart;
 
-use crate::cart::{cart_box, label_colour, label_text, seated_box, SEATED_W};
+use crate::cart::{SEATED_W, cart_box, label_colour, label_text, seated_box};
 use crate::footer::Printed;
 use crate::icon::icon_box;
 use crate::plate::HINT_H;
@@ -107,6 +107,15 @@ impl SlotChrome<'_> {
     }
 
     pub fn draw_with_star(&self, star: Option<(TexId, f32, f32)>, out: &mut Vec<Draw>) {
+        self.draw_with_marks(star, None, out);
+    }
+
+    pub fn draw_with_marks(
+        &self,
+        star: Option<(TexId, f32, f32)>,
+        kid: Option<(TexId, f32, f32)>,
+        out: &mut Vec<Draw>,
+    ) {
         let canvas = self.canvas;
         let seat = self.seat.clamp(0.0, 1.0);
         let dim = self.dim.clamp(0.0, 1.0);
@@ -187,6 +196,16 @@ impl SlotChrome<'_> {
             }
         });
 
+        if let Some(kid) = kid {
+            crate::favorite::draw_kid(
+                self.cart,
+                kid,
+                crate::Placed { x, y, w: cw, h: ch },
+                cart_alpha,
+                0.0,
+                out,
+            );
+        }
         if let Some(star) = star {
             crate::favorite::draw_star(
                 self.cart,

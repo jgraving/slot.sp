@@ -1,22 +1,23 @@
 use std::time::{Duration, Instant};
 
-use slot_gfx::{Compositor, Draw, ScreenEffect, TexId, OUT_H, OUT_W};
+use slot_gfx::{Compositor, Draw, OUT_H, OUT_W, ScreenEffect, TexId};
 
 const PAPER: &[u8] = include_bytes!("../assets/paper.png");
 use crate::shot_loader::{ShotLoader, Want};
 use slot_input::{InputSource, Millis};
 use slot_power::{Platform, Power};
-use slot_store::{format_stamp, BezelPick, Platform as Console, ShellColour};
+use slot_store::{BezelPick, Platform as Console, ShellColour, format_stamp};
 use slot_ui::{
-    badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face, core_button_legends,
-    date_time_text, default_game_bezel_face, delete_legends, footer_ink, game_bezel_face,
-    gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends, menu_detail_face, menu_face,
-    photo_face, prompt_legends, quick_caret_face, quick_description_face, quick_label_face,
-    quick_legend_faces, quick_pointer_face, quick_value_face, quick_warning_value_face,
-    rebuild_count_face, rebuild_title_face, repair_legends, set_clock_hint_face, socket_face,
-    sticker_face, title_face, toast_face, wallpaper_face, word_ink, CartFace, GbShell, Icon,
-    LinkBadge, PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields,
-    Toast, UndoFace, ALERT_PX, BOLT_PX, HUD_ICON_PX, HUD_INK, LEGEND,
+    ALERT_PX, BOLT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
+    PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
+    UndoFace, badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face,
+    core_button_legends, date_time_text, default_game_bezel_face, delete_legends, footer_ink,
+    game_bezel_face, gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends,
+    menu_detail_face, menu_face, photo_face, prompt_legends, quick_caret_face,
+    quick_description_face, quick_label_face, quick_legend_faces, quick_pointer_face,
+    quick_value_face, quick_warning_value_face, rebuild_count_face, rebuild_title_face,
+    repair_legends, set_clock_hint_face, socket_face, sticker_face, title_face, toast_face,
+    wallpaper_face, word_ink,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -63,6 +64,8 @@ pub struct Frontend {
     about: AboutFace,
     quick_clock: QuickClock,
     quick_palette: QuickPalette,
+    kid_tex: Option<TexId>,
+    kid_lines: Vec<String>,
     wallpaper: WallpaperSync,
     game_bezel: BezelSync,
     look: Option<ShelfLook>,
@@ -209,6 +212,8 @@ impl Frontend {
             about: AboutFace::default(),
             quick_clock: QuickClock::default(),
             quick_palette: QuickPalette::default(),
+            kid_tex: None,
+            kid_lines: Vec::new(),
             wallpaper: WallpaperSync::default(),
             game_bezel: BezelSync::default(),
             look: None,
@@ -305,6 +310,22 @@ impl Frontend {
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture(star.w, star.h, &star.rgba);
         self.session.app_mut().set_star_face(id, star.w, star.h);
+        let hints = [
+            ("A", "Play"),
+            ("L/R", "Carousels"),
+            ("MENU", "Parents"),
+            ("X", "Kid-friendly"),
+        ]
+        .iter()
+        .map(|(key, label)| {
+            let f = slot_ui::hint_face(key, label);
+            (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
+        })
+        .collect();
+        self.session.app_mut().set_kid_hints(hints);
+        let smiley = slot_ui::kid_smiley_face();
+        let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
+        self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);
@@ -537,7 +558,8 @@ impl Frontend {
         {
             return;
         }
-        self.boot_intro = crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
+        self.boot_intro =
+            crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
     }
 
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
@@ -545,9 +567,15 @@ impl Frontend {
         compositor.fit(window);
         self.compose(compositor);
         if let Some((brand, started)) = &mut self.boot_intro {
-            let elapsed = started.get_or_insert_with(Instant::now).elapsed().as_millis() as u64;
+            let elapsed = started
+                .get_or_insert_with(Instant::now)
+                .elapsed()
+                .as_millis() as u64;
             // Never cover automatic game resume, and never hold up the emulator loop.
-            if !self.boot_intro_cancelled && elapsed < crate::brand_motion::BOOT_MS && matches!(self.session.app().phase(), crate::app::Phase::Shelf) {
+            if !self.boot_intro_cancelled
+                && elapsed < crate::brand_motion::BOOT_MS
+                && matches!(self.session.app().phase(), crate::app::Phase::Shelf)
+            {
                 let mut intro = Vec::with_capacity(2);
                 brand.boot(elapsed, slot_gfx::Canvas::of(window), &mut intro);
                 compositor.draw_list(&intro);
@@ -698,6 +726,13 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
+        if let Some(menu) = &mut self.session.app_mut().kid_menu {
+            let lines = menu.lines();
+            if lines != self.kid_lines || menu.face.is_none() {
+                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face()));
+                self.kid_lines = lines;
+            }
+        }
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
@@ -869,7 +904,9 @@ impl Frontend {
     pub fn advance(&mut self, input: &mut dyn InputSource) {
         let now = self.now();
         let events = input.poll(now);
-        self.boot_intro_cancelled |= events.iter().any(|event| matches!(event, slot_input::RawEvent::Down(_)));
+        self.boot_intro_cancelled |= events
+            .iter()
+            .any(|event| matches!(event, slot_input::RawEvent::Down(_)));
         if self.rebuild.is_some() {
             return;
         }
@@ -901,7 +938,9 @@ impl Frontend {
 
     pub fn advance_at(&mut self, input: &mut dyn InputSource, now: Millis, dt: f32) {
         let events = input.poll(now);
-        self.boot_intro_cancelled |= events.iter().any(|event| matches!(event, slot_input::RawEvent::Down(_)));
+        self.boot_intro_cancelled |= events
+            .iter()
+            .any(|event| matches!(event, slot_input::RawEvent::Down(_)));
         self.session.feed(events, now);
         self.session.update(dt);
     }

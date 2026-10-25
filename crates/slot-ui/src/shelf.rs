@@ -1,12 +1,12 @@
-use slot_gfx::{Canvas, Draw, TexId, OUT_H};
+use slot_gfx::{Canvas, Draw, OUT_H, TexId};
 use slot_store::{Cart, Platform};
 use std::sync::OnceLock;
 
-use crate::board::{board_in, Placed};
-use crate::cart::{cart_box, gb_shell_of, is_clear, label_colour, label_text, CART_H, CART_W};
+use crate::board::{Placed, board_in};
+use crate::cart::{CART_H, CART_W, cart_box, gb_shell_of, is_clear, label_colour, label_text};
 use crate::hud::Millis;
 use crate::silhouette::GbShell;
-use crate::slot_chrome::{draw_empty_slot, MOUTH_H};
+use crate::slot_chrome::{MOUTH_H, draw_empty_slot};
 
 // Carousel sizes are independent of the physical insertion size. GBA can grow
 // wider; tall GB/Color paks are bounded by the status area and lower housing.
@@ -15,11 +15,19 @@ pub const GBA_SHELF_SCALE: f32 = 396.0 / CART_W as f32;
 pub const GB_SHELF_SCALE: f32 = 328.0 / crate::cart::GB_CART_W as f32;
 
 pub fn shelf_scale(platform: Platform) -> f32 {
-    if platform == Platform::Gba { GBA_SHELF_SCALE } else { GB_SHELF_SCALE }
+    if platform == Platform::Gba {
+        GBA_SHELF_SCALE
+    } else {
+        GB_SHELF_SCALE
+    }
 }
 
 fn height_scale(h: f32) -> f32 {
-    if h > CART_H as f32 { GB_SHELF_SCALE } else { GBA_SHELF_SCALE }
+    if h > CART_H as f32 {
+        GB_SHELF_SCALE
+    } else {
+        GBA_SHELF_SCALE
+    }
 }
 
 const SIDE_SCALE: f32 = 0.78;
@@ -65,6 +73,8 @@ pub struct Shelf {
     shells: Vec<OnceLock<Option<GbShell>>>,
     clears: Vec<OnceLock<bool>>,
     starred: Vec<bool>,
+    kids: Vec<bool>,
+    kid_face: Option<(TexId, f32, f32)>,
     star: Option<(TexId, f32, f32)>,
     ride: f32,
     vel: f32,
@@ -79,6 +89,8 @@ impl Shelf {
             faces: vec![None; carts.len()],
             interiors: vec![None; carts.len()],
             starred: vec![false; carts.len()],
+            kids: vec![false; carts.len()],
+            kid_face: None,
             star: None,
             carts,
             index: 0,
@@ -121,6 +133,7 @@ impl Shelf {
         self.faces = vec![None; carts.len()];
         self.interiors = vec![None; carts.len()];
         self.starred = vec![false; carts.len()];
+        self.kids = vec![false; carts.len()];
         self.carts = carts;
         self.held = None;
         self.select(0);
@@ -132,6 +145,22 @@ impl Shelf {
         self.scroll = i as f32;
         self.ride = i as f32;
         self.vel = 0.0;
+    }
+
+    pub fn set_kid_face(&mut self, face: TexId, w: u32, h: u32) {
+        self.kid_face = Some((face, w as f32, h as f32));
+    }
+    pub fn mark_kids(&mut self, approved: impl Fn(&Cart) -> bool) {
+        self.kids = self.carts.iter().map(approved).collect();
+    }
+    pub fn kid_for(&self, stem: &str) -> Option<(TexId, f32, f32)> {
+        let i = self.carts.iter().position(|c| c.stem == stem)?;
+        self.kids
+            .get(i)
+            .copied()
+            .unwrap_or(false)
+            .then_some(self.kid_face)
+            .flatten()
     }
 
     pub fn set_star(&mut self, face: TexId, w: u32, h: u32) {
@@ -390,7 +419,10 @@ impl Shelf {
 
     pub fn selected_at(&self, canvas: Canvas) -> (f32, f32) {
         let (w, _) = self.slot_width(0);
-        let zoom = self.carts.get(self.index).map_or(GBA_SHELF_SCALE, |c| shelf_scale(c.platform));
+        let zoom = self
+            .carts
+            .get(self.index)
+            .map_or(GBA_SHELF_SCALE, |c| shelf_scale(c.platform));
         let scale = shrink(self.scroll_target() - self.scroll) * zoom;
         (self.centre(canvas, 0) - w * scale / 2.0, scale)
     }
@@ -404,10 +436,24 @@ impl Shelf {
 
     fn pitch(&self, a: i32, u: f32) -> f32 {
         let ((wa, gba_a), (wb, gba_b)) = (self.slot_width(a), self.slot_width(a + 1));
-        let wa = wa * if gba_a { GBA_SHELF_SCALE } else { GB_SHELF_SCALE };
-        let wb = wb * if gba_b { GBA_SHELF_SCALE } else { GB_SHELF_SCALE };
+        let wa = wa
+            * if gba_a {
+                GBA_SHELF_SCALE
+            } else {
+                GB_SHELF_SCALE
+            };
+        let wb = wb
+            * if gba_b {
+                GBA_SHELF_SCALE
+            } else {
+                GB_SHELF_SCALE
+            };
         let (sa, sb) = (shrink(a as f32 - u), shrink((a + 1) as f32 - u));
-        let gap_of = if gba_a || gba_b { CART_W as f32 * GBA_SHELF_SCALE } else { wa };
+        let gap_of = if gba_a || gba_b {
+            CART_W as f32 * GBA_SHELF_SCALE
+        } else {
+            wa
+        };
         wa * sa / 2.0 + gap_of * (1.0 - (sa + sb) / 2.0) + wb * sb / 2.0
     }
 
@@ -457,22 +503,41 @@ impl Shelf {
     }
 
     /// Reuse the cartridge layers and insertion easing, travelling out above the panel.
-    pub fn draw_departing(&self, canvas: Canvas, progress: f32,
-        slot: Option<(TexId, TexId)>, out: &mut Vec<Draw>) {
+    pub fn draw_departing(
+        &self,
+        canvas: Canvas,
+        progress: f32,
+        slot: Option<(TexId, TexId)>,
+        out: &mut Vec<Draw>,
+    ) {
         self.draw_row_departure(canvas, None, 0.0, 0.0, 1.0, Some(progress), out);
         draw_empty_slot(canvas, slot, out);
     }
 
-    fn draw_row_departure(&self, canvas: Canvas, hidden: Option<&str>, shake: f32,
-        recede: f32, dim: f32, departure: Option<f32>, out: &mut Vec<Draw>) {
+    fn draw_row_departure(
+        &self,
+        canvas: Canvas,
+        hidden: Option<&str>,
+        shake: f32,
+        recede: f32,
+        dim: f32,
+        departure: Option<f32>,
+        out: &mut Vec<Draw>,
+    ) {
         let recede = recede.clamp(0.0, 1.0);
         let dim = dim.clamp(0.0, 1.0);
         let target = self.scroll_target();
         let progress = crate::ease(departure.unwrap_or(0.0).clamp(0.0, 1.0));
         // Geometry-only destination row. Textures stay in this shelf until the animation ends.
         let destination = departure.map(|_| {
-            let mut row = Shelf::new(self.carts.iter().enumerate()
-                .filter(|(i, _)| *i != self.index).map(|(_, c)| c.clone()).collect());
+            let mut row = Shelf::new(
+                self.carts
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| *i != self.index)
+                    .map(|(_, c)| c.clone())
+                    .collect(),
+            );
             row.select(self.index.min(row.carts.len().saturating_sub(1)));
             row
         });
@@ -491,12 +556,16 @@ impl Shelf {
             let depart = if slot == 0 { progress } else { 0.0 };
             if let Some(row) = &destination {
                 if i == self.index {
-                    if slot != 0 { continue; }
+                    if slot != 0 {
+                        continue;
+                    }
                 } else {
                     let n = self.carts.len() as i32;
                     let next_slot = slot - slot.div_euclid(n) - 1
                         + i32::from(self.index + 1 == self.carts.len());
-                    if row.carts.len() == 1 && next_slot != 0 { continue; }
+                    if row.carts.len() == 1 && next_slot != 0 {
+                        continue;
+                    }
                     scale += (shrink(next_slot as f32) - scale) * progress;
                     centre += (row.centre(canvas, next_slot) - centre) * progress;
                 }
@@ -599,6 +668,9 @@ impl Shelf {
                     }
                 }
             });
+            if let (Some(true), Some(face)) = (self.kids.get(i), self.kid_face) {
+                crate::favorite::draw_kid(cart, face, Placed { x, y, w, h }, alpha * dim, 0.0, out);
+            }
             if let (Some(true), Some(star)) = (self.starred.get(i), self.star) {
                 crate::favorite::draw_star(
                     cart,
