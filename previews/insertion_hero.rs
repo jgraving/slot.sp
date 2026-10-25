@@ -25,7 +25,7 @@ fn main(){
  let star=slot_ui::star_face(3,[246,195,44]);let (sw,sh)=(star.w as f32,star.h as f32);let star=texture(&mut c,star);
  let [back,front]=slot_ui::shell_slot_faces(slot_store::ShellColour::Graphite);
  let back=c.create_texture(720,slot_ui::SLOT_H,back);let front=c.create_texture(720,slot_ui::SLOT_H,front);
- let logo=png(&mut c,&format!("{out}/hero-wordmark.png"));let light=png(&mut c,&format!("{out}/hero-light.png"));
+ let brand=slot::brand_motion::BrandMotion::upload(&mut c).unwrap();let light=png(&mut c,&format!("{out}/hero-light.png"));
  let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
  let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-insertion.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
  let mut pipe=encoder.stdin.take().unwrap();let mut first=None;let mut last=None;let mut seated=false;let mut trace=Vec::new();
@@ -40,7 +40,9 @@ fn main(){
   let mut draws=vec![Draw::Lava{w:720.,h:480.,phase:slot_gfx::lava_phase(drift)}];
   SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_star(Some((star,sw,sh)),&mut draws);
   draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:light,alpha:1.});
-  draws.push(Draw::Tex{x:0.,y:8.,w:720.,h:96.,tex:logo,alpha:1.});
+  let ms=frame*1000/60;
+  let alpha=if frame>242 {(269-frame) as f32/27.} else {1.};
+  brand.draw(ms,120.,0.,480.,alpha,&mut draws);
   c.begin_frame();c.draw_list(&draws);let pixels=c.read_frame();
   if frame==0 { first=Some(pixels.clone());let mut enc=png::Encoder::new(File::create(format!("{out}/hero-insertion.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap(); }
   if frame==269 {last=Some(pixels.clone());}

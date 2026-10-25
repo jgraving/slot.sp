@@ -69,6 +69,8 @@ pub struct Frontend {
     link_shot: Option<TexId>,
     link_shot_size: (u32, u32),
     link_shot_shown: bool,
+    boot_intro_cancelled: bool,
+    boot_intro: Option<(crate::brand_motion::BrandMotion, Option<Instant>)>,
 }
 
 #[derive(Default)]
@@ -212,6 +214,8 @@ impl Frontend {
             link_shot: None,
             link_shot_size: (0, 0),
             link_shot_shown: false,
+            boot_intro: None,
+            boot_intro_cancelled: false,
         }
     }
 
@@ -517,10 +521,27 @@ impl Frontend {
         }
     }
 
+    pub fn enable_boot_intro(&mut self, compositor: &mut Compositor) {
+        if self.session.app().wallpaper() != slot_store::WallpaperPick::Static {
+            self.boot_intro = crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
+        }
+    }
+
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
         self.session.app_mut().set_panel(window);
         compositor.fit(window);
         self.compose(compositor);
+        if let Some((brand, started)) = &mut self.boot_intro {
+            let elapsed = started.get_or_insert_with(Instant::now).elapsed().as_millis() as u64;
+            // Never cover automatic game resume, and never hold up the emulator loop.
+            if !self.boot_intro_cancelled && elapsed < crate::brand_motion::BOOT_MS && matches!(self.session.app().phase(), crate::app::Phase::Shelf) {
+                let mut intro = Vec::with_capacity(2);
+                brand.boot(elapsed, slot_gfx::Canvas::of(window), &mut intro);
+                compositor.draw_list(&intro);
+            } else if let Some((brand, _)) = self.boot_intro.take() {
+                brand.release(compositor);
+            }
+        }
         compositor.end_frame(window);
     }
 
@@ -835,6 +856,7 @@ impl Frontend {
     pub fn advance(&mut self, input: &mut dyn InputSource) {
         let now = self.now();
         let events = input.poll(now);
+        self.boot_intro_cancelled |= events.iter().any(|event| matches!(event, slot_input::RawEvent::Down(_)));
         if self.rebuild.is_some() {
             return;
         }
@@ -866,6 +888,7 @@ impl Frontend {
 
     pub fn advance_at(&mut self, input: &mut dyn InputSource, now: Millis, dt: f32) {
         let events = input.poll(now);
+        self.boot_intro_cancelled |= events.iter().any(|event| matches!(event, slot_input::RawEvent::Down(_)));
         self.session.feed(events, now);
         self.session.update(dt);
     }
