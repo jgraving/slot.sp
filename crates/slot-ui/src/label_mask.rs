@@ -12,7 +12,8 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
     // Keep the established black-background detector separate.
     let white = rgba[..3].iter().all(|&c| c >= 247);
     if white {
-        return clear_white_template(rgba, w, h);
+        let changed = crate::label_fit::clear_white_outline(rgba, w, h);
+        return if changed == 0 { clear_white_template(rgba, w, h) } else { changed };
     }
     let background = |i: usize| {
         rgba[i * 4..i * 4 + 3]

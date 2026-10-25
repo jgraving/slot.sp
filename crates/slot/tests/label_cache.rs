@@ -161,7 +161,7 @@ fn opaque_scan_corners_are_cleaned_on_device_and_old_versioned_caches_refresh() 
 }
 
 #[test]
-fn white_scan_corners_are_cleaned_and_slb3_caches_refresh() {
+fn white_scan_corners_are_cleaned_and_slb4_caches_refresh() {
     let d = tempfile::tempdir().unwrap();
     let cart = cart_with_label(d.path(), [200, 10, 10]);
     let (w, h) = label_size(&cart);
@@ -196,7 +196,7 @@ fn white_scan_corners_are_cleaned_and_slb3_caches_refresh() {
     assert_eq!(label_art(d.path(), &cart), Some(first.clone()));
     let cache = cache_path(d.path(), &cart);
     let mut old = std::fs::read(&cache).unwrap();
-    old[3] = b'3'; // Same stamp/dimensions but the previous processing algorithm.
+    old[3] = b'4'; // Same stamp/dimensions but the previous processing algorithm.
     std::fs::write(cache, old).unwrap();
     assert!(!fresh(d.path(), &cart));
     assert_eq!(label_art(d.path(), &cart), Some(first));

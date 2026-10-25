@@ -2,6 +2,7 @@ mod art;
 pub use art::{cover, cover_label};
 mod bitmaps;
 mod label_mask;
+mod label_fit;
 pub use bitmaps::{
     link_port, link_port_light, slot_back, slot_back_light, slot_front, slot_front_light,
     slot_plugged, slot_plugged_light, Mould, SLOT_H, SLOT_W,
