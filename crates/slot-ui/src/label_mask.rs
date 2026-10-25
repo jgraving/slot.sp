@@ -12,7 +12,8 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
     // Keep the established black-background detector separate.
     let white = rgba[..3].iter().all(|&c| c >= 247);
     if white {
-        return crate::label_fit::clear_white_outline(rgba, w, h);
+        let changed = crate::label_fit::clear_white_outline(rgba, w, h);
+        return if changed == 0 { clear_white_template(rgba, w, h) } else { changed };
     }
     let background = |i: usize| {
         rgba[i * 4..i * 4 + 3]
@@ -76,6 +77,66 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
         rgba[i * 4 + 3] = 0;
     }
     queue.len()
+}
+
+/// White artwork can touch the scan background. Fit a conservative outline
+/// instead of following white pixels into the label. Never erase nonwhite pixels.
+fn clear_white_template(rgba: &mut [u8], w: usize, h: usize) -> usize {
+    let white = |i: usize| rgba[i * 4..i * 4 + 3].iter().all(|&c| c >= 247);
+    if [0, w - 1, (h - 1) * w, w * h - 1].iter().any(|&i| !white(i)) {
+        return 0;
+    }
+    let short = w.min(h);
+    let stride = (short / 160).max(1);
+    let band = (short / 40).max(2) as f64;
+    let mut best = None;
+    for radius in ((short / 24).max(3)..=short / 5).step_by((short / 320).max(1)) {
+        let r = radius as f64;
+        let mut outside_count = 0;
+        let mut outside_ink = 0;
+        let mut band_count = 0;
+        let mut band_ink = 0;
+        for y in (0..h).step_by(stride) {
+            for x in (0..w).step_by(stride) {
+                let dx = x.min(w - 1 - x) as f64 + 0.5;
+                let dy = y.min(h - 1 - y) as f64 + 0.5;
+                let outside = outside_round(dx, dy, r);
+                if outside {
+                    outside_count += 1;
+                    outside_ink += usize::from(!white(y * w + x));
+                } else if outside_round(dx - band, dy - band, (r - band).max(0.0)) {
+                    band_count += 1;
+                    band_ink += usize::from(!white(y * w + x));
+                }
+            }
+        }
+        // At least 99.5% white exterior plus substantial colour immediately
+        // inside the outline. A plain white label cannot supply this evidence.
+        if outside_count >= 4 && outside_ink * 200 <= outside_count
+            && band_count > 0 && band_ink * 2 >= band_count {
+            best = Some(radius);
+        }
+    }
+    let Some(radius) = best else { return 0; };
+    // Verify exterior coverage again at full resolution before changing bytes.
+    let mut pixels = Vec::new();
+    let mut ink = 0;
+    for y in 0..h {
+        for x in 0..w {
+            if outside_round(x.min(w - 1 - x) as f64 + 0.5,
+                y.min(h - 1 - y) as f64 + 0.5, radius as f64) {
+                if white(y * w + x) { pixels.push(y * w + x); } else { ink += 1; }
+            }
+        }
+    }
+    if ink * 200 > pixels.len() + ink { return 0; }
+    for &i in &pixels { rgba[i * 4 + 3] = 0; }
+    pixels.len()
+}
+
+fn outside_round(dx: f64, dy: f64, radius: f64) -> bool {
+    dx < 0.0 || dy < 0.0 || (dx < radius && dy < radius
+        && (radius - dx).powi(2) + (radius - dy).powi(2) > radius * radius)
 }
 
 #[cfg(test)]
