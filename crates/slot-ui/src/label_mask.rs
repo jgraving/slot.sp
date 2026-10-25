@@ -8,8 +8,8 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
     if w.min(h) < 32 || rgba.len() != n * 4 || rgba.chunks_exact(4).any(|p| p[3] != 255) {
         return 0; // Respect existing alpha, including artist-supplied masks.
     }
-    // Select one background polarity for the entire candidate. Never join black
-    // and white regions, which could connect the exterior to printed artwork.
+    // White print can touch the exterior: validate a shape instead of flooding.
+    // Keep the established black-background detector separate.
     let white = rgba[..3].iter().all(|&c| c >= 247);
     if white {
         return clear_white_template(rgba, w, h);
@@ -17,7 +17,7 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
     let background = |i: usize| {
         rgba[i * 4..i * 4 + 3]
             .iter()
-            .all(|&c| if white { c >= 247 } else { c <= 8 })
+            .all(|&c| c <= 8)
     };
     let corners = [0, w - 1, (h - 1) * w, n - 1];
     if corners.iter().any(|&i| !background(i)) {
