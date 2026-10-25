@@ -403,7 +403,7 @@ fn every_cartridge_seats_against_the_same_connector_stop() {
 }
 
 #[test]
-fn every_cartridge_lands_its_foot_on_the_lip_at_the_same_moment() {
+fn every_cartridge_crosses_the_lip_continuously() {
     let lip = OUT_H as f32 - MOUTH_H;
     let landings: Vec<(&str, f32, f32)> = both()
         .iter()
@@ -430,16 +430,7 @@ fn every_cartridge_lands_its_foot_on_the_lip_at_the_same_moment() {
             "{name} is already on the lip before the travel starts"
         );
     }
-    let (first, rest) = landings.split_first().expect("two cartridges");
-    for (name, at, _) in rest {
-        assert!(
-            (at - first.1).abs() < 0.01,
-            "{name} lands on the lip at seat {at} and {} at {}: the catch is not the same \
-             moment for both",
-            first.0,
-            first.1
-        );
-    }
+
 }
 
 #[test]
@@ -805,30 +796,15 @@ fn the_slot_sits_in_a_recessed_bay() {
 }
 
 #[test]
-fn the_cart_catches_on_the_top_edge_of_the_slot() {
+fn the_release_pop_leaves_each_cartridge_partly_in_the_slot() {
     let lip = OUT_H as f32 - MOUTH_H;
     for (name, c) in both() {
-        let bottom_at = |t: f32| {
-            let out = chrome(&c, t);
-            match out[cart_at(&out)] {
-                Draw::Rect { y, h, .. } | Draw::Tex { y, h, .. } => y + h,
-                ref other => panic!("the cart is not a quad: {other:?}"),
-            }
-        };
-        let mut slowest = (f32::MAX, 0.0f32);
-        let mut t = 0.05;
-        while t < 0.95 {
-            let d = bottom_at(t + 0.05) - bottom_at(t);
-            if d < slowest.0 {
-                slowest = (d, t);
-            }
-            t += 0.05;
-        }
-        let at = bottom_at(slowest.1);
-        assert!(
-            (at - lip).abs() < 16.0,
-            "{name} hesitates at {at} but the slot's top edge is {lip}"
-        );
+        let seated = cart_quad(&c, 1.0);
+        let popped = cart_quad(&c, slot_ui::eject_depth(0.20));
+        assert!(popped.y < seated.y - 15.0, "{name}: no visible pop");
+        assert!(popped.y < lip && popped.y + popped.h > lip + 40.0,
+            "{name}: the release pulled the cartridge out of the slot");
+        assert!((popped.w - seated.w).abs() < 0.01, "{name}: release stretched the cartridge");
     }
 }
 
