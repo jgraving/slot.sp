@@ -46,3 +46,7 @@ ffmpeg -v error -y -i /tmp/slot-readme/out/hero-insertion.mp4 -vf fps=20 /tmp/sl
 python3 tools/opaque_preview_gif.py /tmp/slot-readme/hero previews/hero-insertion.gif
 rm crates/slot/examples/insertion_hero.rs
 ```
+
+The glass reveal is shared by the hero and device boot overlay through `slot::brand_motion`. `tools/build-brand-motion.py` bakes the real Google Sans Flex `opsz`, `wdth`, `wght`, `ROND` and `slnt` axes with damped letter motion, bevel lighting and a warm-white terminal frame into `assets/brand-motion.png`. Regenerate it with `python3 tools/build-brand-motion.py assets/brand-motion.png` (Pillow, NumPy, SciPy, FontTools and Brotli). The font source is the same site-hosted Google Sans Flex file used above; the font itself is not embedded in the application.
+
+`boot_brand.rs` records the exact boot-overlay draw path against a wallpaper preview backdrop, rather than a recording of the whole firmware startup. The device overlay lasts at most 1.1 seconds while normal app updates continue, dismisses on a button press, skips automatic game resume, and is disabled with Static Gradient. The earlier firmware screen uses the still BMP. Its atlas GPU storage is released after the overlay ends.
