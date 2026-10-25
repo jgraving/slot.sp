@@ -31,3 +31,18 @@ GIFs use a shared palette, opaque frames and 50 ms frame intervals. The carousel
 Label scans: LaunchBox Games Database and its contributors; original game artwork belongs to its publishers. Exact source pages and image URLs are listed in `art-sources.json`. Used only for the interface previews.
 
 The showcase uses Emerald, Ruby and Sapphire in translucent green, red and blue shells. Metroid Fusion and WarioWare retain their standard dark shells. The fixture writes the same `cart_shell.txt` overrides used by the application.
+
+The opening hero uses the production App insertion/ejection clock, SlotChrome geometry and compositor with a single Emerald cartridge. It adds a wordmark rendered from the site's Google Sans Flex font and a restrained fixed lighting overlay. It is an art-directed product view, not AI-generated video or a multiplayer/gameplay recording. `make_hero_art.py` and `insertion_hero.rs` reproduce it.
+
+To reproduce the hero after preparing the fixture above (requires FontTools and Brotli):
+
+```sh
+cp previews/insertion_hero.rs crates/slot/examples/insertion_hero.rs
+cargo build -p slot --no-default-features --example insertion_hero
+python3 previews/make_hero_art.py /tmp/slot-readme/out
+target/debug/examples/insertion_hero /tmp/slot-readme/card /tmp/slot-readme/out
+mkdir -p /tmp/slot-readme/hero
+ffmpeg -v error -y -i /tmp/slot-readme/out/hero-insertion.mp4 -vf fps=20 /tmp/slot-readme/hero/%04d.png
+python3 tools/opaque_preview_gif.py /tmp/slot-readme/hero previews/hero-insertion.gif
+rm crates/slot/examples/insertion_hero.rs
+```

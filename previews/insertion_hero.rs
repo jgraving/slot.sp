@@ -1,0 +1,51 @@
+//! Product hero using the real App insertion/ejection clock and SlotChrome geometry.
+#[path="egl_surface.rs"] mod egl_surface;
+use slot::app::App;
+use slot_gfx::{Compositor,Draw,TexId,Canvas};
+use slot_input::Action;
+use slot_ui::{CartFace,SlotChrome,Shelf};
+use std::{fs::File,io::Write,process::{Command,Stdio}};
+fn texture(c:&mut Compositor, face:CartFace)->TexId { c.create_texture(face.w,face.h,&face.rgba) }
+fn png(c:&mut Compositor,path:&str)->TexId {
+    let mut reader=png::Decoder::new(File::open(path).unwrap()).read_info().unwrap();
+    let mut bytes=vec![0;reader.output_buffer_size()];let info=reader.next_frame(&mut bytes).unwrap();
+    assert_eq!(info.color_type,png::ColorType::Rgba);
+    c.create_texture(info.width,info.height,&bytes[..info.buffer_size()])
+}
+fn main(){
+ let args:Vec<_>=std::env::args().skip(1).collect();let [root,out]=args.as_slice() else{panic!("ROOT OUT")};
+ let carts=slot_store::scan(std::path::Path::new(root)).unwrap();
+ let cart=carts.iter().find(|c|c.stem=="Emerald").unwrap().clone();
+ let other=carts.iter().find(|c|c.stem=="Fusion").unwrap().clone();
+ let mut clock=App::new(vec![cart.clone(),other]);
+ let surface=egl_surface::HeadlessSurface::new().unwrap();let mut c=Compositor::new(&surface).unwrap();
+ let face=texture(&mut c,slot_ui::cart_face(&cart));
+ let interior=texture(&mut c,slot_ui::cart_interior(&cart));
+ let backing=texture(&mut c,slot_ui::cart_backing(None));
+ let star=slot_ui::star_face(3,[246,195,44]);let (sw,sh)=(star.w as f32,star.h as f32);let star=texture(&mut c,star);
+ let [back,front]=slot_ui::shell_slot_faces(slot_store::ShellColour::Graphite);
+ let back=c.create_texture(720,slot_ui::SLOT_H,back);let front=c.create_texture(720,slot_ui::SLOT_H,front);
+ let ground=c.create_texture(720,480,slot_ui::default_background().unwrap());
+ let logo=png(&mut c,&format!("{out}/hero-wordmark.png"));let light=png(&mut c,&format!("{out}/hero-light.png"));
+ let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
+ let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-insertion.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
+ let mut pipe=encoder.stdin.take().unwrap();let mut first=None;let mut last=None;let mut seated=false;let mut trace=Vec::new();
+ for frame in 0..270 {
+  if frame==54 {clock.apply(Action::Insert);clock.on_core_ready();}
+  if frame==150 {clock.apply(Action::Eject);}
+  clock.tick_ms(frame*1000/60);clock.update(1.0/60.0);
+  let seat=clock.seat();seated|=seat>=0.999;trace.push(seat);
+  let mut draws=Vec::new();slot_ui::draw_ground(Canvas::FRAMED,Some((ground,720)),&mut draws);
+  SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_star(Some((star,sw,sh)),&mut draws);
+  draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:light,alpha:1.});
+  draws.push(Draw::Tex{x:0.,y:8.,w:720.,h:96.,tex:logo,alpha:1.});
+  c.begin_frame();c.draw_list(&draws);let pixels=c.read_frame();
+  if frame==0 { first=Some(pixels.clone());let mut enc=png::Encoder::new(File::create(format!("{out}/hero-insertion.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap(); }
+  if frame==269 {last=Some(pixels.clone());}
+  pipe.write_all(&pixels).unwrap();
+ }
+ assert!(seated,"hero never seated the cartridge");assert!(clock.seat()<0.001,"hero did not return to the shelf");
+ assert_eq!(first,last,"hero must loop without a pose or lighting jump");
+ assert!(trace[54..82].windows(2).all(|w|w[1]>=w[0]),"insertion reversed");
+ drop(pipe);assert!(encoder.wait().unwrap().success());
+}
