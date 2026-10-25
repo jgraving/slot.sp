@@ -187,7 +187,7 @@ def main():
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = a.samples
-    scene.cycles.use_denoising = True
+    scene.cycles.use_denoising = False
     if hasattr(scene.cycles, 'denoiser'):
         scene.cycles.denoiser = 'OPENIMAGEDENOISE'
     scene.cycles.max_bounces = 12

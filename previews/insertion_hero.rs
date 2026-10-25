@@ -28,7 +28,7 @@ fn main(){
  let vignette=png(&mut c,"assets/brand-vignette.png");
  let brand=slot::brand_motion::BrandMotion::upload(&mut c).unwrap();let light=png(&mut c,&format!("{out}/hero-light.png"));
  let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
- let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-insertion.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
+ let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-glass.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
  let mut pipe=encoder.stdin.take().unwrap();let mut first=None;let mut last=None;let mut seated=false;let mut trace=Vec::new();
  for frame in 0..390 {
   if frame==48 {clock.apply(Action::Insert);clock.on_core_ready();}
@@ -59,7 +59,7 @@ fn main(){
   }
   c.begin_frame();c.draw_list(&draws);let pixels=c.read_frame();
   if frame==0 {first=Some(pixels.clone());}
-  if frame==200 {let mut enc=png::Encoder::new(File::create(format!("{out}/hero-insertion.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap();}
+  if frame==200 {let mut enc=png::Encoder::new(File::create(format!("{out}/hero-glass.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap();}
   if frame==389 {last=Some(pixels.clone());}
   pipe.write_all(&pixels).unwrap();
  }
