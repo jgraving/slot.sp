@@ -147,7 +147,7 @@ impl Menu {
         if self.page == Page::Time {
             let minutes = self.time_minutes();
             return vec![String::new(), format!("Hours {}", minutes / 60),
-                format!("Minutes {}", minutes % 60)];
+                format!("Minutes {}", minutes % 60), self.status.clone()];
         }
         if self.page == Page::Home {
             let value = if self.draft.rule == Rule::Until {
@@ -247,8 +247,8 @@ impl Menu {
             let minutes = self.time_minutes();
             let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, "");
-            self.add_time_meter(&mut face);
+            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, &self.status);
+            if self.status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
         let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
@@ -357,7 +357,11 @@ impl Menu {
             next.bedtime = (next.bedtime as i32 + by).rem_euclid(1440) as u32;
         } else { next.minutes = (next.minutes as i32 + by).clamp(5, 240) as u32; }
         if next.active {
-            if let Err(e) = next.begin(wall) { self.status = if next.approved.is_empty() { "Mark games with X on the carousel".into() } else { e.to_string() }; return; }
+            if let Err(e) = next.begin(wall) {
+                self.stop_repeat();
+                self.status = e.to_string();
+                return;
+            }
         }
         self.save_open(next);
     }

@@ -17,7 +17,7 @@ permissions:
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/heads/integrate-upstream-') }}
 
 jobs:
   build:

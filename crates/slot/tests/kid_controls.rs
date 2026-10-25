@@ -926,3 +926,29 @@ fn holding_time_arrows_repeats_and_stops_on_release_sleep_and_long_frames() {
     for _ in 0..20 { app.update(0.05); }
     assert_eq!(app.kids.minutes, before_sleep);
 }
+
+#[test]
+fn an_expired_bedtime_edit_shows_feedback_and_stops_repeating() {
+    use slot::kid_menu::Menu;
+    let d = card();
+    let wall = now().div_euclid(86_400) * 86_400 + 12 * 3600;
+    let mut policy = Policy::read(d.path()).unwrap();
+    policy.rule = slot::kid_policy::Rule::Until;
+    policy.bedtime = 12 * 60 + 1;
+    policy.begin(wall).unwrap();
+    policy.save(d.path()).unwrap();
+    let mut menu = Menu::new(d.path().to_owned(), policy);
+    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::A, Btn::Down, Btn::Left] {
+        menu.input(Action::GbaDown(b), wall);
+    }
+    assert_eq!(menu.draft.bedtime, 12 * 60 + 1);
+    assert!(menu.lines().iter().any(|line| line == "Choose a later time today"));
+    for _ in 0..20 { assert!(menu.update(0.05).is_none()); }
+    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
+        write_preview(&dir, "parent-bedtime-feedback.png", menu.screen_face());
+    }
+    menu.input(Action::GbaUp(Btn::Left), wall);
+    menu.input(Action::GbaDown(Btn::Right), wall);
+    assert_eq!(menu.draft.bedtime, 12 * 60 + 2);
+    assert!(!menu.lines().iter().any(|line| line == "Choose a later time today"));
+}
