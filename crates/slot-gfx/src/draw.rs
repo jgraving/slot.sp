@@ -65,7 +65,7 @@ pub struct Sprites {
     u_target: gl::types::GLint,
     u_src: gl::types::GLint,
     u_lava: gl::types::GLint,
-    u_flow: [gl::types::GLint; 3],
+    u_flow: [gl::types::GLint; 6],
 }
 
 impl Sprites {
@@ -87,7 +87,7 @@ impl Sprites {
             gl::Uniform2f(u_target, OUT_W as f32, OUT_H as f32);
             u_src = crate::gl::uniform_location(prog, "u_src");
             u_lava = crate::gl::uniform_location(prog, "u_lava");
-            u_flow = ["u_flow0", "u_flow1", "u_flow2"].map(|name| crate::gl::uniform_location(prog, name));
+            u_flow = ["u_flow0", "u_flow1", "u_flow2", "u_flow3", "u_flow4", "u_flow5"].map(|name| crate::gl::uniform_location(prog, name));
             u_rect = crate::gl::uniform_location(prog, "u_rect");
             u_colour = crate::gl::uniform_location(prog, "u_colour");
             u_turn = crate::gl::uniform_location(prog, "u_turn");

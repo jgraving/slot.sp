@@ -123,22 +123,45 @@ uniform float u_lava;
 uniform vec4 u_flow0;
 uniform vec4 u_flow1;
 uniform vec4 u_flow2;
+uniform vec4 u_flow3;
+uniform vec4 u_flow4;
+uniform vec4 u_flow5;
 varying vec2 v_uv;
-float pool(vec2 p, vec4 flow) {
+// Smooth metaball field and analytic gradient: blobs join and pinch apart
+// without hard outlines or per-pixel trigonometry.
+vec3 wax(vec2 p, vec4 flow) {
     vec2 q = (p - flow.xy) / flow.zw;
-    float d = dot(q, q);
-    return 1.0 / (1.0 + d + 0.48 * d * d);
+    float inv = 1.0 / (1.0 + dot(q, q));
+    return vec3(inv * inv, -4.0 * q / flow.zw * inv * inv * inv);
+}
+vec2 eddy(vec2 p, vec4 flow) {
+    vec2 q = p - flow.xy;
+    return vec2(-q.y, q.x) / (0.06 + dot(q, q));
 }
 void main() {
     if (u_lava < 0.5) {
         FRAG_COLOR = texture2D(u_tex, v_uv) * u_colour;
     } else {
         float calm = 1.0 - smoothstep(0.54, 0.90, v_uv.y);
-        vec3 light = vec3(5.0, 56.0, 76.0) * pool(v_uv, u_flow0)
-                   + vec3(66.0, 8.0, 82.0) * pool(v_uv, u_flow1)
-                   + vec3(40.0, 7.0, 23.0) * pool(v_uv, u_flow2);
+        // Overlapping counter-rotating eddies bend the wax into flowing necks.
+        vec2 p = v_uv + 0.018 * (eddy(v_uv, u_flow0) - eddy(v_uv, u_flow1)
+                                      + 0.65 * eddy(v_uv, u_flow2));
+        vec3 a = wax(p, u_flow0), b = wax(p, u_flow1), c = wax(p, u_flow2);
+        vec3 d = wax(p, u_flow3), e = wax(p, u_flow4), f = wax(p, u_flow5);
+        vec3 field = a + b + c + d + e + f;
+        vec3 dye = (vec3(0.08, 0.65, 0.66) * (a.x + e.x)
+                  + vec3(0.49, 0.20, 0.77) * (b.x + d.x)
+                  + vec3(0.85, 0.20, 0.40) * c.x
+                  + vec3(0.94, 0.48, 0.18) * f.x) / max(field.x, 0.001);
+        float body = smoothstep(0.48, 1.16, field.x);
+        vec3 normal = normalize(vec3(-field.yz * 0.045, 1.0));
+        float diffuse = max(dot(normal, vec3(-0.45, -0.55, 0.704)), 0.0);
+        float sheen = diffuse * diffuse; sheen *= sheen;
+        vec3 liquid = dye * (0.18 + 0.36 * diffuse) + vec3(0.14, 0.16, 0.19) * sheen;
+        vec3 glow = dye * min(field.x, 1.8) * 0.075;
+        vec3 base = vec3(14.0, 21.0, 35.0) / 255.0;
         float grain = fract(dot(floor(v_uv * vec2(720.0, 480.0)), vec2(0.75487766, 0.56984029))) - 0.5;
-        FRAG_COLOR = vec4((vec3(14.0, 21.0, 35.0) + calm * light + grain * 0.8) / 255.0, 1.0);
+        FRAG_COLOR = vec4(base + calm * (glow + liquid * body) + grain * (0.8 / 255.0), 1.0);
     }
 }
 "#;
