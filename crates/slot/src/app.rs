@@ -1,37 +1,41 @@
+#[path = "kid_controls.rs"]
+mod kid_controls;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use slot_gfx::{Canvas, OUT_H, OUT_W};
-use slot_input::{Action, Btn, RawEvent, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS};
+use slot_input::{Action, Btn, MENU_DOUBLE_TAP_MS, MUTE_CHORD_MS, RawEvent};
 use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
-    format_stamp, parse_stamp, read_slot_state, scan, write_slot_state, BezelPick, Cart, Core,
-    GbColors, Platform, Recent, Shader, ShotDir, ShotEntry, SlotState, StateEntry, StateRing,
-    WallpaperPick, WallpaperTint, BLUE_LIGHT_MAX, BRIGHTNESS_MAX, FF_SPEEDS, RING_MAX, VOLUME_MAX,
+    BLUE_LIGHT_MAX, BRIGHTNESS_MAX, BezelPick, Cart, Core, FF_SPEEDS, GbColors, Platform, RING_MAX,
+    Recent, Shader, ShotDir, ShotEntry, SlotState, StateEntry, StateRing, VOLUME_MAX,
+    WallpaperPick, WallpaperTint, format_stamp, parse_stamp, read_slot_state, scan,
+    write_slot_state,
 };
 use slot_ui::{
-    board_from, board_zoom, draw_empty_slot, draw_ground, draw_slot_name, draw_sticker, ease,
-    footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap, shelf_cart_at, ClockPicker,
-    Draw, FfState, GbShell, Hud, HudKind, Icon, LinkBadge, Millis, Placed, Polaroids, PowerChoice,
-    QuickMenu, QuickMenuFaces, QuickRow, QuickValue, Refusal, Shelf, ShotMode, ShotViewer,
-    SlotChrome, TexId, Toast, CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W, HINT_EDGE, HOP_LIFT, MOUTH_H,
-    REPEAT_DELAY_MS, SHADOW_H, SHADOW_W, SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, TURN_PAD,
+    CART_W, CHIP_H, CHIP_U, CHIP_V, CHIP_W, ClockPicker, Draw, FfState, GbShell, HINT_EDGE,
+    HOP_LIFT, Hud, HudKind, Icon, LinkBadge, MOUTH_H, Millis, Placed, Polaroids, PowerChoice,
+    QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
+    SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
+    TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, draw_slot_name,
+    draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
+    shelf_cart_at,
 };
 
 use crate::audio::Sfx;
 use crate::core_picker::{Chip, CorePicker, Outcome, Press};
-use crate::link_kind::{link_carried, link_dual, link_kind, serial_option, LinkKind};
-use crate::link_radio::{radio_jobs, LinkRole, RadioJob, RadioJobs};
+use crate::link_kind::{LinkKind, link_carried, link_dual, link_kind, serial_option};
+use crate::link_radio::{LinkRole, RadioJob, RadioJobs, radio_jobs};
 use crate::link_screen::LinkSprites;
-use crate::link_start::{link_port, LinkFail, LinkProgress, LinkStarter, LinkStep};
+use crate::link_start::{LinkFail, LinkProgress, LinkStarter, LinkStep, link_port};
 use crate::loading_mark::LoadingMark;
 use crate::persist::{self, Snapshot};
 use crate::video_mode::{self, VideoMode};
 use slot_store::{
-    read_carousel, read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
-    Binding, CarouselKeys, Controls, Device, GameButton, Modifier, ShortcutKeys,
+    Binding, CarouselKeys, Controls, Device, GameButton, Modifier, ShortcutKeys, read_carousel,
+    read_controls, read_shortcuts, write_carousel, write_controls, write_shortcuts,
 };
 
 pub const RECORDING: &str = "Recording";
@@ -338,6 +342,10 @@ struct FavoriteRemoval {
 }
 
 pub struct App {
+    pub kids: crate::kid_policy::Policy,
+    pub kid_menu: Option<crate::kid_menu::Menu>,
+    kid_error: bool,
+    catalog: Vec<Cart>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
     bluetooth_supported: bool,
     pub audio_indicator: Option<TexId>,
@@ -353,6 +361,8 @@ pub struct App {
     orphaned: Vec<TexId>,
     play_held: Option<Millis>,
     favorite_removal: Option<FavoriteRemoval>,
+    kid_removal: Option<FavoriteRemoval>,
+    kid_remove_face: Option<(TexId, u32, u32)>,
     favorite_departure: Option<Millis>,
     favorite_remove_face: Option<(TexId, u32, u32)>,
     held_dir: Option<(Btn, Millis, usize)>,
@@ -545,6 +555,7 @@ fn shift_down(draws: &mut [Draw], dy: f32) {
 
 impl App {
     pub fn new(carts: Vec<Cart>) -> Self {
+        let catalog = carts.clone();
         let shelves = shelves_of(carts);
         let shelf_at = shelves
             .iter()
@@ -553,6 +564,10 @@ impl App {
         let state_writer = crate::state_writer::StateWriter::spawn();
         let card_writes = state_writer.card_writes();
         App {
+            kids: crate::kid_policy::Policy::default(),
+            kid_menu: None,
+            kid_error: false,
+            catalog,
             bluetooth: None,
             bluetooth_supported: false,
             audio_indicator: None,
@@ -582,6 +597,8 @@ impl App {
             orphaned: Vec::new(),
             play_held: None,
             favorite_removal: None,
+            kid_removal: None,
+            kid_remove_face: None,
             favorite_departure: None,
             favorite_remove_face: None,
             held_dir: None,
@@ -747,7 +764,22 @@ impl App {
         } else if !app.shelves[RECENTS_AT].1.carts.is_empty() {
             app.shelf_at = RECENTS_AT;
         }
-        if app.state.clock_set {
+        match crate::kid_policy::Policy::read(root) {
+            Ok(policy) => app.kids = policy,
+            Err(_) => {
+                app.kids.active = true;
+                app.kid_error = true;
+            }
+        }
+        app.apply_kid_scope();
+        if app.kids.active {
+            app.phase = Phase::Shelf;
+            app.state.cart = None;
+            app.state.cart_platform = None;
+            if app.kid_error {
+                app.open_kid_controls();
+            }
+        } else if app.state.clock_set {
             app.start();
         } else {
             app.phase = clock_screen(system_secs(), 0, false);
@@ -756,6 +788,10 @@ impl App {
     }
 
     fn start(&mut self) {
+        if self.kids.active {
+            self.phase = Phase::Shelf;
+            return;
+        }
         if let Some(stem) = self.loading.as_ref().and_then(LoadingMark::left) {
             return self.start_after_a_crash(&stem);
         }
@@ -1255,6 +1291,7 @@ impl App {
                 QuickValue::Dark
             }),
             QuickRow::Bluetooth
+            | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
             | QuickRow::Screen
@@ -1503,7 +1540,11 @@ impl App {
         // flowing wallpaper behind the fading game during insertion/ejection;
         // switching from a static image after the overlay ends causes a pop.
         if face.is_some() && matches!(self.state.wallpaper, WallpaperPick::Default) {
-            out.push(Draw::Lava { w: self.canvas().w, h: self.canvas().h, phase: slot_gfx::lava_phase(self.now()) });
+            out.push(Draw::Lava {
+                w: self.canvas().w,
+                h: self.canvas().h,
+                phase: slot_gfx::lava_phase(self.now()),
+            });
         } else {
             draw_ground(self.canvas(), face, out);
         }
@@ -1652,6 +1693,7 @@ impl App {
     fn random_drawn(&self) -> bool {
         matches!(self.random_wallpaper, Some(Some(_)))
     }
+
 
     pub fn set_sticker_face(&mut self, face: TexId) {
         self.sticker_face = Some(face);
@@ -2016,11 +2058,13 @@ impl App {
     }
 
     pub fn input_context(&self) -> slot_input::Context {
-        let overlaid = self.game_menu_open()
+        let overlaid = self.parent_controls_open()
+            || self.game_menu_open()
             || self.in_game_menu().is_some()
             || self.repair_prompt()
             || self.shutting_down();
-        let shelf = matches!(self.phase, Phase::Shelf)
+        let shelf = self.kid_menu.is_none()
+            && matches!(self.phase, Phase::Shelf)
             && self.core_picker.is_none()
             && !self.repair_prompt
             && self.reset_prompt.is_none();
@@ -2351,7 +2395,13 @@ impl App {
         self.hud.set_headphones(self.headphones);
         let secs = power.now();
         if matches!(self.phase, Phase::SetClock { .. }) || secs < CLOCK_FLOOR {
-            self.phase = clock_screen(secs, 0, false);
+            if self.kids.active {
+                self.kid_error = true;
+                self.phase = Phase::Shelf;
+                self.open_kid_controls();
+            } else {
+                self.phase = clock_screen(secs, 0, false);
+            }
         }
         self.copy_card_log(&power);
         if let Some(result) = power.take_repair_result() {
@@ -2653,6 +2703,9 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        if !self.kid_action_allowed(action) {
+            return;
+        }
         if self
             .wake_guard
             .is_some_and(|until| std::time::Instant::now() < until)
@@ -2701,6 +2754,9 @@ impl App {
             Action::Favorite | Action::GbaUp(_) => {}
             Action::GbaDown(btn) if Some(btn) == favorite_button => {}
             _ => self.favorite_removal = None,
+        }
+        if self.kid_input(action) {
+            return;
         }
         self.track_held_dir(action);
         match action {
@@ -3021,6 +3077,7 @@ impl App {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
             QuickRow::About => self.phase = Phase::About,
+            QuickRow::Kids => self.open_kid_controls(),
             QuickRow::Power
             | QuickRow::Screen
             | QuickRow::ScreenGeneral
@@ -3272,6 +3329,7 @@ impl App {
             | QuickRow::ShowTitles
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds
+            | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
@@ -3423,8 +3481,20 @@ impl App {
             Action::BrightnessDown => (HudKind::Brightness, s.brightness.saturating_sub(1)),
             Action::BlueLightUp => (HudKind::BlueLight, up(s.blue_light, 1, BLUE_LIGHT_MAX)),
             Action::BlueLightDown => (HudKind::BlueLight, s.blue_light.saturating_sub(1)),
-            Action::VolumeUp => (HudKind::Volume, up(self.level(), VOLUME_STEP, VOLUME_MAX)),
-            Action::VolumeDown => (HudKind::Volume, self.level().saturating_sub(VOLUME_STEP)),
+            Action::VolumeUp => (
+                HudKind::Volume,
+                up(
+                    self.level().min(self.kid_volume_limit()),
+                    VOLUME_STEP,
+                    VOLUME_MAX.min(self.kid_volume_limit()),
+                ),
+            ),
+            Action::VolumeDown => (
+                HudKind::Volume,
+                self.level()
+                    .min(self.kid_volume_limit())
+                    .saturating_sub(VOLUME_STEP),
+            ),
             _ => return false,
         };
         if kind == HudKind::Volume {
@@ -3559,7 +3629,7 @@ impl App {
     }
 
     pub fn volume(&self) -> u8 {
-        self.level()
+        self.level().min(self.kid_volume_limit())
     }
 
     fn level(&self) -> u8 {
@@ -3622,7 +3692,7 @@ impl App {
         if self.bluetooth_volume_address().is_none() || self.volume() == level {
             return;
         }
-        self.state.volume_bt = Some(level.min(100));
+        self.state.volume_bt = Some(level.min(self.kid_volume_limit()));
         self.vol_before.clear();
         self.persist_soon();
         let now = self.now();
@@ -3631,10 +3701,10 @@ impl App {
     }
 
     pub fn output_volume(&self) -> u8 {
-        if self.muted() {
+        if self.muted() || (self.kid_menu.is_some() && !self.shutting_down()) {
             0
         } else {
-            self.level()
+            self.level().min(self.kid_volume_limit())
         }
     }
 
@@ -3684,7 +3754,8 @@ impl App {
                 let before = shelf.scroll.round() as i32;
                 shelf.tick(now);
                 shelf.update(dt);
-                if self.state.carousel_sounds && before != shelf.scroll.round() as i32
+                if self.state.carousel_sounds
+                    && before != shelf.scroll.round() as i32
                     && self.bluetooth.is_none()
                     && self.core_picker.is_none()
                     && self.favorite_departure.is_none()
@@ -3972,6 +4043,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.tick_kid_policy();
         if self.power_click_at.is_some_and(|at| self.now() >= at) {
             self.power_click_at = None;
             self.sfx = Some(Sfx::PowerSwitch);
@@ -4142,6 +4214,7 @@ impl App {
         };
         self.restock(RECENTS_AT, carts);
         self.mark_stars();
+        self.mark_kid_approved();
     }
 
     fn restock_favorites(&mut self) {
@@ -4161,6 +4234,7 @@ impl App {
             shelf.select(index.min(shelf.carts.len() - 1));
         }
         self.mark_stars();
+        self.mark_kid_approved();
     }
 
     fn restock(&mut self, at: usize, carts: Vec<Cart>) {
@@ -4399,6 +4473,21 @@ impl App {
     }
 
     pub fn draw(&self, out: &mut Vec<Draw>) {
+        if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
+            if let Some(tex) = self.kid_menu.as_ref().and_then(|m| m.face) {
+                slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
+                out.push(Draw::Tex {
+                    x: 0.0,
+                    y: 0.0,
+                    w: self.canvas().w,
+                    h: self.canvas().h,
+                    tex,
+                    alpha: 1.0,
+                });
+                self.draw_status_bar(out);
+                return;
+            }
+        }
         if self.shutting_down() {
             out.push(Draw::Rect {
                 x: 0.0,
@@ -4590,6 +4679,7 @@ impl App {
                     }
                 }
                 self.draw_favorite_removal(out);
+                self.draw_kid_removal(out);
             }
             Phase::About => {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
@@ -4988,7 +5078,7 @@ impl App {
             slot: self.slot_faces,
             canvas: self.canvas(),
         }
-        .draw_with_star(self.shelf().star_for(stem), out);
+        .draw_with_marks(self.shelf().star_for(stem), self.shelf().kid_for(stem), out);
     }
 
     pub fn alert_visible(&self) -> bool {
@@ -5243,6 +5333,12 @@ impl App {
                 let (lid, turn) = lid_from(self.canvas(), shelf, progress);
                 slot_ui::draw_star(cart, star, lid, 1.0, turn, out);
             }
+            if let (Some((cart, _)), Some(kid)) =
+                (self.shelf().find(stem), self.shelf().kid_for(stem))
+            {
+                let (lid, turn) = lid_from(self.canvas(), shelf, progress);
+                slot_ui::draw_kid(cart, kid, lid, 1.0, turn, out);
+            }
         }
 
         if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
@@ -5406,6 +5502,9 @@ impl App {
     }
 
     fn insert(&mut self, clean: bool) {
+        if !self.kid_can_launch() {
+            return;
+        }
         if !self.on_shelf() {
             return;
         }
@@ -5455,7 +5554,7 @@ impl App {
     }
 
     fn eject(&mut self) {
-        if self.single_cart() {
+        if self.single_cart() && !self.kids.active {
             return self.refuse();
         }
         self.shot_wanted = false;
@@ -5583,6 +5682,8 @@ impl App {
         }
         self.polaroids = None;
         self.phase = Phase::Doze { cart };
+        // Record the pause even when no frame runs during hardware suspend.
+        self.tick_kid_policy();
         self.dozed_at = self.now();
         self.radio.ask(RadioJob::Cool);
         if let Some(power) = &mut self.power {
@@ -5602,6 +5703,8 @@ impl App {
         if let Some(power) = &mut self.power {
             power.on_open();
         }
+        // Enforce persisted deadlines before the caller can resume the core.
+        self.tick_kid_policy();
     }
 
     pub fn on_doze_timeout(&mut self) {
