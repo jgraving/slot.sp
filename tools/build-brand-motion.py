@@ -64,6 +64,7 @@ def build(font_path, output):
         a=np.clip(alpha+back,0,1)
         rgb=(rgb*alpha[...,None]+np.array([.18,.28,.42])*back[...,None])/np.maximum(a[...,None],.001)
         rgba=np.dstack((np.clip(rgb*255,0,255).astype('uint8'),np.round(a*255).astype('uint8')))
+        if frame == 0: rgba[:] = 0  # No rear-face ghost at the loop boundary.
         image=Image.fromarray(rgba,'RGBA')
         atlas.paste(image,((frame%COLS)*W,(frame//COLS)*H))
     output=Path(output);output.parent.mkdir(parents=True,exist_ok=True);atlas.save(output,optimize=True)
