@@ -37,27 +37,6 @@ Game Boy · Game Boy Color · Game Boy Advance
 - **Listen your way.** Speaker, wired headphones, Bluetooth and detected USB audio, with separate volume/mute settings per output. Saved Bluetooth headphones can reconnect automatically.
 - **Keep your place.** Screenshot gallery, save/load undo, periodic saves and configurable insertion/ejection state behavior inherited from slot. Choose mGBA or gpSP through the cartridge’s circuit-board core picker.
 
-## A shelf they can make their own
-
-Kid mode keeps the familiar **Recents, Favorites and system carousels**, showing only games you approve. There is no extra Kids shelf, and your own Favorites and Recents stay intact.
-
-1. With kid mode off, press **X** on a cartridge to approve it. A **gold smiley in the top-left corner** marks approved games. Press X again to remove approval.
-2. Open **Menu → Kid Mode** and choose a four-button parent code using **A/B/X/Y or the D-pad**. Repeat it to confirm; **Start** submits and **Select** removes the last button.
-3. Choose **Daily allowance**, **Play for** or **Play until**, adjust the time and volume limit, then select **Start kid mode**.
-
-| Limit | How it works |
-| --- | --- |
-| Daily allowance | Counts active gameplay. Usage persists across restarts; the allowance renews on a new calendar day. |
-| Play for | Sets a deadline from when a parent starts or applies the session. Sleep and reboot do not extend it. |
-| Play until | Sets a bedtime for today using the handheld’s clock. |
-| Volume limit | Defaults to **50%**, adjustable from **10–80%**, across audio outputs. |
-
-When time runs out, slot.sp uses its save paths, returns to the shelf and asks for a parent. Parent dialogs pause and mute gameplay. Settings and potentially disruptive shortcuts require parent access; approved-game browsing stays simple. Set the handheld’s clock correctly before enabling limits.
-
-To change limits or leave kid mode, open the menu and enter your code. **Applying a duration starts a new deadline; it does not reset today’s daily usage.**
-
-**Forgot the code?** Shut down, put the content card in a computer and read `Config/kids/parent-code.txt`. The recovery code is intentionally stored in plain text, so anyone with access to the card can read it. Kid mode starts off; damaged policy data blocks play until a parent resolves it.
-
 ## Install or update
 
 Downloads are public and do not need a GitHub account.
@@ -86,12 +65,11 @@ Put uncompressed games in `Games/GB`, `Games/GBC` or `Games/GBA`, with label ima
 | --- | --- |
 | Switch day/night presets | **Select + X** |
 | Take an in-game screenshot | **Menu + X** |
-| Approve a game for kid mode | **X** on its cartridge, with kid mode off |
 | Change shell or wallpaper | **General → Shell Color / Wallpaper** |
 | Disable carousel clicks or the boot animation | **Carousel Sounds / Boot Animation** in settings |
 | Configure lid-close, sleep and shutdown behavior | Power settings; see [Power options](POWER-OPTIONS.md) |
 
-Shortcuts can be remapped. Kid mode restricts shortcuts that could change settings, alter saves or open parent screens.
+Shortcuts can be remapped.
 
 [Audio and Bluetooth](BLUETOOTH.md) · [Day/night display](NIGHT-DISPLAY.md) · [Power options](POWER-OPTIONS.md) · [Shell finishes](previews/rgsp-shell-finishes.png)
 
@@ -101,7 +79,7 @@ Code releases run an ARM64 build and device regression checks before publication
 
 The fork focuses on the SP. Upstream also supports RG34XX, RG34XXSP, RG35XXSP, RG35XX Plus, RG28XX and RG35XX-H; fork additions have not all been tested on every model. Unsupported panels retain normal refresh rates. USB-C headphone playback has been reported working on RG SP; Bluetooth volume synchronization remains experimental. Physical link play and deep sleep/wake need device-specific testing.
 
-Intermittent shutdown speaker static/pop, an unreliable power-switch click and boot-logo jumping have been reported. They are not confirmed fixed. The latest kid-mode changes still need RG SP testing. See [audio testing and limitations](BLUETOOTH.md#tested-devices-and-known-limitations).
+See [audio testing and limitations](BLUETOOTH.md#tested-devices-and-known-limitations).
 
 ## Credits
 

@@ -813,19 +813,6 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             blit(&mut rgba, &pointer, 18, top.saturating_sub(4));
         }
         if i == lines.len() - 1 {
-            if matches!(line.as_str(), "PARENT CODE HINTS" | "PARENT HOME HINTS" | "PARENT NOTICE HINTS") {
-                let keys: &[(&str, &str)] = match line.as_str() {
-                    "PARENT CODE HINTS" => &[("SELECT", "Delete"), ("START", "Done"), ("MENU", "Cancel")],
-                    "PARENT HOME HINTS" => &[("B", "Back"), ("L/R", "Change"), ("A", "Select")],
-                    _ => &[("B", "Games"), ("A", "Parents")],
-                };
-                let hints: Vec<_> = keys.iter().map(|(key, label)| slot_ui::hint_face(key, label)).collect();
-                let gap = slot_ui::LEGEND_GAP as u32;
-                let total = hints.iter().map(|h| h.w).sum::<u32>() + gap * hints.len().saturating_sub(1) as u32;
-                let mut x = (screen_w - total) / 2;
-                for hint in hints { blit(&mut rgba, &hint, x, 427); x += hint.w + gap; }
-                continue;
-            }
             let faces = slot_ui::sound_button_legends(footer_ink);
             let left: Vec<_> = [line.contains("B Back").then_some(0)]
                 .into_iter()

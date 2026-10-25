@@ -6,7 +6,7 @@ use std::thread;
 
 use slot_gfx::{Compositor, TexId};
 use slot_store::Cart;
-use slot_ui::{CartFace, cart_face_with, cart_interior, shows_interior};
+use slot_ui::{cart_face_with, cart_interior, shows_interior, CartFace};
 
 use crate::app::{App, FaceWant};
 use crate::label_cache::label_art;
@@ -16,13 +16,7 @@ const WORKERS: usize = 2;
 type Key = (usize, usize);
 
 /// A cart's face and, for a clear GBA cart, the game-coloured inside it is drawn over.
-type Built = (
-    Key,
-    slot_store::Platform,
-    String,
-    CartFace,
-    Option<CartFace>,
-);
+type Built = (Key, CartFace, Option<CartFace>);
 
 #[derive(Default)]
 struct Queue {
@@ -64,8 +58,8 @@ impl CartFaces {
 
     pub fn sync(&mut self, app: &mut App, compositor: &mut Compositor) {
         self.free.extend(app.shed_faces());
-        while let Ok((key, platform, stem, face, interior)) = self.built.try_recv() {
-            self.place(app, compositor, key, platform, &stem, face, interior);
+        while let Ok((key, face, interior)) = self.built.try_recv() {
+            self.place(app, compositor, key, face, interior);
         }
         let wants = app.face_wants();
         if wants != self.asked {
@@ -79,11 +73,11 @@ impl CartFaces {
             .map(|w| (w.shelf, w.index))
             .collect();
         while !waiting.is_empty() {
-            let Ok((key, platform, stem, face, interior)) = self.built.recv() else {
+            let Ok((key, face, interior)) = self.built.recv() else {
                 return;
             };
             waiting.retain(|k| *k != key);
-            self.place(app, compositor, key, platform, &stem, face, interior);
+            self.place(app, compositor, key, face, interior);
         }
     }
 
@@ -121,19 +115,11 @@ impl CartFaces {
         app: &mut App,
         compositor: &mut Compositor,
         key: Key,
-        platform: slot_store::Platform,
-        stem: &str,
         face: CartFace,
         interior: Option<CartFace>,
     ) {
         self.pending.remove(&key);
         self.asked.retain(|w| (w.shelf, w.index) != key);
-        if !app
-            .face_cart(key.0, key.1)
-            .is_some_and(|c| c.platform == platform && c.stem == stem)
-        {
-            return;
-        }
         let tex = self.texture(compositor, &face);
         self.free.extend(app.set_cart_face(key.0, key.1, tex));
         if let Some(interior) = interior {
@@ -168,10 +154,7 @@ fn work(queue: &Shared, outbox: &Sender<Built>, root: &Path) {
         };
         let face = cart_face_with(&cart, label_art(root, &cart));
         let interior = shows_interior(&cart).then(|| cart_interior(&cart));
-        if outbox
-            .send((key, cart.platform, cart.stem.clone(), face, interior))
-            .is_err()
-        {
+        if outbox.send((key, face, interior)).is_err() {
             return;
         }
     }
