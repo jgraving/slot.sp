@@ -327,17 +327,15 @@ fn the_lip_is_the_frontmost_band() {
 }
 
 #[test]
-fn the_cart_catches_on_the_lip_before_going_in() {
+fn the_renderer_follows_physical_depth_without_a_second_pause() {
     for (name, c) in both() {
         let step = |a: f32, b: f32| cart_y(&c, b) - cart_y(&c, a);
         let approach = step(0.15, 0.30);
         let catching = step(0.45, 0.60);
         let through = step(0.70, 0.85);
-        assert!(
-            catching < approach * 0.5,
-            "{name}: no hesitation at the lip"
-        );
-        assert!(through > catching * 1.5, "{name}: it never pushes through");
+        assert!(approach > 0.0, "{name}: the approach reversed");
+        assert!(catching > 0.0, "{name}: stopped at the lip");
+        assert!((through - catching).abs() < 0.01, "{name}: depth is being eased twice");
     }
 }
 
@@ -586,15 +584,17 @@ fn the_alert_fits_on_the_cart_face() {
 }
 
 #[test]
-fn the_travel_eases_out_into_the_seat() {
+fn the_final_snap_reaches_the_same_seated_pose() {
     for (name, c) in both() {
-        let last = (cart_y(&c, 1.0) - cart_y(&c, 0.9)).abs();
-        let through = (cart_y(&c, 0.85) - cart_y(&c, 0.70)).abs() / 1.5;
+        let last = (cart_y(&c, slot_ui::insert_depth(1.0))
+            - cart_y(&c, slot_ui::insert_depth(0.95))).abs();
+        let through = (cart_y(&c, slot_ui::insert_depth(0.84))
+            - cart_y(&c, slot_ui::insert_depth(0.79))).abs();
         assert!(
-            last < through * 0.5,
-            "{name} covers {last} px in the last tenth against {through} while dropping \
-             through: it arrives at speed and stops dead"
+            last > through * 2.0,
+            "{name}: the final snap covers {last} px against {through} during the push"
         );
+        assert_eq!(cart_y(&c, slot_ui::insert_depth(1.0)), cart_y(&c, 1.0));
     }
 }
 

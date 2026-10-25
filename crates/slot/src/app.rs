@@ -3789,7 +3789,8 @@ impl App {
                 if self.screen <= 0.0 {
                     let was = *t;
                     *t += dt;
-                    touched = was < 0.0 && *t >= 0.0;
+                    let at = -Sfx::Eject.lead();
+                    touched = was < at && *t >= at;
                 }
                 (*t >= EJECT_S).then_some(Phase::Shelf)
             }
@@ -4444,7 +4445,7 @@ impl App {
     }
 
     fn refuse_out(&mut self, cart: String, caught: f32) {
-        let t = (1.0 - caught) * EJECT_S;
+        let t = slot_ui::eject_progress_for_depth(caught) * EJECT_S;
         self.phase = Phase::Ejecting { cart, t };
         self.refused_from = Some(t);
     }
@@ -4464,10 +4465,10 @@ impl App {
                 if *resumed {
                     1.0
                 } else {
-                    (t / SEATED_AT).clamp(0.0, 1.0)
+                    slot_ui::insert_depth(t / SEATED_AT)
                 }
             }
-            Phase::Ejecting { t, .. } => 1.0 - (t / EJECT_S).clamp(0.0, 1.0),
+            Phase::Ejecting { t, .. } => slot_ui::eject_depth(t / EJECT_S),
             _ => 1.0,
         }
     }
@@ -5557,6 +5558,7 @@ impl App {
         if self.single_cart() && !self.kids.active {
             return self.refuse();
         }
+        let depth = self.seat();
         self.shot_wanted = false;
         self.eject_overlay = match self.shows_game() {
             true => self.overlay_slide(),
@@ -5575,7 +5577,11 @@ impl App {
         self.refused_from = None;
         self.phase = Phase::Ejecting {
             cart,
-            t: -EJECT_HOLD_S,
+            t: if depth >= 1.0 {
+                -EJECT_HOLD_S
+            } else {
+                slot_ui::eject_progress_for_depth(depth) * EJECT_S
+            },
         };
     }
 

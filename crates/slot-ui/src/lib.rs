@@ -12,6 +12,8 @@ mod barcode;
 mod battery;
 mod board;
 mod cart;
+mod cart_motion;
+pub use cart_motion::{eject_depth, eject_progress_for_depth, insert_depth};
 mod clock;
 mod draw;
 mod favorite;

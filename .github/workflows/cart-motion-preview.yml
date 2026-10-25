@@ -1,0 +1,39 @@
+name: Capture cartridge motion
+on:
+  push:
+    branches: [integrate-upstream-kid-time-warnings]
+    paths: ['crates/**', 'assets/**', 'previews/cart_motion.rs', '.github/workflows/cart-motion-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      SLOT_SILENT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri python3-pil
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Build production capture
+        run: |
+          cp previews/cart_motion.rs crates/slot/examples/cart_motion.rs
+          cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
+          cp previews/fixture.rs crates/slot/examples/motion_fixture.rs
+          cargo build --locked -p slot --no-default-features --example cart_motion --example motion_fixture
+      - name: Record motion and contact sounds
+        run: |
+          mkdir -p /tmp/slot-motion/out
+          target/debug/examples/motion_fixture /tmp/slot-motion/card
+          python3 previews/prepare_art.py /tmp/slot-motion/card
+          target/debug/examples/cart_motion /tmp/slot-motion/card /tmp/slot-motion/out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cartridge-motion-preview
+          path: /tmp/slot-motion/out/*
+          if-no-files-found: error
