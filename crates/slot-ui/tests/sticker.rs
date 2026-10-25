@@ -48,7 +48,7 @@ fn the_compliance_block_is_the_credits() {
         "MGBA",
         "GPSP",
         "BASEOS BY PVAIBHAV",
-        "OPEN SANS",
+        "GOOGLE SANS FLEX",
         "NERD",
         "LCD3X",
         "MARKUS",

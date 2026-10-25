@@ -55,7 +55,7 @@ fn main(){
   values[QuickRow::Theme.index()]=Some(QuickValue::Dark);values[QuickRow::Recents.index()]=Some(QuickValue::On);
   values[QuickRow::ShowTitles.index()]=Some(QuickValue::Show);values[QuickRow::FastForward.index()]=Some(QuickValue::Speed3);
   values[QuickRow::FastForwardSound.index()]=Some(QuickValue::On);values[QuickRow::Rumble.index()]=Some(QuickValue::On);
-  QuickMenu{row,hidden:&[],values,clock:None,wallpaper:None,faces:Some(&faces),ground:Some(bg),palette:None,
+  QuickMenu{row,hidden:&[],values,clock:None,wallpaper:None,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
    gba_bezel:None,gb_bezel:None,gbc_bezel:None,bezel:None,over_game:false,footer_legends:true,footer_top:480.,canvas:Canvas::FRAMED}.draw(&mut out);
   draw_empty_slot(Canvas::FRAMED,slot,&mut out);
   for (i,(tex,w)) in [faces.legend[0],faces.legend[if row.opens(){2}else{1}]].into_iter().enumerate(){
@@ -70,8 +70,8 @@ fn main(){
  for w in [640,720] {
   let mut s=Scene::new(&root,&format!("sound-{w}"));
   let canvas=Canvas{w:w as f32,h:480.};
-  let lines=["","","COMPACT","ROW SPEAKER_DEVICE Internal speaker","SELECTED ACTIVE DEVICE WF-C510",
-   "ROW USB_DEVICE USB headphones","ROW Pair audio device","ROW DISCONNECT 0%","ROW BLUETOOTH On","B Back · A Connect · Y Forget"].map(str::to_owned);
+  let lines=["","","COMPACT","ROW BLUETOOTH On","ROW SPEAKER_DEVICE Internal speaker","SELECTED ACTIVE DEVICE WF-C510",
+   "ROW USB_DEVICE USB headphones","ROW Pair audio device","ROW DISCONNECT 0%","B Back · A Connect · Y Forget"].map(str::to_owned);
   let f=slot::bluetooth::screen_face_on(&lines,footer_ink(false),canvas);let tex=s.add(&f.rgba,f.w,f.h);
   let [back,front]=shell_slot_faces(ShellColour::Platinum);let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));
   let mut out=vec![Draw::Rect{x:0.,y:0.,w:w as f32,h:480.,colour:[0.08,0.10,0.11,1.]}];
@@ -87,6 +87,6 @@ fn main(){
   let sprites=LinkSprites{port:s.sprite(a.port_light),plug_host:s.sprite(a.plug_host),plug_join:s.sprite(a.plug_join),adapter:s.sprite(a.adapter),
    arcs_right:a.arcs_right.map(|f|s.sprite(f)),arcs_left:a.arcs_left.map(|f|s.sprite(f)),clicks:s.sprite(a.clicks),arrow_left:s.sprite(a.arrow_left),arrow_right:s.sprite(a.arrow_right)};
   let mut out=vec![Draw::Rect{x:0.,y:0.,w:720.,h:480.,colour:[0.12,0.15,0.17,1.]}];
-  draw_link_art(menu,kind,now,&sprites,&mut out);s.save(out);
+  draw_link_art(Canvas::FRAMED,menu,kind,now,&sprites,&mut out);s.save(out);
  }
 }

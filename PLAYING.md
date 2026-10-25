@@ -53,7 +53,7 @@ The browser shows snapshots of your saves. Each game keeps ten manual states, wi
 
 ## Choose an emulator
 
-Press <kbd>START</kbd> on a GBA cartridge to open its circuit-board view. Use <kbd>Left</kbd> or <kbd>Right</kbd> to choose **mGBA** or **gpSP**, then <kbd>A</kbd> to save. <kbd>B</kbd> goes back. The choice is remembered for that game.
+Press <kbd>START</kbd> on a GBA cartridge to open its circuit-board view. Use <kbd>Left</kbd> or <kbd>Right</kbd> to choose **mGBA** or **gpSP**, then <kbd>A</kbd> to save. <kbd>B</kbd> or <kbd>START</kbd> closes the picker. The choice is remembered for that game.
 
 | Emulator | Use |
 | :--- | :--- |

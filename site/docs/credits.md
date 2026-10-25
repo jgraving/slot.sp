@@ -52,7 +52,7 @@ Simpletex shader
 <div class="keys" markdown>
 
 Typeface
-:   [Open Sans](https://github.com/googlefonts/opensans), under the SIL Open Font License
+:   [Google Sans Flex](https://github.com/googlefonts/googlesans-flex), under the SIL Open Font License. [Open Sans](https://github.com/googlefonts/opensans) supplies fallback characters.
 
 Symbols
 :   [Nerd Fonts](https://www.nerdfonts.com) by Ryan L. McIntyre, under MIT

@@ -48,7 +48,7 @@ pub fn rom_marking_face(stem: &str) -> CartFace {
         w: ROM_W,
         h: ROM_H,
     };
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Print) else {
         return face;
     };
     let max_w = (ROM_W - 2 * MARK_PAD) as f32;
@@ -317,5 +317,6 @@ fn name_layout(core: Core, max_w: f32) -> Option<text::Layout> {
         lines: vec![core.text().to_string()],
         px,
         tracking: tracking(px),
+        role: text::Role::Menu,
     })
 }

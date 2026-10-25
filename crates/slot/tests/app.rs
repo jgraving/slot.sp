@@ -1262,6 +1262,22 @@ fn let_it_open(app: &mut App) {
 }
 
 #[test]
+fn start_closes_the_emulator_picker_like_b_without_changing_the_selected_game() {
+    for close in [Btn::B, Btn::Start] {
+        let (_d, mut app) = on_shelf(&["Emerald", "Zzz"]);
+        fake_picker_faces(&mut app);
+        common::through(&mut app, Btn::Start);
+        let_it_open(&mut app);
+        assert!(app.core_picker().is_some());
+        let selected = app.selected_stem().map(str::to_owned);
+        common::through(&mut app, close);
+        app.update(0.5);
+        assert!(app.core_picker().is_none(), "{close:?} did not close the picker");
+        assert_eq!(app.selected_stem(), selected.as_deref());
+    }
+}
+
+#[test]
 fn the_open_cart_rests_over_the_shelf_with_its_lid_turned() {
     let (_d, mut app) = on_shelf(&["Emerald", "Zzz"]);
     let f = fake_picker_faces(&mut app);

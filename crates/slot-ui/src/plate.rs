@@ -51,8 +51,12 @@ pub fn hint_row(legend: &[(&'static str, &'static str)]) -> Vec<Hint> {
         .collect()
 }
 
+fn caption_font(label: &str) -> Option<&'static fontdue::Font> {
+    text::font(if label.chars().any(|c| c.is_ascii_digit()) { text::Role::Value } else { text::Role::Detail })
+}
+
 pub fn cap_width(key: &str) -> u32 {
-    let Some(font) = text::label_font() else {
+    let Some(font) = caption_font(key) else {
         return CAP;
     };
     let layout = text::fit(font, key, CAP_MAX_W, 1, KEY_PX, KEY_PX);
@@ -81,7 +85,7 @@ pub fn hint_coloured(key: &str, label: &str, ink: [u8; 3]) -> UndoFace {
     for _ in 0..cap_w * CAP {
         cap.extend_from_slice(&[INK[0], INK[1], INK[2], 255]);
     }
-    if let Some(font) = text::label_font() {
+    if let Some(font) = caption_font(key) {
         let layout = text::fit(font, key, cap_w as f32, 1, KEY_PX, KEY_PX);
         text::draw_centred(&mut cap, cap_w, CAP, &layout, CAP_INK);
     }
@@ -89,7 +93,7 @@ pub fn hint_coloured(key: &str, label: &str, ink: [u8; 3]) -> UndoFace {
 
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
-    if let Some(font) = text::label_font() {
+    if let Some(font) = caption_font(label) {
         let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, ink);
     }
@@ -109,7 +113,7 @@ pub fn word_face(text: &str) -> UndoFace {
 pub fn word_ink(text: &str, ink: [u8; 3]) -> UndoFace {
     let w = word_width(text);
     let mut rgba = vec![0u8; (w * HINT_H * 4) as usize];
-    if let Some(font) = text::label_font() {
+    if let Some(font) = caption_font(text) {
         let layout = text::fit(font, text, w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut rgba, w, HINT_H, &layout, ink);
     }
@@ -159,7 +163,7 @@ fn band_width(label: &str) -> u32 {
 }
 
 fn capped_width(label: &str, max_w: f32) -> u32 {
-    let Some(font) = text::label_font() else {
+    let Some(font) = caption_font(label) else {
         return max_w as u32;
     };
     let layout = text::fit(font, label, max_w, 1, LABEL_PX, LABEL_MIN_PX);
@@ -172,7 +176,7 @@ fn capped_width(label: &str, max_w: f32) -> u32 {
 }
 
 pub fn title_line_face(text: &str) -> UndoFace {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Display) else {
         return UndoFace {
             rgba: Vec::new(),
             w: 0,
@@ -204,7 +208,7 @@ pub fn title_line_face(text: &str) -> UndoFace {
 
 pub fn title_face(text: &str) -> UndoFace {
     let mut rgba = vec![0u8; (TITLE_W * TITLE_H * 4) as usize];
-    if let Some(font) = text::label_font() {
+    if let Some(font) = text::font(text::Role::Display) {
         let layout = text::fit(font, text, TITLE_W as f32, 1, TITLE_PX, TITLE_MIN_PX);
         text::draw_centred(&mut rgba, TITLE_W, TITLE_H, &layout, INK);
     }
@@ -252,7 +256,7 @@ pub fn arrows_hint_coloured(label: &str, ink: [u8; 3]) -> UndoFace {
     }
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
-    if let Some(font) = text::label_font() {
+    if let Some(font) = caption_font(label) {
         let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, ink);
     }
@@ -309,7 +313,7 @@ pub fn pad_hint_face(label: &str) -> UndoFace {
     blit(&mut rgba, w, &glyph_cap(PAD_GLYPH), CAP, CAP, 0, (HINT_H - CAP) / 2);
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
-    if let Some(font) = text::label_font() {
+    if let Some(font) = caption_font(label) {
         let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, INK);
     }
