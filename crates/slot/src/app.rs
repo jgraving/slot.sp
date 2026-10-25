@@ -5707,6 +5707,8 @@ impl App {
         }
         self.polaroids = None;
         self.phase = Phase::Doze { cart };
+        // Record the pause even when no frame runs during hardware suspend.
+        self.tick_kid_policy();
         self.dozed_at = self.now();
         self.radio.ask(RadioJob::Cool);
         if let Some(power) = &mut self.power {
@@ -5726,6 +5728,8 @@ impl App {
         if let Some(power) = &mut self.power {
             power.on_open();
         }
+        // Enforce persisted deadlines before the caller can resume the core.
+        self.tick_kid_policy();
     }
 
     pub fn on_doze_timeout(&mut self) {

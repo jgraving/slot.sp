@@ -342,3 +342,55 @@ fn invalid_hardware_clock_requires_parent_instead_of_exposing_clock_settings() {
     app.apply(Action::Insert);
     assert!(matches!(app.phase(), Phase::Shelf));
 }
+
+#[test]
+fn wake_checks_session_and_bedtime_before_any_update() {
+    use slot::kid_policy::Rule;
+    for rule in [Rule::Session, Rule::Until] {
+        let d = card();
+        let wall = now();
+        let mut policy = Policy::read(d.path()).unwrap();
+        policy.rule = rule;
+        // Give bedtime enough room even if this test runs near midnight.
+        let start = wall.div_euclid(86_400) * 86_400 + 12 * 3600;
+        policy.bedtime = 12 * 60 + 5;
+        policy.begin(start).unwrap();
+        policy.save(d.path()).unwrap();
+        let (mut app, clock) = common::app_booting_at(d.path(), start);
+        app.apply(Action::Insert);
+        app.set_snapshot(common::StubSnapshot::boxed());
+        app.on_core_ready();
+        for _ in 0..120 {
+            app.update(1.0 / 60.0);
+        }
+        assert!(matches!(app.phase(), Phase::Playing { .. }));
+        app.apply(Action::LidClose);
+        assert!(matches!(app.phase(), Phase::Doze { .. }));
+        clock.advance(301);
+        app.apply(Action::LidOpen);
+        assert!(matches!(app.phase(), Phase::Shelf), "{rule:?}");
+        assert!(app.parent_controls_open());
+        assert_eq!(app.output_volume(), 0);
+    }
+}
+
+#[test]
+fn daily_allowance_does_not_count_suspend_without_intervening_frames() {
+    let d = card();
+    let (mut app, clock) = common::app_booting_at(d.path(), now());
+    app.apply(Action::Insert);
+    app.set_snapshot(common::StubSnapshot::boxed());
+    app.on_core_ready();
+    for _ in 0..120 {
+        app.update(1.0 / 60.0);
+    }
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    let before = app.kids.remaining(now());
+    app.apply(Action::LidClose);
+    clock.advance(600);
+    // Advance monotonic time without running a frame while asleep.
+    app.tick_ms(app.now() + 600_000);
+    app.apply(Action::LidOpen);
+    assert!(matches!(app.phase(), Phase::Playing { .. }));
+    assert_eq!(app.kids.remaining(now() + 600), before);
+}
