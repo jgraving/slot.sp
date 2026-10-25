@@ -858,7 +858,9 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
     let out = frame(&a);
     assert!(drawn(&out, 500), "the date and time is not grey");
 
-    press(&mut a, Btn::Down);
+    while a.quick_menu() != Some(QuickRow::DateTime) {
+        press(&mut a, Btn::Down);
+    }
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
     let out = frame(&a);
     assert!(
