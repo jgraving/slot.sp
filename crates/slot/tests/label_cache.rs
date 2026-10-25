@@ -172,7 +172,10 @@ fn white_scan_corners_are_cleaned_and_slb3_caches_refresh() {
     let radius = h / 8;
     for y in 0..h {
         for x in 0..w {
-            if x.min(w - 1 - x) + y.min(h - 1 - y) < radius {
+            let dx = x.min(w - 1 - x) as f64 + 0.5;
+            let dy = y.min(h - 1 - y) as f64 + 0.5;
+            let r = radius as f64;
+            if dx < r && dy < r && (r - dx).powi(2) + (r - dy).powi(2) > r * r {
                 pixels[((y * w + x) * 4) as usize..][..3].fill(255);
             }
         }
