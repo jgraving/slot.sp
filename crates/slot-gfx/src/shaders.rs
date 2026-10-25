@@ -144,16 +144,16 @@ void main() {
     } else {
         float calm = 1.0 - smoothstep(0.54, 0.90, v_uv.y);
         // Overlapping counter-rotating eddies bend the wax into flowing necks.
-        vec2 p = v_uv + 0.018 * (eddy(v_uv, u_flow0) - eddy(v_uv, u_flow1)
+        vec2 p = v_uv + 0.010 * (eddy(v_uv, u_flow0) - eddy(v_uv, u_flow1)
                                       + 0.65 * eddy(v_uv, u_flow2));
         vec3 a = wax(p, u_flow0), b = wax(p, u_flow1), c = wax(p, u_flow2);
         vec3 d = wax(p, u_flow3), e = wax(p, u_flow4), f = wax(p, u_flow5);
         vec3 field = a + b + c + d + e + f;
         vec3 dye = (vec3(0.08, 0.65, 0.66) * (a.x + e.x)
                   + vec3(0.49, 0.20, 0.77) * (b.x + d.x)
-                  + vec3(0.85, 0.20, 0.40) * c.x
-                  + vec3(0.94, 0.48, 0.18) * f.x) / max(field.x, 0.001);
-        float body = smoothstep(0.58, 0.88, field.x);
+                  + vec3(0.12, 0.58, 0.66) * c.x
+                  + vec3(0.49, 0.20, 0.77) * f.x) / max(field.x, 0.001);
+        float body = smoothstep(0.55, 1.02, field.x);
         vec3 normal = normalize(vec3(-field.yz * 0.045, 1.0));
         float diffuse = max(dot(normal, vec3(-0.45, -0.55, 0.704)), 0.0);
         float sheen = diffuse * diffuse; sheen *= sheen;

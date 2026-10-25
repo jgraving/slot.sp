@@ -17,7 +17,7 @@ fn motion_is_periodic_and_bounded_even_after_long_uptime() {
 #[test]
 fn deforming_blobs_conserve_area_and_have_both_rising_and_falling_motion() {
     let a = lava_centres(lava_phase(0));
-    let b = lava_centres(lava_phase(2000));
+    let b = lava_centres(lava_phase(LAVA_PERIOD_MS / 12));
     assert!(a.iter().zip(b).any(|(a,b)| b[1] < a[1] - 0.02));
     assert!(a.iter().zip(b).any(|(a,b)| b[1] > a[1] + 0.02));
     for ms in (0..LAVA_PERIOD_MS).step_by(200) {
