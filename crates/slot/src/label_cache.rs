@@ -10,7 +10,7 @@ use slot_store::Cart;
 use slot_ui::{cover_label, label_size};
 
 const DIR: &str = "System/Cache/Labels";
-const VERSION: &[u8; 4] = b"SLB3";
+const VERSION: &[u8; 4] = b"SLB4";
 const HEAD: usize = 28;
 const STALL: Duration = Duration::from_secs(20);
 

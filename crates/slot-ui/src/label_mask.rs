@@ -1,4 +1,4 @@
-//! Conservative cleanup of opaque black scanner backgrounds around rounded labels.
+//! Conservative cleanup of opaque black or white scanner backgrounds around rounded labels.
 //! Runs on source pixels once, before resizing; the device caches the result.
 
 /// Returns the number of pixels made transparent. Ambiguous images stay unchanged.
@@ -8,12 +8,19 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
     if w.min(h) < 32 || rgba.len() != n * 4 || rgba.chunks_exact(4).any(|p| p[3] != 255) {
         return 0; // Respect existing alpha, including artist-supplied masks.
     }
-    let black = |i: usize| rgba[i * 4..i * 4 + 3].iter().all(|&c| c <= 8);
+    // Select one background polarity for the entire candidate. Never join black
+    // and white regions, which could connect the exterior to printed artwork.
+    let white = rgba[..3].iter().all(|&c| c >= 247);
+    let background = |i: usize| {
+        rgba[i * 4..i * 4 + 3]
+            .iter()
+            .all(|&c| if white { c >= 247 } else { c <= 8 })
+    };
     let corners = [0, w - 1, (h - 1) * w, n - 1];
-    if corners.iter().any(|&i| !black(i)) {
+    if corners.iter().any(|&i| !background(i)) {
         return 0;
     }
-    // A few isolated black corner pixels or a one-pixel frame are not a scan cutout.
+    // A few isolated background corner pixels or a one-pixel frame are not a scan cutout.
     let diagonal = (w.min(h) / 200).max(2);
     let diagonals = [
         diagonal * w + diagonal,
@@ -21,7 +28,7 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
         (h - 1 - diagonal) * w + diagonal,
         (h - 1 - diagonal) * w + w - 1 - diagonal,
     ];
-    if diagonals.iter().any(|&i| !black(i)) {
+    if diagonals.iter().any(|&i| !background(i)) {
         return 0;
     }
     let rim = w.min(h) / 8;
@@ -40,7 +47,7 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
         let i = queue[at];
         let (x, y) = (i % w, i / w);
         if x >= rim && x < w - rim && y >= rim && y < h - rim {
-            return 0; // Black flowing into the artwork is not a safe background mask.
+            return 0; // Background flowing into the artwork is not a safe background mask.
         }
         at += 1;
         for next in [
@@ -52,7 +59,7 @@ pub(crate) fn clear_corner_background(rgba: &mut [u8], w: u32, h: u32) -> usize 
         .into_iter()
         .flatten()
         {
-            if !seen[next] && black(next) {
+            if !seen[next] && background(next) {
                 seen[next] = true;
                 queue.push(next);
             }
@@ -97,6 +104,54 @@ mod tests {
             if new[3] != 0 {
                 assert_eq!(old, new);
             }
+        }
+    }
+
+    #[test]
+    fn white_scan_backgrounds_preserve_white_print_and_black_ink() {
+        for level in [247, 255] {
+            let mut rgba = scan();
+            for px in rgba.chunks_exact_mut(4) {
+                let color = if px[0] == 0 { level } else { 80 };
+                px[..3].fill(color);
+            }
+            let print = (30 * 128 + 60) * 4;
+            rgba[print..print + 3].fill(255);
+            let ink = print + 4;
+            rgba[ink..ink + 3].fill(0);
+            let before = rgba.clone();
+            assert_eq!(clear_corner_background(&mut rgba, 128, 64), 112);
+            for (old, new) in before.chunks_exact(4).zip(rgba.chunks_exact(4)) {
+                assert_eq!(&old[..3], &new[..3]);
+                if new[3] != 0 {
+                    assert_eq!(old, new);
+                }
+            }
+            assert_eq!(rgba[print + 3], 255);
+            assert_eq!(rgba[ink + 3], 255);
+        }
+    }
+
+    #[test]
+    fn ambiguous_white_artwork_and_mixed_corners_are_unchanged() {
+        let mut candidates = vec![vec![255; 128 * 64 * 4]];
+        let mut spill = scan();
+        for px in spill.chunks_exact_mut(4) {
+            let color = if px[0] == 0 { 255 } else { 80 };
+            px[..3].fill(color);
+        }
+        for t in 0..32 {
+            spill[(t * 128 + t) * 4..][..3].fill(255);
+            spill[(t * 128 + t + 1) * 4..][..3].fill(255);
+        }
+        candidates.push(spill);
+        let mut mixed = scan();
+        mixed[..3].fill(255);
+        candidates.push(mixed);
+        for mut rgba in candidates {
+            let before = rgba.clone();
+            assert_eq!(clear_corner_background(&mut rgba, 128, 64), 0);
+            assert_eq!(rgba, before);
         }
     }
 
