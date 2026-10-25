@@ -1,9 +1,43 @@
-# Night display
+# 🌗 Day & night
 
-Hold Select and press X to switch between saved day and night brightness/warmth settings. X alone keeps its usual behavior. The shortcut works on the carousel and in games.
+[← Overview](README.md) · [All guides](GUIDE.md)
 
-The shortcut can be remapped under **Controls → Shortcuts → Day / Night**. Reset All restores Select + X.
+Save a bright daytime setting and a dimmer, warmer nighttime setting. Switch between them without adjusting both controls each time.
 
-Night starts at brightness 2 and warmth 9; day starts from your existing display settings. Adjust brightness and warmth with the existing shortcuts while either preset is active to remember its values. The active preset survives restart. A brief toast confirms the change.
+## Switch presets
 
-Preferences are stored in Config/display.txt. If it does not exist, the night/day/bedtime settings from the old Config/comfort.txt are imported without modifying that file or its other preferences. Invalid brightness or warmth entries are ignored.
+Hold <kbd>SELECT</kbd> and press <kbd>X</kbd>. This works on the carousel and during a game, with the default controls outside kid mode.
+
+slot.sp remembers the active preset when you restart.
+
+## Set up each preset
+
+1. Switch to the preset you want to change.
+2. Adjust brightness and warmth using the shortcuts below, or **Menu → Screen → General**.
+3. Switch to the other preset and set it up the same way.
+
+Each adjustment saves to the preset you are using.
+
+| Control | Action |
+| :--- | :--- |
+| <kbd>SELECT</kbd> + <kbd>Up</kbd> | Raise brightness. |
+| <kbd>SELECT</kbd> + <kbd>Down</kbd> | Lower brightness. |
+| <kbd>SELECT</kbd> + <kbd>Left</kbd> | Reduce warmth. |
+| <kbd>SELECT</kbd> + <kbd>Right</kbd> | Increase warmth. |
+
+The warmth setting is named **Blue Light** in the menu. A higher value gives the picture a warmer tint. The night preset starts at brightness **2** and Blue Light **9**; the day preset starts with your existing display settings.
+
+## Change the shortcut
+
+Open **Menu → Controls → Shortcuts → Day / Night**, press <kbd>A</kbd> and record your preferred combination. Restoring the page's defaults brings back <kbd>SELECT</kbd> + <kbd>X</kbd>.
+
+<details>
+<summary><strong>Where the presets are saved</strong></summary>
+
+The presets are stored in `Config/display.txt`. The menu and shortcuts update this file for you.
+
+</details>
+
+---
+
+[Appearance & screen](DISPLAY.md) · [Buttons & shortcuts](CONTROLS.md)
