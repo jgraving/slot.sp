@@ -87,6 +87,6 @@ fn main(){
   let sprites=LinkSprites{port:s.sprite(a.port_light),plug_host:s.sprite(a.plug_host),plug_join:s.sprite(a.plug_join),adapter:s.sprite(a.adapter),
    arcs_right:a.arcs_right.map(|f|s.sprite(f)),arcs_left:a.arcs_left.map(|f|s.sprite(f)),clicks:s.sprite(a.clicks),arrow_left:s.sprite(a.arrow_left),arrow_right:s.sprite(a.arrow_right)};
   let mut out=vec![Draw::Rect{x:0.,y:0.,w:720.,h:480.,colour:[0.12,0.15,0.17,1.]}];
-  draw_link_art(menu,kind,now,&sprites,&mut out);s.save(out);
+  draw_link_art(Canvas::FRAMED,menu,kind,now,&sprites,&mut out);s.save(out);
  }
 }
