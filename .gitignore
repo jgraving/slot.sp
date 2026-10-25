@@ -18,8 +18,13 @@
 /target-device
 /target-verify
 /dist-device
+/.venv-site/
 /site/public
 /site/.cache
+/site/docs/features
+/site/docs/media/fork
+/site/docs/assets/fonts
+/.openai/
 
 # Parallel implementation worktrees, never content.
 /.worktrees

@@ -8,23 +8,24 @@
 </footer>
 {% endblock %}
 {% block content %}
+<div class="fork-home">
 <section class="hero" aria-label="slot.sp">
   <div class="hero-copy">
-    <div class="wordmark-row">
-      <h1 class="wordmark">slot.sp</h1>
-      <button class="say" type="button" aria-label="Hear how slot is pronounced" title="Pronunciation">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path class="say-body" d="M3 9.5h4.2L12.5 5v14l-5.3-4.5H3z"/>
-          <path class="say-wave say-wave-1" d="M15.5 9.2a4 4 0 0 1 0 5.6"/>
-          <path class="say-wave say-wave-2" d="M18.3 6.4a8 8 0 0 1 0 11.2"/>
-        </svg>
-      </button>
-      <audio id="say-slot" src="{{ 'media/slot.mp3' | url }}" preload="none"></audio>
-    </div>
-    <p class="tagline">A bespoke, Game Boy-centric frontend for the Anbernic RG SP.</p>
+    <p class="hero-platforms">GAME BOY · COLOR · ADVANCE</p>
+    <h1 class="fork-title">Game Boy games.<br><span>SP style.</span></h1>
+    <p class="tagline">Your games, a familiar feel.</p>
+    <p class="sub">A game launcher for Anbernic handhelds, inspired by the Game Boy Advance SP. Choose a cartridge, press A and play.</p>
     <div class="actions">
-      <a class="btn" href="https://github.com/BrandonKowalski/slot/releases/latest">Download</a>
-      <a class="btn ghost" href="https://studio.slot-cfw.fyi" target="_blank">Cart Studio</a>
+      <a class="btn" href="https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip">Download update <span aria-hidden="true">↓</span></a>
+      <a class="btn ghost" href="{{ 'installing/' | url }}">First installation <span aria-hidden="true">↗</span></a>
+    </div>
+    <p class="hero-note">Free &amp; open source · By Jake Graving</p>
+    <div class="shell-picker" role="group" aria-label="Preview a handheld color">
+      <button type="button" data-shell="graphite" aria-label="Graphite" aria-pressed="false" style="--swatch:#45474d"></button>
+      <button type="button" data-shell="platinum" aria-label="Platinum" aria-pressed="true" style="--swatch:#c6cbd3"></button>
+      <button type="button" data-shell="pearl blue" aria-label="Pearl Blue" aria-pressed="false" style="--swatch:#a6cce2"></button>
+      <button type="button" data-shell="pearl pink" aria-label="Pearl Pink" aria-pressed="false" style="--swatch:#e0adbf"></button>
+      <span id="shell-name" aria-live="polite">Platinum</span>
     </div>
   </div>
 
@@ -36,7 +37,7 @@
             <use href="#lidArt"/>
           </svg>
           <video class="screen-box hero-screen" width="720" height="480" muted playsinline loop
-                 preload="metadata" poster="{{ 'media/main.webp' | url }}"></video>
+                 preload="metadata" poster="{{ 'media/fork/carousel.webp' | url }}"></video>
         </div>
         <div class="dv-back" aria-hidden="true">
           <svg viewBox="0 0 820 725" preserveAspectRatio="none"><use href="#lidBackArt"/></svg>
@@ -57,4 +58,36 @@
     </div>
   </div>
 </section>
+<section class="fork-details" aria-labelledby="details-title">
+  <div class="section-intro"><h2 id="details-title">More for your SP.</h2><p>Colors, sound, controls and a menu for the kids.</p></div>
+  <div class="feature-lead">
+    <div><span class="feature-icon" aria-hidden="true">✦</span><h3>Make it yours.</h3><p>Four SP colors, larger cartridge artwork and slow, flowing backgrounds. Google Sans Flex brings clearer small text and bolder selections.</p><a href="{{ 'features/display/' | url }}">Explore the look <span aria-hidden="true">→</span></a></div>
+    <figure class="brand-demo"><video data-fork-loop muted playsinline loop preload="none" poster="{{ 'media/fork/brand.webp' | url }}" aria-label="The slot.sp logo and cartridge animation"><source data-src="{{ 'media/fork/brand.mp4' | url }}" type="video/mp4"></video><button class="motion-control" type="button" aria-pressed="false">Pause animations</button></figure>
+  </div>
+  <div class="feature-pair">
+    <article><span class="feature-icon" aria-hidden="true">☺</span><h3>Ready for smaller hands.</h3><p>Approve games on the carousel. Set playtime and volume limits. Kids get gentle time reminders and a simple menu to keep playing, adjust brightness or exit.</p><a href="{{ 'features/kid-mode/' | url }}">Set up kid mode <span aria-hidden="true">→</span></a></article>
+    <article><span class="feature-icon" aria-hidden="true">♫</span><h3>Listen your way.</h3><p>Use the speaker, wired headphones, Bluetooth or USB audio. Each output remembers its volume, and paired headphones reconnect automatically.</p><a href="{{ 'features/bluetooth/' | url }}">Choose your audio <span aria-hidden="true">→</span></a></article>
+  </div>
+  <div class="feature-list" aria-label="More features">
+    <a href="{{ 'features/night-display/' | url }}"><span aria-hidden="true">◐</span><div><h3>Day &amp; night</h3><p>Your brightness and warmth, one shortcut apart.</p></div><span aria-hidden="true">↗</span></a>
+    <a href="{{ 'features/playing/' | url }}"><span aria-hidden="true">↶</span><div><h3>Pick up where you left off</h3><p>Save, resume, rewind and undo a save or load.</p></div><span aria-hidden="true">↗</span></a>
+    <a href="{{ 'features/library/' | url }}"><span aria-hidden="true">☆</span><div><h3>Favorites &amp; Recents</h3><p>Your favorites together. Your latest game close by.</p></div><span aria-hidden="true">↗</span></a>
+    <a href="{{ 'features/screenshots/' | url }}"><span aria-hidden="true">▧</span><div><h3>Keep the moment</h3><p>Capture screenshots, browse thumbnails and zoom in.</p></div><span aria-hidden="true">↗</span></a>
+  </div>
+</section>
+<section class="fork-details motion-section" aria-labelledby="motion-title">
+  <div class="section-intro"><h2 id="motion-title">Made to be played.</h2><p>A closer look at slot.sp in motion.</p></div>
+  <div class="motion-grid">
+    {% for clip, title, href in [('core-picker', 'Choose an emulator for each GBA game.', 'features/playing/#choose-an-emulator'), ('link', 'Play and trade with a nearby handheld.', 'features/link-play/'), ('shutdown', 'An SP finish, right down to switching off.', 'features/power-options/')] %}
+    <figure><video data-fork-loop muted playsinline loop preload="none" poster="{{ ('media/fork/' ~ clip ~ '.webp') | url }}" aria-label="{{ title }}"><source data-src="{{ ('media/fork/' ~ clip ~ '.mp4') | url }}" type="video/mp4"></video><figcaption><a href="{{ href | url }}">{{ title }} <span aria-hidden="true">↗</span></a></figcaption></figure>
+    {% endfor %}
+  </div>
+</section>
+<section class="fork-download" aria-labelledby="download-title">
+  <h2 id="download-title">Your next game is waiting.</h2>
+  <p>Already running slot? Replace the System folder.<br>Starting fresh? Follow the installation guide.</p>
+  <div class="actions"><a class="btn" href="https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip">Download System ZIP <span aria-hidden="true">↓</span></a><a class="btn ghost" href="{{ 'installing/' | url }}">Get started <span aria-hidden="true">→</span></a></div>
+  <a class="release-link" href="https://github.com/jgraving/slot.sp/releases/latest">All downloads &amp; release notes</a>
+</section>
+</div>
 {% endblock %}

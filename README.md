@@ -9,7 +9,7 @@
 
 Game Boy · Game Boy Color · Game Boy Advance
 
-**[⬇ Download update](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** · **[Get started](GETTING-STARTED.md)** · **[User guide](GUIDE.md)**
+**[⬇ Download update](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** · **[Website](https://jgraving.github.io/slot.sp/)** · **[Get started](GETTING-STARTED.md)** · **[User guide](GUIDE.md)**
 
 </div>
 

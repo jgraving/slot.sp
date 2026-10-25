@@ -4,7 +4,7 @@ hide:
   - toc
 ---
 
-# Installing slot.
+# Install slot.sp
 
 <details class="way" id="one-sd-card" open markdown>
 <summary>One SD Card</summary>
@@ -30,7 +30,7 @@ hide:
 3.  Download the latest release
     { .step-title role="heading" aria-level="3" }
 
-    Go fetch the [latest slot release](https://github.com/BrandonKowalski/slot/releases/latest) from GitHub.
+    Go fetch the [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
 
 4.  Copy it onto your SD card
     { .step-title role="heading" aria-level="3" }
@@ -50,7 +50,7 @@ hide:
 6.  Re-insert the card into `SD1` and boot!
     { .step-title role="heading" aria-level="3" }
 
-    I hope you enjoy using slot!
+    Open the [user guide](features/guide.md) for buttons, settings and features.
 
 </div>
 
@@ -73,7 +73,7 @@ hide:
 2.  Download the latest release
     { .step-title role="heading" aria-level="3" }
 
-    Go fetch the [latest slot release](https://github.com/BrandonKowalski/slot/releases/latest) from GitHub.
+    Go fetch the [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
 
 3.  Copy it onto SD2
     { .step-title role="heading" aria-level="3" }
@@ -95,7 +95,7 @@ hide:
 5.  Put the second card into `SD2` and boot!
     { .step-title role="heading" aria-level="3" }
 
-    I hope you enjoy using slot!
+    Open the [user guide](features/guide.md) for buttons, settings and features.
 
 </div>
 

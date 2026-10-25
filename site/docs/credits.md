@@ -8,6 +8,10 @@ hide:
 
 # Credits
 
+## Project
+
+slot.sp by [Jake Graving](https://github.com/jgraving), based on [slot by Brandon T. Kowalski](https://github.com/BrandonKowalski/slot).
+
 ## Design
 
 <div class="keys" markdown>
@@ -64,7 +68,7 @@ Symbols
 <div class="keys" markdown>
 
 Cartridge sounds
-:   A recording of me shoving a cartridge into my childhood GBA
+:   Original cartridge recordings by Brandon T. Kowalski, with soft synthesized carousel clicks in slot.sp.
 
 </div>
 
