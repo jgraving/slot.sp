@@ -31,3 +31,18 @@ fn atlas_opens_transparently_and_locks_to_an_opaque_white_mark() {
     }}
     assert!(solid>3000,"the final mark disappeared");
 }
+
+#[test]
+fn glass_phase_transmits_the_background_before_the_final_lock_in() {
+    let bytes=include_bytes!("../../../assets/brand-motion.png");
+    let mut reader=png::Decoder::new(std::io::Cursor::new(bytes)).read_info().unwrap();
+    let mut pixels=vec![0;reader.output_buffer_size()];reader.next_frame(&mut pixels).unwrap();
+    let (mut coverage,mut alpha)=(0u64,0u64);
+    // Frame 12 is the first dense/narrow pose, still made of clear glass.
+    for y in 384..512 {for x in 0..480 {
+        let a=pixels[(y*1920+x)*4+3];
+        if a>8 {coverage+=1;alpha+=a as u64;}
+    }}
+    assert!(coverage>5000);
+    assert!(alpha/coverage<150,"the glass interior became opaque");
+}

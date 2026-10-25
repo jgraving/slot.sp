@@ -29,27 +29,37 @@ fn main(){
  let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
  let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-insertion.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
  let mut pipe=encoder.stdin.take().unwrap();let mut first=None;let mut last=None;let mut seated=false;let mut trace=Vec::new();
- for frame in 0..270 {
-  if frame==54 {clock.apply(Action::Insert);clock.on_core_ready();}
-  if frame==150 {clock.apply(Action::Eject);}
+ for frame in 0..360 {
+  if frame==48 {clock.apply(Action::Insert);clock.on_core_ready();}
+  if frame==270 {clock.apply(Action::Eject);}
   clock.tick_ms(frame*1000/60);clock.update(1.0/60.0);
   let seat=clock.seat();seated|=seat>=0.999;trace.push(seat);
   // A short, eased excursion through the production wallpaper keeps this
   // brief insertion loop calm and makes its endpoints exactly identical.
-  let drift=(1000.0 * (1.0-(std::f64::consts::TAU * frame as f64 / 269.0).cos())).round() as u64;
+  let drift=(1000.0 * (1.0-(std::f64::consts::TAU * frame as f64 / 359.0).cos())).round() as u64;
   let mut draws=vec![Draw::Lava{w:720.,h:480.,phase:slot_gfx::lava_phase(drift)}];
   SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_star(Some((star,sw,sh)),&mut draws);
   draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:light,alpha:1.});
-  let ms=frame*1000/60;
-  let alpha=if frame>242 {(269-frame) as f32/27.} else {1.};
-  brand.draw(ms,120.,0.,480.,alpha,&mut draws);
+  // The cart vacates the centre before the mark enters; clear the mark
+  // before ejection so the two objects never compete for the same space.
+  if (68..264).contains(&frame) {
+   let reveal=(frame-68) as f32/90.;
+   let alpha=if frame>240 {(264-frame) as f32/24.} else {1.};
+   assert!(seat>0.6,"logo entered before the cartridge cleared its space");
+   let progress=reveal.clamp(0.,1.);
+   let spring=(1.-progress).powi(2)*(progress*8.).cos();
+   let width=560.-20.*spring;
+   let ms=((frame-68)*slot::brand_motion::REVEAL_MS/90) as u64;
+   brand.draw(ms,(720.-width)/2.,96.+18.*spring,width,alpha,&mut draws);
+  }
   c.begin_frame();c.draw_list(&draws);let pixels=c.read_frame();
-  if frame==0 { first=Some(pixels.clone());let mut enc=png::Encoder::new(File::create(format!("{out}/hero-insertion.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap(); }
-  if frame==269 {last=Some(pixels.clone());}
+  if frame==0 {first=Some(pixels.clone());}
+  if frame==200 {let mut enc=png::Encoder::new(File::create(format!("{out}/hero-insertion.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap();}
+  if frame==359 {last=Some(pixels.clone());}
   pipe.write_all(&pixels).unwrap();
  }
  assert!(seated,"hero never seated the cartridge");assert!(clock.seat()<0.001,"hero did not return to the shelf");
  assert_eq!(first,last,"hero must loop without a pose or lighting jump");
- assert!(trace[54..82].windows(2).all(|w|w[1]>=w[0]),"insertion reversed");
+ assert!(trace[48..78].windows(2).all(|w|w[1]>=w[0]),"insertion reversed");
  drop(pipe);assert!(encoder.wait().unwrap().success());
 }
