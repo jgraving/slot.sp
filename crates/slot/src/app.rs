@@ -1230,6 +1230,7 @@ impl App {
                 QuickValue::Hide
             }),
             QuickRow::BootAnimation => Some(QuickValue::flag(self.state.boot_animation)),
+            QuickRow::CarouselSounds => Some(QuickValue::flag(self.state.carousel_sounds)),
             QuickRow::ShowTitles => Some(if self.state.show_titles {
                 QuickValue::Show
             } else {
@@ -3058,6 +3059,7 @@ impl App {
             | QuickRow::Recents
             | QuickRow::ShowTitles
             | QuickRow::BootAnimation
+            | QuickRow::CarouselSounds
             | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::Resume
@@ -3190,6 +3192,11 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::CarouselSounds {
+            self.state.carousel_sounds = !self.state.carousel_sounds;
+            self.persist();
+            return;
+        }
         if row == QuickRow::BootAnimation {
             self.state.boot_animation = !self.state.boot_animation;
             self.persist();
@@ -3261,6 +3268,7 @@ impl App {
             | QuickRow::Recents
             | QuickRow::ShowTitles
             | QuickRow::BootAnimation
+            | QuickRow::CarouselSounds
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
@@ -3673,7 +3681,7 @@ impl App {
                 let before = shelf.scroll.round() as i32;
                 shelf.tick(now);
                 shelf.update(dt);
-                if before != shelf.scroll.round() as i32
+                if self.state.carousel_sounds && before != shelf.scroll.round() as i32
                     && self.bluetooth.is_none()
                     && self.core_picker.is_none()
                     && self.favorite_departure.is_none()
