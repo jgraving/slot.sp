@@ -10,7 +10,10 @@ fn switches_use_colour_and_thumb_position_over_a_transparent_background() {
             let i = ((20 * face.w + MENU_PAD + x) * 4) as usize;
             <[u8; 4]>::try_from(&face.rgba[i..i+4]).unwrap()
         };
-        assert!(pixel(&off, 62)[0] > pixel(&off, 62)[1]);
+        let disabled = pixel(&off, 62);
+        assert_eq!(disabled[0], disabled[1]);
+        assert_eq!(disabled[1], disabled[2]);
+        assert!(disabled[0] < 180);
         assert!(pixel(&on, 18)[1] > pixel(&on, 18)[0]);
         assert!(pixel(&off, 18)[0] > 240);
         assert!(pixel(&on, 62)[0] > 240);

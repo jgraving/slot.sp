@@ -4,7 +4,7 @@ use crate::{MENU_PAD, UndoFace};
 pub fn toggle_face(on: bool, lit: bool) -> UndoFace {
     let (w, h) = (80 + 2 * MENU_PAD, 40);
     let mut face = UndoFace { rgba: vec![0; (w * h * 4) as usize], w, h };
-    let track = if on { [42u8, 176, 102] } else { [211u8, 65, 75] };
+    let track = if on { [42u8, 176, 102] } else { [128u8, 128, 128] };
     let thumb_x = MENU_PAD as f32 + if on { 62.0 } else { 18.0 };
     for y in 0..h {
         for x in MENU_PAD..w - MENU_PAD {
