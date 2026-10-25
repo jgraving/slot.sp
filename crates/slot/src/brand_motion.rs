@@ -2,8 +2,10 @@
 use slot_gfx::{Canvas, Compositor, Draw, TexId};
 
 pub const FRAMES: usize = 48;
-pub const REVEAL_MS: u64 = 850;
-pub const BOOT_MS: u64 = 1_100;
+pub const REVEAL_MS: u64 = 900;
+pub const HOLD_MS: u64 = 220;
+pub const FADE_MS: u64 = 180;
+pub const BOOT_MS: u64 = REVEAL_MS + HOLD_MS + FADE_MS;
 const COLS: usize = 4;
 const TILE_W: u32 = 480;
 const TILE_H: u32 = 128;
@@ -14,7 +16,7 @@ pub fn frame_at(ms: u64) -> usize {
 }
 
 pub fn boot_opacity(ms: u64) -> f32 {
-    let t = ((ms.saturating_sub(930)) as f32 / 170.0).clamp(0.0, 1.0);
+    let t = (ms.saturating_sub(REVEAL_MS + HOLD_MS) as f32 / FADE_MS as f32).clamp(0.0, 1.0);
     1.0 - t * t * (3.0 - 2.0 * t)
 }
 
