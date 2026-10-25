@@ -12,7 +12,7 @@ Choose which games children can play, set a time allowance and cap the volume. C
 2. With kid mode off, browse the carousel and press <kbd>X</kbd> on each game you want to allow. A gold smiley marks approved games.
 3. Open **Menu → Kid Mode**.
 4. Choose a **Play limit**, set the **Time**, and adjust the **Volume limit**.
-5. Turn on the **Kid mode** switch at the top. Green means on; red means off.
+5. Turn on the **Kid mode** switch at the top. Green means on; gray means off.
 6. If you have not set a parent code, enter four buttons, then enter the same four buttons again to confirm. Each screen advances automatically.
 
 You can also set the code separately through **Parent code → Set**. Kid mode starts off on a new installation.

@@ -31,7 +31,7 @@ Saved headphones appear by name on the main Sound screen. Select a device and pr
 
 Select **Internal speaker** or **Wired headphones** to return to local audio. This also stops automatic reconnect to the Bluetooth device.
 
-The **Bluetooth** switch is the first row in Sound. Green means on; red means off. Press <kbd>A</kbd> or use <kbd>Left</kbd> / <kbd>Right</kbd> to change it. Turning it off keeps your saved pairings. The choice is remembered.
+The **Bluetooth** switch is the first row in Sound. Green means on; gray means off. Press <kbd>A</kbd> or use <kbd>Left</kbd> / <kbd>Right</kbd> to change it. Turning it off keeps your saved pairings. The choice is remembered.
 
 If an operation fails, Sound shows **Error**, restarts Bluetooth and tries the operation once more.
 
