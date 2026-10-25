@@ -1,131 +1,76 @@
-# Sound outputs
+# 🎧 Audio & headphones
 
-Open **Sound** from the carousel settings or the in-game Settings menu to choose
-an audio output and manage headphones. The selected output has a checkmark.
-Speaker, headphone and Bluetooth icons identify the output in the menu and
-volume display. USB and analog headphones use the same headphone symbol.
+[← Overview](README.md) · [All guides](GUIDE.md)
 
-## Bluetooth headphones
+[Outputs](#choose-an-output) · [Bluetooth](#pair-bluetooth-headphones) · [Volume](#volume--mute) · [Disconnect volume](#volume-on-disconnect)
 
-Bluetooth defaults to **Off** on a fresh setup. Change the **Bluetooth** setting
-with left/right, or choose **Pair audio device** to enable it automatically.
-Put the headphones in pairing mode, choose **Scan for devices**, and select
-them from the results. Progress indicators show background work.
+## Choose an output
 
-Saved devices appear in Sound. Press **A** to connect. Press **Y** to forget a
-device, then **Y** again to confirm; **B** or navigation cancels the confirmation.
-Press **B** to go back or **MENU** to close Sound.
+Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** during play. The selected output has a checkmark.
 
-The selected paired device reconnects at startup and is retried after connection
-loss while slot is awake. Retry delays increase from 5 to 15, 30, then 60 seconds.
-Automatic reconnect does not scan for or pair new devices. Selecting the local
-output stops automatic reconnect.
+| Output | How to use it |
+| :--- | :--- |
+| **Internal speaker** | Select it in Sound. |
+| **Wired headphones** | Plug into the headphone jack. The local output changes from Internal speaker to Wired headphones. |
+| **Bluetooth headphones** | Pair once, then select them by name in Sound. |
+| **USB audio** | Plug into the data/OTG port. A detected playback device is selected automatically and appears by name in Sound. |
 
-The Bluetooth On/Off choice is remembered. Off powers down the controller through
-BlueZ without rfkill-blocking the UART and preserves saved pairings. If the
-controller cannot start, Sound asks the user to turn the handheld off and on.
+The status and volume icons show the current audio output. A manual output choice stays selected until another USB attachment or restart.
 
-## USB and wired headphones
+## Pair Bluetooth headphones
 
-The local output is shown as **Wired headphones** when the headphone jack is in
-use, otherwise **Internal speaker**.
+1. Put your headphones in pairing mode.
+2. Open **Sound → Pair audio device**. This enables Bluetooth if it is off.
+3. Choose **Scan for devices**.
+4. Select your headphones with the D-pad and press <kbd>A</kbd>.
+5. Once connected, adjust the volume with the handheld's volume buttons.
 
-Plug a supported USB audio device into the handheld's data/OTG port. slot selects
-it when its playback endpoint appears, including at startup. A manual Sound
-operation already in progress takes priority. A deliberate output choice remains
-in effect until another USB attachment or restart.
+Saved headphones appear by name on the main Sound screen. Select a device and press <kbd>A</kbd> to reconnect. The selected Bluetooth device reconnects automatically at startup and after a connection is lost while the handheld is awake.
 
-USB discovery uses ALSA card IDs rather than fixed card numbers. Only USB playback
-endpoints are listed; microphone-only, internal and HDMI endpoints are excluded.
-Playback is checked with digital silence before selecting the route.
+### Switch back or turn Bluetooth off
 
-## Volume
+Select **Internal speaker** or **Wired headphones** to return to local audio. This also stops automatic reconnect to the Bluetooth device.
 
-Volume and mute are remembered separately for the speaker, analog headphones,
-Bluetooth and USB. USB starts at 20%. Use slot's normal volume controls.
+Change **Bluetooth** to **Off** to turn off the radio while keeping your saved pairings. The choice is remembered.
 
-**Volume on disconnect** chooses the local output volume after Bluetooth loss or
-wired/USB headphone removal. It defaults to **0% (silent)** and changes in 5% steps.
-If the headphone jack is occupied when Bluetooth disconnects, the setting applies
-to the wired headphones.
+### Forget a device
 
-Device and mute icons make the active output clear. Starting a game muted or at
-zero volume briefly shows the volume bar, including when a game resumes at startup.
+Highlight the saved device, press <kbd>Y</kbd>, release it and press <kbd>Y</kbd> again to confirm. <kbd>B</kbd> or moving to another row cancels.
 
-### Bluetooth volume synchronization
+## Volume & mute
 
-Linked Bluetooth volume is experimental and **not yet reliable in hardware
-testing**. The handheld and headphones may still have separate volume levels.
-If Bluetooth playback is quiet at maximum handheld volume, adjust the headphones'
-own volume as well. This resolved quiet playback on the tested Sony WF-C510.
+| Button | Action |
+| :--- | :--- |
+| <kbd>VOL+</kbd> / <kbd>VOL−</kbd> | Change the active output's volume. |
+| Both volume buttons together | Toggle mute. |
+| <kbd>SELECT</kbd> + either volume button | Toggle mute. |
 
-The implementation attempts native AVRCP volume through BlueALSA when the selected
-A2DP transport exposes it. It checks readback before bypassing software attenuation
-and falls back to software volume if native control is unavailable or fails.
-Initialization accounts for the existing volume instead of setting the headphones
-to maximum. Volume work runs outside the UI and audio threads.
+The speaker, wired headphones, Bluetooth and USB each remember their own volume and mute state. USB audio starts at **20%**.
 
-The intended behavior is for handheld controls to adjust headphone volume and
-headphone controls to update slot's indicator. Automated checks exercise this path,
-but successful playback does not establish that two-way synchronization works.
+Headphones with their own volume controls may also need those controls adjusted. Use the handheld's volume indicator to set slot.sp's level.
 
-## Tested devices and known limitations
+In kid mode, volume stays within the parent's [volume limit](KID-MODE.md#time--volume-limits). The kid menu also has a Volume row.
 
-Tested on **RG SP** and **RG35XXSP**, with Bluetooth playback and the Sound menu
-broadly working on both.
+## Volume on disconnect
 
-- USB-C headphone playback has been confirmed on RG SP.
-- USB audio was unavailable in RG35XXSP testing. A hardware limitation is
-  suspected, but the cause has not been confirmed.
-- Quiet analog headphone output was reported with some headphones, while the
-  speaker and working USB-C headphones sounded normal. The exposed mixer levels
-  were already at maximum; a general fix has not been established.
-- A USB-to-3.5 mm adapter was not recognized. Previously failing USB earbuds also
-  stopped working on a phone, so those dropouts are suspected hardware trouble.
-- Abrupt Bluetooth power-off may take time to be reported by the Bluetooth stack.
+In Sound, set **Volume on disconnect** to choose the volume used after Bluetooth disconnects or headphones are unplugged. It starts at **0%** and changes in **5%** steps.
 
-Bluetooth controls appear only when support is detected. Local and detected USB
-outputs remain available without Bluetooth hardware.
+If wired headphones are plugged in when Bluetooth disconnects, the chosen level applies to those headphones. Otherwise it applies to the speaker.
 
-## Diagnostics
+<details>
+<summary><strong>Sound menu buttons</strong></summary>
 
-Press **X while in Sound** to save a report. **There is no on-screen hint for this
-shortcut.** Reports are saved on the SD card:
+| Button | Action |
+| :--- | :--- |
+| <kbd>Up</kbd> / <kbd>Down</kbd> | Choose an output or setting. |
+| <kbd>Left</kbd> / <kbd>Right</kbd> | Change a value, such as Bluetooth On/Off or disconnect volume. |
+| <kbd>A</kbd> | Select, connect or start a scan. |
+| <kbd>Y</kbd> | Begin forgetting a saved device. |
+| <kbd>B</kbd> | Go back. |
+| <kbd>MENU</kbd> | Close Sound. |
 
-- `Bluetooth/latest-report.txt`: the current manual report.
-- `Bluetooth/previous-report.txt`: the previous manual report, for comparison.
+</details>
 
-Reports include selected output, saved volumes, Bluetooth state, mixer readings
-and relevant USB driver, power and stream information. For quiet audio, save a
-report with the affected output selected. For connection failures, save one after
-the failure. If Bluetooth controls are missing, also check
-`Logs/bluetooth-support.log`.
+---
 
-Routine operation transcripts remain temporary. Saved helper reports are bounded
-to 128 KiB; error and reconnect reports use `latest-error.txt` and
-`latest-restore.txt`. The helper cleans up only its own obsolete logs.
-
-## Implementation and development checks
-
-Audio uses BaseOS's existing BlueZ, BlueALSA and ALSA support. Adapter readiness
-and the selected A2DP playback endpoint are checked before reporting a successful
-connection. The connection is checked again after endpoint discovery so a headset
-that disconnects during setup does not replace the current output. Short-lived
-helper commands use hard timeouts even if the client ignores termination. Competing operations are serialized, and automatic work yields to
-manual choices. A passive BlueZ listener monitors connections while awake, with
-polling as a fallback.
-
-Incoming pairing and discoverability remain disabled. Pairing is initiated for a
-device selected in Sound; ambiguous authorization prompts and legacy PIN requests
-are rejected. Devices are trusted after their audio service has been verified.
-
-Run the focused checks with:
-
-- `python3 card/test-bluetooth.py`
-- `cargo test -p slot --no-default-features --features device --lib --test quick_menu --test menu_repeat`
-- `cargo test -p slot-ui --test quick_menu`
-
-The checks cover device discovery, pairing, connection failures, reconnect,
-competing operations, volume handling and menu behavior. Hardware validation
-should include playback, both Bluetooth volume controls, mute, reconnect and
-switching outputs. Automated checks do not replace device testing.
+[Buttons & shortcuts](CONTROLS.md) · [Kid mode](KID-MODE.md) · [Sleep & power](POWER-OPTIONS.md)
