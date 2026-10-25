@@ -193,3 +193,40 @@ fn flowing_gradient_advances_while_custom_wallpapers_remain_still() {
         if wallpaper == WallpaperPick::Default { assert_ne!(phases[0], phases[1]); }
     }
 }
+
+#[test]
+fn flowing_gradient_is_already_moving_under_the_outgoing_game() {
+    use slot::app::Phase;
+    use slot_gfx::{Draw, TexId};
+    use slot_input::Action;
+    use slot_store::{write_slot_state, SlotState, WallpaperPick};
+    for wallpaper in [WallpaperPick::Default, WallpaperPick::Static] {
+        let d = common::tmp_root_with_carts(&["Emerald", "Fusion"]);
+        write_slot_state(d.path(), &SlotState { wallpaper: wallpaper.clone(), cart: Some("Emerald".into()), clock_set: true, ..SlotState::default() }).unwrap();
+        let mut app = slot::app::App::boot(d.path());
+        app.set_snapshot(common::StubSnapshot::boxed());
+        app.on_core_ready();
+        for _ in 0..120 { app.update(1.0 / 60.0); }
+        app.set_ground(TexId::from_raw(800));
+        let mut out = Vec::new();
+        app.draw(&mut out);
+        assert!(!out.iter().any(|d| matches!(d, Draw::Lava { .. })), "fully visible gameplay should not draw the hidden gradient");
+        app.apply(Action::Eject);
+        assert!(matches!(app.phase(), Phase::Ejecting { .. }));
+        assert!(app.shows_game(), "test must cover the outgoing game overlay");
+        let mut phases = Vec::new();
+        for _ in 0..8 {
+            out.clear();
+            app.draw(&mut out);
+            let phase = out.iter().find_map(|d| match d { Draw::Lava { phase, .. } => Some(*phase), _ => None });
+            if wallpaper == WallpaperPick::Default { phases.push(phase.expect("gradient switched to static during game exit")); }
+            else { assert!(phase.is_none()); }
+            app.update(0.016);
+        }
+        if wallpaper == WallpaperPick::Default { assert_ne!(phases[0], phases[7]); }
+        for _ in 0..120 { app.update(0.016); }
+        assert!(matches!(app.phase(), Phase::Shelf));
+        out.clear();app.draw(&mut out);
+        assert_eq!(out.iter().any(|d| matches!(d, Draw::Lava { .. })), wallpaper == WallpaperPick::Default);
+    }
+}

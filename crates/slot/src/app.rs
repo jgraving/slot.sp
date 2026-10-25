@@ -1499,7 +1499,10 @@ impl App {
             WallpaperPick::Blur => blur,
             WallpaperPick::File(_) | WallpaperPick::Random => own,
         };
-        if face.is_some() && !self.shows_game() && matches!(self.state.wallpaper, WallpaperPick::Default) {
+        // This method is called only when a background is needed. Keep the
+        // flowing wallpaper behind the fading game during insertion/ejection;
+        // switching from a static image after the overlay ends causes a pop.
+        if face.is_some() && matches!(self.state.wallpaper, WallpaperPick::Default) {
             out.push(Draw::Lava { w: self.canvas().w, h: self.canvas().h, phase: slot_gfx::lava_phase(self.now()) });
         } else {
             draw_ground(self.canvas(), face, out);
