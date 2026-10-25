@@ -26,6 +26,8 @@ jobs:
           cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
           cp previews/fixture.rs crates/slot/examples/motion_fixture.rs
           cargo build --locked -p slot --no-default-features --example cart_motion --example motion_fixture
+      - name: Check cartridge interaction and sound
+        run: cargo test --locked -p slot --no-default-features --test app --test eject --test sfx -- --test-threads=1
       - name: Record motion and contact sounds
         run: |
           mkdir -p /tmp/slot-motion/out
