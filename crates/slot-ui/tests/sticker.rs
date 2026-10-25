@@ -152,3 +152,9 @@ fn a_model_baseos_gives_two_names_shows_the_first() {
     });
     assert!(both.rgba == plus.rgba);
 }
+
+#[test]
+fn fork_credits_and_german_origin_are_present() {
+    let text=sticker_lines(&fields()).join("\n");
+    for line in ["© 2026 JAKE GRAVING","BASED ON SLOT BY","BRANDON T. KOWALSKI.","MADE IN GERMANY","SLOT.SP-DE"] { assert!(text.contains(line),"{line}"); }
+}

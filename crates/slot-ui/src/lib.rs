@@ -17,7 +17,7 @@ mod draw;
 mod favorite;
 mod favorite_remove;
 mod footer;
-pub use favorite::draw_star;
+pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
 mod icon;
@@ -71,7 +71,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    badge_face, icon_box, icon_face, sound_device_icon, star_face, warm_fonts, Badge, Icon,
+    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, warm_fonts, Badge, Icon,
 };
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
@@ -126,3 +126,6 @@ pub use sticker::{
     CREDITS, DC, HOME, ORIGIN, STICKER_H, STICKER_W,
 };
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
+
+mod button_code;
+pub use button_code::button_code_face;
