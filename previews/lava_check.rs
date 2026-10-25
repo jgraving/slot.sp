@@ -1,6 +1,6 @@
 //! Exercise the production GL background and export a short review clip.
 #[path = "egl_surface.rs"] mod egl_surface;
-use slot_gfx::{Compositor, Draw, lava_phase};
+use slot_gfx::{Compositor, Draw, lava_phase, LAVA_PERIOD_MS};
 use std::io::Write;
 use std::process::{Command, Stdio};
 fn render(c: &mut Compositor, now: u64, marker: bool) -> Vec<u8> {
@@ -17,7 +17,7 @@ fn main() {
     let b = render(&mut c, 9000, false);
     assert_ne!(a, b, "gradient did not move");
     assert_eq!(&a[440*720*4..], &b[440*720*4..], "the slot's lower backdrop must remain steady");
-    assert_eq!(a, render(&mut c, 36_000, false), "the motion must loop cleanly");
+    assert_eq!(a, render(&mut c, LAVA_PERIOD_MS, false), "the motion must loop cleanly");
     let overlay = render(&mut c, 9000, true);
     let at = (25*720+25)*4;
     assert_eq!(&overlay[at..at+4], &[255, 0, 0, 255], "background shader leaked into UI sprites");

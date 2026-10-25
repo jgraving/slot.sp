@@ -1,14 +1,14 @@
 name: Capture README previews
 on:
   push:
-    branches: [integrate-upstream-default-wallpaper]
+    branches: [integrate-upstream-brand-pulse]
     paths: ['crates/**', 'assets/**', 'previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper' && github.actor != 'github-actions[bot]'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-brand-pulse' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -58,5 +58,5 @@ jobs:
           git add previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
           if ! git diff --cached --quiet; then
             git commit -m "Capture slot.sp README animations"
-            git push origin HEAD:integrate-upstream-default-wallpaper
+            git push origin HEAD:integrate-upstream-brand-pulse
           fi

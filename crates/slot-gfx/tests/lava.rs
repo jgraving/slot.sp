@@ -13,3 +13,11 @@ fn motion_is_periodic_and_bounded_even_after_long_uptime() {
     assert_eq!(lava_phase(0), lava_phase(LAVA_PERIOD_MS));
     assert_ne!(lava_centres(lava_phase(0)), lava_centres(lava_phase(9000)));
 }
+
+#[test]
+fn pools_breathe_visibly_within_two_seconds() {
+    let rest = lava_centres(lava_phase(0));
+    let expanded = lava_centres(lava_phase(2000));
+    assert!(expanded[0][2] / rest[0][2] > 1.20);
+    assert!(expanded[0][3] / rest[0][3] > 1.20);
+}
