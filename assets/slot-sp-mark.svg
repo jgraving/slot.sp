@@ -1,4 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="currentColor" role="img" aria-label="slot.sp cartridge and slot mark">
-  <path id="cartridge" d="M32 10H96Q104 10 104 18V28Q104 34 98 34H94V80Q94 86 88 86H40Q34 86 34 80V34H30Q24 34 24 28V18Q24 10 32 10Z"/>
-  <path id="cradle" d="M16 66H18Q24 66 24 72V98Q24 102 28 102H100Q104 102 104 98V72Q104 66 110 66H112Q120 66 120 74V106Q120 118 108 118H20Q8 118 8 106V74Q8 66 16 66Z"/>
-</svg>

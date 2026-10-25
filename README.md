@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-reduced-motion: reduce)" srcset="previews/hero-static.svg">
-  <img src="previews/hero-insertion.gif" width="480" height="320" alt="slot.sp — a cartridge seats, then its glass cartridge-and-slot symbol and wordmark resolve into place">
+  <img src="previews/hero-insertion.gif" width="480" height="320" alt="slot.sp — a cartridge seats, then the tinted glass slot.sp wordmark resolves into place">
 </picture>
 
 **Your Game Boy shelf, made for the SP.**
