@@ -115,4 +115,3 @@ fn tactile(sound: Sfx, rate: u32) -> Vec<i16> {
     }
     out
 }
-
