@@ -17,11 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install capture dependencies
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           if ! command -v ffmpeg || ! ldconfig -p | grep 'libEGL.so.1' >/dev/null || ! dpkg-query -W -f='${Status}' libgl1-mesa-dri | grep 'install ok installed' >/dev/null; then
             sudo apt-get update
-            sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri
+            sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
           fi
           python3 -m pip install pillow==13.0.0
       - uses: dtolnay/rust-toolchain@1.96.0
