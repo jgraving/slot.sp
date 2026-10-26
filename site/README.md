@@ -50,4 +50,5 @@ The **Capture documentation media** workflow on `docs/media-refresh` builds the 
 - Give installation, the guide and Studio a clear place in navigation. Keep one maintained guide per topic; preserve superseded URLs with redirects.
 - Use the actual interface beside the steps it explains. Give clips play controls and keep them quiet until requested.
 - Name the feature and say what it does. Avoid slogans, repeated download sections and lists of vague benefits.
-- Use teal for links and actions, with Google Sans Flex for both the site and device UI. Keep ornament out of instructional pages.
+- Keep the SP illustration and recognizable feature icons. Use the same symbols in the homepage and guide navigation so topics are easy to distinguish. Favor readable labels and space over extra small captions.
+- Use teal for links and actions, with Google Sans Flex for both the site and device UI.

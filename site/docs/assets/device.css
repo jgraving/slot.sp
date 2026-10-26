@@ -1,0 +1,114 @@
+/* Original SP illustration, with its existing perspective and materials. */
+.device{position:relative;z-index:2;transform-style:preserve-3d;
+  --depth-lid:calc(var(--dw) * .097);
+  --depth-deck:calc(var(--dw) * .194)}
+.dv-lid,.dv-deck{position:relative;transform-style:preserve-3d}
+.dv-lid{transform-origin:50% 107.6%}
+.dv-front>svg,.dv-deck>svg{display:block;width:100%;height:auto}
+
+.dv-front,.dv-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;transform-style:flat}
+.dv-front{position:relative;transform:translateZ(.6px)}
+.dv-back{position:absolute;inset:0;transform:rotateX(180deg) translateZ(var(--depth-lid))}
+.dv-back svg{display:block;width:100%;height:100%}
+.dv-ao{position:absolute;left:0;right:0;top:0;height:30%;pointer-events:none;
+  transform:translateZ(.3px);
+  background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.16) 55%,rgba(0,0,0,0))}
+
+.pose-flat{transform:perspective(calc(var(--dw) * 2.5))}
+.pose-flat .dv-lid{transform:none}
+
+.pose-flat .dv-edge,
+.pose-flat .f3d,
+.pose-flat .dv-back{display:none}
+.guide-stage .device.is-shut .dv-back,
+.guide-stage .device.is-swinging .dv-back{
+  display:block;
+  bottom:auto;
+  aspect-ratio:820/725;
+  transform:rotateX(180deg);
+}
+
+.pose-hero{transform:perspective(calc(var(--dw) * 2.5)) rotateZ(13deg) rotateX(6deg) rotateY(-27deg)}
+.pose-hero.no-lid-anim .dv-lid{animation:none}
+.pose-hero .dv-lid{
+  transform:rotateX(-22deg);
+  animation:lid-open 1.5s cubic-bezier(.3,.86,.36,1) .4s backwards;
+}
+@keyframes lid-open{from{transform:rotateX(-178deg)}to{transform:rotateX(-22deg)}}
+
+
+.f3d{position:absolute;backface-visibility:hidden;
+  background:linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.3)),
+             linear-gradient(180deg,var(--shell-shade),var(--shell-base))}
+.side-l,.side-r{top:0;height:100%;width:9.7%;
+  border-radius:100% 100% 100% 100% / 8.3% 8.3% 4.1% 4.1%}
+.side-l{left:0;transform-origin:0 50%;transform:rotateY(90deg) rotateX(180deg)}
+.side-r{right:0;transform-origin:100% 50%;transform:rotateY(-90deg) rotateX(180deg)}
+.deck-l,.deck-r{top:0;height:100%;width:19.4%;
+  border-radius:100% 100% 100% 100% / 6.6% 6.6% 9.6% 9.6%}
+.dv-bottom{left:9%;width:82%;bottom:0;height:19.2%;
+  transform-origin:50% 100%;transform:rotateX(90deg) rotateY(180deg);
+  background:linear-gradient(rgba(0,0,0,.58),rgba(0,0,0,.42)),
+             linear-gradient(90deg,var(--shell-shade),var(--shell-base))}
+
+.dv-edge{
+  position:absolute;left:2.5%;right:2.5%;top:0;height:11%;
+  transform-origin:50% 0;
+  transform:rotateX(-90deg) rotateY(180deg);
+  background:linear-gradient(var(--shell-base),var(--shell-shade));
+  border-radius:5px 5px 0 0;
+  backface-visibility:hidden;
+}
+
+.screen-box{
+  position:absolute;
+  left:5.7317%;
+  top:15.0345%;
+  width:88.5366%;
+  height:66.7586%;
+
+  border-radius:4px;
+  overflow:hidden;
+  background:var(--opening);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.guide-screen,.hero-screen{
+  z-index:5;
+  opacity:0;
+  transition:opacity .45s ease;
+  object-fit:fill;
+  border:0;
+  transform:translateZ(0);
+}
+
+.sl{stop-color:var(--shell-light)}
+.sb{stop-color:var(--shell-base)}
+.ss{stop-color:var(--shell-shade)}
+.bh{stop-color:var(--btn-hi)}
+.bb{stop-color:var(--btn)}
+.peer-defs .sl{stop-color:var(--peer-light)}
+.peer-defs .sb{stop-color:var(--peer-base)}
+.peer-defs .ss{stop-color:var(--peer-shade)}
+.peer-defs .bh{stop-color:var(--peer-btn-hi)}
+.peer-defs .bb{stop-color:var(--peer-btn)}
+
+.rim{stroke:var(--shell-light);stroke-opacity:.8;stroke-width:3}
+.lens{fill:var(--shell-light);fill-opacity:.30;stroke:#000;stroke-opacity:.17;stroke-width:3}
+.bumper circle{fill:var(--shell-shade);fill-opacity:.22;stroke:var(--shell-light);stroke-opacity:.35;stroke-width:2}
+.dish{fill:#000;fill-opacity:.10;stroke:var(--shell-light);stroke-opacity:.5;stroke-width:4}
+.dishIn{fill:none;stroke:#000;stroke-opacity:.18;stroke-width:4}
+.lensEdge{stroke:var(--shell-light);stroke-opacity:.85;stroke-width:4}
+.lensInner{stroke:#000;stroke-opacity:.35;stroke-width:5}
+.crossEdge{fill:var(--etch);opacity:.28}
+.dimple{fill:#000;fill-opacity:.15}
+.seam path{stroke:#000;stroke-opacity:.28;stroke-width:3}
+.ledOn{fill:#6fd39b}
+.ledGlow{fill:#6fd39b;opacity:.22}
+.ledOff{fill:var(--etch);opacity:.5}
+.face circle{stroke:var(--etch);stroke-opacity:.32;stroke-width:3}
+.face text,.glyph{fill:var(--etch);font-family:"Google Sans Flex",sans-serif;font-weight:600;text-anchor:middle}
+.face text{font-size:32px}
+.micro text{fill:var(--etch);font:600 20px "Google Sans Flex",sans-serif;letter-spacing:2.5px;text-anchor:middle}
+.holes circle{fill:var(--etch);opacity:.7}
+
