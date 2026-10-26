@@ -9,9 +9,11 @@
   <path d="M28 48L94 75M26 53L96 82M43 28L99 53M43 91L79 103" fill="none" stroke="#e1cc96" stroke-opacity=".16" stroke-width=".45"/>
   <use href="#smiley" fill="none" stroke="url(#rim)" stroke-width="1.15"/>
   <path d="M25 43A45 45 0 0 1 64 19" fill="none" stroke="#fff0b6" stroke-width=".8" stroke-linecap="round" opacity=".70"/>
-  <g fill="#493c2b" stroke="#493c2b">
-    <ellipse cx="46" cy="52" rx="4.5" ry="6" stroke="none"/>
-    <ellipse cx="82" cy="52" rx="4.5" ry="6" stroke="none"/>
-    <path d="M40 77Q64 102 88 77" fill="none" stroke-width="6" stroke-linecap="round"/>
+  <!-- Bold dark ink and a fine champagne keyline stay legible over bronze folds. -->
+  <g fill="#271b10" stroke="#f6e4b0" stroke-width="3" paint-order="stroke fill">
+    <ellipse cx="46" cy="51" rx="6.5" ry="8"/>
+    <ellipse cx="82" cy="51" rx="6.5" ry="8"/>
   </g>
+  <path d="M39 76Q64 103 89 76" fill="none" stroke="#f6e4b0" stroke-width="13" stroke-linecap="round"/>
+  <path d="M39 76Q64 103 89 76" fill="none" stroke="#271b10" stroke-width="9" stroke-linecap="round"/>
 </svg>
