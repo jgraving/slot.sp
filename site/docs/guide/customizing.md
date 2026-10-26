@@ -14,7 +14,7 @@ e.g. `Labels/GBA/Metroid Fusion.png` goes with `Games/GBA/Metroid Fusion.gba`.
 
 slot will cache labels on the next boot after adding labels.
 
-You don't have to make these by hand and can use the [Cart Studio](https://studio.slot-cfw.fyi) to fetch and apply labels.
+Use [Cart Studio](https://jakegraving.com/slot.sp/studio/) to find artwork, design labels and choose cartridge colors. The [Studio guide](../features/cart-studio.md) covers card access and ZIP export.
 
 ## Cart shells
 

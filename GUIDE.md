@@ -11,6 +11,7 @@ Start with [installation](GETTING-STARTED.md), then use the [button reference](C
 | **[⬇ Installation & updates](GETTING-STARTED.md)** | Choose a download, prepare a card, add games and update an existing installation. |
 | **[🕹️ Buttons & shortcuts](CONTROLS.md)** | Default controls for the carousel, games and menus; remapping your buttons. |
 | **[⭐ Games & artwork](LIBRARY.md)** | Favorites, Recents, game labels and cartridge colors. |
+| **[🎨 Cart Studio](CART-STUDIO.md)** | Find artwork, edit labels and save cartridge colors from your browser. |
 | **[💾 Playing & saving](PLAYING.md)** | Launching, resuming, save states, undo, emulator choice, fast-forward, rewind and turbo. |
 | **[📸 Screenshots](SCREENSHOTS.md)** | Capture, browse, zoom and manage pictures. |
 | **[🎨 Appearance & screen](DISPLAY.md)** | SP colors, backgrounds, animation, shaders, palettes and picture size. |

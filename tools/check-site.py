@@ -8,7 +8,7 @@ import subprocess
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1] / 'site/public'
-ORIGIN = 'jgraving.github.io'
+ORIGIN = 'jakegraving.com'
 BASE = '/slot.sp/'
 
 class Page(HTMLParser):
@@ -52,16 +52,23 @@ for source, page in pages.items():
             if not (tag == 'use' and url.fragment in dynamic_ids):
                 errors.append(f'{source.relative_to(ROOT)}: missing anchor {link}')
         checked += 1
-for source in (ROOT / 'assets').glob('*.css'):
+for source in list((ROOT / 'assets').glob('*.css')) + list((ROOT / 'studio').glob('*.css')):
     for link in re.findall(r'url\([\"\']?([^\)\"\']+)', source.read_text()):
         if not urlsplit(link).scheme and not (source.parent / link).is_file():
             errors.append(f'{source.name}: missing CSS asset {link}')
         checked += 1
 home = (ROOT / 'index.html').read_text()
+assert 'https://jakegraving.com/slot.sp/' in home
 assert 'Game Boy games.' in home and 'features/kid-mode/' in home
 assert 'BrandonKowalski/slot/releases' not in home
 assert 'fonts.googleapis.com' not in home, 'Typeface must be self-hosted'
 assert not (ROOT / 'CNAME').exists(), 'Do not publish the upstream custom domain'
+studio_pin = json.loads((ROOT.parent / 'studio.json').read_text())
+studio_info = json.loads((ROOT / 'studio/build-info.json').read_text())
+assert studio_info['source_commit'] == studio_pin['ref']
+assert studio_info['repository'] == 'jgraving/slot-cart-studio'
+assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
+assert (ROOT / 'studio/LICENSE').is_file()
 for video in (ROOT / 'media/fork').glob('*.mp4'):
     metadata = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
         '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', str(video)]))

@@ -9,7 +9,7 @@
 
 Game Boy · Game Boy Color · Game Boy Advance
 
-**[⬇ Download update](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** · **[Website](https://jgraving.github.io/slot.sp/)** · **[Get started](GETTING-STARTED.md)** · **[User guide](GUIDE.md)**
+**[⬇ Download update](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** · **[Website](https://jakegraving.com/slot.sp/)** · **[Cart Studio](https://jakegraving.com/slot.sp/studio/)** · **[Get started](GETTING-STARTED.md)** · **[User guide](GUIDE.md)**
 
 </div>
 
@@ -22,6 +22,7 @@ Game Boy · Game Boy Color · Game Boy Advance
 | 🔤 **[Google Sans Flex](DISPLAY.md#type)** | Bolder selections, steady numbers and readable small text. |
 | 🎨 **[Four SP colors](DISPLAY.md#colors)** | Graphite, Platinum, Pearl Blue and Pearl Pink, with matching power-switch and link-screen artwork. |
 | 🖼️ **[Larger game artwork](LIBRARY.md#game-artwork)** | Bigger cartridges and labels, with automatic cleanup around rounded label corners. |
+| 🖌️ **[Cart Studio](CART-STUDIO.md)** | Find artwork, design labels and choose cartridge colors in your browser. Save to your SD card or export a ZIP. |
 | ⭐ **[Favorites & Recents](LIBRARY.md#favorites--recents)** | Keep favorite games together and return to the ones you played last. |
 | 🌊 **[Animation & backgrounds](DISPLAY.md#backgrounds--animation)** | Flowing gradients, an optional glass logo animation and soft carousel clicks. |
 | 🌗 **[Day & night presets](NIGHT-DISPLAY.md)** | Switch between your saved brightness and warmth settings with one shortcut. |
