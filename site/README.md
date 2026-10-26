@@ -4,11 +4,11 @@ Published at **https://jakegraving.com/slot.sp/** through GitHub Pages.
 
 ## Build
 
-Use Python 3.13, FFmpeg, Rust 1.96 with the `wasm32-unknown-unknown` target, and wasm-pack 0.15.0. From the repository root:
+Use Python 3.13, Rust 1.96 with the `wasm32-unknown-unknown` target, and wasm-pack 0.15.0. From the repository root:
 
 ```sh
 python -m venv .venv-site
-.venv-site/bin/pip install zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0
+.venv-site/bin/pip install zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0 --only-binary=av av==16.0.0
 mkdir -p _studio
 git clone https://github.com/jgraving/slot-cart-studio.git _studio/slot-cart-studio
 git -C _studio/slot-cart-studio checkout "$(python -c 'import json; print(json.load(open("site/studio.json"))["ref"])')"
@@ -37,7 +37,7 @@ The `pages` workflow builds and checks pull requests. Merging a website or guide
 
 Repository **Settings → Pages → Source** must be **GitHub Actions**. No custom domain or deployment token is required. The inherited upstream `CNAME` is deliberately absent.
 
-Checks cover the strict documentation build, local page links and anchors, CSS assets, project subpath, self-hosted font references, playable 720×480 H.264 previews and the pinned Studio WebAssembly package.
+Checks cover the strict documentation build, local page links and anchors, CSS assets, project subpath, self-hosted font references, 720×480 H.264 previews with a decoded first frame and the pinned Studio WebAssembly package.
 
 ## Captures
 
