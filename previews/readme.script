@@ -37,6 +37,9 @@ tap y
 wait 40
 cut
 shot favorites
+tap x
+wait 20
+shot approved
 wait 45
 down power
 wait 61

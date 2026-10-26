@@ -22,7 +22,7 @@ if not args.git_objects:
             first.convert('RGB').save(target/(stem+'.png'))
     shutil.copyfile(out/'hero-glass.png',target/'hero-glass.png')
     # Native selected shots are clearer posters than intermediate animation frames.
-    for name in ['carousel','core-picker','favorites']:
+    for name in ['carousel','core-picker','favorites','approved']:
         shutil.copyfile(out/(name+'.png'),shots/(name+'.png'))
     for name in ['parent-settings','parent-time','kid-menu','kid-warning','parent-code','sound','about']:
         shutil.copyfile(out/(name+'.png'),shots/(name+'.png'))

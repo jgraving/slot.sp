@@ -39,7 +39,7 @@ fn main(){
         draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:ui,alpha:1.});
         c.begin_frame();c.draw_list(&draws);save(path,720,480,&c.read_frame());
     };
-    let mut policy=Policy::default();policy.minutes=90;policy.begin(WALL).unwrap();
+    let mut policy=Policy::default();policy.minutes=90;policy.approved.push((slot_store::Platform::Gba,"Emerald".into()));policy.begin(WALL).unwrap();
     let mut home=Menu::new(root.clone(),policy.clone());
     for b in [Btn::A,Btn::B,Btn::X,Btn::Y]{press(&mut home,b);}
     home.set_remaining(Some((75*60,90*60)));
