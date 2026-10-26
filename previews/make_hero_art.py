@@ -1,18 +1,8 @@
-"""Build the site's real wordmark font and a restrained studio-light overlay."""
+"""Build the fixed lighting overlay for the production hero capture."""
 from pathlib import Path
-import io, math, sys, urllib.request
-from PIL import Image, ImageDraw, ImageFont
-from fontTools.ttLib import TTFont
-from fontTools.varLib.instancer import instantiateVariableFont
+import math, sys
+from PIL import Image
 out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
-font = TTFont(io.BytesIO(urllib.request.urlopen('https://jakegraving.com/assets/fonts/google-sans-flex-v5-web.woff2', timeout=60).read()))
-font = instantiateVariableFont(font, {'wght': 600}, inplace=False)
-font.flavor = None
-buf = io.BytesIO(); font.save(buf); buf.seek(0)
-typeface = ImageFont.truetype(buf, 150)
-logo = Image.new('RGBA', (1440, 192))
-ImageDraw.Draw(logo).text((720, 92), 'slot.sp', font=typeface, fill=(246, 247, 242, 255), anchor='mm', stroke_width=0)
-logo.resize((720, 96), Image.Resampling.LANCZOS).save(out/'hero-wordmark.png')
 light = Image.new('RGBA', (720, 480))
 pixels = []
 for y in range(480):

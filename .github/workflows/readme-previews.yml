@@ -1,62 +1,62 @@
-name: Capture README previews
+name: Capture documentation media
 on:
   push:
-    branches: [integrate-upstream-default-wallpaper]
-    paths: ['crates/**', 'assets/**', 'previews/**', 'crates/slot/src/link_screen.rs', 'tools/opaque_preview_gif.py', '.github/workflows/readme-previews.yml']
+    branches: [docs/media-refresh]
+    paths: ['crates/**', 'assets/**', 'previews/**', 'tools/opaque_preview_gif.py', 'tools/collect-doc-media.py', '.github/workflows/readme-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
   capture:
-    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/integrate-upstream-default-wallpaper' && github.actor != 'github-actions[bot]'
+    if: github.repository == 'jgraving/slot.sp' && github.ref == 'refs/heads/docs/media-refresh'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       LIBGL_ALWAYS_SOFTWARE: '1'
       SLOT_SILENT: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install capture dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri python3-pil
+          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0
       - uses: dtolnay/rust-toolchain@1.96.0
-      - name: Build capture tools
+      - name: Build production capture tools
         run: |
-          cp previews/capture.rs crates/slot/examples/readme_capture.rs
-          cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
-          cp previews/link_capture.rs crates/slot/examples/link_capture.rs
-          cp previews/fixture.rs crates/slot/examples/readme_fixture.rs
-          cp previews/lava_check.rs crates/slot/examples/lava_check.rs
-          cargo test --locked -p slot --no-default-features --test link_screen --test link_art_builder --test power --test power_click --test wallpaper --test quick_menu
-          cargo test --locked -p slot-ui --test power_switch --test shell_material
-          cargo test --locked -p slot-gfx --no-default-features --test lava
-          cargo build --locked -p slot --no-default-features --example readme_capture --example readme_fixture --example lava_check
-      - name: Record production compositor and encode opaque GIFs
-        run: |
-          mkdir -p /tmp/slot-readme/out
-          target/debug/examples/lava_check /tmp/slot-readme/out
-          target/debug/examples/readme_fixture /tmp/slot-readme/card
-          python3 previews/prepare_art.py /tmp/slot-readme/card
-          target/debug/examples/readme_capture /tmp/slot-readme/card previews/readme.script /tmp/slot-readme/out
-          for clip in carousel core-picker link shutdown; do
-            mkdir -p "/tmp/slot-readme/$clip"
-            ffmpeg -v error -y -i "/tmp/slot-readme/out/$clip.mp4" -vf fps=20 "/tmp/slot-readme/$clip/%04d.png"
-            python3 tools/opaque_preview_gif.py "/tmp/slot-readme/$clip" "previews/readme-$clip.gif"
+          set -eu
+          for name in capture egl_surface link_capture fixture lava_check insertion_hero boot_brand cart_motion docs_ui; do
+            cp "previews/$name.rs" "crates/slot/examples/$name.rs"
           done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lava-preview
-          path: /tmp/slot-readme/out/lava.*
-      - name: Publish generated media to this branch
+          cargo build --locked -p slot --no-default-features --example capture --example fixture --example lava_check --example insertion_hero --example boot_brand --example cart_motion --example docs_ui --example layout_review
+          cargo test --locked -p slot --no-default-features --test parent_code --test button_code --test kid_controls --test sound_menu_style -- --test-threads=1
+          cargo test --locked -p slot-ui --test typography --test sticker --test cart_motion --test quick_menu
+      - name: Record current interface
         run: |
-          git diff --check
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          cp /tmp/slot-readme/out/lava.mp4 previews/lava-gradient.mp4
-          cp /tmp/slot-readme/out/lava.png previews/lava-gradient.png
-          git add previews/lava-gradient.png previews/lava-gradient.mp4 previews/readme-carousel.gif previews/readme-core-picker.gif previews/readme-link.gif previews/readme-shutdown.gif
-          if ! git diff --cached --quiet; then
-            git commit -m "Capture slot.sp README animations"
-            git push origin HEAD:integrate-upstream-default-wallpaper
-          fi
+          set -eu
+          mkdir -p /tmp/slot-docs/out
+          target/debug/examples/fixture /tmp/slot-docs/card
+          python3 previews/prepare_art.py /tmp/slot-docs/card
+          target/debug/examples/capture /tmp/slot-docs/card previews/readme.script /tmp/slot-docs/out
+          python3 previews/make_hero_art.py /tmp/slot-docs/out
+          target/debug/examples/insertion_hero /tmp/slot-docs/card /tmp/slot-docs/out
+          target/debug/examples/boot_brand /tmp/slot-docs/out
+          target/debug/examples/cart_motion /tmp/slot-docs/card /tmp/slot-docs/out
+          target/debug/examples/lava_check /tmp/slot-docs/out
+          target/debug/examples/docs_ui /tmp/slot-docs/card /tmp/slot-docs/out
+          target/debug/examples/layout_review /tmp/slot-docs/layout
+          python3 tools/compose-layout-review.py /tmp/slot-docs/layout /tmp/slot-docs/out/menu-overview.png menu
+          python3 tools/compose-layout-review.py /tmp/slot-docs/layout /tmp/slot-docs/out/sound-overview.png sound
+          python3 tools/collect-doc-media.py /tmp/slot-docs
+      - name: Prepare media objects for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/slot-docs --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: documentation-media
+          path: |
+            /tmp/slot-docs/publish/**
+            /tmp/slot-docs/media-entries.json
+          if-no-files-found: error

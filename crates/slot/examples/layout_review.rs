@@ -36,7 +36,7 @@ impl Scene {
 }
 fn main(){
  let root=PathBuf::from(std::env::args().nth(1).expect("output directory"));
- for (name,row) in [("menu-general",QuickRow::ShellColour),("menu-general-bottom",QuickRow::DateTime),("menu-game-top",QuickRow::FastForward),("menu-game-bottom",QuickRow::EjectSave)] {
+ for (name,row) in [("menu-general",QuickRow::ShellColour),("menu-general-bottom",QuickRow::DateTime),("menu-game-top",QuickRow::FastForward),("menu-game-bottom",QuickRow::EjectSave),("menu-power",QuickRow::LidClose)] {
   let mut s=Scene::new(&root,name);
   let faces=QuickMenuFaces {
    labels:QuickRow::ALL.map(|r|[s.face(quick_label_face(r,false)),s.face(quick_label_face(r,true))]).to_vec(),
@@ -51,11 +51,13 @@ fn main(){
   let [back,front]=shell_slot_faces(ShellColour::Platinum);
   let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));
   let mut out=vec![];
-  let mut values=[None;QuickRow::ALL.len()];values[QuickRow::ShellColour.index()]=Some(QuickValue::PearlBlue);
+  let app=slot::app::App::new(vec![]);
+  let mut values=QuickRow::ALL.map(|r|app.quick_value(r));values[QuickRow::ShellColour.index()]=Some(QuickValue::PearlBlue);
   values[QuickRow::Theme.index()]=Some(QuickValue::Dark);values[QuickRow::Recents.index()]=Some(QuickValue::On);
   values[QuickRow::ShowTitles.index()]=Some(QuickValue::Show);values[QuickRow::FastForward.index()]=Some(QuickValue::Speed3);
   values[QuickRow::FastForwardSound.index()]=Some(QuickValue::On);values[QuickRow::Rumble.index()]=Some(QuickValue::On);
-  QuickMenu{row,hidden:&[],values,clock:None,wallpaper:None,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
+  let wallpaper=Some([s.face(quick_value_face("Flowing Gradient",false)),s.face(quick_value_face("Flowing Gradient",true))]);
+  QuickMenu{row,hidden:&[],values,clock:None,wallpaper,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
    gba_bezel:None,gb_bezel:None,gbc_bezel:None,bezel:None,over_game:false,footer_legends:true,footer_top:480.,canvas:Canvas::FRAMED}.draw(&mut out);
   draw_empty_slot(Canvas::FRAMED,slot,&mut out);
   for (i,(tex,w)) in [faces.legend[0],faces.legend[if row.opens(){2}else{1}]].into_iter().enumerate(){
@@ -70,7 +72,7 @@ fn main(){
  for w in [640,720] {
   let mut s=Scene::new(&root,&format!("sound-{w}"));
   let canvas=Canvas{w:w as f32,h:480.};
-  let lines=["","","COMPACT","ROW BLUETOOTH On","ROW SPEAKER_DEVICE Internal speaker","SELECTED ACTIVE DEVICE WF-C510",
+  let lines=["","","COMPACT","ROW BLUETOOTH On","ROW SPEAKER_DEVICE Internal speaker","SELECTED ACTIVE DEVICE Headphones",
    "ROW USB_DEVICE USB headphones","ROW Pair audio device","ROW DISCONNECT 0%","B Back · A Connect · Y Forget"].map(str::to_owned);
   let f=slot::bluetooth::screen_face_on(&lines,footer_ink(false),canvas);let tex=s.add(&f.rgba,f.w,f.h);
   let [back,front]=shell_slot_faces(ShellColour::Platinum);let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));

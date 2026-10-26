@@ -22,6 +22,7 @@ enum Step {
     Up(Btn),
     Rec(Option<String>),
     Cut,
+    Shot(String),
 }
 
 struct Clip {
@@ -112,6 +113,7 @@ fn parse(script: &str) -> Vec<Step> {
             ["rec"] => steps.push(Step::Rec(None)),
             ["rec", name] => steps.push(Step::Rec(Some(name.to_string()))),
             ["cut"] => steps.push(Step::Cut),
+            ["shot", name] => steps.push(Step::Shot((*name).to_string())),
             _ => panic!("cannot read {line:?}"),
         }
     }
@@ -200,6 +202,14 @@ fn main() {
                     None => out.clone(),
                 };
                 clip = Some(Clip::start(path));
+            }
+            Step::Shot(name) => {
+                let pixels = compositor.read_frame();
+                let file = std::fs::File::create(format!("{out}/{name}.png")).unwrap();
+                let mut encoder = png::Encoder::new(file, OUT_W, OUT_H);
+                encoder.set_color(png::ColorType::Rgba);
+                encoder.set_depth(png::BitDepth::Eight);
+                encoder.write_header().unwrap().write_image_data(&pixels).unwrap();
             }
             Step::Cut => {
                 if let Some(done) = clip.take() {
