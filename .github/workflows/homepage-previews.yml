@@ -63,7 +63,7 @@ jobs:
           python3 -m pip install --only-binary=av av==16.0.0
           node tools/capture-readme-model.cjs /tmp/slot-homepage /tmp/slot-homepage/out/platinum/hero.mp4
           mkdir -p /tmp/slot-homepage/publish/previews/readme-model
-          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/model-frames /tmp/slot-homepage/publish/previews/readme-model/hero.gif --width 440 --frame-ms 80
+          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/model-frames /tmp/slot-homepage/publish/previews/readme-model/hero.gif --width 820 --frame-ms 80
           python3 previews/collect_readme_model.py /tmp/slot-homepage
       - name: Prepare media blobs for review
         env:
