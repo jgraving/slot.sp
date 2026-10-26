@@ -1,37 +1,67 @@
 {% extends "main.html" %}
+{% macro icon(name) -%}<img class="feature-icon" src="{{ ('assets/icons/' ~ name ~ '.svg') | url }}" width="48" height="48" alt="" aria-hidden="true">{%- endmacro %}
 {% block content %}
+{% include "partials/device.svg" %}
 <div class="home">
   <section class="intro" aria-labelledby="intro-title">
-    <div>
-      <h1 id="intro-title">Game Boy games.<br>SP style.</h1>
+    <div class="intro-copy">
+      <h1 id="intro-title">Game Boy games.<br><span>SP style.</span></h1>
       <p class="intro-text">A Game Boy, Color and Advance launcher for Anbernic handhelds, inspired by the Game Boy Advance SP.</p>
       <p>Choose a cartridge, press A and play.</p>
       <a class="download" href="https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip">Download System ZIP <span aria-hidden="true">↓</span></a>
-      <p class="download-help">New to slot? <a href="{{ 'installing/' | url }}">Install it</a>. Already using it? <a href="{{ 'updating/' | url }}">Update it</a>.</p>
+      <div class="install-links"><a href="{{ 'installing/' | url }}">Install</a><a href="{{ 'updating/' | url }}">Update</a><a href="{{ 'features/guide/' | url }}">User guide</a></div>
     </div>
-    <figure class="demo">
-      <video controls muted playsinline loop preload="none" width="720" height="480" poster="{{ 'media/fork/readme-carousel.png' | url }}" aria-label="Browse the game carousel in slot.sp">
-        <source src="{{ 'media/fork/readme-carousel.mp4' | url }}" type="video/mp4">
-      </video>
-      <figcaption>The game carousel. <a href="{{ 'features/controls/' | url }}">See the controls</a>.</figcaption>
+    <figure class="sp-preview" aria-label="slot.sp on an illustrated RG SP">
+      <div class="sp-stage">
+        <div class="device pose-hero">
+          <div class="dv-lid">
+            <div class="dv-front">
+              <svg viewBox="0 0 820 725" aria-hidden="true"><use href="#lidArt"/></svg>
+              <video id="hero-preview" class="hero-screen screen-box" width="720" height="480" muted playsinline loop preload="none" poster="{{ 'media/fork/readme-carousel.png' | url }}" aria-label="Browse the game carousel in slot.sp"><source src="{{ 'media/fork/readme-carousel.mp4' | url }}" type="video/mp4"></video>
+            </div>
+            <div class="dv-back" aria-hidden="true"><svg viewBox="0 0 820 725" preserveAspectRatio="none"><use href="#lidBackArt"/></svg></div>
+            <span class="dv-edge" aria-hidden="true"></span><span class="f3d side-l" aria-hidden="true"></span><span class="f3d side-r" aria-hidden="true"></span>
+          </div>
+          <div class="dv-deck">
+            <svg viewBox="0 725 820 830" aria-hidden="true"><use href="#deckArt"/></svg>
+            <span class="f3d side-l deck-l" aria-hidden="true"></span><span class="f3d side-r deck-r" aria-hidden="true"></span><span class="f3d dv-bottom" aria-hidden="true"></span><span class="dv-ao" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-controls">
+        <div class="finish-picker" role="group" aria-label="Handheld color">
+          <button type="button" data-shell="graphite" aria-label="Graphite" title="Graphite" aria-pressed="false" style="--swatch:#45474d"></button>
+          <button type="button" data-shell="platinum" aria-label="Platinum" title="Platinum" aria-pressed="true" style="--swatch:#c6cbd3"></button>
+          <button type="button" data-shell="pearl blue" aria-label="Pearl Blue" title="Pearl Blue" aria-pressed="false" style="--swatch:#a6cce2"></button>
+          <button type="button" data-shell="pearl pink" aria-label="Pearl Pink" title="Pearl Pink" aria-pressed="false" style="--swatch:#e0adbf"></button>
+        </div>
+        <button type="button" class="preview-toggle" aria-controls="hero-preview" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path class="play-glyph" d="m9 5 10 7-10 7z" fill="currentColor"/><path class="pause-glyph" d="M8 5v14m8-14v14" fill="none" stroke="currentColor" stroke-width="3"/></svg><span>Play preview</span></button>
+      </div>
     </figure>
   </section>
   <section class="features" aria-labelledby="features-title">
     <h2 id="features-title">What’s in slot.sp</h2>
     <dl>
-      <div><dt><a href="{{ 'features/kid-mode/' | url }}">Kid mode</a></dt><dd>Approve games, set playtime and volume limits, and give kids a simple menu with time reminders.</dd></div>
-      <div><dt><a href="{{ 'features/playing/' | url }}">Save &amp; resume</a></dt><dd>Pick up where you left off. Browse save states, undo a save or load, rewind, or fast-forward.</dd></div>
-      <div><dt><a href="{{ 'features/bluetooth/' | url }}">Audio &amp; headphones</a></dt><dd>Choose Bluetooth, USB, wired headphones or the speaker. Each output remembers its volume.</dd></div>
-      <div><dt><a href="{{ 'features/display/' | url }}">SP colors &amp; backgrounds</a></dt><dd>Choose four SP colors, still or flowing backgrounds, and screen effects for each system.</dd></div>
-      <div><dt><a href="{{ 'features/night-display/' | url }}">Day &amp; night</a></dt><dd>Keep separate brightness and warmth settings, then switch between them with a shortcut.</dd></div>
-      <div><dt><a href="{{ 'features/library/' | url }}">Your game collection</a></dt><dd>Keep Favorites and Recents together. Add your own labels and cartridge colors.</dd></div>
+      <div><dt><a href="{{ 'features/kid-mode/' | url }}">{{ icon('kid-mode') }}Kid mode</a></dt><dd>Approve games, set time and volume limits, and give kids a simple menu with time reminders.</dd></div>
+      <div><dt><a href="{{ 'features/playing/' | url }}">{{ icon('playing') }}Save &amp; resume</a></dt><dd>Pick up where you left off. Browse save states, undo a save or load, rewind, or fast-forward.</dd></div>
+      <div><dt><a href="{{ 'features/bluetooth/' | url }}">{{ icon('bluetooth') }}Audio &amp; headphones</a></dt><dd>Use Bluetooth, USB, wired headphones or the speaker. Each output remembers its volume.</dd></div>
+      <div><dt><a href="{{ 'features/display/' | url }}">{{ icon('display') }}SP colors &amp; backgrounds</a></dt><dd>Choose four SP colors, still or flowing backgrounds, and screen effects for each system.</dd></div>
+      <div><dt><a href="{{ 'features/night-display/' | url }}">{{ icon('night-display') }}Day &amp; night</a></dt><dd>Save your brightness and warmth settings, then switch between them with a shortcut.</dd></div>
+      <div><dt><a href="{{ 'features/library/' | url }}">{{ icon('library') }}Your game collection</a></dt><dd>Keep Favorites and Recents together. Add your own labels and cartridge colors.</dd></div>
     </dl>
-    <p><a href="{{ 'features/guide/' | url }}">Read the user guide →</a> <span class="link-divider">·</span> <a href="{{ 'features/link-play/' | url }}">Link play</a> <span class="link-divider">·</span> <a href="{{ 'features/screenshots/' | url }}">Screenshots</a> <span class="link-divider">·</span> <a href="{{ 'features/power-options/' | url }}">Sleep &amp; power</a></p>
+    <nav class="more-features" aria-label="More features">
+      <a href="{{ 'features/link-play/' | url }}">{{ icon('link-play') }}Link play</a>
+      <a href="{{ 'features/screenshots/' | url }}">{{ icon('screenshots') }}Screenshots</a>
+      <a href="{{ 'features/power-options/' | url }}">{{ icon('power-options') }}Sleep &amp; power</a>
+      <a href="{{ 'features/guide/' | url }}">{{ icon('guide') }}User guide <span aria-hidden="true">→</span></a>
+    </nav>
   </section>
   <section class="studio-note" aria-labelledby="studio-title">
-    <h2 id="studio-title">Cart Studio</h2>
-    <p>Edit game labels and cartridge colors in your browser. Preview each cartridge, then save to your SD card or download a ZIP.</p>
-    <p><a href="{{ 'studio/' | url }}">Open Cart Studio →</a> <span class="link-divider">·</span> <a href="{{ 'features/cart-studio/' | url }}">Studio guide</a></p>
+    <div class="studio-art" aria-hidden="true">{{ icon('cart-studio') }}</div>
+    <div><h2 id="studio-title">Cart Studio</h2>
+      <p>Edit game labels and cartridge colors in your browser. Preview each cartridge, then save to your SD card or download a ZIP.</p>
+      <div class="studio-links"><a href="{{ 'studio/' | url }}">Open Cart Studio →</a><a href="{{ 'features/cart-studio/' | url }}">Studio guide</a></div>
+    </div>
   </section>
 </div>
 {% endblock %}

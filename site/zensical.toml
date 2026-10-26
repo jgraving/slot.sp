@@ -29,7 +29,7 @@ nav = [
   { "About" = ["questions.md", "credits.md", "ai.md"] },
 ]
 
-extra_css = ["assets/slot.css"]
+extra_css = ["assets/device.css", "assets/slot.css"]
 extra_javascript = ["assets/slot.js"]
 
 [project.theme]
