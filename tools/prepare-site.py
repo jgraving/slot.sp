@@ -77,6 +77,8 @@ def main():
     for entry in homepage['files']:
         source = ROOT / entry['path']
         assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        if source.suffix not in ('.mp4', '.png'):
+            continue
         target = homepage_media / revision / source.name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
