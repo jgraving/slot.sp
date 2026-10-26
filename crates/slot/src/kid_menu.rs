@@ -185,7 +185,7 @@ impl Menu {
                 format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
                 self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
-                if self.gate.enabled() { "Change parent code" } else { "Set parent code" }.into(),
+                "Set parent code".into(),
             ];
             let status = if self.status.is_empty() {
                 format!(
@@ -277,7 +277,7 @@ impl Menu {
                 ("Play limit".into(), kind.into(), true),
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
-                ("Parent code".into(), if self.gate.enabled() { "Change" } else { "Set" }.into(), false),
+                ("Set parent code".into(), String::new(), false),
             ];
             let status = if self.status == "Parent code saved" { "" } else { &self.status };
             let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
