@@ -1,7 +1,7 @@
 name: Capture homepage previews
 on:
   push:
-    branches: ['docs/homepage-*']
+    branches: ['docs/homepage-*', 'docs/media-refresh']
     paths: ['previews/**', 'crates/slot-ui/**', '.github/workflows/homepage-previews.yml']
   workflow_dispatch:
 permissions:

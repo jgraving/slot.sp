@@ -29,7 +29,7 @@ fn main() {
         wallpaper: slot_store::WallpaperPick::Default,
         ..SlotState::default()
     }).unwrap();
-    if std::env::args().nth(2).is_some() {
+    {
         let mut kids = slot::kid_policy::Policy::default();
         kids.approved.push((Platform::Gba, "Emerald".into()));
         kids.save(&root).unwrap();

@@ -79,3 +79,36 @@ fn about_sticker_preview_uses_the_requested_credits() {
         );
     }
 }
+
+#[test]
+fn approval_follows_cart_geometry_and_is_drawn_behind_the_slot_front() {
+    use slot_ui::{Canvas, Shelf, SlotChrome};
+    let face = TexId::from_raw(101);
+    let kid = (TexId::from_raw(102), 30., 30.);
+    let front = TexId::from_raw(103);
+    for platform in Platform::ALL {
+        let c = cart(platform);
+        let (rest, scale) = Shelf::new(vec![c.clone()]).selected_at(Canvas::FRAMED);
+        for depth in [0., 0.1, 0.4, 0.8, 1., 0.8, 0.4, 0.] {
+            let mut out = Vec::new();
+            SlotChrome {
+                cart: &c, face: Some(face), rest, scale, seat: depth,
+                alert: None, dim: 0., screen: 0., game: false, over: true,
+                behind: [None, None], slot: Some((TexId::from_raw(104), front)),
+                canvas: Canvas::FRAMED,
+            }.draw_with_marks(None, Some(kid), &mut out);
+            let body = out.iter().find_map(|d| match *d {
+                Draw::Tex { x, y, w, h, tex, .. } if tex == face => Some(Placed { x, y, w, h }),
+                _ => None,
+            }).unwrap();
+            let mut expected = Vec::new();
+            slot_ui::draw_kid(&c, kid, body, 1., 0., &mut expected);
+            let mark = out.iter().position(|d| matches!(d, Draw::Tex { tex, .. } if *tex == kid.0)).unwrap();
+            let Draw::Tex { x, y, w, h, alpha, .. } = out[mark] else { panic!() };
+            let Draw::Tex { x: ex, y: ey, w: ew, h: eh, alpha: ea, .. } = expected[0] else { panic!() };
+            assert_eq!((x, y, w, h, alpha), (ex, ey, ew, eh, ea));
+            let lip = out.iter().position(|d| matches!(d, Draw::Tex { tex, .. } if *tex == front)).unwrap();
+            assert!(mark < lip, "approval must disappear under the slot with the cart");
+        }
+    }
+}
