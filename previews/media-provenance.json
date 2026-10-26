@@ -79,8 +79,9 @@
     },
     {
       "path": "previews/guide/kid-menu.png",
-      "bytes": 406439,
-      "sha256": "73023c4c2d7f849784e2a91b3373a5ea21689f68eda98fafe0e7e859c7cc13ac"
+      "bytes": 417146,
+      "sha256": "bce25d357566de48eb600c0d19c088d9d4dafb6e2b077c395d55e33a2e847b19",
+      "source_manifest": "previews/controls-screen-provenance.json"
     },
     {
       "path": "previews/guide/kid-warning.png",
@@ -226,6 +227,18 @@
       "path": "previews/slot-fit-motion.gif",
       "bytes": 4351248,
       "sha256": "665b330b8a9915b52a495fe0f3a1682565dc0dcf275a2af30a383784293cb244"
+    },
+    {
+      "path": "previews/guide/kid-controls.png",
+      "bytes": 454014,
+      "sha256": "6bdda43ffc519c9cf672db0d4d753987faac673c2f9c14120377d100a3cd7826",
+      "source_manifest": "previews/controls-screen-provenance.json"
+    },
+    {
+      "path": "previews/guide/buttons-shortcuts.png",
+      "bytes": 441390,
+      "sha256": "d17b710269991c152019a6bb5d01934a87b3920cb91a568a660ff421d4e02a71",
+      "source_manifest": "previews/controls-screen-provenance.json"
     }
   ]
 }

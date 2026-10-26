@@ -29,13 +29,16 @@ During a game, tapping <kbd>MENU</kbd> opens:
 | **Volume** | Adjust volume within the parent's cap. |
 | **Brightness** | Adjust screen brightness. |
 | **Exit game** | Return to the carousel through the normal save-and-exit process. |
+| **Buttons & shortcuts** | Read the kid-friendly control guide; Left / Right change pages and B returns. |
 | **Parent controls** | Enter the parent code to change limits or turn kid mode off. |
 
 ![The kid menu during a game: Resume, Volume, Brightness, Exit game and Parent controls](previews/guide/kid-menu.png)
 
+![The child-friendly button reference](previews/guide/kid-controls.png)
+
 Use <kbd>Up</kbd> / <kbd>Down</kbd> to select a row and <kbd>Left</kbd> / <kbd>Right</kbd> to adjust a value. <kbd>A</kbd> selects; <kbd>B</kbd> or <kbd>MENU</kbd> closes the menu.
 
-On the carousel, the kid menu offers **Games**, Volume, Brightness and Parent controls. Children can browse, play and leave games without entering a code. Parent dialogs pause and mute the game.
+On the carousel, the kid menu offers **Games**, Volume, Brightness, Buttons & shortcuts and Parent controls. Children can browse, play and leave games without entering a code. Parent dialogs pause and mute the game.
 
 ## Time & volume limits
 

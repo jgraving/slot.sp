@@ -1,0 +1,27 @@
+{
+  "capture": "Production docs_ui example rendered locally with surfaceless Mesa",
+  "base_commit": "4ee5d09033e99ad5913a8047706910c07fa0c0c3",
+  "source_sha256": {
+    "previews/docs_ui.rs": "b33aca6d23b7f46e51edadd6d3fd138d414ae7865eed0c373683d390cf60ae0e",
+    "crates/slot/src/kid_menu.rs": "bd64cacf0d8c8f616dc7539dd46f6dc0d0e1bc93c0756282a7183ce070ed3eac",
+    "crates/slot/src/reference.rs": "4949b89e0c2f2d3dc40233a5c0734dbba5cd0fd169f850b53ce72df46f24a5e1",
+    "crates/slot-ui/src/quick_menu.rs": "c0709e8b1479e21ca546c87fdcb854c4851f52e4836cf6fac89e7886fc061761"
+  },
+  "files": [
+    {
+      "path": "previews/guide/kid-menu.png",
+      "bytes": 417146,
+      "sha256": "bce25d357566de48eb600c0d19c088d9d4dafb6e2b077c395d55e33a2e847b19"
+    },
+    {
+      "path": "previews/guide/kid-controls.png",
+      "bytes": 454014,
+      "sha256": "6bdda43ffc519c9cf672db0d4d753987faac673c2f9c14120377d100a3cd7826"
+    },
+    {
+      "path": "previews/guide/buttons-shortcuts.png",
+      "bytes": 441390,
+      "sha256": "d17b710269991c152019a6bb5d01934a87b3920cb91a568a660ff421d4e02a71"
+    }
+  ]
+}
