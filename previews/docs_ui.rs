@@ -50,6 +50,15 @@ fn main(){
     let mut child=Menu::child(root.clone(),policy.clone(),true,50,55);
     child.set_remaining(Some((75*60,90*60)));
     render(child.screen_face(),&out.join("kid-menu.png"));
+    let kid_pages=slot::reference::pages(true,true,slot_store::Platform::Gba,slot_store::Controls::default(),slot_store::ShortcutKeys::default(),slot_store::CarouselKeys::default());
+    let mut kid_help=Menu::reference(root.clone(),policy.clone(),kid_pages);
+    press(&mut kid_help,Btn::Right);
+    render(kid_help.screen_face(),&out.join("kid-controls.png"));
+    let adult_pages=slot::reference::pages(false,true,slot_store::Platform::Gba,slot_store::Controls::default(),slot_store::ShortcutKeys::default(),slot_store::CarouselKeys::default());
+    let mut help=Menu::reference(root.clone(),policy.clone(),adult_pages);
+    for _ in 0..3 { press(&mut help,Btn::Right); }
+    render(help.screen_face(),&out.join("buttons-shortcuts.png"));
+
     render(Menu::warning(root.clone(),policy.clone(),15*60).screen_face(),&out.join("kid-warning.png"));
     let mut code=Menu::new(root.clone(),policy.clone());
     for b in [Btn::A,Btn::B,Btn::X]{press(&mut code,b);}

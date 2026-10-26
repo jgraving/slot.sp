@@ -65,6 +65,14 @@ To confirm removal of a favorite or kid approval, release the button and press i
 
 Follow the on-screen hints for a confirmation or a screen with different controls, such as parent-code entry.
 
+## On-device reference
+
+Open **Menu → Controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
+
+![The on-device reference showing the saved shortcut bindings](previews/guide/buttons-shortcuts.png)
+
+Kid mode has its own **Buttons & shortcuts** row in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
+
 ## Change a button
 
 Open **Menu → Controls**, then choose a page:

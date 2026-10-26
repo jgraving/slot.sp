@@ -1294,6 +1294,8 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
+            | QuickRow::Reference
+            | QuickRow::PlayReference
             | QuickRow::Screen
             | QuickRow::Game
             | QuickRow::Wallpaper
@@ -2604,6 +2606,14 @@ impl App {
         self.link_player
     }
 
+    pub fn reference_pages(&self, in_game: bool) -> Vec<crate::reference::Page> {
+        crate::reference::pages(self.kid_mode(),in_game,self.playing_platform(),self.controls,self.shortcuts,self.carousel)
+    }
+    fn open_reference(&mut self) {
+        if let Some(root)=self.root.clone() {
+            self.kid_menu=Some(crate::kid_menu::Menu::reference(root,self.kids.clone(),self.reference_pages(matches!(self.phase,Phase::Playing {..}))));
+        }
+    }
     pub fn take_colour_correction(&mut self) -> Option<bool> {
         self.colour_pending.take()
     }
@@ -3003,6 +3013,7 @@ impl App {
     fn open_in_game_row(&mut self, row: QuickRow) {
         if row.toggle() { return self.change_setting(row, true); }
         match row {
+            QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::Resume => self.in_game_menu = None,
             QuickRow::UndoSave | QuickRow::UndoLoad => {
                 self.in_game_menu = None;
@@ -3079,6 +3090,7 @@ impl App {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
             QuickRow::About => self.phase = Phase::About,
+            QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::Kids => self.open_kid_controls(),
             QuickRow::Power
             | QuickRow::Screen
@@ -3335,6 +3347,8 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
+            | QuickRow::Reference
+            | QuickRow::PlayReference
             | QuickRow::Screen
             | QuickRow::Game
             | QuickRow::Resume

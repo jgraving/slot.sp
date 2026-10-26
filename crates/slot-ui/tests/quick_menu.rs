@@ -98,7 +98,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
-        ["Shelf", "Shortcuts", "In-Game"]
+        ["Shelf", "Shortcuts", "Buttons & Shortcuts", "In-Game"]
     );
     assert_eq!(
         QuickRow::SHELF_KEYS.map(QuickRow::label),
@@ -169,7 +169,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ControlsInGame,
             QuickRow::ScreenGeneral,
             QuickRow::UndoSave,
-            QuickRow::UndoLoad
+            QuickRow::UndoLoad,
+            QuickRow::Reference,
+            QuickRow::PlayReference
         ]
     );
     for page in [
@@ -367,7 +369,8 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::PlayScreen,
             QuickRow::PlaySound,
             QuickRow::PlayGameplay,
-            QuickRow::PlayControls
+            QuickRow::PlayControls,
+            QuickRow::PlayReference
         ]
     );
     assert_eq!(

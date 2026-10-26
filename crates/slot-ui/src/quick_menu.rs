@@ -106,6 +106,8 @@ pub enum QuickRow {
     AutoLoad,
     UndoSave,
     UndoLoad,
+    Reference,
+    PlayReference,
 }
 
 impl QuickRow {
@@ -115,7 +117,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::ShowTitles)
     }
-    pub const ALL: [QuickRow; 95] = [
+    pub const ALL: [QuickRow; 97] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -211,6 +213,8 @@ impl QuickRow {
         QuickRow::AutoLoad,
         QuickRow::UndoSave,
         QuickRow::UndoLoad,
+        QuickRow::Reference,
+        QuickRow::PlayReference,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -243,9 +247,10 @@ impl QuickRow {
         QuickRow::DateTime,
     ];
 
-    pub const CONTROL_PAGES: [QuickRow; 3] = [
+    pub const CONTROL_PAGES: [QuickRow; 4] = [
         QuickRow::ControlsShelf,
         QuickRow::Shortcuts,
+        QuickRow::Reference,
         QuickRow::ControlsInGame,
     ];
 
@@ -337,11 +342,12 @@ impl QuickRow {
         QuickRow::ExitGame,
     ];
 
-    pub const SETTINGS: [QuickRow; 4] = [
+    pub const SETTINGS: [QuickRow; 5] = [
         QuickRow::PlayScreen,
         QuickRow::PlaySound,
         QuickRow::PlayGameplay,
         QuickRow::PlayControls,
+        QuickRow::PlayReference,
     ];
 
     pub const PLAY_SCREEN: [QuickRow; 6] = [
@@ -397,7 +403,7 @@ impl QuickRow {
             | QuickRow::ShowTitles
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds => &QuickRow::GENERAL,
-            QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
+            QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
             QuickRow::Resume
@@ -410,6 +416,7 @@ impl QuickRow {
             QuickRow::PlayScreen
             | QuickRow::PlaySound
             | QuickRow::PlayGameplay
+            | QuickRow::PlayReference
             | QuickRow::PlayControls => &QuickRow::SETTINGS,
 
             r if r.game_button().is_some() => &QuickRow::CONTROLS,
@@ -518,6 +525,7 @@ impl QuickRow {
             QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
+            QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
             QuickRow::Bluetooth | QuickRow::PlaySound => "Sound",
             QuickRow::GbaShader => "Shader",
             QuickRow::GbShader => "Shader",
@@ -608,6 +616,8 @@ impl QuickRow {
                 | QuickRow::Bluetooth
                 | QuickRow::PlaySound
                 | QuickRow::About
+                | QuickRow::Reference
+                | QuickRow::PlayReference
                 | QuickRow::Screen
                 | QuickRow::Game
                 | QuickRow::Resume
@@ -861,6 +871,7 @@ impl QuickValue {
             QuickValue::Level7 => "7",
             QuickValue::Level8 => "8",
             QuickValue::Level9 => "9",
+
         }
     }
 
@@ -1087,6 +1098,10 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        6 => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_pair(ButtonLegend::Left, ButtonLegend::Right), "Page", hint, false),
+        ],
         1 => vec![
             with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
@@ -1119,10 +1134,15 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
 /// spacing, carets and bitmap footer. The app draws its normal menu ground.
 pub fn parent_settings_face(rows: &[(String, String, bool)], selected: usize,
     footer: u8, status: &str) -> UndoFace {
+    parent_settings_face_with_space(rows, selected, footer, status, 0.0)
+}
+
+pub fn parent_settings_face_with_space(rows: &[(String, String, bool)], selected: usize,
+    footer: u8, status: &str, reserve: f32) -> UndoFace {
     let mut face = parent_footer_face(footer, rows.get(selected).is_some_and(|r| r.2));
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = (LEGEND_Y - QUICK_PITCH * visible as f32) / 2.0;
+    let top = (LEGEND_Y - reserve.max(0.0) - QUICK_PITCH * visible as f32) / 2.0;
     let pad = MENU_PAD as f32;
     let right = OUT_W as f32 - QUICK_EDGE;
     for (i, (label, value, adjustable)) in rows.iter().enumerate().skip(start).take(visible) {
