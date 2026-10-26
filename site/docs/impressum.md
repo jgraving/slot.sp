@@ -10,9 +10,6 @@ Jacob Graving
 Deutschland  
 E-Mail: [jgraving@gmail.com](mailto:jgraving@gmail.com)
 
-!!! info "Anschrift noch nicht veröffentlicht"
-    Die vollständige postalische Anschrift wird ergänzt. Soweit eine Impressumspflicht besteht, ist dieses Impressum bis dahin unvollständig.
-
 ## Über dieses Angebot
 
 slot.sp ist ein Open-Source-Projekt für Anbernic-Handhelds. Diese Website bietet Informationen, Anleitungen, Downloads und Cart Studio zur lokalen Bearbeitung von Spiele-Labels.

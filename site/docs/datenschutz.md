@@ -13,7 +13,7 @@ Diese Erklärung gilt für die slot.sp-Website und das hier angebotene Cart Stud
 Jacob Graving, Deutschland  
 E-Mail: [jgraving@gmail.com](mailto:jgraving@gmail.com)
 
-Die postalische Anschrift ist derzeit noch nicht veröffentlicht; siehe [Impressum](impressum.md).
+Weitere Angaben zum Anbieter stehen im [Impressum](impressum.md).
 
 ## Website und Hosting
 
