@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 import json
 import re
+import shutil
 import subprocess
 from urllib.parse import unquote, urlsplit
 
@@ -70,11 +71,19 @@ assert studio_info['repository'] == 'jgraving/slot-cart-studio'
 assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 for video in (ROOT / 'media/fork').glob('*.mp4'):
-    metadata = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
-        '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', str(video)]))
-    assert float(metadata['format']['duration']) > 0, video
-    assert any(s.get('codec_name') == 'h264' and s.get('width') == 720
-               and s.get('height') == 480 for s in metadata['streams']), video
+    if shutil.which('mediainfo'):
+        metadata = json.loads(subprocess.check_output(['mediainfo', '--Output=JSON', str(video)]))
+        tracks = metadata['media']['track']
+        assert any(t.get('@type') == 'Video' and t.get('Format') == 'AVC'
+                   and int(t.get('Width', 0)) == 720 and int(t.get('Height', 0)) == 480
+                   and float(t.get('Duration', 0)) > 0 for t in tracks), video
+    else:
+        metadata = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', str(video)]))
+        assert float(metadata['format']['duration']) > 0, video
+        assert any(s.get('codec_name') == 'h264' and s.get('width') == 720
+                   and s.get('height') == 480 for s in metadata['streams']), video
+
 if errors:
     raise SystemExit('\n'.join(sorted(set(errors))))
 print(f'PASS: {len(pages)} pages; {checked} local links, anchors and assets; project base {BASE}')

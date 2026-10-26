@@ -4,7 +4,7 @@ Published at **https://jakegraving.com/slot.sp/** through GitHub Pages.
 
 ## Build
 
-Use Python 3.13, FFmpeg, Rust 1.96 with the `wasm32-unknown-unknown` target, and wasm-pack 0.15.0. From the repository root:
+Use Python 3.13, MediaInfo or FFmpeg, Rust 1.96 with the `wasm32-unknown-unknown` target, and wasm-pack 0.15.0. From the repository root:
 
 ```sh
 python -m venv .venv-site
