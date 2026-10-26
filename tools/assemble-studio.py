@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Place the pinned Cart Studio build inside the Pages website."""
+"""Publish the pinned Studio app and renderer together under versioned asset URLs."""
 import json
 from pathlib import Path
 import re
@@ -15,14 +15,24 @@ renderer_commit = subprocess.check_output(['git', '-C', str(renderer), 'rev-pars
 assert commit == pin['ref'], (commit, pin['ref'])
 assert renderer_commit == (source / 'slot.ref').read_text().strip()
 target = ROOT / 'site/public/studio'
-shutil.copytree(source / 'web', target, dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns('*.test.mjs', '.gitignore'))
-script = target / 'studio.js'
+assets_base = f'assets/{commit[:12]}/'
+bundle = target / assets_base
+shutil.copytree(source / 'web', bundle, dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns('index.html', '*.test.mjs', '.gitignore'))
+script = bundle / 'studio.js'
 text, count = re.subn(r"^const BUILD = 'dev';$", f"const BUILD = '{commit}';", script.read_text(), flags=re.M)
 assert count == 1, 'Studio build stamp is missing'
 script.write_text(text)
+# Studio CSS previously lived one directory below the website's font assets.
+for css in bundle.glob('*.css'):
+    css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))
+html = (source / 'web/index.html').read_text()
+for name in ['studio.js', 'studio.css', 'slot-sp.css']:
+    html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
+(target / 'index.html').write_text(html)
 shutil.copyfile(source / 'LICENSE', target / 'LICENSE')
 (target / 'build-info.json').write_text(json.dumps(dict(
-    repository=pin['repository'], source_commit=commit,
-    renderer_repository=(source / 'slot.repo').read_text().strip(), renderer_commit=renderer_commit), indent=2) + '\n')
-print(f'Assembled Cart Studio {commit} at /slot.sp/studio/')
+    repository=pin['repository'], source_commit=commit, assets_base=assets_base,
+    renderer_repository=(source / 'slot.repo').read_text().strip(),
+    renderer_commit=renderer_commit), indent=2) + '\n')
+print(f'Assembled Cart Studio {commit} with versioned assets at /slot.sp/studio/')
