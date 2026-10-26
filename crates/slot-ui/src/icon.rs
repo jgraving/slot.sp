@@ -190,7 +190,7 @@ impl Badge {
 /// Antialiased foil artwork; rendered once when textures are loaded.
 pub fn star_face(scale: u32, colour: [u8; 3]) -> CartFace {
     let w = 11 * scale.max(1);
-    let svg = include_str!("../assets/favorite-star.svg").replace(
+    let svg = sticker_svg(include_str!("../assets/favorite-star.svg")).replace(
         "#f6c32c",
         &format!("#{:02x}{:02x}{:02x}", colour[0], colour[1], colour[2]),
     );
@@ -199,6 +199,10 @@ pub fn star_face(scale: u32, colour: [u8; 3]) -> CartFace {
     let hi = crate::art::render_svg(&svg, w * 4, w * 4).expect("embedded favorite star SVG");
     let rgba = prefilter_star(&hi, w);
     CartFace { rgba, w, h: w }
+}
+
+fn sticker_svg(art: &str) -> String {
+    art.replace("<!-- sticker-foil -->", include_str!("../assets/sticker-foil.svg"))
 }
 
 fn prefilter_star(src: &[u8], w: u32) -> Vec<u8> {
@@ -616,8 +620,8 @@ pub fn sound_device_icon(icon: Icon, ink: [u8; 3]) -> crate::UndoFace {
 /// Gold foil approval sticker, rendered once at four times native resolution.
 pub fn kid_smiley_face() -> CartFace {
     let w = 30;
-    let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><defs><linearGradient id="g" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#fff2b0"/><stop offset=".4" stop-color="#f5ce59"/><stop offset=".7" stop-color="#d6a326"/><stop offset="1" stop-color="#ffe390"/></linearGradient></defs><circle cx="15" cy="15" r="14" fill="#fff4d7"/><circle cx="15" cy="15" r="12.6" fill="url(#g)" stroke="#a77a16" stroke-width=".7"/><path d="M6 10C10 3 20 3 24 10" stroke="#fff8d2" stroke-width="1.2" fill="none" opacity=".8"/><ellipse cx="10.7" cy="12" rx="1.3" ry="1.8" fill="#735118"/><ellipse cx="19.3" cy="12" rx="1.3" ry="1.8" fill="#735118"/><path d="M8.6 18Q15 25 21.4 18" fill="none" stroke="#735118" stroke-width="1.8" stroke-linecap="round"/></svg>"##;
-    let hi = crate::art::render_svg(svg, w * 4, w * 4).expect("embedded smiley SVG");
+    let svg = sticker_svg(include_str!("../assets/kid-smiley.svg"));
+    let hi = crate::art::render_svg(&svg, w * 4, w * 4).expect("embedded smiley SVG");
     CartFace {
         rgba: prefilter_star(&hi, w),
         w,

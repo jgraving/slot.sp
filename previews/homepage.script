@@ -1,0 +1,22 @@
+# Browse all five fixture cartridges and return to the starting selection.
+wait 120
+shot hero
+rec hero
+wait 48
+tap right
+wait 48
+tap right
+wait 48
+tap right
+wait 48
+tap right
+wait 48
+tap left
+wait 48
+tap left
+wait 48
+tap left
+wait 48
+tap left
+wait 48
+cut
