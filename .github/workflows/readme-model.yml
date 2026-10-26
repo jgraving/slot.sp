@@ -33,9 +33,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 tools/collect-doc-media.py /tmp/slot-readme-model --git-objects
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: readme-model-media
           path: |
             /tmp/slot-readme-model/publish/**
             /tmp/slot-readme-model/media-entries.json
+            /tmp/slot-readme-model/model-capture.json
+            /tmp/slot-readme-model/model-frames/0000.png
+            /tmp/slot-readme-model/model-frames/0060.png
+            /tmp/slot-readme-model/model-frames/0120.png
+            /tmp/slot-readme-model/model-frames/0168.png
           if-no-files-found: error
