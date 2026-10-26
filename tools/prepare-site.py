@@ -77,7 +77,32 @@ def main():
     font.flavor = 'woff2'
     font.save(fonts / 'google-sans-flex.woff2')
     shutil.copyfile(ROOT / 'licenses/GoogleSansFlex-OFL.txt', fonts / 'OFL.txt')
-    print(f'Prepared {len(GUIDES)} guides, fork previews and self-hosted Google Sans Flex')
+    # Fingerprint the app styles and script so a cached previous version cannot
+    # be combined with a freshly deployed page. Keep source config unchanged.
+    generated = DOCS / 'assets/generated'
+    if generated.exists():
+        shutil.rmtree(generated)
+    generated.mkdir(parents=True)
+    config = (ROOT / 'site/zensical.toml').read_text()
+    for relative in ['assets/device.css', 'assets/slot.css', 'assets/slot.js']:
+        source = DOCS / relative
+        content = source.read_text()
+        if source.suffix == '.css':
+            # Generated CSS is one directory deeper than the original file.
+            def parent_url(match):
+                raw = match[1].strip()
+                quote = raw[0] if raw.startswith(('"', "'")) else ''
+                path = raw[1:-1] if quote else raw
+                if path.startswith(('/', '#')) or re.match(r'[a-z]+:', path):
+                    return match[0]
+                return f'url({quote}../{path}{quote})'
+            content = re.sub(r'url\(([^)]+)\)', parent_url, content)
+        digest = hashlib.sha256(content.encode()).hexdigest()[:12]
+        name = f'{source.stem}.{digest}{source.suffix}'
+        (generated / name).write_text(content)
+        config = config.replace('"' + relative + '"', '"assets/generated/' + name + '"')
+    (ROOT / 'site/zensical.build.toml').write_text(config)
+    print(f'Prepared {len(GUIDES)} guides, reviewed media, font and fingerprinted website assets')
 
 if __name__ == '__main__':
     main()

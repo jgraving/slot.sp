@@ -73,7 +73,7 @@ jobs:
       - name: Prepare feature guides, font and fork previews
         run: python tools/prepare-site.py
       - name: Build website
-        run: zensical build --clean --strict -f site/zensical.toml
+        run: zensical build --clean --strict -f site/zensical.build.toml
       - name: Integrate Cart Studio
         run: python tools/assemble-studio.py
       - name: Check published links and assets
