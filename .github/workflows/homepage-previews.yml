@@ -17,9 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install capture dependencies
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri
+          if ! command -v ffmpeg || ! ldconfig -p | grep 'libEGL.so.1' >/dev/null || ! dpkg-query -W -f='${Status}' libgl1-mesa-dri | grep 'install ok installed' >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri
+          fi
           python3 -m pip install pillow==13.0.0
       - uses: dtolnay/rust-toolchain@1.96.0
       - name: Build current production animation
@@ -46,8 +49,8 @@ jobs:
           done
           python3 previews/compose_homepage.py /tmp/slot-homepage
           mkdir -p /tmp/slot-homepage/gif
-          ffmpeg -nostdin -v error -y -i /tmp/slot-homepage/out/platinum/hero.mp4 -vf fps=20 /tmp/slot-homepage/gif/%04d.png
-          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/gif /tmp/slot-homepage/out/readme-hero.gif --width 480
+          ffmpeg -nostdin -v error -y -i /tmp/slot-homepage/out/platinum/hero.mp4 -vf fps=12.5 /tmp/slot-homepage/gif/%04d.png
+          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/gif /tmp/slot-homepage/out/readme-hero.gif --width 440 --frame-ms 80
           python3 previews/collect_homepage.py /tmp/slot-homepage
       - name: Prepare media blobs for review
         env:
