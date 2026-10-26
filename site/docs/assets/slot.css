@@ -127,3 +127,10 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 }
 
 @media(prefers-reduced-motion:reduce){.pose-hero .dv-lid{animation:none}.hero-screen{transition:none}}
+
+.privacy-box{display:flex;gap:14px;align-items:flex-start;text-align:left;padding:20px 22px;margin:24px auto;max-width:660px;background:#192e32;border:1px solid #416c6c;border-radius:12px;color:#e6f6f3;font-size:15px;line-height:1.65;box-sizing:border-box}
+.privacy-box>svg{width:26px;height:26px;flex:0 0 26px;color:#91ded8;margin-top:2px}
+.privacy-box strong{display:block;color:#b9eeee;font-size:17px;font-weight:650}
+.privacy-box p{margin:7px 0 0;color:#e6f6f3;font-size:15px;line-height:1.65}
+.privacy-box .privacy-detail{color:#b8d4d2;font-size:14px}
+@media(max-width:520px){.privacy-box{padding:16px;gap:12px}}
