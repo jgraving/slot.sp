@@ -5,7 +5,7 @@
   <img src="previews/hero-glass.gif" width="480" alt="slot.sp logo animation">
 </picture>
 
-**Game Boy games. SP style.**
+**Your games. SP style.**
 
 Game Boy · Game Boy Color · Game Boy Advance
 

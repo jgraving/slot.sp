@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- sticker-foil -->
+  <defs><circle id="smiley" cx="64" cy="64" r="50"/></defs>
+  <use href="#smiley" fill="#291702" stroke="#291702" stroke-width="16" opacity=".32" transform="translate(0 2)" filter="url(#shadow)"/>
+  <use href="#smiley" fill="url(#paper)" stroke="#493c2b" stroke-width="16"/>
+  <use href="#smiley" fill="url(#paper)" stroke="url(#paper)" stroke-width="12"/>
+  <use href="#smiley" fill="url(#gold)" stroke="#94763d" stroke-width="1.3"/>
+  <use href="#smiley" fill="url(#gold)" filter="url(#grain)" opacity=".10"/>
+  <path d="M28 48L94 75M26 53L96 82M43 28L99 53M43 91L79 103" fill="none" stroke="#e1cc96" stroke-opacity=".16" stroke-width=".45"/>
+  <use href="#smiley" fill="none" stroke="url(#rim)" stroke-width="1.15"/>
+  <path d="M25 43A45 45 0 0 1 64 19" fill="none" stroke="#fff0b6" stroke-width=".8" stroke-linecap="round" opacity=".70"/>
+  <g fill="#493c2b" stroke="#493c2b">
+    <ellipse cx="46" cy="52" rx="4.5" ry="6" stroke="none"/>
+    <ellipse cx="82" cy="52" rx="4.5" ry="6" stroke="none"/>
+    <path d="M40 77Q64 102 88 77" fill="none" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

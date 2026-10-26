@@ -2,6 +2,8 @@
 use slot_store::{write_slot_state, Platform, Recent, SlotState};
 fn main() {
     let root = std::path::PathBuf::from(std::env::args().nth(1).expect("fixture root"));
+    let colour = std::env::args().nth(2).map(|s| slot_store::ShellColour::parse(&s)
+        .expect("SP finish")).unwrap_or(slot_store::ShellColour::Graphite);
     slot::root::ensure(&root);
     let names = ["Emerald", "Fusion", "Ruby", "Sapphire", "WarioWare"];
     for name in names {
@@ -23,8 +25,13 @@ fn main() {
         shelf: Some("gba".into()),
         shelf_cart: Some(Recent { platform: Platform::Gba, stem: "Emerald".into() }),
         favorites: names.into_iter().map(|name| Recent { platform: Platform::Gba, stem: name.into() }).collect(),
-        shell_colour: slot_store::ShellColour::Graphite,
+        shell_colour: colour,
         wallpaper: slot_store::WallpaperPick::Default,
         ..SlotState::default()
     }).unwrap();
+    if std::env::args().nth(2).is_some() {
+        let mut kids = slot::kid_policy::Policy::default();
+        kids.approved.push((Platform::Gba, "Emerald".into()));
+        kids.save(&root).unwrap();
+    }
 }

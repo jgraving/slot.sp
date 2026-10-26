@@ -4,7 +4,7 @@
 
 [Carousel](#on-the-carousel) · [In game](#in-game) · [Display & volume](#display--volume) · [Remapping](#change-a-button)
 
-These are the default controls. A combination means hold the first button, then press the second. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
+These are the default controls. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
 
 ## On the carousel
 
@@ -31,7 +31,7 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | Double-tap <kbd>MENU</kbd> | Open the save-state browser. |
 | <kbd>SELECT</kbd> + <kbd>R1</kbd> | Save a state. |
 | <kbd>SELECT</kbd> + <kbd>L1</kbd> | Load the newest state. |
-| <kbd>MENU</kbd> + <kbd>X</kbd> | Take a screenshot. |
+| <kbd>MENU</kbd> + <kbd>X</kbd> together | Take a screenshot; release both buttons afterward. |
 | Hold <kbd>R2</kbd> | Fast-forward. |
 | Double-tap <kbd>R2</kbd> | Keep fast-forward on; press it again to stop. |
 | Hold <kbd>L2</kbd> | Rewind. |

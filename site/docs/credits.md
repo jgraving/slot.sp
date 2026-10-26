@@ -72,6 +72,10 @@ Cartridge sounds
 
 </div>
 
-<p class="credits-fine">Game Boy is a trademark of Nintendo. slot is not affiliated with Nintendo.</p>
+## Preview artwork
+
+Label scans come from the [LaunchBox Games Database](https://gamesdb.launchbox-app.com/) and its contributors. Original game artwork belongs to its publishers. [Image sources](https://github.com/jgraving/slot.sp/blob/main/previews/art-sources.json).
+
+<p class="credits-fine">Game Boy is a trademark of Nintendo. slot.sp is not affiliated with or endorsed by Nintendo.</p>
 
 </div>

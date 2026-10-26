@@ -12,8 +12,8 @@ target.mkdir(parents=True, exist_ok=True)
 files = []
 for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
     for suffix in ['mp4', 'png']:
-        source = root / f'out/hero-{finish}.{suffix}'
-        dest = target / source.name
+        source = root / f'out/{finish}/hero.{suffix}'
+        dest = target / f'hero-{finish}.{suffix}'
         shutil.copyfile(source, dest)
         files.append(dict(path=f'previews/homepage/{dest.name}', bytes=dest.stat().st_size,
                           sha256=hashlib.sha256(dest.read_bytes()).hexdigest()))
