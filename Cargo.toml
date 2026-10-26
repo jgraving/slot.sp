@@ -1,4 +1,5 @@
 [workspace]
+exclude = ["_studio/slot-cart-studio", "_studio/slot"]
 resolver = "2"
 members = ["crates/*"]
 
