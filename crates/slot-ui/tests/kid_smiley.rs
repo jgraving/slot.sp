@@ -112,3 +112,18 @@ fn approval_follows_cart_geometry_and_is_drawn_behind_the_slot_front() {
         }
     }
 }
+
+#[test]
+fn approval_face_has_readable_dark_eyes_and_smile_at_native_size() {
+    let face = slot_ui::kid_smiley_face();
+    let dark_pixels = |xs: std::ops::Range<u32>, ys: std::ops::Range<u32>| {
+        ys.flat_map(|y| xs.clone().map(move |x| (x, y))).filter(|&(x, y)| {
+            let i = ((y * face.w + x) * 4) as usize;
+            let p = &face.rgba[i..i + 4];
+            p[3] > 240 && p[0] < 55 && p[1] < 40 && p[2] < 30
+        }).count()
+    };
+    assert!(dark_pixels(8..14, 9..15) >= 4, "left eye disappears into the foil");
+    assert!(dark_pixels(16..22, 9..15) >= 4, "right eye disappears into the foil");
+    assert!(dark_pixels(8..23, 17..24) >= 12, "smile is too fine at native size");
+}
