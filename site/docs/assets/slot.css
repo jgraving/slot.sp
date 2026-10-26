@@ -80,9 +80,12 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .md-typeset .features dt a:hover{text-decoration:underline;color:var(--teal)}
 .md-typeset .features dd{font-size:16px;margin:10px 0 0 62px;color:var(--muted);line-height:1.65}
 .md-typeset img.feature-icon{display:block;width:48px;height:48px;max-width:none;flex:none;margin:0}
-.more-features{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;padding-top:28px;border-top:1px solid var(--rule)}
-.md-typeset .more-features a{display:flex;align-items:center;gap:12px;font-size:17px;font-weight:550;text-decoration:none}
-.md-typeset .more-features a:hover{text-decoration:underline}
+.more-features{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;padding-top:28px;border-top:1px solid var(--rule)}
+.md-typeset .more-features a{display:flex;align-items:flex-start;gap:12px;font-size:17px;font-weight:550;text-decoration:none}
+.md-typeset .more-features a>span{display:grid;gap:10px;min-width:0}
+.md-typeset .more-features strong{font-size:17px;font-weight:600;line-height:1.5}
+.md-typeset .more-features a>span>span{font-size:16px;font-weight:400;line-height:1.65;color:var(--muted)}
+.md-typeset .more-features a:hover strong{text-decoration:underline}
 .md-typeset .more-features .feature-icon{width:30px;height:30px}
 .studio-note{display:flex;align-items:center;gap:36px;padding-block:44px}
 .md-typeset .studio-note h2{margin-bottom:12px}.studio-note p{max-width:64ch;margin:0;color:var(--muted);font-size:17px}
@@ -95,7 +98,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .device-defs{position:absolute;width:0;height:0;overflow:hidden}
 :root{--shell-light:#e2e5e9;--shell-base:#b8bcc2;--shell-shade:#7e838b;--btn:#c2c6cc;--btn-hi:#e9ecf0;--etch:rgba(0,0,0,.46)}
 .md-typeset .sp-preview{margin:0;padding:8px 0 0;min-width:0;max-width:none}
-.sp-stage{--dw:250px;position:relative;width:var(--dw);aspect-ratio:820/1555;margin:0 auto 64px;isolation:isolate}
+.sp-stage{--dw:320px;position:relative;width:var(--dw);aspect-ratio:820/1555;margin:0 auto 48px;isolation:isolate}
 .sp-stage::before{content:"";position:absolute;inset:-8% -45%;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 35% 40%,#91ded81c,transparent 65%),radial-gradient(ellipse at 75% 65%,#a48ad71c,transparent 60%);mask-image:radial-gradient(ellipse,#000 30%,transparent 72%)}
 .sp-stage .device{width:100%}
 .md-typeset .hero-screen{position:absolute;left:5.7317%;top:15.0345%;width:88.5366%;height:66.7586%;max-width:none;aspect-ratio:auto;object-fit:fill;margin:0;border:0;border-radius:4px;opacity:1;background:#080b10;transform:translateZ(0)}
@@ -113,16 +116,17 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
  .md-header__inner.md-grid{grid-template-columns:auto 1fr auto;padding:0 20px;gap:12px}
  .md-header__inner>label[for=__drawer]{display:block;margin:0}.mast-tabs{display:none}
  .intro{grid-template-columns:1fr;gap:48px;padding-top:56px;max-width:720px;margin:auto}
- .intro-text{max-width:48ch}.sp-stage{--dw:240px;margin-bottom:56px}.features dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 32px}
+ .more-features{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .intro-text{max-width:48ch}.sp-stage{--dw:280px;margin-bottom:56px}.features dl{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 32px}
 }
 @media(max-width:540px){
  .home{padding:0 24px}.intro{padding:48px 0;gap:40px}.intro-text{font-size:17px}
  .md-typeset .setup-choice{padding:20px;gap:16px}.md-typeset .setup-choice .feature-icon{width:36px;height:36px}
  .features dl{grid-template-columns:1fr;gap:28px}.features,.studio-note{padding:28px 0}
  .foot-base{padding:24px 20px}.foot-pager{padding:20px}
- .sp-stage{--dw:200px;margin-bottom:48px}.pose-hero{transform:perspective(calc(var(--dw) * 2.5)) rotateZ(7deg) rotateX(6deg) rotateY(-18deg)}
+ .sp-stage{--dw:min(240px,64vw);margin-bottom:48px}.pose-hero{transform:perspective(calc(var(--dw) * 2.5)) rotateZ(7deg) rotateX(6deg) rotateY(-18deg)}
  .studio-note{align-items:start;gap:18px}.md-typeset .studio-art .feature-icon{width:56px;height:56px}.studio-note p{font-size:16px}
- .more-features{display:grid;grid-template-columns:1fr 1fr;gap:22px 12px}.md-typeset .more-features a{font-size:16px;gap:8px}
+ .more-features{grid-template-columns:1fr;gap:24px}.md-typeset .more-features a{font-size:16px;gap:8px}
  .md-typeset .keys dl{grid-template-columns:1fr}.md-typeset .keys dt{border-bottom:0;padding-bottom:0}.md-typeset .keys dd{padding-top:4px}
 }
 
