@@ -16,6 +16,7 @@ enum Page {
     Confirm,
     Notice,
     Warning,
+    Reference,
 }
 pub struct Menu {
     root: PathBuf,
@@ -38,6 +39,9 @@ pub struct Menu {
     pub child_brightness: u8,
     child_in_game: bool,
     remaining: Option<(u64, u64)>,
+    reference: Vec<crate::reference::Page>,
+    reference_at: usize,
+    reference_child: bool,
 }
 impl Menu {
     pub fn new(root: PathBuf, policy: Policy) -> Self {
@@ -72,6 +76,9 @@ impl Menu {
             child_brightness: 0,
             child_in_game: false,
             remaining: None,
+            reference: Vec::new(),
+            reference_at: 0,
+            reference_child: false,
         }
     }
     pub fn child(root: PathBuf, policy: Policy, in_game: bool, volume: u8, brightness: u8) -> Self {
@@ -83,6 +90,14 @@ impl Menu {
         menu.child_brightness = brightness;
         menu
     }
+    pub fn set_reference(&mut self, pages: Vec<crate::reference::Page>) { self.reference = pages; }
+    pub fn reference(root: PathBuf, policy: Policy, pages: Vec<crate::reference::Page>) -> Self {
+        let mut menu = Self::new(root,policy);
+        menu.page = Page::Reference;
+        menu.reference = pages;
+        menu
+    }
+    pub fn reference_open(&self) -> bool { self.page == Page::Reference }
     pub fn time_warning(&self) -> bool { self.page == Page::Warning }
     pub fn set_remaining(&mut self, remaining: Option<(u64, u64)>) {
         if self.remaining != remaining { self.remaining = remaining; self.face = None; }
@@ -114,6 +129,7 @@ impl Menu {
             ("Brightness".into(), format!("{}%", self.child_brightness), true),
         ];
         if self.child_in_game { rows.push(("Exit game".into(), String::new(), false)); }
+        rows.push(("Buttons & shortcuts".into(), String::new(), false));
         rows.push(("Parent controls".into(), String::new(), false));
         rows
     }
@@ -130,6 +146,12 @@ impl Menu {
         menu
     }
     pub fn lines(&self) -> Vec<String> {
+        if self.page == Page::Reference {
+            return self.reference.get(self.reference_at).map(|(title,rows)| {
+                let mut lines=vec![title.clone(),format!("Page {} / {}",self.reference_at+1,self.reference.len())];
+                lines.extend(rows.iter().map(|(a,b,_)| format!("{a}: {b}"))); lines
+            }).unwrap_or_default();
+        }
         if self.page == Page::Warning {
             return vec![slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0))];
         }
@@ -138,7 +160,7 @@ impl Menu {
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Time | Page::Child | Page::Warning => "",
+            Page::Home | Page::Time | Page::Child | Page::Warning | Page::Reference => "",
         };
         if self.page == Page::Child {
             return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
@@ -214,6 +236,25 @@ impl Menu {
         ]
     }
     pub fn screen_face(&self) -> UndoFace {
+        if self.page == Page::Reference {
+            let mut face = slot_ui::parent_footer_face(6,false);
+            if let Some((title,rows)) = self.reference.get(self.reference_at) {
+                let title=slot_ui::quick_heading_face(title);
+                let x=face.w.saturating_sub(title.w)/2;
+                blit(&mut face,&title,x,40);
+                for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
+                    let label=slot_ui::quick_value_face(label,false);
+                    let value=slot_ui::quick_value_face(value,true);
+                    let right=face.w.saturating_sub(value.w+32);
+                    blit(&mut face,&label,32,108+i as u32*42);
+                    blit(&mut face,&value,right,108+i as u32*42);
+                }
+                let page=slot_ui::quick_description_face(&[&format!("{} / {}",self.reference_at+1,self.reference.len())]);
+                let x=face.w.saturating_sub(page.w)/2;
+                blit(&mut face,&page,x,370);
+            }
+            return face;
+        }
         if self.page == Page::Warning {
             let mut face = slot_ui::parent_footer_face(5, false);
             let title = slot_ui::quick_heading_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)));
@@ -222,7 +263,7 @@ impl Menu {
             return face;
         }
         if self.page == Page::Child {
-            let mut face = slot_ui::parent_settings_face(&self.child_rows(), self.selected, 0, "");
+            let mut face = slot_ui::parent_settings_face_with_space(&self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
             self.add_time_meter(&mut face);
             return face;
         }
@@ -414,6 +455,17 @@ impl Menu {
             self.visible = false;
             return;
         }
+        if self.page == Page::Reference {
+            match action {
+                Action::GbaDown(Btn::B) => if self.reference_child { self.page=Page::Child; } else { self.visible=false; },
+                Action::GbaDown(Btn::Left | Btn::Right) if !self.reference.is_empty() => {
+                    let n=self.reference.len();
+                    self.reference_at=(self.reference_at+if action==Action::GbaDown(Btn::Right) {1} else {n-1})%n;
+                }
+                _=>{}
+            }
+            return;
+        }
         if self.page == Page::Warning {
             match action {
                 Action::GbaDown(Btn::A) => self.visible = false,
@@ -439,6 +491,7 @@ impl Menu {
                 Action::GbaDown(Btn::A) => match self.selected {
                     0 => self.visible = false,
                     1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
+                    n if n == count - 2 => { self.page=Page::Reference; self.reference_at=0; self.reference_child=true; },
                     n if n == count - 1 => { self.page = Page::Unlock; self.selected = 0; self.code.clear(); self.status.clear(); }
                     _ if self.child_in_game => { self.child_action = Some(Action::Eject); self.visible = false; }
                     _ => {}

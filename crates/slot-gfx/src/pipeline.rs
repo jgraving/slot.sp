@@ -32,6 +32,7 @@ pub struct GamePass {
     /// Pixels kept for the carousel footer. The picture scales in the space above them.
     bottom: f32,
     src: [f32; 4],
+    destination: Option<[f32;4]>,
 }
 
 impl GamePass {
@@ -91,6 +92,7 @@ impl GamePass {
             fills: false,
             bottom: 0.0,
             src: WHOLE_TEXTURE,
+            destination: None,
         })
     }
 
@@ -148,6 +150,7 @@ impl GamePass {
         self.paper_size = size as f32;
     }
 
+    pub fn set_destination(&mut self, rect: Option<[f32;4]>) { self.destination=rect; }
     pub fn set_source_rect(&mut self, rect: [f32; 4]) {
         self.src = rect;
     }
@@ -175,18 +178,26 @@ impl GamePass {
 
     pub fn draw(&self, quad: &Quad) {
         let src = match self.effect {
-            ScreenEffect::Grid => whole_scale_source(self.src, self.fbo_scale),
+            ScreenEffect::Grid if self.destination.is_none() => whole_scale_source(self.src, self.fbo_scale),
             _ => self.src,
         };
-        self.draw_source(self.game, quad, src);
+        self.draw_source(self.game, quad, src, self.destination);
     }
 
     pub fn draw_still(&self, tex: gl::types::GLuint, quad: &Quad) {
-        self.draw_source(tex, quad, WHOLE_TEXTURE);
+        self.draw_source(tex, quad, if self.destination.is_some() { self.src } else { WHOLE_TEXTURE }, self.destination);
     }
 
-    fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4]) {
-        let (x, y, w, h) = self.placed();
+    fn draw_source(&self, tex: gl::types::GLuint, quad: &Quad, src: [f32; 4], destination: Option<[f32;4]>) {
+        let (mut x, mut y, mut w, mut h) = self.placed();
+        if let Some(rect)=destination {
+            // Follow the existing CRT power animation; footer reveals crop rather than resize.
+            let (full_x,full_y,full_w,full_h)=crate::power::screen_rect_above(self.power,0.0);
+            x=full_x+rect[0]/OUT_W as f32*full_w;
+            y=full_y+rect[1]/OUT_H as f32*full_h;
+            w=rect[2]/OUT_W as f32*full_w;
+            h=rect[3]/OUT_H as f32*full_h;
+        }
         let bright = if self.fills {
             1.0
         } else {
@@ -196,7 +207,11 @@ impl GamePass {
         // it, so opening the scale does not squash the picture into the shorter rect.
         let mut src = src;
         if self.bottom > 0.0 {
-            src[3] *= (OUT_H as f32 - self.bottom) / OUT_H as f32;
+            if destination.is_some() {
+                let shown=(OUT_H as f32-self.bottom-y).clamp(0.0,h);
+                src[3] *= shown/h.max(1.0);
+                h=shown;
+            } else { src[3] *= (OUT_H as f32 - self.bottom) / OUT_H as f32; }
         }
         unsafe {
             gl::UseProgram(self.prog);

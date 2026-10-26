@@ -37,7 +37,7 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | Hold <kbd>L2</kbd> | Rewind. |
 | Hold <kbd>X</kbd> / <kbd>Y</kbd> | Turbo A / Turbo B. |
 | <kbd>SELECT</kbd> + <kbd>MENU</kbd> | Open link play. |
-| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Stretch the picture / restore its original proportions. |
+| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Previous / next scaling mode: Actual, Stretch, Fit and Integer. |
 
 ## Display & volume
 
@@ -64,6 +64,14 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | <kbd>MENU</kbd> | Close the menu. |
 
 Follow the on-screen hints for a confirmation or a screen with different controls, such as parent-code entry.
+
+## On-device reference
+
+Open **Menu → Controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
+
+![The on-device reference showing the saved shortcut bindings](previews/guide/buttons-shortcuts.png)
+
+Kid mode has its own **Buttons & shortcuts** row in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
 
 ## Change a button
 

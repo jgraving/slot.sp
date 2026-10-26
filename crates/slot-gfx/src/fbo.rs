@@ -32,6 +32,7 @@ pub struct Compositor {
     sprites: Sprites,
     game_bezel: Option<TexId>,
     sp_frame: bool,
+    game_destination: Option<[f32;4]>,
     turn: Option<Turn>,
     captured: Option<(u32, u32, Vec<u8>)>,
 }
@@ -82,6 +83,7 @@ impl Compositor {
                 sprites: Sprites::new()?,
                 game_bezel: None,
                 sp_frame: true,
+                game_destination: None,
                 turn: None,
                 captured: None,
             })
@@ -213,7 +215,7 @@ impl Compositor {
     }
 
     fn native(&self) -> bool {
-        crate::bezel::framed(self.window)
+        self.game_destination.is_some() || crate::bezel::framed(self.window)
     }
 
     fn resize(&mut self, size: (u32, u32)) {
@@ -257,6 +259,10 @@ impl Compositor {
         self.game.set_fills_frame(on);
     }
 
+    pub fn set_game_destination(&mut self, rect: Option<[f32;4]>) {
+        self.game_destination=rect;
+        self.game.set_destination(rect);
+    }
     pub fn set_game_source_rect(&mut self, rect: [f32; 4]) {
         self.game.set_source_rect(rect);
     }
@@ -444,7 +450,7 @@ impl Compositor {
 
 impl Compositor {
     fn in_game_rect(&mut self, draw: impl FnOnce(&mut Self)) {
-        if !self.native() {
+        if !self.native() || self.game_destination.is_some() {
             return draw(self);
         }
         let (x, top, w, h) = crate::bezel::game_rect(self.window, self.sp_frame);

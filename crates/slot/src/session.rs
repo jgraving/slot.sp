@@ -454,6 +454,15 @@ impl Session {
                 None => eprintln!("slot: link: a transport arrived with no core to run it"),
             }
         }
+        if let Some(on)=self.app.take_frame_blending() {
+            if !self.app.link_active() {
+                if let Some(emu)=&self.emu {
+                    let (key,value)=crate::frame_blending::option(self.app.core(),on);
+                    emu.set_option(key,value);
+                    if self.held() { emu.refresh_blending(); }
+                }
+            }
+        }
         let mut recoloured = false;
         if let Some(p) = self.app.take_gb_colors() {
             if let Some(emu) = &self.emu {

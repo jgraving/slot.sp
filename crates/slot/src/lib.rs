@@ -28,6 +28,8 @@ pub mod drc;
 pub mod emu;
 pub mod face_builder;
 pub mod frames;
+pub mod frame_blending;
+pub mod reference;
 pub mod frontend;
 pub mod input;
 pub mod kid_policy;
