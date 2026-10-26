@@ -16,7 +16,7 @@ git clone https://github.com/BrandonKowalski/slot.git _studio/slot
 git -C _studio/slot checkout "$(cat _studio/slot-cart-studio/slot.ref)"
 (cd _studio/slot-cart-studio && wasm-pack build --release --target web --no-typescript --out-dir web/pkg)
 .venv-site/bin/python tools/prepare-site.py
-.venv-site/bin/zensical build --clean --strict -f site/zensical.toml
+.venv-site/bin/zensical build --clean --strict -f site/zensical.build.toml
 .venv-site/bin/python tools/assemble-studio.py
 .venv-site/bin/python tools/check-site.py
 ```
@@ -24,6 +24,7 @@ git -C _studio/slot checkout "$(cat _studio/slot-cart-studio/slot.ref)"
 The output is `site/public/`. The preparation step:
 
 - Turns the root feature guides into website pages, adapting relative links and heading anchors.
+- Creates `site/zensical.build.toml` with content-hashed CSS and JavaScript URLs. The source configuration stays in `site/zensical.toml`; build the generated configuration after preparing the site.
 - Copies reviewed native H.264 clips and PNG screenshots, verifying their recorded SHA-256 hashes. GitHub uses the corresponding GIFs; the website uses videos with play controls.
 - Builds a self-hosted Google Sans Flex WOFF2 from the source pinned in the UI font manifest, verifying its SHA-256 first. Its license is included with the website font.
 

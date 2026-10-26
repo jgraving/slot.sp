@@ -1,5 +1,5 @@
 (() => {
-  const assets = new URL('.', document.currentScript.src);
+  const assets = new URL('../', document.currentScript.src);
   const topics = {
     guide:'guide', 'getting-started':'getting-started', controls:'controls',
     library:'library', playing:'playing', 'kid-mode':'kid-mode', bluetooth:'bluetooth',
