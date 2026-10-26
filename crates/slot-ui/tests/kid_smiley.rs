@@ -107,7 +107,7 @@ fn approval_follows_cart_geometry_and_is_drawn_behind_the_slot_front() {
             let Draw::Tex { x, y, w, h, alpha, .. } = out[mark] else { panic!() };
             let Draw::Tex { x: ex, y: ey, w: ew, h: eh, alpha: ea, .. } = expected[0] else { panic!() };
             assert_eq!((x, y, w, h, alpha), (ex, ey, ew, eh, ea));
-            let lip = out.iter().position(|d| matches!(d, Draw::Tex { tex, .. } if *tex == front)).unwrap();
+            let lip = out.iter().position(|d| matches!(d, Draw::Part { tex, .. } if *tex == front)).unwrap();
             assert!(mark < lip, "approval must disappear under the slot with the cart");
         }
     }
