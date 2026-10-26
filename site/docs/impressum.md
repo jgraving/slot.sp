@@ -19,4 +19,4 @@ slot.sp ist ein Open-Source-Projekt für Anbernic-Handhelds. Diese Website biete
 
 Game Boy ist eine Marke von Nintendo. Dieses Projekt ist weder mit Nintendo verbunden noch von Nintendo unterstützt.
 
-Informationen zur Verarbeitung personenbezogener Daten stehen in der [Datenschutzerklärung](../datenschutz/). Hinweise zu Mitwirkenden und Lizenzen stehen unter [Credits](../credits/).
+Informationen zur Verarbeitung personenbezogener Daten stehen in der [Datenschutzerklärung](datenschutz.md). Hinweise zu Mitwirkenden und Lizenzen stehen unter [Credits](credits.md).
