@@ -2,10 +2,8 @@
 
 <picture>
   <source media="(prefers-reduced-motion: reduce)" srcset="previews/readme-model/hero.png">
-  <img src="previews/readme-model/hero.gif" width="440" alt="An SP model showing the slot.sp carousel and glass logo animation on its screen">
+  <img src="previews/readme-model/hero.gif" width="820" alt="slot.sp: Your games. SP style. An SP model displays the carousel and glass logo animation.">
 </picture>
-
-**Your games. SP style.**
 
 **[Website & guide](https://jakegraving.com/slot.sp/)** · **[New installation](https://jakegraving.com/slot.sp/installing/)** · **[Update](https://jakegraving.com/slot.sp/updating/)** · **[Cart Studio](https://jakegraving.com/slot.sp/studio/)**
 
