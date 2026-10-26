@@ -1,11 +1,11 @@
 {
-  "source_commit": "c94aa0b8f6b834e9706475208cd73f778d1c26ed",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40302092854",
+  "source_commit": "d23fe98988a3c67392a94f56d3d171a977665f3f",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40305712421",
   "files": [
     {
       "path": "previews/homepage/hero-graphite.mp4",
-      "bytes": 893748,
-      "sha256": "781b7bd0cee48b3b1ccda41ce7e98ee92f72dac31f574212a98a27d10d109e77"
+      "bytes": 1171104,
+      "sha256": "e2c53fb50f94e256d813cef0a2e1ea1f705f1fbd9b5c6f6288be6e27f0956c3a"
     },
     {
       "path": "previews/homepage/hero-graphite.png",
@@ -14,8 +14,8 @@
     },
     {
       "path": "previews/homepage/hero-platinum.mp4",
-      "bytes": 893715,
-      "sha256": "275f5003a844b8d9f62ce203bb8dc6687808676d1d150c4f64ca1fecf9ea0bd5"
+      "bytes": 1195947,
+      "sha256": "49747da303f48448f115cac6498a2b85ab8301676cd4f193d3088e8e3c4a6db7"
     },
     {
       "path": "previews/homepage/hero-platinum.png",
@@ -24,8 +24,8 @@
     },
     {
       "path": "previews/homepage/hero-pearl_blue.mp4",
-      "bytes": 894974,
-      "sha256": "6ecfaf6b83de6d9b04ff094e77cf423fbee090d5af0b3fece05bdfd157d83aa6"
+      "bytes": 1182368,
+      "sha256": "8dc1d26c0a85766fff583de23f29e5a4a944d03c47362028ac205afa0403b45b"
     },
     {
       "path": "previews/homepage/hero-pearl_blue.png",
@@ -34,13 +34,18 @@
     },
     {
       "path": "previews/homepage/hero-pearl_pink.mp4",
-      "bytes": 894816,
-      "sha256": "880c768e245a5bd72dca6bfd080f5176ddac3c7140683ff4e6797c917ef94388"
+      "bytes": 1183482,
+      "sha256": "c468d158400df9e663af3a18292e9476b34f3d08ed42946f6bd551b4035afbb6"
     },
     {
       "path": "previews/homepage/hero-pearl_pink.png",
       "bytes": 481214,
       "sha256": "61b261a96f9e0fe6e09f112684cb78521ce0f5d80a056b2ac50f2c3d3af0823d"
+    },
+    {
+      "path": "previews/homepage/readme-hero.gif",
+      "bytes": 8842958,
+      "sha256": "d0b2992f40c3b5aae4641d6b2bc8aa6e7551edc15f7841e9a110ca110835cb76"
     }
   ]
 }

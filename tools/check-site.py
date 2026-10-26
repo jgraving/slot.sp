@@ -61,6 +61,7 @@ for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').gl
 home = (ROOT / 'index.html').read_text()
 assert 'https://jakegraving.com/slot.sp/' in home
 assert 'Your games.' in home and 'features/kid-mode/' in home
+assert not re.search(r'game\s*boy', home, re.I), 'Keep third-party system names out of homepage text'
 assert 'BrandonKowalski/slot/releases' not in home
 assert 'fonts.googleapis.com' not in home, 'Typeface must be self-hosted'
 assert not (ROOT / 'CNAME').exists(), 'Do not publish the upstream custom domain'

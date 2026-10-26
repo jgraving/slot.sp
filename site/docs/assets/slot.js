@@ -61,7 +61,7 @@
       const current = ++request;
       preview.pause();
       preview.poster = new URL(`hero-${finish}.png`, media).href;
-      preview.setAttribute('aria-label', `Browse the game carousel in slot.sp, ${button.getAttribute('aria-label')} finish`);
+      preview.setAttribute('aria-label', `Browse the carousel and watch the glass slot.sp logo, ${button.getAttribute('aria-label')} finish`);
       preview.addEventListener('loadedmetadata', () => {
         if (current !== request) return;
         preview.currentTime = Math.min(position, Math.max(0, preview.duration - .01));
