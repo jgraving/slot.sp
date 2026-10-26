@@ -108,6 +108,7 @@ pub enum QuickRow {
     UndoLoad,
     Reference,
     PlayReference,
+    Scaling,
 }
 
 impl QuickRow {
@@ -117,7 +118,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::ShowTitles)
     }
-    pub const ALL: [QuickRow; 97] = [
+    pub const ALL: [QuickRow; 98] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -215,6 +216,7 @@ impl QuickRow {
         QuickRow::UndoLoad,
         QuickRow::Reference,
         QuickRow::PlayReference,
+        QuickRow::Scaling,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -350,11 +352,12 @@ impl QuickRow {
         QuickRow::PlayReference,
     ];
 
-    pub const PLAY_SCREEN: [QuickRow; 6] = [
+    pub const PLAY_SCREEN: [QuickRow; 7] = [
         QuickRow::Shader,
         QuickRow::Bezel,
         QuickRow::Palette,
         QuickRow::ColourCorrection,
+        QuickRow::Scaling,
         QuickRow::PlayBrightness,
         QuickRow::PlayBlueLight,
     ];
@@ -374,7 +377,7 @@ impl QuickRow {
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
             QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
-            QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
+            QuickRow::Scaling | QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
                 &QuickRow::SCREEN_GBA
@@ -526,6 +529,7 @@ impl QuickRow {
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
+            QuickRow::Scaling => "Scaling",
             QuickRow::Bluetooth | QuickRow::PlaySound => "Sound",
             QuickRow::GbaShader => "Shader",
             QuickRow::GbShader => "Shader",
@@ -752,10 +756,14 @@ pub enum QuickValue {
     Level7,
     Level8,
     Level9,
+    Actual,
+    Stretch,
+    Fit,
+    Integer,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 42] = [
+    pub const ALL: [QuickValue; 46] = [
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -798,6 +806,10 @@ impl QuickValue {
         QuickValue::Level7,
         QuickValue::Level8,
         QuickValue::Level9,
+        QuickValue::Actual,
+        QuickValue::Stretch,
+        QuickValue::Fit,
+        QuickValue::Integer,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -871,6 +883,10 @@ impl QuickValue {
             QuickValue::Level7 => "7",
             QuickValue::Level8 => "8",
             QuickValue::Level9 => "9",
+            QuickValue::Actual => "Actual",
+            QuickValue::Stretch => "Stretch",
+            QuickValue::Fit => "Fit",
+            QuickValue::Integer => "Integer",
 
         }
     }

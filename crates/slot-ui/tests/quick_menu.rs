@@ -257,6 +257,10 @@ fn the_values_read_as_the_menu_prints_them() {
             "7",
             "8",
             "9",
+            "Actual",
+            "Stretch",
+            "Fit",
+            "Integer",
 
         ]
     );
@@ -380,6 +384,7 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::Bezel,
             QuickRow::Palette,
             QuickRow::ColourCorrection,
+            QuickRow::Scaling,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
@@ -450,6 +455,7 @@ fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
         vec![
             QuickRow::Shader,
             QuickRow::ColourCorrection,
+            QuickRow::Scaling,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
@@ -465,33 +471,33 @@ fn the_in_game_screen_panel_shows_three_rows_and_scrolls_the_rest() {
         slot_ui::quick_window(QuickRow::ColourCorrection, &[]),
         (2, 3)
     );
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (3, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (4, 3));
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
         slot_ui::quick_window(QuickRow::PlayBlueLight, &hidden),
-        (1, 3)
+        (2, 3)
     );
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("six rows in three");
+    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("seven rows in three");
     assert!(
         (top.thumb_y - top.y).abs() < 0.5,
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h / 6.0).abs() < 0.5,
-        "the thumb is not one row of six"
+        (top.thumb_h - top.h / 7.0).abs() < 0.5,
+        "the thumb is not one row of seven"
     );
-    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
+    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("seven rows in three");
     assert!(
         (end.thumb_y + end.thumb_h - (end.y + end.h)).abs() < 0.5,
         "the thumb is not at the bottom"
     );
     assert!(
         slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_some(),
-        "four rows in three still scroll"
+        "five rows in three still scroll"
     );
     assert!(slot_ui::quick_scroll(QuickRow::Rumble, &[]).is_some(), "eight gameplay rows scroll within the fork’s six-row limit");
     assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());
