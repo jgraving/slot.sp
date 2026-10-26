@@ -6,7 +6,7 @@
 
 ## Take a screenshot
 
-During a game, hold <kbd>MENU</kbd> and press <kbd>X</kbd>.
+During a game, press <kbd>MENU</kbd> + <kbd>X</kbd> together, then release both buttons. Avoid holding <kbd>MENU</kbd> on its own: that exits the game.
 
 To change this combination, open **Menu → Controls → Shortcuts → Screenshot** from the carousel and record a new binding.
 

@@ -1,7 +1,7 @@
 [project]
 site_url = "https://jakegraving.com/slot.sp/"
 site_name = "slot.sp"
-site_description = "Game Boy games. SP style. A game launcher by Jake Graving, with four SP colors, kid mode, Bluetooth audio and more."
+site_description = "Your games. SP style. A game launcher by Jake Graving for Anbernic handhelds, with four SP colors, kid mode and Bluetooth audio."
 repo_url = "https://github.com/jgraving/slot.sp"
 repo_name = "jgraving/slot.sp"
 docs_dir = "docs"
@@ -31,6 +31,9 @@ nav = [
 
 extra_css = ["assets/device.css", "assets/slot.css"]
 extra_javascript = ["assets/slot.js"]
+
+[project.extra]
+homepage_media_revision = "prepared"
 
 [project.theme]
 custom_dir = "overrides"

@@ -70,13 +70,17 @@ def main():
     shutil.copyfile(ROOT / 'previews/rgsp-shell-finishes.png', media / 'rgsp-shell-finishes.png')
     shutil.copyfile(ROOT / 'previews/media-provenance.json', media / 'media-provenance.json')
     homepage = json.loads((ROOT / 'previews/homepage/provenance.json').read_text())
+    revision = homepage['source_commit'][:12]
+    homepage_media = media / 'homepage'
+    if homepage_media.exists():
+        shutil.rmtree(homepage_media)
     for entry in homepage['files']:
         source = ROOT / entry['path']
         assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
-        target = media / 'homepage' / source.name
+        target = homepage_media / revision / source.name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
-    shutil.copyfile(ROOT / 'previews/homepage/provenance.json', media / 'homepage/provenance.json')
+    shutil.copyfile(ROOT / 'previews/homepage/provenance.json', homepage_media / 'provenance.json')
     manifest = json.loads((ROOT / 'crates/slot-ui/assets/fonts/profiles.json').read_text())
     data = args.font_source.read_bytes() if args.font_source else urllib.request.urlopen(
         manifest['source_url'], timeout=60).read()
@@ -92,6 +96,8 @@ def main():
         shutil.rmtree(generated)
     generated.mkdir(parents=True)
     config = (ROOT / 'site/zensical.toml').read_text()
+    config = config.replace('homepage_media_revision = "prepared"',
+                            f'homepage_media_revision = "{revision}"')
     for relative in ['assets/device.css', 'assets/slot.css', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()

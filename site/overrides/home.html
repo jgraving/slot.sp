@@ -2,10 +2,11 @@
 {% macro icon(name) -%}<img class="feature-icon" src="{{ ('assets/icons/' ~ name ~ '.svg') | url }}" width="48" height="48" alt="" aria-hidden="true">{%- endmacro %}
 {% block content %}
 {% include "partials/device.svg" %}
+{% set hero_media = 'media/fork/homepage/' ~ config.extra.homepage_media_revision ~ '/' %}
 <div class="home">
   <section class="intro" aria-labelledby="intro-title">
     <div class="intro-copy">
-      <h1 id="intro-title">Game Boy games.<br><span>SP style.</span></h1>
+      <h1 id="intro-title">Your games.<br><span>SP style.</span></h1>
       <p class="intro-text">A Game Boy, Color and Advance launcher for Anbernic handhelds, inspired by the Game Boy Advance SP.</p>
       <p>Choose a cartridge, press A and play.</p>
       <nav class="setup-choices" aria-label="Get slot.sp">
@@ -20,7 +21,7 @@
           <div class="dv-lid">
             <div class="dv-front">
               <svg viewBox="0 0 820 725" aria-hidden="true"><use href="#lidArt"/></svg>
-              <video id="hero-preview" class="hero-screen screen-box" width="720" height="480" muted playsinline loop preload="none" data-media="{{ 'media/fork/homepage/' | url }}" poster="{{ 'media/fork/homepage/hero-platinum.png' | url }}" aria-label="Cartridge insertion and removal in slot.sp, Platinum finish"><source src="{{ 'media/fork/homepage/hero-platinum.mp4' | url }}" type="video/mp4"></video>
+              <video id="hero-preview" class="hero-screen screen-box" width="720" height="480" muted playsinline loop preload="none" data-media="{{ hero_media | url }}" poster="{{ (hero_media ~ 'hero-platinum.png') | url }}" aria-label="Browse the game carousel in slot.sp, Platinum finish"><source src="{{ (hero_media ~ 'hero-platinum.mp4') | url }}" type="video/mp4"></video>
             </div>
             <div class="dv-back" aria-hidden="true"><svg viewBox="0 0 820 725" preserveAspectRatio="none"><use href="#lidBackArt"/></svg></div>
             <span class="dv-edge" aria-hidden="true"></span><span class="f3d side-l" aria-hidden="true"></span><span class="f3d side-r" aria-hidden="true"></span>

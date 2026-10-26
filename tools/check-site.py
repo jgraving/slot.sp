@@ -60,7 +60,7 @@ for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').gl
         checked += 1
 home = (ROOT / 'index.html').read_text()
 assert 'https://jakegraving.com/slot.sp/' in home
-assert 'Game Boy games.' in home and 'features/kid-mode/' in home
+assert 'Your games.' in home and 'features/kid-mode/' in home
 assert 'BrandonKowalski/slot/releases' not in home
 assert 'fonts.googleapis.com' not in home, 'Typeface must be self-hosted'
 assert not (ROOT / 'CNAME').exists(), 'Do not publish the upstream custom domain'
@@ -71,8 +71,9 @@ assert studio_info['repository'] == 'jgraving/slot-cart-studio'
 assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 hero_durations = []
+hero_revision = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())['source_commit'][:12]
 for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
-    stem = ROOT / f'media/fork/homepage/hero-{finish}'
+    stem = ROOT / f'media/fork/homepage/{hero_revision}/hero-{finish}'
     with Image.open(stem.with_suffix('.png')) as poster:
         assert poster.size == (720, 480), stem
     with av.open(str(stem.with_suffix('.mp4'))) as clip:
