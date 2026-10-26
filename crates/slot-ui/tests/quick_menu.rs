@@ -98,7 +98,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
-        ["Shelf", "Shortcuts", "In-Game"]
+        ["Shelf", "Shortcuts", "Buttons & Shortcuts", "In-Game"]
     );
     assert_eq!(
         QuickRow::SHELF_KEYS.map(QuickRow::label),
@@ -255,6 +255,11 @@ fn the_values_read_as_the_menu_prints_them() {
             "7",
             "8",
             "9",
+            "Actual",
+            "Stretch",
+            "Fit",
+            "Integer",
+            "Mix",
 
         ]
     );
@@ -367,7 +372,8 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::PlayScreen,
             QuickRow::PlaySound,
             QuickRow::PlayGameplay,
-            QuickRow::PlayControls
+            QuickRow::PlayControls,
+            QuickRow::PlayReference
         ]
     );
     assert_eq!(
@@ -377,6 +383,8 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::Bezel,
             QuickRow::Palette,
             QuickRow::ColourCorrection,
+            QuickRow::Scaling,
+            QuickRow::FrameBlending,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
@@ -447,6 +455,8 @@ fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
         vec![
             QuickRow::Shader,
             QuickRow::ColourCorrection,
+            QuickRow::Scaling,
+            QuickRow::FrameBlending,
             QuickRow::PlayBrightness,
             QuickRow::PlayBlueLight
         ]
