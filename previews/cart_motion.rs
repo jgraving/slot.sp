@@ -23,6 +23,9 @@ fn main() {
     let interior = c.create_texture(interior.w, interior.h, &interior.rgba);
     let backing = slot_ui::cart_backing(None);
     let backing = c.create_texture(backing.w, backing.h, &backing.rgba);
+    let kid = slot_ui::kid_smiley_face();
+    let kid = (c.create_texture(kid.w, kid.h, &kid.rgba), kid.w as f32, kid.h as f32);
+    let approved = slot::kid_policy::Policy::read(std::path::Path::new(root)).unwrap().allows(&cart);
     let [back, front] = slot_ui::shell_slot_faces(slot_store::ShellColour::Graphite);
     let back = c.create_texture(720, slot_ui::SLOT_H, back);
     let front = c.create_texture(720, slot_ui::SLOT_H, front);
@@ -63,7 +66,7 @@ fn main() {
             alert: None, dim: 0.0, screen: 0.0, game: false, over: true,
             behind: [Some(interior), Some(backing)], slot: Some((back, front)),
             canvas: Canvas::FRAMED,
-        }.draw(&mut draws);
+        }.draw_with_marks(None, approved.then_some(kid), &mut draws);
         c.begin_frame(); c.draw_list(&draws);
         pipe.write_all(&c.read_frame()).unwrap();
     }

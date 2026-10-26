@@ -1,6 +1,6 @@
 {
-  "source_commit": "21cffb200642255ea9690e3211099a7bbc76e73c",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40251244493",
+  "source_commit": "8a96a113f265ed9c759e3c73503bc7acf6024262",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40311110957",
   "files": [
     {
       "path": "previews/boot-brand.gif",
@@ -19,28 +19,28 @@
     },
     {
       "path": "previews/cart-motion.mp4",
-      "bytes": 315174,
-      "sha256": "9dfd427149576c217b1b6fbf46e6a186aad9ec1fbb14ec65a4b7b2d49231440e"
+      "bytes": 314726,
+      "sha256": "806ee9ddf47d6aea6dc3842122592d18300e8cd9845d0eb1c2cec94029099ea4"
     },
     {
       "path": "previews/cart-motion.png",
-      "bytes": 205403,
-      "sha256": "1e6d24555b8a49e17792953c2114459f3402ad5a12f96e0c53f57a49ae7775d8"
+      "bytes": 207922,
+      "sha256": "b6ecd4097099af2968a7c041b941a5e0a753c1cda1ba2bfa01d9634ac6a47164"
     },
     {
       "path": "previews/favorite-remove.gif",
-      "bytes": 2197808,
-      "sha256": "96ec9e608e5d55127d74beb4e31d0523754d762ee80d30f52b2f70258e34f1cb"
+      "bytes": 2338113,
+      "sha256": "717093cbc68c2afe749708c83c5bdc4d4d19815c37ee08daf800b86d17ca00f5"
     },
     {
       "path": "previews/favorite-remove.mp4",
-      "bytes": 75639,
-      "sha256": "83acc558065270c70145c59b7435610143e22b35ec16a1bd0eba9106f49e3542"
+      "bytes": 75747,
+      "sha256": "6a404d9e850b037caeb53afbf574985561e442aefd314a53a3ff4b13793a2aef"
     },
     {
       "path": "previews/favorite-remove.png",
-      "bytes": 236361,
-      "sha256": "68b149dae14331ff6e07856de8dd83731e44b719bc49fd1f23bd69e0cc3f7482"
+      "bytes": 238166,
+      "sha256": "0a8a1f74ba7eeec723855b2d44c35aaa17519ef95a072737a69538277b64a461"
     },
     {
       "path": "previews/guide/about.png",
@@ -54,23 +54,23 @@
     },
     {
       "path": "previews/guide/approved.png",
-      "bytes": 477762,
-      "sha256": "9ec36e16b86f579facf3d430832baf720c2ab84c8a3212a0bca82cdae73679f0"
+      "bytes": 477866,
+      "sha256": "1df7984e6e74e0c48ce45f3d878ba6667a8da0338a857d605f3352f780fe201e"
     },
     {
       "path": "previews/guide/carousel.png",
-      "bytes": 479357,
-      "sha256": "c7f2d66063e8b20f08c9cc3a5f793b9fc5ed158b666e2776d2ad1426b7535a15"
+      "bytes": 480900,
+      "sha256": "b01a9ed59efb0f6e5e0817f52eea0a82a351f29cd850350a276e6d7facdd8d4b"
     },
     {
       "path": "previews/guide/core-picker.png",
-      "bytes": 460848,
-      "sha256": "13fd386bace525e11560f663c2133939394d74d92af4caa50d55dbea74bd9bec"
+      "bytes": 461118,
+      "sha256": "ef4a2b8a77270e6db8dcdae85f46d440884a565d3052dbf3bd70f9cf39992076"
     },
     {
       "path": "previews/guide/favorites.png",
-      "bytes": 475629,
-      "sha256": "92eef3e489e112529b05c95bb9fdb7b8ec23cb13f61524839691388e520f1106"
+      "bytes": 477171,
+      "sha256": "2ca9903ebab0c98505bcb5905fc6dec0f81118af59f57c0bab4518c24d3e17be"
     },
     {
       "path": "previews/guide/general.png",
@@ -114,13 +114,13 @@
     },
     {
       "path": "previews/hero-glass.gif",
-      "bytes": 7245293,
-      "sha256": "3d55e4724c7321437de10ef2c2410fd9b9b0425d581df36940e441d35066bc6a"
+      "bytes": 6934335,
+      "sha256": "f37e49518a4de7619ea1c053c02a45224171ddd7508e583a12ad56d3bcd71776"
     },
     {
       "path": "previews/hero-glass.mp4",
-      "bytes": 534067,
-      "sha256": "83f236b135eb0ea830228d1e8552b341c9d95977efdaa58a259ad8dc23fad93e"
+      "bytes": 334001,
+      "sha256": "33c8ba87c4d5600b10153deb7ecb8934234c84d751c48ef7aad7c9cc38d29258"
     },
     {
       "path": "previews/hero-glass.png",
@@ -164,33 +164,33 @@
     },
     {
       "path": "previews/readme-carousel.gif",
-      "bytes": 6892943,
-      "sha256": "d4fdd6ba9fc86b12b397f8d404ed8e3b49295680a37bba3070db89988b7efad4"
+      "bytes": 6888422,
+      "sha256": "768dbc34dad21bf1c24b4a89d78b5190473685cea86cf51893bc652088337eed"
     },
     {
       "path": "previews/readme-carousel.mp4",
-      "bytes": 649009,
-      "sha256": "221426624478831eaa241ed225b684a8f2138857894beb8c67b2c2a88c062874"
+      "bytes": 652623,
+      "sha256": "7a82769a6abf15a28b7082167b11c8435dc875aef307250350c4cbaa58335cb4"
     },
     {
       "path": "previews/readme-carousel.png",
-      "bytes": 239545,
-      "sha256": "8720925f081270458b0b6ef0ba8821c3de1f2968b1661c358b3605714ce6784e"
+      "bytes": 241904,
+      "sha256": "a1695a04ba50cf7c445b8c8fb2c09cf872997c3d452185a4c53032821b531eef"
     },
     {
       "path": "previews/readme-core-picker.gif",
-      "bytes": 4519073,
-      "sha256": "47b73cc7b7fdcd398f9a0be8cd905b3ba6ecf7065900ccd069cc9965bff0d068"
+      "bytes": 5067370,
+      "sha256": "56f99102c402bd94131aa23c20797bfac09d6f74e41917174471b20ab705bd39"
     },
     {
       "path": "previews/readme-core-picker.mp4",
-      "bytes": 361474,
-      "sha256": "de365c7238e133190a2560ba40852e1c2221bc6fd948114ddf4730922a8e99e8"
+      "bytes": 363346,
+      "sha256": "4f6bdcadaa8c420d2db2346084bb80ce4963f4ffa61b5d6bf02e26d2c1b2d487"
     },
     {
       "path": "previews/readme-core-picker.png",
-      "bytes": 231890,
-      "sha256": "2387fa6cc106959a8b125c7239aa9eb2e28c9a7b46a67d15b465d7d00ca8753f"
+      "bytes": 233133,
+      "sha256": "fad194c546ccee98fbd6dd2edd5cebfa892a56f43e9c50dba23fbacf7351c41e"
     },
     {
       "path": "previews/readme-link.gif",
@@ -224,8 +224,8 @@
     },
     {
       "path": "previews/slot-fit-motion.gif",
-      "bytes": 4287412,
-      "sha256": "c769de50ccad6c780da69b849c5069583c60a104e7ef74cc4947b4a54d864404"
+      "bytes": 4821130,
+      "sha256": "ee8228110334b5692dbe4e7fbc0d5222342689d924013074a98d4e3304869cf5"
     }
   ]
 }

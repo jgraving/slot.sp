@@ -29,6 +29,8 @@ fn main(){
  let interior=texture(&mut c,slot_ui::cart_interior(&cart));
  let backing=texture(&mut c,slot_ui::cart_backing(None));
  let star=slot_ui::star_face(3,[246,195,44]);let (sw,sh)=(star.w as f32,star.h as f32);let star=texture(&mut c,star);
+ let kid=slot_ui::kid_smiley_face();let (kw,kh)=(kid.w as f32,kid.h as f32);let kid=texture(&mut c,kid);
+ let approved=slot::kid_policy::Policy::read(std::path::Path::new(root)).unwrap().allows(&cart);
  let [back,front]=slot_ui::shell_slot_faces(colour);
  let back=c.create_texture(720,slot_ui::SLOT_H,back);let front=c.create_texture(720,slot_ui::SLOT_H,front);
  let vignette=png(&mut c,"assets/brand-vignette.png");
@@ -49,7 +51,7 @@ fn main(){
   let leave=((290.-frame as f32)/28.).clamp(0.,1.);
   let focus=(enter*enter*(3.-2.*enter))*(leave*leave*(3.-2.*leave));
   draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:vignette,alpha:focus});
-  SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_star(Some((star,sw,sh)),&mut draws);
+  SlotChrome {cart:&cart,face:Some(face),rest,scale,seat,alert:None,dim:0.0,screen:0.0,game:false,over:true,behind:[Some(interior),Some(backing)],slot:Some((back,front)),canvas:Canvas::FRAMED}.draw_with_marks(Some((star,sw,sh)),approved.then_some((kid,kw,kh)),&mut draws);
   draws.push(Draw::Tex{x:0.,y:0.,w:720.,h:480.,tex:light,alpha:1.});
   // The cart vacates the centre before the mark enters; clear the mark
   // before ejection so the two objects never compete for the same space.

@@ -1,51 +1,51 @@
 {
-  "source_commit": "d23fe98988a3c67392a94f56d3d171a977665f3f",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40305712421",
+  "source_commit": "d026259b671afe1ec4c0061bc3c9465d1756f6e8",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40311886851",
   "files": [
     {
       "path": "previews/homepage/hero-graphite.mp4",
-      "bytes": 1171104,
-      "sha256": "e2c53fb50f94e256d813cef0a2e1ea1f705f1fbd9b5c6f6288be6e27f0956c3a"
+      "bytes": 1194348,
+      "sha256": "d54409c00559095ca6b66cda520bfbba5ba4128bdebfe25436893feeb089ebe9"
     },
     {
       "path": "previews/homepage/hero-graphite.png",
-      "bytes": 480900,
-      "sha256": "b01a9ed59efb0f6e5e0817f52eea0a82a351f29cd850350a276e6d7facdd8d4b"
+      "bytes": 480904,
+      "sha256": "04fb5c3a5338cb3424a7c4237198d5d2b0f827c828e15fea2c7e23f08994df98"
     },
     {
       "path": "previews/homepage/hero-platinum.mp4",
-      "bytes": 1195947,
-      "sha256": "49747da303f48448f115cac6498a2b85ab8301676cd4f193d3088e8e3c4a6db7"
+      "bytes": 1192496,
+      "sha256": "4e524c033c73078b74c14488b8db00b598292c0f81b244784b9bb0929e782993"
     },
     {
       "path": "previews/homepage/hero-platinum.png",
-      "bytes": 481187,
-      "sha256": "28f0bcc116ef11ecc8f42172f4be9aecb120a3e5bd2a8efc10190a3316470484"
+      "bytes": 481192,
+      "sha256": "e049235dd297a82bb9beeaeca80023b6d2eb0f04dfffddc6d84d14f8c308a7a6"
     },
     {
       "path": "previews/homepage/hero-pearl_blue.mp4",
-      "bytes": 1182368,
-      "sha256": "8dc1d26c0a85766fff583de23f29e5a4a944d03c47362028ac205afa0403b45b"
+      "bytes": 1189847,
+      "sha256": "3af42ed3f00fcff8ec9ac2e6a3c388f53447ca20f3ac1c43a85bb492ceb26bae"
     },
     {
       "path": "previews/homepage/hero-pearl_blue.png",
-      "bytes": 481187,
-      "sha256": "698150fa51c9043ad2bedd1b6b71448feffd5bf24ab8ef40c7e8549857b7da89"
+      "bytes": 481192,
+      "sha256": "9c902a9d437fae08a0380b58c2bb372eca25a8b43dc27f29695b979054b830d4"
     },
     {
       "path": "previews/homepage/hero-pearl_pink.mp4",
-      "bytes": 1183482,
-      "sha256": "c468d158400df9e663af3a18292e9476b34f3d08ed42946f6bd551b4035afbb6"
+      "bytes": 1187197,
+      "sha256": "fa1fd7cf3f81f6578bdff95c18da93aa3ec29c324323ea276dc070540ffcec07"
     },
     {
       "path": "previews/homepage/hero-pearl_pink.png",
-      "bytes": 481214,
-      "sha256": "61b261a96f9e0fe6e09f112684cb78521ce0f5d80a056b2ac50f2c3d3af0823d"
+      "bytes": 481219,
+      "sha256": "bdb0f8aecc732ccc05d79d00a8af82a561548118e0faa4da7b72f2de49f28c81"
     },
     {
       "path": "previews/homepage/readme-hero.gif",
-      "bytes": 8842958,
-      "sha256": "d0b2992f40c3b5aae4641d6b2bc8aa6e7551edc15f7841e9a110ca110835cb76"
+      "bytes": 9347059,
+      "sha256": "852a18e98924356fa2474c9ddfd5ad8396146e50515fb7d9739039d28f9ac163"
     }
   ]
 }

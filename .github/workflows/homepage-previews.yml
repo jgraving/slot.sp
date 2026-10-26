@@ -1,7 +1,7 @@
 name: Capture homepage previews
 on:
   push:
-    branches: ['docs/homepage-*']
+    branches: ['docs/homepage-*', 'docs/media-refresh']
     paths: ['previews/**', 'crates/slot-ui/**', '.github/workflows/homepage-previews.yml']
   workflow_dispatch:
 permissions:
@@ -9,7 +9,7 @@ permissions:
 jobs:
   capture:
     if: github.repository == 'jgraving/slot.sp'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       LIBGL_ALWAYS_SOFTWARE: '1'
