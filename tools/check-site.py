@@ -27,7 +27,7 @@ class Page(HTMLParser):
                 self.links.append((tag, attrs[key]))
 
 pages = {path: Page(path.read_text()) for path in ROOT.rglob('*.html')}
-dynamic_ids = set(re.findall(r'id="([^"]+)"', (ROOT / 'assets/device.svg').read_text()))
+dynamic_ids = set()
 errors = []
 checked = 0
 for source, page in pages.items():

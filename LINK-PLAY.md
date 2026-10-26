@@ -22,6 +22,8 @@ Keep the devices close together. Starting Host before Join gives the second play
 | <kbd>B</kbd> | Go back. |
 | <kbd>SELECT</kbd>, when offered | Switch cable / wireless-adapter mode. |
 
+![The Host and Join controls on the link screen](previews/readme-link.gif)
+
 ## Choose the link mode
 
 For GBA games, press <kbd>START</kbd> on the carousel to choose the emulator for each game before linking.

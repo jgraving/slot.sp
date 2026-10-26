@@ -12,7 +12,7 @@ e.g. `Labels/GBA/Metroid Fusion.png` goes with `Games/GBA/Metroid Fusion.gba`.
 | Game Boy | 1.12:1 | 1024×914 |
 | Game Boy Color | 1.12:1 | 1024×914 |
 
-slot will cache labels on the next boot after adding labels.
+slot.sp will cache labels on the next boot after adding labels.
 
 Use [Cart Studio](https://jakegraving.com/slot.sp/studio/) to find artwork, design labels and choose cartridge colors. The [Studio guide](../features/cart-studio.md) covers card access and ZIP export.
 
@@ -32,7 +32,7 @@ That's the game's file name, then three words:
 2. **Color**: six hex digits, no `#`.
 3. **Finish**: `solid`, `clear` or `glitter`.
 
-Keep all three options lowercase. A line slot can't read is skipped.
+Keep all three options lowercase. A line slot.sp can't read is skipped.
 
 ## Wallpapers
 
@@ -65,18 +65,18 @@ GBA bezels only show on the 640×480 devices, where the game is 640×427 at 0, 2
 
 ## Boot logo
 
-Put a `.bmp` at `Config/bootlogo.bmp`. slot hands it to the device when it boots, so you'll see it the next time you power on.
+Put a `.bmp` at `Config/bootlogo.bmp`. slot.sp hands it to the device when it boots, so you'll see it the next time you power on.
 
-slot copies the file as it is, without resizing it, so make it the same size and format as the logo your device already shows.
+slot.sp copies the file as it is, without resizing it, so make it the same size and format as the logo your device already shows.
 
-Delete `Config/bootlogo.bmp` to go back to the slot logo.
+Delete `Config/bootlogo.bmp` to go back to the slot.sp logo.
 
 ## BIOS
 
-slot doesn't need any BIOS files. If you have your own, drop them into `BIOS/` and you'll get the real boot animation when a game starts.
+slot.sp doesn't need any BIOS files. If you have your own, drop them into `BIOS/` and you'll get the real boot animation when a game starts.
 
 - `gba_bios.bin`
 - `gbc_bios.bin`
 - `gb_bios.bin`
 
-If you link with mGBA, both devices need the same BIOS setup. See [Linking Up](linking.md).
+If you link with mGBA, both devices need the same BIOS setup. See [Linking Up](../features/link-play.md).

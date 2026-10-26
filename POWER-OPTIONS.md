@@ -6,6 +6,8 @@
 
 Open **Menu → Power** from the carousel. Choose how the handheld sleeps, how long it waits before shutting down and when to power off.
 
+![Power settings for lid behavior, the shutdown timer and sleeping now](previews/guide/power.png)
+
 ## Choose what the lid does
 
 Change **Lid Close**:
@@ -37,6 +39,8 @@ For limits on active play, use [kid mode](KID-MODE.md#time--volume-limits).
 | **About →** <kbd>X</kbd> | Restart the launcher, useful after adding games or labels. |
 
 The animated power switch follows your selected SP color. Power settings are remembered across restarts.
+
+![The animated power switch during shutdown](previews/readme-shutdown.gif)
 
 ## Set the clock
 

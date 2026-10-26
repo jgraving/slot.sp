@@ -4,6 +4,8 @@
 
 [Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
 
+![General settings with SP color, theme, wallpaper and animation options](previews/guide/appearance.png)
+
 ## Type
 
 Google Sans Flex is used across menus, cartridge captions, notices and settings. Selected rows gain weight and a little width. Headings use rounder letterforms, while hints and small text use an optical size chosen for readability. Numeric values use equal-width digits so changing a clock or percentage does not make the text jump.
@@ -39,6 +41,8 @@ Open **Menu → General**:
 | **Game Titles** | Show game names above the slot. |
 
 **Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup.
+
+![The slot.sp startup animation](previews/boot-brand.gif)
 
 ## The game picture
 

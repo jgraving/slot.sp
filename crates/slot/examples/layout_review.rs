@@ -48,7 +48,7 @@ fn main(){
    legend_light:quick_legend_faces(footer_ink(true)).map(|f|s.hint(f)),
   };
   let bg=s.add(default_background().unwrap(),720,480);
-  let [back,front]=shell_slot_faces(ShellColour::Platinum);
+  let [back,front]=shell_slot_faces(ShellColour::PearlBlue);
   let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));
   let mut out=vec![];
   let app=slot::app::App::new(vec![]);

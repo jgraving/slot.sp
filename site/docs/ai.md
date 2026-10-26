@@ -1,18 +1,12 @@
 ---
-title: AI
+title: AI disclosure
 hide:
   - navigation
   - toc
 ---
 
-# AI Disclosure
+# AI disclosure
 
-The Rust frontend, and the SVGs on this site, were put together by Claude. I reviewed everything that was produced. All documentation is 100% free-range, meatbag prose.
+This fork uses AI tools for programming, documentation and website development. The source and change history are public on [GitHub](https://github.com/jgraving/slot.sp).
 
-My goal with this project was to recreate the feeling of playing my GBA SP in the back seat as a kid, but with a few modern creature comforts.
-
-Nothing about this project is exciting or groundbreaking from a technological perspective, and as a result, I delegated the glue code. mGBA and gpSP have been around forever and are the true stars of this show. The incredible skeuomorphic art is the work of Markus, an artist who saw the bare-bones version and offered to dress it up.
-
-I understand if my use of AI is a dealbreaker for you. Just know it's the least interesting part of what's here.
-
-Figured I should share the end result of all the wasted water.
+The original [slot project](https://github.com/BrandonKowalski/slot) also used AI-assisted development. The SP artwork is by Markus. Emulator, design and software credits are listed on the [credits page](credits.md).

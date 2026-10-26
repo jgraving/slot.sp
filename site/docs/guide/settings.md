@@ -1,66 +1,26 @@
-# Settings Explained
+# Settings reference
 
-Tap <kbd>MENU</kbd> on the shelf to open settings. 
+Tap <kbd>MENU</kbd> on the carousel to open settings. Changes save as you make them.
 
-All settings save as soon as you change an option.
+| Menu | Use it for | Instructions |
+| :--- | :--- | :--- |
+| **General** | SP color, theme, background, Recents, game titles, startup animation and carousel clicks. | [Appearance & screen](../features/display.md) |
+| **Screen** | Brightness, warmth, per-system shaders, palettes and borders. | [Screen](../features/display.md#the-game-picture) · [Day & night](../features/night-display.md) |
+| **Gameplay** | Resume behavior, fast-forward speed and sound, rewind, turbo and rumble. | [Playing & saving](../features/playing.md) |
+| **Controls** | Game buttons, carousel buttons and shortcuts. | [Buttons & shortcuts](../features/controls.md) |
+| **Sound** | Audio output, Bluetooth pairing and disconnect volume. | [Audio & headphones](../features/bluetooth.md) |
+| **Kid Mode** | Approved games, time allowance, volume cap and parent code. | [Kid mode](../features/kid-mode.md) |
+| **Power** | Lid behavior, sleep and shutdown timer. | [Sleep & power](../features/power-options.md) |
+| **About** | Version and credits. Press <kbd>X</kbd> to restart the launcher. | [Credits](../credits.md) |
 
-## General
+![General settings](../media/fork/general.png)
 
-| Setting | Choices | Default | Does |
-| --- | --- | --- | --- |
-| Theme | Dark, Light | Dark | The look of the shelf and menus |
-| Wallpaper | None, Random, Default, Default Blur, your own | Default | What's behind the shelf |
-| Wallpaper Tint | Off, 25%, 45%, 65% | Off | Darkens your own wallpaper so carts stand out. Only shows for your own or Random |
-| Recents | Show, Hide | Hide | A shelf of your last 10 games |
-| Game Titles | Show, Hide | Hide | Shows the name of the cart you're on |
-| Lid Power Off | 1, 3, 5, 10, 15, 30 min | 3 min | How long slot sleeps before powering off |
-| Date & Time | | | Sets the clock |
+## During a game
 
-Random picks a different wallpaper each boot.
+Tap <kbd>MENU</kbd> for Resume, States, Screenshots, Settings and Exit Game. Settings opens the options for the current game. Open the full menu from the carousel to change carousel controls and other general preferences.
 
-## Screen
-
-### General
-
-| Setting | Choices | Default |
-| --- | --- | --- |
-| Brightness | 1 to 9 | 5 |
-| Blue Light | Off, 1 to 9 | Off |
-
-### Game Boy Advance, Game Boy Color and Game Boy
-
-Each system has its own page.
-
-| Setting | Choices | Default |
-| --- | --- | --- |
-| Shader | GBA: Off, LCD3x, Grid, Dot. GB and GBC: Off, LCD3x, Grid, Simpletex | Grid on GBA, Simpletex on GB and GBC |
-| Color Correction | On, Off | Off |
-| Palette | Game Boy only. Auto, then 48 palettes | Auto |
-| Bezel | None, Default, AGS-102, your own | AGS-102 on 640×480 devices, None elsewhere |
-
-## Gameplay
-
-| Setting | Choices | Default | Does |
-| --- | --- | --- | --- |
-| Fast Forward | Off, 2x, 3x, 4x, 6x | 6x | The top speed when fast-forwarding |
-| Fast Forward Sound | On, Off | Off | Sound while fast-forwarding |
-| Rewind | On, Off | On | Hold <kbd>L2</kbd> to go back |
-| Turbo Buttons | On, Off | On | Turbo A and Turbo B |
-| Rumble | On, Off | On | For games with a rumble pak |
-| Left Stick as D-Pad | On, Off | On | Only on devices with a left stick |
-| Load State on Insert | On, Off | On | Inserting a cart picks up where you left off |
-| Save State on Eject | On, Off | On | Ejecting saves where you were |
-
-## Controls
-
-See [Controls](controls.md).
+In kid mode, the [kid menu](../features/kid-mode.md#the-kid-menu) offers Resume, Volume, Brightness, Exit game and Parent controls.
 
 ## About
 
-Your device's sticker, with the version of slot and more. Press <kbd>X</kbd> to restart.
-
-## The in-game menu
-
-Tap <kbd>MENU</kbd> while playing for Resume, States, Screenshots, Settings and Exit Game.
-
-Settings while in-game has the Screen and Gameplay pages for the system you're playing, and the In-Game controls. Shortcuts and shelf keys can only be customized from settings accessed from the shelf.
+![The About sticker with project, artwork and typeface credits](../media/fork/about.png)
