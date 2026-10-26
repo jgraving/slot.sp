@@ -2,7 +2,7 @@ name: Capture documentation media
 on:
   push:
     branches: [docs/media-refresh]
-    paths: ['crates/**', 'assets/**', 'previews/**', 'tools/opaque_preview_gif.py', 'tools/collect-doc-media.py', '.github/workflows/readme-previews.yml']
+    paths: ['crates/**', 'assets/**', 'previews/*.rs', 'previews/*.py', 'previews/*.script', 'previews/artwork/**', 'tools/opaque_preview_gif.py', 'tools/collect-doc-media.py']
   workflow_dispatch:
 permissions:
   contents: write

@@ -1,6 +1,6 @@
 {
-  "source_commit": "2773f46c5fbf050ae6f12c272bd4576b6e141896",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40250690607",
+  "source_commit": "21cffb200642255ea9690e3211099a7bbc76e73c",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40251244493",
   "files": [
     {
       "path": "previews/boot-brand.gif",
@@ -49,8 +49,8 @@
     },
     {
       "path": "previews/guide/appearance.png",
-      "bytes": 178045,
-      "sha256": "4a139d0f2ba2b3fca76e1fd323b8828e8be170e33e97ababf7416888b0920404"
+      "bytes": 178313,
+      "sha256": "fca715f50cf0713fe74c04d80686cb4cd04be95345509635dbce8786f665e9bf"
     },
     {
       "path": "previews/guide/approved.png",
@@ -74,8 +74,8 @@
     },
     {
       "path": "previews/guide/general.png",
-      "bytes": 171908,
-      "sha256": "10e5c6d190eaa017f413ffcb90b8ba500e0646aaa74a37a68929f9069a49fb31"
+      "bytes": 172213,
+      "sha256": "85a45cbfee5bcfc964576e589b83a3d4f3dbfd95aac8eb075090686f2dc135ee"
     },
     {
       "path": "previews/guide/kid-menu.png",
@@ -104,8 +104,8 @@
     },
     {
       "path": "previews/guide/power.png",
-      "bytes": 169139,
-      "sha256": "a94dee2bd06afc8381cb31b353ce7e0240d79187d77f69184d5465a7d49fc1d7"
+      "bytes": 169452,
+      "sha256": "a6650214ebbc6bb0fbf67a3d92b7ad522da09fef863afc358f4227d0b1e13a5e"
     },
     {
       "path": "previews/guide/sound.png",
