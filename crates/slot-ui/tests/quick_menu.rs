@@ -169,7 +169,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::ControlsInGame,
             QuickRow::ScreenGeneral,
             QuickRow::UndoSave,
-            QuickRow::UndoLoad
+            QuickRow::UndoLoad,
+            QuickRow::Reference,
+            QuickRow::PlayReference
         ]
     );
     for page in [
@@ -472,33 +474,33 @@ fn the_in_game_screen_panel_shows_three_rows_and_scrolls_the_rest() {
         slot_ui::quick_window(QuickRow::ColourCorrection, &[]),
         (2, 3)
     );
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (3, 3));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (5, 3));
     let hidden = [QuickRow::Palette, QuickRow::Bezel];
     assert_eq!(
         slot_ui::quick_window(QuickRow::PlayBlueLight, &hidden),
-        (1, 3)
+        (3, 3)
     );
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("six rows in three");
+    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("eight rows in three");
     assert!(
         (top.thumb_y - top.y).abs() < 0.5,
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h / 6.0).abs() < 0.5,
-        "the thumb is not one row of six"
+        (top.thumb_h - top.h / 8.0).abs() < 0.5,
+        "the thumb is not one row of eight"
     );
-    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
+    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("eight rows in three");
     assert!(
         (end.thumb_y + end.thumb_h - (end.y + end.h)).abs() < 0.5,
         "the thumb is not at the bottom"
     );
     assert!(
         slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_some(),
-        "four rows in three still scroll"
+        "six rows in three still scroll"
     );
     assert!(slot_ui::quick_scroll(QuickRow::Rumble, &[]).is_some(), "eight gameplay rows scroll within the fork’s six-row limit");
     assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());
