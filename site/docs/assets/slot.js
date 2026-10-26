@@ -39,6 +39,7 @@
         const values = finishes[button.dataset.shell];
         ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,values[i]));
         document.querySelectorAll('[data-shell]').forEach(other => other.setAttribute('aria-pressed',String(other === button)));
+        changePreview(button);
       });
     });
 
@@ -48,18 +49,40 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let wanted = !reduced.matches;
     let visible = true;
+    let finish = 'platinum';
+    let request = 0;
+    let position = 0;
+    const media = new URL(preview.dataset.media, document.baseURI);
+    function changePreview(button) {
+      const next = button.dataset.shell.replaceAll(' ', '_');
+      if (next === finish) return;
+      finish = next;
+      if (preview.readyState > 0) position = preview.currentTime;
+      const current = ++request;
+      preview.pause();
+      preview.poster = new URL(`hero-${finish}.png`, media).href;
+      preview.setAttribute('aria-label', `Cartridge insertion and removal in slot.sp, ${button.getAttribute('aria-label')} finish`);
+      preview.addEventListener('loadedmetadata', () => {
+        if (current !== request) return;
+        preview.currentTime = Math.min(position, Math.max(0, preview.duration - .01));
+        sync();
+      }, {once:true});
+      preview.src = new URL(`hero-${finish}.mp4`, media).href;
+      preview.load();
+      state();
+    }
     function sync() {
       if (wanted && visible && !document.hidden) preview.play().catch(() => {});
       else preview.pause();
     }
     function state() {
-      toggle.setAttribute('aria-pressed', String(!preview.paused));
-      toggle.querySelector('span').textContent = preview.paused ? 'Play preview' : 'Pause preview';
+      toggle.setAttribute('aria-pressed', String(wanted));
+      toggle.querySelector('span').textContent = wanted ? 'Pause preview' : 'Play preview';
     }
     preview.addEventListener('play',state);
     preview.addEventListener('pause',state);
-    toggle.addEventListener('click',() => { wanted = preview.paused; sync(); });
-    reduced.addEventListener('change',() => { if (reduced.matches) { wanted = false; sync(); } });
+    toggle.addEventListener('click',() => { wanted = !wanted; sync(); state(); });
+    reduced.addEventListener('change',() => { if (reduced.matches) { wanted = false; sync(); state(); } });
     new IntersectionObserver(entries => { visible = entries[0].isIntersecting; sync(); },{threshold:.1}).observe(preview);
     document.addEventListener('visibilitychange',sync);
     state();

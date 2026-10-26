@@ -7,8 +7,14 @@ hide:
 
 # Update slot.sp
 
+Already running slot or slot.sp? The **System ZIP** contains the launcher, emulators and bundled files for an update. You copy its `System` folder onto your existing content card; your games, saves and settings stay in place.
+
+**[Download the update — slot.sp-System.zip ↓](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)**
+
+Starting with a new card? Follow the **[new installation guide](installing.md)** instead.
+
 1. Back up your content card and shut down the handheld.
-2. Download and extract **[slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)**.
+2. Download and extract **slot.sp-System.zip** using the link above.
 3. Copy its `System` folder to the root of your content card, replacing the existing folder's files.
 4. Safely eject the card, put it back in the handheld and power on.
 

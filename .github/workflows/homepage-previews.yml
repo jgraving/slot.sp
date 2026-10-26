@@ -1,0 +1,54 @@
+name: Capture homepage previews
+on:
+  push:
+    branches: [docs/homepage-media]
+    paths: ['previews/**', '.github/workflows/homepage-previews.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      SLOT_SILENT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libegl1-mesa-dev libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Build current production animation
+        run: |
+          set -eu
+          for name in egl_surface fixture insertion_hero; do
+            cp "previews/$name.rs" "crates/slot/examples/$name.rs"
+          done
+          cargo build --locked -p slot --no-default-features --example fixture --example insertion_hero
+          cargo test --locked -p slot-ui --test cart_motion
+      - name: Render four matching finishes
+        run: |
+          set -eu
+          mkdir -p /tmp/slot-homepage/out /tmp/slot-homepage/publish/previews/homepage
+          target/debug/examples/fixture /tmp/slot-homepage/card
+          python3 previews/prepare_art.py /tmp/slot-homepage/card
+          python3 previews/make_hero_art.py /tmp/slot-homepage/out
+          for finish in graphite platinum pearl_blue pearl_pink; do
+            target/debug/examples/insertion_hero /tmp/slot-homepage/card /tmp/slot-homepage/out "$finish"
+          done
+          python3 previews/collect_homepage.py /tmp/slot-homepage
+      - name: Prepare media blobs for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/slot-homepage --git-objects
+      - uses: actions/upload-artifact@v7
+        with:
+          name: homepage-media
+          path: |
+            /tmp/slot-homepage/publish/**
+            /tmp/slot-homepage/media-entries.json
+          if-no-files-found: error

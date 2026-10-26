@@ -13,7 +13,13 @@ fn png(c:&mut Compositor,path:&str)->TexId {
     c.create_texture(info.width,info.height,&bytes[..info.buffer_size()])
 }
 fn main(){
- let args:Vec<_>=std::env::args().skip(1).collect();let [root,out]=args.as_slice() else{panic!("ROOT OUT")};
+ let args:Vec<_>=std::env::args().skip(1).collect();
+ assert!((2..=3).contains(&args.len()),"ROOT OUT [FINISH]");
+ let (root,out)=(&args[0],&args[1]);
+ let colour=args.get(2).map(|s|slot_store::ShellColour::parse(s).expect("SP finish"))
+     .unwrap_or(slot_store::ShellColour::Graphite);
+ assert!(slot_store::ShellColour::FINISHES.contains(&colour));
+ let stem=args.get(2).map(|_|format!("hero-{}",colour.key())).unwrap_or("hero-glass".into());
  let carts=slot_store::scan(std::path::Path::new(root)).unwrap();
  let cart=carts.iter().find(|c|c.stem=="Emerald").unwrap().clone();
  let other=carts.iter().find(|c|c.stem=="Fusion").unwrap().clone();
@@ -23,12 +29,12 @@ fn main(){
  let interior=texture(&mut c,slot_ui::cart_interior(&cart));
  let backing=texture(&mut c,slot_ui::cart_backing(None));
  let star=slot_ui::star_face(3,[246,195,44]);let (sw,sh)=(star.w as f32,star.h as f32);let star=texture(&mut c,star);
- let [back,front]=slot_ui::shell_slot_faces(slot_store::ShellColour::Graphite);
+ let [back,front]=slot_ui::shell_slot_faces(colour);
  let back=c.create_texture(720,slot_ui::SLOT_H,back);let front=c.create_texture(720,slot_ui::SLOT_H,front);
  let vignette=png(&mut c,"assets/brand-vignette.png");
  let brand=slot::brand_motion::BrandMotion::upload(&mut c).unwrap();let light=png(&mut c,&format!("{out}/hero-light.png"));
  let shelf=Shelf::new(vec![cart.clone()]);let (rest,scale)=shelf.selected_at(Canvas::FRAMED);
- let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","16","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/hero-glass.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
+ let mut encoder=Command::new("ffmpeg").args(["-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-c:v","libx264","-preset","slow","-crf","20","-pix_fmt","yuv420p","-movflags","+faststart",&format!("{out}/{stem}.mp4")]).stdin(Stdio::piped()).spawn().unwrap();
  let mut pipe=encoder.stdin.take().unwrap();let mut first=None;let mut last=None;let mut seated=false;let mut trace=Vec::new();
  for frame in 0..390 {
   if frame==48 {clock.apply(Action::Insert);clock.on_core_ready();}
@@ -59,7 +65,7 @@ fn main(){
   }
   c.begin_frame();c.draw_list(&draws);let pixels=c.read_frame();
   if frame==0 {first=Some(pixels.clone());}
-  if frame==200 {let mut enc=png::Encoder::new(File::create(format!("{out}/hero-glass.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap();}
+  if frame==if args.get(2).is_some(){0}else{200} {let mut enc=png::Encoder::new(File::create(format!("{out}/{stem}.png")).unwrap(),720,480);enc.set_color(png::ColorType::Rgba);enc.set_depth(png::BitDepth::Eight);enc.write_header().unwrap().write_image_data(&pixels).unwrap();}
   if frame==389 {last=Some(pixels.clone());}
   pipe.write_all(&pixels).unwrap();
  }

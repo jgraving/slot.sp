@@ -62,9 +62,13 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .md-typeset .intro h1{font-size:clamp(36px,4.1vw,58px);font-weight:690;line-height:1.05;letter-spacing:-.045em;margin:0 0 24px;font-variation-settings:"ROND" 55}
 .intro-text{max-width:34ch;color:var(--muted);font-size:18px;line-height:1.6}
 .intro p{margin:0 0 18px}
-.md-typeset .download{display:inline-flex;gap:28px;align-items:center;margin:10px 0 18px;padding:13px 18px;background:var(--teal);color:#112322;border:1px solid var(--teal);border-radius:5px;text-decoration:none;font-size:17px;font-weight:660}
-.md-typeset .download:hover{background:#b4e9e5;color:#112322}
-.install-links{display:flex;flex-wrap:wrap;gap:26px;font-size:17px;margin-top:4px}
+.setup-choices{display:grid;gap:16px;margin:28px 0 22px}
+.md-typeset .setup-choice{display:flex;align-items:start;gap:16px;padding:18px;border:1px solid var(--rule);border-radius:8px;text-decoration:none;color:var(--ink)}
+.md-typeset .setup-choice:hover{border-color:var(--teal);background:var(--panel)}
+.setup-choice>span{display:grid;gap:6px}.setup-choice strong{font-size:21px;font-weight:650;line-height:1.3}
+.setup-choice>span>span{color:var(--muted);font-size:16px;line-height:1.5}
+.setup-choice b{color:var(--teal);font-size:16px;font-weight:600;margin-top:4px}
+.intro-guide{font-size:17px}
 .features,.studio-note{padding:34px 0 42px;border-top:1px solid var(--rule)}
 .md-typeset .home h2{font-size:26px;margin:0 0 28px}
 .features dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:36px 44px;margin:0 0 32px}
@@ -79,6 +83,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .md-typeset .more-features .feature-icon{width:30px;height:30px}
 .studio-note{display:flex;align-items:center;gap:36px;padding-block:44px}
 .md-typeset .studio-note h2{margin-bottom:12px}.studio-note p{max-width:64ch;margin:0;color:var(--muted);font-size:17px}
+.studio-note .studio-local{margin-top:16px}
 .md-typeset .studio-art .feature-icon{width:112px;height:112px}
 .studio-links{display:flex;flex-wrap:wrap;gap:28px;margin-top:20px;font-size:17px;font-weight:550}
 .md-sidebar--primary .nav-topic{display:flex;align-items:center;gap:10px;font-size:15px;line-height:1.4}

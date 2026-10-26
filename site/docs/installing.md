@@ -6,6 +6,10 @@ hide:
 
 # Install slot.sp
 
+Starting with a new card? First install **BaseOS**, the handheld's operating system, then copy **slot.sp-SD2.zip** onto your content card. That ZIP includes the launcher, folder structure and starting settings.
+
+Choose your card setup below. Already running slot or slot.sp? Use the **[update guide](updating.md)** to keep your games, saves and settings.
+
 <details class="way" id="one-sd-card" open markdown>
 <summary>One SD Card</summary>
 
