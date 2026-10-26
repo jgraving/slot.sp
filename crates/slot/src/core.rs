@@ -112,6 +112,8 @@ fn open_named(
                     colour,
                     palette,
                 );
+                let (key, value) = crate::frame_blending::option(core, crate::frame_blending::read(root, platform));
+                opened.set_option(key, value);
                 if let Some(player) = link {
                     apply_link_options(&mut opened, core, player);
                 }

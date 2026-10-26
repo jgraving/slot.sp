@@ -1126,6 +1126,20 @@ fn a_refresh_redraws_a_paused_core_without_moving_it() {
     );
     assert_eq!(frame_count(&emu), held, "the refresh moved the game on");
 }
+#[test]
+fn a_blending_refresh_warms_history_without_advancing_the_paused_game() {
+    let emu = spawn();
+    emu.set_speed(Speed::Paused);
+    std::thread::sleep(Duration::from_millis(100));
+    let held = frame_count(&emu);
+    let shown = emu.published_count();
+    emu.refresh_blending();
+    assert!(
+        wait_for(|| emu.published_count() > shown),
+        "the refresh never published a frame"
+    );
+    assert_eq!(frame_count(&emu), held, "the refresh moved the game on");
+}
 
 fn spawn_rate_probe(fps: f64) -> EmuHandle {
     let (mut core, _) = Probe::new(Duration::ZERO);

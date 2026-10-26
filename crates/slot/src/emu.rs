@@ -84,6 +84,7 @@ enum Cmd {
     BeginCable(u8, Box<dyn LinkChannel>),
     SetOption(String, String),
     Refresh,
+    RefreshBlending,
 }
 
 struct Shared {
@@ -411,6 +412,7 @@ impl EmuHandle {
         rx
     }
 
+    pub fn refresh_blending(&self) { request(&self.cmds, &self.shared, Cmd::RefreshBlending); }
     pub fn refresh(&self) {
         request(&self.cmds, &self.shared, Cmd::Refresh);
     }
@@ -1023,12 +1025,13 @@ impl Worker {
                     eprintln!("slot: {e}");
                 }
             }
-            Cmd::Refresh => match core.serialize() {
+            Cmd::Refresh | Cmd::RefreshBlending => match core.serialize() {
                 Ok(state) => {
                     core.set_frame_skip(true);
                     core.run_frame(ButtonMask(0));
                     core.set_frame_skip(false);
                     core.run_frame(ButtonMask(0));
+                    if matches!(cmd, Cmd::RefreshBlending) { core.run_frame(ButtonMask(0)); }
                     self.publish(core.video_xrgb8888());
                     let _ = core.take_audio();
                     if let Err(e) = core.unserialize(&state) {
