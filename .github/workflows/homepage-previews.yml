@@ -9,7 +9,7 @@ permissions:
 jobs:
   capture:
     if: github.repository == 'jgraving/slot.sp'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       LIBGL_ALWAYS_SOFTWARE: '1'
