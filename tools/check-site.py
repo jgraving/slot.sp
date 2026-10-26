@@ -53,7 +53,7 @@ for source, page in pages.items():
             if not (tag == 'use' and url.fragment in dynamic_ids):
                 errors.append(f'{source.relative_to(ROOT)}: missing anchor {link}')
         checked += 1
-for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').glob('*.css')):
+for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').rglob('*.css')):
     for link in re.findall(r'url\([\"\']?([^\)\"\']+)', source.read_text()):
         if not urlsplit(link).scheme and not (source.parent / link).is_file():
             errors.append(f'{source.name}: missing CSS asset {link}')
