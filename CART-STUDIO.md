@@ -24,12 +24,15 @@ Studio identifies the games in `Games/GBA`, `Games/GBC` and `Games/GB`. Choose a
 
 | Choice | What it does |
 | :--- | :--- |
-| **Logo Only** | Places the game's logo on a colored background. |
+| **Real Label** | Uses an available scanned label, or asks you to choose a label PNG. |
+| **Logo Only** | Places an available logo on a colored background, or asks you to choose a logo PNG. |
 | **Custom logo** | Uses your PNG as a logo, with a background you can adjust. |
 | **Custom label** | Uses your PNG or scanned label as the full label. |
 | **On the card** | Keeps the label already saved for that game. |
 
 Use the **Game** selector if the automatic match needs changing. **Fill unlabelled carts** helps you choose artwork for games without labels.
+
+Rounded black or white scanner backgrounds are cleaned automatically, using the same process as the handheld. Cleaned corners remain transparent when you save a label. Previews use the current slot.sp cartridge artwork, including textured plastic and clear-shell interiors.
 
 ## Change the look
 
@@ -40,7 +43,7 @@ For your own label PNGs, use these suggested sizes:
 | System | Size |
 | :--- | :--- |
 | Game Boy Advance | 1280 × 661 |
-| Game Boy / Game Boy Color | 1024 × 914 |
+| Game Boy / Game Boy Color | 1024 × 901 |
 
 ## Save your changes
 

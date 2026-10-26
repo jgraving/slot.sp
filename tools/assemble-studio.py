@@ -24,5 +24,5 @@ script.write_text(text)
 shutil.copyfile(source / 'LICENSE', target / 'LICENSE')
 (target / 'build-info.json').write_text(json.dumps(dict(
     repository=pin['repository'], source_commit=commit,
-    renderer_repository='BrandonKowalski/slot', renderer_commit=renderer_commit), indent=2) + '\n')
+    renderer_repository=(source / 'slot.repo').read_text().strip(), renderer_commit=renderer_commit), indent=2) + '\n')
 print(f'Assembled Cart Studio {commit} at /slot.sp/studio/')

@@ -69,6 +69,7 @@ studio_pin = json.loads((ROOT.parent / 'studio.json').read_text())
 studio_info = json.loads((ROOT / 'studio/build-info.json').read_text())
 assert studio_info['source_commit'] == studio_pin['ref']
 assert studio_info['repository'] == 'jgraving/slot-cart-studio'
+assert studio_info['renderer_repository'] == 'jgraving/slot.sp'
 assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 hero_durations = []
