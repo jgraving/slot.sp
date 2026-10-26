@@ -95,8 +95,9 @@
     },
     {
       "path": "previews/guide/parent-settings.png",
-      "bytes": 413753,
-      "sha256": "123974f279993cd19f2234bda40cfd7695f014dfcb71dcfaf511f36341411adf"
+      "bytes": 249036,
+      "sha256": "0ff64da5a408a7911770614bbd56ef7be333a29c64e622f573eda89b71718cc0",
+      "source_manifest": "previews/controls-screen-provenance.json"
     },
     {
       "path": "previews/guide/parent-time.png",
@@ -145,13 +146,15 @@
     },
     {
       "path": "previews/parent-code.gif",
-      "bytes": 232936,
-      "sha256": "b3190701b71164a5c8870e2c4f4049bb0c65f7539fe6296cc3eb0421923022d6"
+      "bytes": 244686,
+      "sha256": "027dd07065366fe5b5011106be451637ed2c27491ec4bd563f98a0d6ade14754",
+      "source_manifest": "previews/controls-screen-provenance.json"
     },
     {
       "path": "previews/parent-code.mp4",
-      "bytes": 42396,
-      "sha256": "58620b1279b982249b2064b718c8aae6216794829831be914a87ba159161f41e"
+      "bytes": 41544,
+      "sha256": "1d3d2fed37e737b64d8b406019a0bd8fe4bdf8c932bbf7feb95c9ef4c8111a0d",
+      "source_manifest": "previews/controls-screen-provenance.json"
     },
     {
       "path": "previews/parent-code.png",
@@ -230,8 +233,8 @@
     },
     {
       "path": "previews/guide/kid-controls.png",
-      "bytes": 454014,
-      "sha256": "6bdda43ffc519c9cf672db0d4d753987faac673c2f9c14120377d100a3cd7826",
+      "bytes": 274742,
+      "sha256": "7eea60e01da3fc8038f16ca0b5344916e125b1182abb27c5d5a69f699b172713",
       "source_manifest": "previews/controls-screen-provenance.json"
     },
     {

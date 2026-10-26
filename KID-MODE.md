@@ -17,7 +17,7 @@ Choose which games children can play, set a time allowance and cap the volume. C
 
 ![Parent settings with kid mode enabled and a remaining-time meter](previews/guide/parent-settings.png)
 
-You can also set the code separately through **Parent code → Set**. Kid mode starts off on a new installation.
+You can also set the code separately through **Set parent code**. Kid mode starts off on a new installation.
 
 ## The kid menu
 
@@ -88,7 +88,7 @@ Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd> or 
 | <kbd>SELECT</kbd> | Delete the last entry. |
 | <kbd>MENU</kbd> | Cancel code entry. |
 
-To change the code, open **Parent controls**, unlock it and choose **Parent code → Change**. Enter and confirm the new code. A mismatched confirmation shakes and clears; re-enter the confirmation to try again.
+To change the code, open **Parent controls**, unlock it and choose **Set parent code**. Enter and confirm the new code. A mismatched confirmation shakes and clears; re-enter the confirmation to try again.
 
 ### Turn kid mode off
 
