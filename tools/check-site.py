@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Check built website links, anchors and local media before Pages deployment."""
 from html.parser import HTMLParser
+import av
 from pathlib import Path
 import json
 import re
-import shutil
-import subprocess
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1] / 'site/public'
@@ -71,18 +70,13 @@ assert studio_info['repository'] == 'jgraving/slot-cart-studio'
 assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 for video in (ROOT / 'media/fork').glob('*.mp4'):
-    if shutil.which('mediainfo'):
-        metadata = json.loads(subprocess.check_output(['mediainfo', '--Output=JSON', str(video)]))
-        tracks = metadata['media']['track']
-        assert any(t.get('@type') == 'Video' and t.get('Format') == 'AVC'
-                   and int(t.get('Width', 0)) == 720 and int(t.get('Height', 0)) == 480
-                   and float(t.get('Duration', 0)) > 0 for t in tracks), video
-    else:
-        metadata = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
-            '-show_entries', 'stream=codec_name,width,height:format=duration', '-of', 'json', str(video)]))
-        assert float(metadata['format']['duration']) > 0, video
-        assert any(s.get('codec_name') == 'h264' and s.get('width') == 720
-                   and s.get('height') == 480 for s in metadata['streams']), video
+    with av.open(str(video)) as container:
+        assert container.duration and container.duration > 0, video
+        assert any(s.codec_context.name == 'h264'
+                   and s.codec_context.width == 720 and s.codec_context.height == 480
+                   for s in container.streams.video), video
+        frame = next(container.decode(video=0))
+        assert (frame.width, frame.height) == (720, 480), video
 
 if errors:
     raise SystemExit('\n'.join(sorted(set(errors))))

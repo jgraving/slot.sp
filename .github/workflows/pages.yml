@@ -46,9 +46,7 @@ jobs:
       - name: Install website dependencies
         timeout-minutes: 5
         run: |
-          python -m pip install --disable-pip-version-check --timeout 30 --retries 3 zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0
-      - name: Check media inspection tool
-        run: command -v mediainfo || command -v ffprobe
+          python -m pip install --disable-pip-version-check --timeout 30 --retries 3 zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0 --only-binary=av av==16.0.0
       - id: studio
         name: Read Cart Studio pin
         run: echo "ref=$(python -c 'import json; print(json.load(open("site/studio.json"))["ref"])')" >> "$GITHUB_OUTPUT"
