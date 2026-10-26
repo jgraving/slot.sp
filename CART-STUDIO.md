@@ -4,6 +4,12 @@
 
 Find artwork for your games, design labels and choose cartridge colors and finishes in your browser.
 
+## Your files stay on your device
+
+Cart Studio is a **static website**. The editor runs in your browser, on your device. Your games, labels and edits are never uploaded to or stored on a Studio server.
+
+It downloads game databases and artwork to find matches. Your changes stay in the browser until you choose **Write to card** or download a ZIP. Save before closing the tab to keep your edits.
+
 ## Open your card
 
 1. Shut down the handheld and put its content card in your computer.
@@ -11,8 +17,6 @@ Find artwork for your games, design labels and choose cartridge colors and finis
 3. Choose the card's **top folder**, with `Games` and `Labels` inside it.
 
 In Chrome or Edge, **Choose SD Card** allows Studio to save directly to the card. **Open folder for ZIP export** lets you work with a folder and download the changes instead. Other browsers offer folder import and ZIP export.
-
-Game files are read on your computer. The browser downloads game databases and artwork to find matches.
 
 ## Choose artwork
 

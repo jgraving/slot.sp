@@ -69,6 +69,14 @@ def main():
             shutil.copyfile(source, media / source.name)
     shutil.copyfile(ROOT / 'previews/rgsp-shell-finishes.png', media / 'rgsp-shell-finishes.png')
     shutil.copyfile(ROOT / 'previews/media-provenance.json', media / 'media-provenance.json')
+    homepage = json.loads((ROOT / 'previews/homepage/provenance.json').read_text())
+    for entry in homepage['files']:
+        source = ROOT / entry['path']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        target = media / 'homepage' / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    shutil.copyfile(ROOT / 'previews/homepage/provenance.json', media / 'homepage/provenance.json')
     manifest = json.loads((ROOT / 'crates/slot-ui/assets/fonts/profiles.json').read_text())
     data = args.font_source.read_bytes() if args.font_source else urllib.request.urlopen(
         manifest['source_url'], timeout=60).read()

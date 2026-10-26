@@ -5,6 +5,7 @@ import av
 from pathlib import Path
 import json
 import re
+from PIL import Image
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1] / 'site/public'
@@ -69,7 +70,15 @@ assert studio_info['source_commit'] == studio_pin['ref']
 assert studio_info['repository'] == 'jgraving/slot-cart-studio'
 assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
-for video in (ROOT / 'media/fork').glob('*.mp4'):
+hero_durations = []
+for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
+    stem = ROOT / f'media/fork/homepage/hero-{finish}'
+    with Image.open(stem.with_suffix('.png')) as poster:
+        assert poster.size == (720, 480), stem
+    with av.open(str(stem.with_suffix('.mp4'))) as clip:
+        hero_durations.append(clip.duration)
+assert len(set(hero_durations)) == 1, 'Color previews must share the same timeline'
+for video in (ROOT / 'media/fork').rglob('*.mp4'):
     with av.open(str(video)) as container:
         assert container.duration and container.duration > 0, video
         assert any(s.codec_context.name == 'h264'

@@ -46,6 +46,8 @@ The **Capture documentation media** workflow on `docs/media-refresh` builds the 
 
 `previews/media-provenance.json` records the source commit, Actions run, file sizes and hashes. Menu examples use explicit sample settings. These are software-rendered examples, not photographs or hardware test results.
 
+The **Capture homepage previews** workflow renders the production insertion/ejection and brand animation in all four SP finishes. `previews/homepage/provenance.json` records those clips and their matching first-frame posters. The homepage picker switches both the illustrated handheld and the native preview, preserving playback position and the visitor's play/pause choice. It downloads each alternative clip only when selected. Reduced motion keeps a still poster until playback is requested.
+
 ## Layout and copy
 
 - Give installation, the guide and Studio a clear place in navigation. Keep one maintained guide per topic; preserve superseded URLs with redirects.
