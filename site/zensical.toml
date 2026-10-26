@@ -9,49 +9,27 @@ site_dir = "public"
 
 nav = [
   { "Home" = "index.md" },
-  { "Get started" = ["installing.md", "updating.md"] },
-  { "Features" = [
-    { "Appearance & screen" = "features/display.md" },
+  { "Install" = ["installing.md", "updating.md"] },
+  { "Guide" = [
+    { "All guides" = "features/guide.md" },
+    { "Buttons & shortcuts" = "features/controls.md" },
+    { "Games & artwork" = "features/library.md" },
+    { "Playing & saving" = "features/playing.md" },
     { "Kid mode" = "features/kid-mode.md" },
     { "Audio & headphones" = "features/bluetooth.md" },
+    { "Appearance & screen" = "features/display.md" },
     { "Day & night" = "features/night-display.md" },
-    { "Games & artwork" = "features/library.md" },
-    { "Cart Studio guide" = "features/cart-studio.md" },
-    { "Buttons & shortcuts" = "features/controls.md" },
-    { "Playing & saving" = "features/playing.md" },
     { "Screenshots" = "features/screenshots.md" },
     { "Sleep & power" = "features/power-options.md" },
     { "Link play" = "features/link-play.md" },
+    { "Cart Studio guide" = "features/cart-studio.md" },
+    { "Reference" = ["guide/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
   ] },
-  { "Guide" = [
-    { "All guides" = "features/guide.md" },
-    { "Installation & updates" = "features/getting-started.md" },
-    { "Interactive tour" = "tour.md" },
-    { "Playing" = [
-      "guide/shelf.md",
-      "guide/playing.md",
-      "guide/screenshots.md",
-      "guide/save-states.md",
-      "guide/fast-forward-rewind-turbo.md",
-      "guide/linking.md",
-      "guide/power.md",
-    ] },
-    { "Making It Yours" = [
-      "guide/screen.md",
-      "guide/controls.md",
-      "guide/customizing.md",
-    ] },
-    { "Reference and Help" = [
-      "guide/settings.md",
-      "guide/storage.md",
-      "guide/troubleshooting.md",
-    ] },
-  ] },
-  { "About" = ["questions.md", "credits.md", "ai.md"] },
   { "Cart Studio" = "https://jakegraving.com/slot.sp/studio/" },
+  { "About" = ["questions.md", "credits.md", "ai.md"] },
 ]
 
-extra_css = ["assets/slot.css", "assets/fork.css"]
+extra_css = ["assets/slot.css"]
 extra_javascript = ["assets/slot.js"]
 
 [project.theme]

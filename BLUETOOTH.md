@@ -17,6 +17,8 @@ Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** du
 
 The status and volume icons show the current audio output. A manual output choice stays selected until another USB attachment or restart.
 
+![Sound settings with Bluetooth enabled, headphones selected and the disconnect volume at zero](previews/guide/sound.png)
+
 ## Pair Bluetooth headphones
 
 1. Put your headphones in pairing mode.

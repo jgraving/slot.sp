@@ -7,11 +7,9 @@ import json
 from pathlib import Path
 import re
 import shutil
-import subprocess
 import urllib.request
 
 from fontTools.ttLib import TTFont
-from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'site/docs'
@@ -41,24 +39,36 @@ def main():
         return '](' + path + anchor + ')'
     for name in GUIDES:
         content = (ROOT / (name + '.md')).read_text()
+        # The website has a sidebar and section links; GitHub keeps its own navigation.
+        content = re.sub(r'^# [^A-Za-z0-9]+', '# ', content, count=1)
+        lines = content.splitlines()
+        lines = [line for line in lines if not line.startswith('[←')
+                 and not (line.startswith('[') and '](' in line and '(#' in line)]
+        content = '\n'.join(lines) + '\n'
         content = content.replace('<details>', '<details markdown>')
         content = re.sub(r'\]\(([^)#]*)(#[^)]*)?\)', link, content)
+        def video(match):
+            label, stem = match.groups()
+            stem = {'slot-fit-motion': 'cart-motion', 'power-switch': 'readme-shutdown'}.get(stem, stem)
+            return (f'<video controls muted playsinline loop preload="none" width="720" height="480" '
+                    f'poster="/slot.sp/media/fork/{stem}.png" aria-label="{label}">'
+                    f'<source src="/slot.sp/media/fork/{stem}.mp4" type="video/mp4"></video>')
+        content = re.sub(r'!\[([^]]*)\]\(../media/fork/([^/)]+)\.gif\)', video, content)
         # Render GitHub callouts as native site admonitions.
         content = re.sub(r'^> \[!(TIP|NOTE|WARNING)\]\n((?:>.*\n?)+)',
             lambda m: '!!! ' + m[1].lower() + '\n\n' + ''.join(
                 '    ' + line.removeprefix('> ').removeprefix('>') + '\n'
                 for line in m[2].splitlines()), content, flags=re.M)
         (features / (name.lower() + '.md')).write_text(content)
+    provenance = json.loads((ROOT / 'previews/media-provenance.json').read_text())
+    # Publish the reviewed captures, not obsolete experiments in the source folder.
+    for entry in provenance['files']:
+        source = ROOT / entry['path']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        if source.suffix in ('.mp4', '.png'):
+            shutil.copyfile(source, media / source.name)
     shutil.copyfile(ROOT / 'previews/rgsp-shell-finishes.png', media / 'rgsp-shell-finishes.png')
-    shutil.copyfile(ROOT / 'previews/hero-glass.mp4', media / 'brand.mp4')
-    Image.open(ROOT / 'previews/hero-glass.png').save(media / 'brand.webp', quality=85)
-    for name in ['carousel', 'core-picker', 'link', 'shutdown']:
-        source = ROOT / f'previews/readme-{name}.gif'
-        subprocess.run(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
-            '-i', str(source), '-an', '-vf', 'fps=30,scale=720:480:flags=lanczos',
-            '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '24',
-            '-movflags', '+faststart', str(media / (name + '.mp4'))], check=True)
-        Image.open(source).convert('RGB').save(media / (name + '.webp'), quality=85)
+    shutil.copyfile(ROOT / 'previews/media-provenance.json', media / 'media-provenance.json')
     manifest = json.loads((ROOT / 'crates/slot-ui/assets/fonts/profiles.json').read_text())
     data = args.font_source.read_bytes() if args.font_source else urllib.request.urlopen(
         manifest['source_url'], timeout=60).read()

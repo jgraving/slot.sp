@@ -4,6 +4,8 @@
 
 Start with [installation](GETTING-STARTED.md), then use the [button reference](CONTROLS.md) while you play.
 
+![The game carousel in slot.sp](previews/guide/carousel.png)
+
 ## Find a feature
 
 | Guide | What's inside |
@@ -34,3 +36,7 @@ Start with [installation](GETTING-STARTED.md), then use the [button reference](C
 A **tap** means press and release. A **hold** means keep the button pressed. For a combination such as <kbd>SELECT</kbd> + <kbd>X</kbd>, hold the first button and press the second.
 
 The guides show the default controls. If you remap them, the on-screen button hints follow your choices. Kid mode has its own [short menu](KID-MODE.md#the-kid-menu).
+
+## Reference
+
+[Settings](https://jakegraving.com/slot.sp/guide/settings/) · [Card folders](https://jakegraving.com/slot.sp/guide/storage/) · [Custom artwork & BIOS](https://jakegraving.com/slot.sp/guide/customizing/) · [Troubleshooting](https://jakegraving.com/slot.sp/guide/troubleshooting/)

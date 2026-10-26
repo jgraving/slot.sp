@@ -1,4 +1,5 @@
 wait 120
+shot carousel
 rec carousel
 wait 45
 tap right
@@ -18,13 +19,27 @@ rec core-picker
 wait 30
 tap start
 wait 60
+shot core-picker
 tap right
 wait 45
 tap left
 wait 45
-tap b
+tap start
 wait 60
 cut
+rec favorite-remove
+wait 20
+tap y
+wait 20
+tap y
+wait 40
+tap y
+wait 40
+cut
+shot favorites
+tap x
+wait 20
+shot approved
 wait 45
 down power
 wait 61

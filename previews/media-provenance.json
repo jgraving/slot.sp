@@ -1,0 +1,231 @@
+{
+  "source_commit": "21cffb200642255ea9690e3211099a7bbc76e73c",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40251244493",
+  "files": [
+    {
+      "path": "previews/boot-brand.gif",
+      "bytes": 525669,
+      "sha256": "b2f3c8c3f06d496412e8ef3d474cd401b87a8ad34880e4862390899ca84fb9da"
+    },
+    {
+      "path": "previews/boot-brand.mp4",
+      "bytes": 117115,
+      "sha256": "2a445e92e0d36decbb6a1390c37f4fdf0a024a6389ef4fe7c4c785a4754683dc"
+    },
+    {
+      "path": "previews/boot-brand.png",
+      "bytes": 22186,
+      "sha256": "422bc5677d5fd5ed1ac0e18feb9acf2b006ec51c1667b4d5e23d6eea5f68a84e"
+    },
+    {
+      "path": "previews/cart-motion.mp4",
+      "bytes": 315174,
+      "sha256": "9dfd427149576c217b1b6fbf46e6a186aad9ec1fbb14ec65a4b7b2d49231440e"
+    },
+    {
+      "path": "previews/cart-motion.png",
+      "bytes": 205403,
+      "sha256": "1e6d24555b8a49e17792953c2114459f3402ad5a12f96e0c53f57a49ae7775d8"
+    },
+    {
+      "path": "previews/favorite-remove.gif",
+      "bytes": 2197808,
+      "sha256": "96ec9e608e5d55127d74beb4e31d0523754d762ee80d30f52b2f70258e34f1cb"
+    },
+    {
+      "path": "previews/favorite-remove.mp4",
+      "bytes": 75639,
+      "sha256": "83acc558065270c70145c59b7435610143e22b35ec16a1bd0eba9106f49e3542"
+    },
+    {
+      "path": "previews/favorite-remove.png",
+      "bytes": 236361,
+      "sha256": "68b149dae14331ff6e07856de8dd83731e44b719bc49fd1f23bd69e0cc3f7482"
+    },
+    {
+      "path": "previews/guide/about.png",
+      "bytes": 286107,
+      "sha256": "fa782a24d4f904c97462dbd8b50ec100b558132501c0546cb6b939eb0409eefb"
+    },
+    {
+      "path": "previews/guide/appearance.png",
+      "bytes": 178313,
+      "sha256": "fca715f50cf0713fe74c04d80686cb4cd04be95345509635dbce8786f665e9bf"
+    },
+    {
+      "path": "previews/guide/approved.png",
+      "bytes": 477762,
+      "sha256": "9ec36e16b86f579facf3d430832baf720c2ab84c8a3212a0bca82cdae73679f0"
+    },
+    {
+      "path": "previews/guide/carousel.png",
+      "bytes": 479357,
+      "sha256": "c7f2d66063e8b20f08c9cc3a5f793b9fc5ed158b666e2776d2ad1426b7535a15"
+    },
+    {
+      "path": "previews/guide/core-picker.png",
+      "bytes": 460848,
+      "sha256": "13fd386bace525e11560f663c2133939394d74d92af4caa50d55dbea74bd9bec"
+    },
+    {
+      "path": "previews/guide/favorites.png",
+      "bytes": 475629,
+      "sha256": "92eef3e489e112529b05c95bb9fdb7b8ec23cb13f61524839691388e520f1106"
+    },
+    {
+      "path": "previews/guide/general.png",
+      "bytes": 172213,
+      "sha256": "85a45cbfee5bcfc964576e589b83a3d4f3dbfd95aac8eb075090686f2dc135ee"
+    },
+    {
+      "path": "previews/guide/kid-menu.png",
+      "bytes": 406438,
+      "sha256": "e903e13f4ddaedb35d95eecae84c5776c90e8afdb9be0b9c719049ed02ff2537"
+    },
+    {
+      "path": "previews/guide/kid-warning.png",
+      "bytes": 381773,
+      "sha256": "b8ff894bdc7200d2abe44d35aba907e74838a2b0e3d2b53f39ed6aa092719fd7"
+    },
+    {
+      "path": "previews/guide/parent-code.png",
+      "bytes": 385152,
+      "sha256": "ef06a10d18b46f14a05468940fe7dd0f0f0bb789cbb5451a8c564537ee14ae5f"
+    },
+    {
+      "path": "previews/guide/parent-settings.png",
+      "bytes": 413751,
+      "sha256": "3a27c8d59c01504a7e496b94e8699a228d66c35b3357efe9a83b0777588b2152"
+    },
+    {
+      "path": "previews/guide/parent-time.png",
+      "bytes": 387456,
+      "sha256": "462b231c79f7cb04612605803ef44df420db06c2b3110b9c197f34bb0d6b2c50"
+    },
+    {
+      "path": "previews/guide/power.png",
+      "bytes": 169452,
+      "sha256": "a6650214ebbc6bb0fbf67a3d92b7ad522da09fef863afc358f4227d0b1e13a5e"
+    },
+    {
+      "path": "previews/guide/sound.png",
+      "bytes": 429156,
+      "sha256": "ff779d1671ea2a14313659a29e166c49c0bbac02e59499d33cf24660c20d0ab2"
+    },
+    {
+      "path": "previews/hero-glass.gif",
+      "bytes": 7245293,
+      "sha256": "3d55e4724c7321437de10ef2c2410fd9b9b0425d581df36940e441d35066bc6a"
+    },
+    {
+      "path": "previews/hero-glass.mp4",
+      "bytes": 534067,
+      "sha256": "83f236b135eb0ea830228d1e8552b341c9d95977efdaa58a259ad8dc23fad93e"
+    },
+    {
+      "path": "previews/hero-glass.png",
+      "bytes": 349516,
+      "sha256": "799df3053e9434c724f1c9ca8b4963ed53419720e7718cab2af8f3cf86543867"
+    },
+    {
+      "path": "previews/lava-gradient.gif",
+      "bytes": 14835006,
+      "sha256": "160ab5115c58451f8eb0533ffc134e7655f22303d99de6781dd9c9fa66444cb8"
+    },
+    {
+      "path": "previews/lava-gradient.mp4",
+      "bytes": 351772,
+      "sha256": "34a47064106d003ca3ed49a819d234ce635e41d6e66a6cd63e2c31498ea897ad"
+    },
+    {
+      "path": "previews/lava-gradient.png",
+      "bytes": 67307,
+      "sha256": "6452cdfba0a57b4bbf1f57b6ce52441c8501a95908557e71122b51b3dedb8aa7"
+    },
+    {
+      "path": "previews/parent-code.gif",
+      "bytes": 232940,
+      "sha256": "adcfc77428d4d3b68882d79cee04abe3a20d784601ad04bedab180a168291aff"
+    },
+    {
+      "path": "previews/parent-code.mp4",
+      "bytes": 42378,
+      "sha256": "554166001ee32ce45ee78e3ddaec512a19ee67585c277337a657e0f89d916ce1"
+    },
+    {
+      "path": "previews/parent-code.png",
+      "bytes": 385152,
+      "sha256": "ef06a10d18b46f14a05468940fe7dd0f0f0bb789cbb5451a8c564537ee14ae5f"
+    },
+    {
+      "path": "previews/power-switch.gif",
+      "bytes": 192105,
+      "sha256": "4c921eeba3e0de0b55e703da80daf3610e26e902a9dee8effa1d0d1a6310ba04"
+    },
+    {
+      "path": "previews/readme-carousel.gif",
+      "bytes": 6892943,
+      "sha256": "d4fdd6ba9fc86b12b397f8d404ed8e3b49295680a37bba3070db89988b7efad4"
+    },
+    {
+      "path": "previews/readme-carousel.mp4",
+      "bytes": 649009,
+      "sha256": "221426624478831eaa241ed225b684a8f2138857894beb8c67b2c2a88c062874"
+    },
+    {
+      "path": "previews/readme-carousel.png",
+      "bytes": 239545,
+      "sha256": "8720925f081270458b0b6ef0ba8821c3de1f2968b1661c358b3605714ce6784e"
+    },
+    {
+      "path": "previews/readme-core-picker.gif",
+      "bytes": 4519073,
+      "sha256": "47b73cc7b7fdcd398f9a0be8cd905b3ba6ecf7065900ccd069cc9965bff0d068"
+    },
+    {
+      "path": "previews/readme-core-picker.mp4",
+      "bytes": 361474,
+      "sha256": "de365c7238e133190a2560ba40852e1c2221bc6fd948114ddf4730922a8e99e8"
+    },
+    {
+      "path": "previews/readme-core-picker.png",
+      "bytes": 231890,
+      "sha256": "2387fa6cc106959a8b125c7239aa9eb2e28c9a7b46a67d15b465d7d00ca8753f"
+    },
+    {
+      "path": "previews/readme-link.gif",
+      "bytes": 4220028,
+      "sha256": "c218fbbf5c880bce1e056ab02896d7ed99ae0d9d4f47b50a3df4ac1d7b904c7f"
+    },
+    {
+      "path": "previews/readme-link.mp4",
+      "bytes": 93388,
+      "sha256": "a03cb55723bbab130f38ee0c5b4644552e000682cfab512ebc0f5be5ff922b05"
+    },
+    {
+      "path": "previews/readme-link.png",
+      "bytes": 97097,
+      "sha256": "5640d397cf8f5f143245dbc45589009e0af0765964fb2e5ef3438f41bee52711"
+    },
+    {
+      "path": "previews/readme-shutdown.gif",
+      "bytes": 192105,
+      "sha256": "4c921eeba3e0de0b55e703da80daf3610e26e902a9dee8effa1d0d1a6310ba04"
+    },
+    {
+      "path": "previews/readme-shutdown.mp4",
+      "bytes": 19708,
+      "sha256": "2060d21b10a0def78f7488ad593da7a1b961ec1e2292f3171e1205bb0d2b8f2f"
+    },
+    {
+      "path": "previews/readme-shutdown.png",
+      "bytes": 70138,
+      "sha256": "54edcff23b798aed4f3303aafccf38a54429fcb6acbc1e6ed8b2a8a925fd0bc8"
+    },
+    {
+      "path": "previews/slot-fit-motion.gif",
+      "bytes": 4287412,
+      "sha256": "c769de50ccad6c780da69b849c5069583c60a104e7ef74cc4947b4a54d864404"
+    }
+  ]
+}

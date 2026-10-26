@@ -22,6 +22,7 @@ enum Step {
     Up(Btn),
     Rec(Option<String>),
     Cut,
+    Shot(String),
 }
 
 struct Clip {
@@ -112,6 +113,7 @@ fn parse(script: &str) -> Vec<Step> {
             ["rec"] => steps.push(Step::Rec(None)),
             ["rec", name] => steps.push(Step::Rec(Some(name.to_string()))),
             ["cut"] => steps.push(Step::Cut),
+            ["shot", name] => steps.push(Step::Shot((*name).to_string())),
             _ => panic!("cannot read {line:?}"),
         }
     }
@@ -160,7 +162,7 @@ fn main() {
     let mut clip: Option<Clip> = None;
     let present = Duration::from_secs_f64(1.0 / FPS);
     let mut due = std::time::Instant::now();
-    let mut run = |input: &mut Scripted, frame: &mut u64, clip: &mut Option<Clip>| {
+    let mut run = |input: &mut Scripted, frame: &mut u64, clip: &mut Option<Clip>, shot: Option<&str>| {
         let loading = std::time::Instant::now();
         while frontend.core_settling() && loading.elapsed() < Duration::from_secs(5) {
             std::thread::sleep(Duration::from_millis(5));
@@ -177,6 +179,13 @@ fn main() {
         frontend.compose(&mut compositor);
         let mut pixels = compositor.read_frame();
         panel(&mut pixels, frontend.app(), lit);
+        if let Some(name) = shot {
+            let file = std::fs::File::create(format!("{out}/{name}.png")).unwrap();
+            let mut encoder = png::Encoder::new(file, OUT_W, OUT_H);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            encoder.write_header().unwrap().write_image_data(&pixels).unwrap();
+        }
         if let Some(clip) = clip {
             clip.frames.send(pixels).unwrap();
             clip.written += 1;
@@ -186,7 +195,7 @@ fn main() {
         match step {
             Step::Wait(n) => {
                 for _ in 0..n {
-                    run(&mut input, &mut frame, &mut clip);
+                    run(&mut input, &mut frame, &mut clip, None);
                 }
             }
             Step::Down(b) => input.0.push(RawEvent::Down(b)),
@@ -201,6 +210,7 @@ fn main() {
                 };
                 clip = Some(Clip::start(path));
             }
+            Step::Shot(name) => run(&mut input, &mut frame, &mut clip, Some(&name)),
             Step::Cut => {
                 if let Some(done) = clip.take() {
                     done.finish();

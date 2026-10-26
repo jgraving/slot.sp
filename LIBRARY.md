@@ -12,6 +12,8 @@ Use <kbd>Left</kbd> and <kbd>Right</kbd> to move through cartridges. Tap <kbd>A<
 
 Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between starting letters. To display game names above the slot, turn on **Menu → General → Game Titles**.
 
+![Browse game cartridges on the carousel](previews/guide/carousel.png)
+
 ## Favorites & Recents
 
 | Collection | How to use it |
@@ -22,6 +24,8 @@ Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between startin
 ### Remove a favorite
 
 Press <kbd>Y</kbd> on a starred game. A prompt appears above it. Release <kbd>Y</kbd> and press it again within three seconds to remove the star. Moving to another game, leaving the carousel or waiting cancels the prompt.
+
+![Confirm removing a game from Favorites](previews/favorite-remove.gif)
 
 ### Mark games for children
 

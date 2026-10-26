@@ -1,7 +1,7 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="previews/hero-static.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="previews/hero-glass.png">
   <img src="previews/hero-glass.gif" width="480" alt="slot.sp logo animation">
 </picture>
 
@@ -19,7 +19,6 @@ Game Boy · Game Boy Color · Game Boy Advance
 
 | | What you get |
 | :--- | :--- |
-| 🔤 **[Google Sans Flex](DISPLAY.md#type)** | Bolder selections, steady numbers and readable small text. |
 | 🎨 **[Four SP colors](DISPLAY.md#colors)** | Graphite, Platinum, Pearl Blue and Pearl Pink, with matching power-switch and link-screen artwork. |
 | 🖼️ **[Larger game artwork](LIBRARY.md#game-artwork)** | Bigger cartridges and labels, with automatic cleanup around rounded label corners. |
 | 🖌️ **[Cart Studio](CART-STUDIO.md)** | Find artwork, design labels and choose cartridge colors in your browser. Save to your SD card or export a ZIP. |
@@ -33,6 +32,7 @@ Game Boy · Game Boy Color · Game Boy Advance
 | ⏩ **[Fast-forward, rewind & turbo](PLAYING.md#fast-forward-rewind--turbo)** | Speed through familiar sections, go back a few seconds or repeat a button while you hold it. |
 | ⚙️ **[Emulator choice](PLAYING.md#choose-an-emulator)** | Choose mGBA or gpSP for each GBA game from its animated circuit-board view. |
 | 🕹️ **[Your controls](CONTROLS.md#change-a-button)** | Remap game buttons, carousel controls and shortcuts. |
+| 🔤 **[Google Sans Flex](DISPLAY.md#type)** | Bolder selections, steady numbers and readable small text. |
 | 🔗 **[Local link play](LINK-PLAY.md)** | Host or join a nearby device for multiplayer games and trading. |
 | ⏻ **[Sleep & power](POWER-OPTIONS.md)** | Choose light or deep sleep, set a shutdown timer and watch the power switch slide off. |
 

@@ -1,5 +1,10 @@
-# Screenshots
-
-!!! info "Coming soon"
-
-    This page is still being written.
+---
+title: Screenshots
+template: redirect.html
+redirect: features/screenshots/
+search:
+  exclude: true
+hide:
+  - navigation
+  - toc
+---

@@ -15,6 +15,8 @@ Choose which games children can play, set a time allowance and cap the volume. C
 5. Turn on the **Kid mode** switch at the top. Green means on; gray means off.
 6. If you have not set a parent code, enter four buttons, then enter the same four buttons again to confirm. Each screen advances automatically.
 
+![Parent settings with kid mode enabled and a remaining-time meter](previews/guide/parent-settings.png)
+
 You can also set the code separately through **Parent code → Set**. Kid mode starts off on a new installation.
 
 ## The kid menu
@@ -28,6 +30,8 @@ During a game, tapping <kbd>MENU</kbd> opens:
 | **Brightness** | Adjust screen brightness. |
 | **Exit game** | Return to the carousel through the normal save-and-exit process. |
 | **Parent controls** | Enter the parent code to change limits or turn kid mode off. |
+
+![The kid menu during a game: Resume, Volume, Brightness, Exit game and Parent controls](previews/guide/kid-menu.png)
 
 Use <kbd>Up</kbd> / <kbd>Down</kbd> to select a row and <kbd>Left</kbd> / <kbd>Right</kbd> to adjust a value. <kbd>A</kbd> selects; <kbd>B</kbd> or <kbd>MENU</kbd> closes the menu.
 
@@ -43,6 +47,8 @@ On the carousel, the kid menu offers **Games**, Volume, Brightness and Parent co
 | **Time** | Daily/Duration: 5 minutes to 4 hours, shown as hours and minutes. Tap left/right to change one minute, or hold to keep adjusting. Press A to adjust Hours and Minutes separately. Bedtime uses the same controls with a 24-hour clock. |
 | **Volume limit** | 10–80%, in ten-point steps. Starts at 50% and applies across audio outputs while kid mode is on. |
 
+![Set hours and minutes separately in the Time editor](previews/guide/parent-time.png)
+
 Settings save as you change them. Changing the volume cap does not restart the session timer. Normal parent adjustments keep an approved game paused in place, ready to resume.
 
 When time is up, play stops and the carousel asks for a parent. Choose **Parents**, enter your code and adjust the time settings to allow more play.
@@ -50,6 +56,8 @@ When time is up, play stops and the carousel asks for a parent. Choose **Parents
 ## Time reminders
 
 During play, the game pauses to show how much time is left at **1 hour, 30 minutes, 15 minutes, 5 minutes and 1 minute**. Short sessions skip reminders at or above their starting length. Press <kbd>A</kbd> to continue or <kbd>B</kbd> to exit the game. No parent code is needed for these choices.
+
+![The 15-minute reminder with Continue and Exit game choices](previews/guide/kid-warning.png)
 
 Each reminder appears once for the current allowance or session, including across restarts. After waking, one reminder shows the current time left if several reminders were passed while asleep.
 
@@ -61,11 +69,15 @@ With kid mode off, browse the carousel and press <kbd>X</kbd> on a cartridge to 
 
 To remove approval, press <kbd>X</kbd>, release it and press it again within three seconds. Moving away or waiting cancels the confirmation.
 
+![A gold smiley marks an approved game on the carousel](previews/guide/approved.png)
+
 Your full Favorites and Recents lists are kept. Turning kid mode off shows them again.
 
 ## The parent code
 
 Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd> or the D-pad. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
+
+![Entering the parent code: an incorrect code shakes and clears, then the correct code opens settings](previews/parent-code.gif)
 
 | Button | Action |
 | :--- | :--- |

@@ -1,6 +1,6 @@
 # Storage Reference
 
-slot keeps everything on the card in plain folders.
+slot.sp keeps everything on the card in plain folders.
 
 If you use two cards, all of this is on the one in `SD2`.
 
@@ -18,9 +18,9 @@ If you use two cards, all of this is on the one in `SD2`.
 | `Bezels/GBA`, `Bezels/GB`, `Bezels/GBC` | Your bezels                         |
 | `Config/`                               | Your settings                       |
 | `Logs/`                                 | Logs, for when something breaks     |
-| `System/`                               | slot itself                         |
+| `System/`                               | slot.sp itself                         |
 
-slot makes any of these that are missing when it boots, except `Screenshots/`, which appears with your first screenshot.
+slot.sp makes any of these that are missing when it boots, except `Screenshots/`, which appears with your first screenshot.
 
 ## Games
 
@@ -30,32 +30,32 @@ slot makes any of these that are missing when it boots, except `Screenshots/`, w
 | `Games/GB`  | `.gb`, `.gbc` |
 | `Games/GBC` | `.gb`, `.gbc` |
 
-The folder decides which shelf a game goes on.
+The folder decides which carousel a game goes on.
 
 !!! warning "ROMs must be unzipped!"
 
-    slot does not read `.zip` or `.7z` files.
+    slot.sp does not read `.zip` or `.7z` files.
 
-Put games right in the folder. slot doesn't look inside subdirectories.
+Put games right in the folder. slot.sp doesn't look inside subdirectories.
 
 ## Names matter
 
 Everything about a game hangs off its file name: its battery save, save states, label, cart shell and emulator choice.
 
-If you rename `Metroid Fusion.gba`, rename its save in `Saves/GBA` too, or slot won't find it.
+If you rename `Metroid Fusion.gba`, rename its save in `Saves/GBA` too, or slot.sp won't find it.
 
 ## Saves and states
 
 - Battery saves are `Saves/<system>/<game>.sav`.
 - Save states are in `States/<system>/<emulator>/<game>/`. Each one has a `.png` next to it for the switcher.
 
-Periodically back up `Saves/` and `States/`. You never know when an SD card will go bad.
+Periodically back up `Saves/` and `States/`. Keep a backup before changing or replacing the card.
 
 ## Config
 
-Most of what's in `Config/` is written by slot when you change a setting. 
+Most of what's in `Config/` is written by slot.sp when you change a setting.
 
-I don't recommend editing these by hand but it's your life.
+Use the on-device menus to change settings. These files are listed for backups and troubleshooting.
 
 | File                                            | What it holds                                      |
 |-------------------------------------------------|----------------------------------------------------|
@@ -67,12 +67,12 @@ I don't recommend editing these by hand but it's your life.
 | `cart_shell.txt`                                | Cart colors, see [Customization](customizing.md). A `Labels/cart_shell.txt` overrides it |
 | `bootlogo.bmp`                                  | Your boot logo, if you've made one                 |
 
-If you ever want slot back to how it came, delete `Config/`. 
+If you ever want slot.sp back to how it came, delete `Config/`.
 
 You'll have to set the clock again on the next boot.
 
 ## Updating
 
-Updates only replace `System/`. Everything else on this list is yours and stays put. 
+Updates only replace `System/`. Everything else on this list is yours and stays put.
 
 See [Updating](../updating.md) for more.

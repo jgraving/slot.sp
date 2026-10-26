@@ -1,0 +1,3 @@
+{% extends "main.html" %}
+{% block extrahead %}<meta http-equiv="refresh" content="0; url={{ page.meta.redirect | url }}">{% endblock %}
+{% block content %}<h1>{{ page.title }}</h1><p>This guide has moved. <a href="{{ page.meta.redirect | url }}">Open {{ page.title }}</a>.</p>{% endblock %}
