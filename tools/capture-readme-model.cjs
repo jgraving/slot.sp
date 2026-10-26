@@ -3,17 +3,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const crypto = require('node:crypto');
+const { execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
 const repo = path.resolve(__dirname, '..');
 const output = path.resolve(process.argv[2]);
 const videoPath = path.resolve(process.argv[3] || path.join(repo, 'previews/homepage/hero-platinum.mp4'));
 fs.mkdirSync(path.join(output, 'model-frames'), { recursive: true });
+execFileSync('python3', [path.join(repo, 'previews/extract_model_frames.py'), videoPath, output], { stdio: 'inherit' });
+const native = JSON.parse(fs.readFileSync(path.join(output, 'native-frames.json'), 'utf8'));
 const home = fs.readFileSync(path.join(repo, 'site/overrides/home.html'), 'utf8');
 const start = home.indexOf('<div class="sp-stage">');
 const end = home.indexOf('<div class="preview-controls">', start);
 if (start < 0 || end < 0) throw Error('Website model markup not found');
 const model = home.slice(start, end).replace(/<video[\s\S]*?<\/video>/,
-  '<video class="hero-screen screen-box" muted playsinline preload="auto" src="/native.mp4"></video>');
+  '<img class="hero-screen screen-box" src="/native-frames/0000.png" alt="">');
 const defs = fs.readFileSync(path.join(repo, 'site/overrides/partials/device.svg'), 'utf8');
 const html = `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="/site/docs/assets/device.css">
@@ -24,11 +27,12 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 </style></head><body>${defs}<div class="md-typeset">${model}</div></body></html>`;
 const server = http.createServer((req, res) => {
   if (req.url === '/') { res.setHeader('Content-Type', 'text/html'); return res.end(html); }
-  const file = req.url === '/native.mp4' ? videoPath : path.resolve(repo, '.' + new URL(req.url, 'http://localhost').pathname);
-  if (file !== videoPath && !file.startsWith(repo + path.sep)) { res.writeHead(403); return res.end(); }
+  const requestPath = new URL(req.url, 'http://localhost').pathname;
+  const file = /^\/native-frames\/\d{4}\.png$/.test(requestPath) ? path.join(output, requestPath.slice(1)) : path.resolve(repo, '.' + requestPath);
+  if (!file.startsWith(path.join(output, 'native-frames') + path.sep) && !file.startsWith(repo + path.sep)) { res.writeHead(403); return res.end(); }
   try {
     const data = fs.readFileSync(file);
-    const type = file.endsWith('.mp4') ? 'video/mp4' : file.endsWith('.css') ? 'text/css' : 'application/octet-stream';
+    const type = file.endsWith('.png') ? 'image/png' : file.endsWith('.css') ? 'text/css' : 'application/octet-stream';
     res.setHeader('Content-Type', type);
     res.setHeader('Content-Length', data.length);
     res.end(data);
@@ -40,21 +44,22 @@ const server = http.createServer((req, res) => {
   try {
     const page = await browser.newPage({ viewport: { width: 600, height: 760 }, deviceScaleFactor: 1 });
     await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => document.querySelector('video').readyState >= 2);
-    const duration = await page.evaluate(() => { const v = document.querySelector('video'); v.pause(); return v.duration; });
+    await page.locator('.hero-screen').evaluate(img => img.decode());
+    const duration = native.duration;
     if (!(duration > 10 && duration < 20)) throw Error(`Unexpected source clip: ${duration}s`);
     const bounds = await page.locator('.dv-front, .dv-deck').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x:r.x, y:r.y, right:r.right, bottom:r.bottom }; }));
     if (bounds.some(r => r.x < 8 || r.y < 8 || r.right > 592 || r.bottom > 752)) throw Error('Model clipped: ' + JSON.stringify(bounds));
-    const frames = Math.round(duration * 1000 / 80);
+    const frames = native.frames;
     for (let i = 0; i < frames; i++) {
-      await page.evaluate(async time => {
-        const v = document.querySelector('video');
-        if (Math.abs(v.currentTime - time) > .001) await new Promise(resolve => { v.addEventListener('seeked', resolve, { once: true }); v.currentTime = time; });
+      await page.evaluate(async index => {
+        const screen = document.querySelector('.hero-screen');
+        screen.src = `/native-frames/${String(index).padStart(4, '0')}.png`;
+        await screen.decode();
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      }, Math.min(i * .08, duration - .02));
+      }, i);
       await page.screenshot({ path: path.join(output, 'model-frames', `${String(i).padStart(4, '0')}.png`) });
     }
-    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
+    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, browser_version: browser.version(), native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
     console.log(`Captured ${frames} frames of the website SP model with native playback`);
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });
