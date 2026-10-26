@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'site/docs'
 GUIDES = ['GUIDE', 'GETTING-STARTED', 'CONTROLS', 'LIBRARY', 'PLAYING',
           'SCREENSHOTS', 'DISPLAY', 'NIGHT-DISPLAY', 'BLUETOOTH', 'KID-MODE',
-          'POWER-OPTIONS', 'LINK-PLAY']
+          'POWER-OPTIONS', 'LINK-PLAY', 'CART-STUDIO']
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -41,6 +41,7 @@ def main():
         return '](' + path + anchor + ')'
     for name in GUIDES:
         content = (ROOT / (name + '.md')).read_text()
+        content = content.replace('<details>', '<details markdown>')
         content = re.sub(r'\]\(([^)#]*)(#[^)]*)?\)', link, content)
         # Render GitHub callouts as native site admonitions.
         content = re.sub(r'^> \[!(TIP|NOTE|WARNING)\]\n((?:>.*\n?)+)',

@@ -1,5 +1,5 @@
 ---
-title: slot.sp
+title: Game Boy games. SP style.
 template: home.html
 hide:
   - navigation

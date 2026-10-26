@@ -19,6 +19,7 @@
 /target-verify
 /dist-device
 /.venv-site/
+/_studio/
 /site/public
 /site/.cache
 /site/docs/features
@@ -29,3 +30,5 @@
 # Parallel implementation worktrees, never content.
 /.worktrees
 .superpowers/
+
+/tools/__pycache__/
