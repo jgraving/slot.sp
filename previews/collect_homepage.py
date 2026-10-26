@@ -17,6 +17,10 @@ for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
         shutil.copyfile(source, dest)
         files.append(dict(path=f'previews/homepage/{dest.name}', bytes=dest.stat().st_size,
                           sha256=hashlib.sha256(dest.read_bytes()).hexdigest()))
+gif = target / 'readme-hero.gif'
+shutil.copyfile(root / 'out/readme-hero.gif', gif)
+files.append(dict(path=f'previews/homepage/{gif.name}', bytes=gif.stat().st_size,
+                  sha256=hashlib.sha256(gif.read_bytes()).hexdigest()))
 (target / 'provenance.json').write_text(json.dumps(dict(
     source_commit=os.environ['GITHUB_SHA'],
     run_url=f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}',

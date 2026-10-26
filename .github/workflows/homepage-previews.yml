@@ -1,7 +1,7 @@
 name: Capture homepage previews
 on:
   push:
-    branches: [docs/homepage-carousel]
+    branches: ['docs/homepage-*']
     paths: ['previews/**', 'crates/slot-ui/**', '.github/workflows/homepage-previews.yml']
   workflow_dispatch:
 permissions:
@@ -25,10 +25,10 @@ jobs:
       - name: Build current production animation
         run: |
           set -eu
-          for name in egl_surface fixture capture link_capture; do
+          for name in egl_surface fixture capture link_capture insertion_hero; do
             cp "previews/$name.rs" "crates/slot/examples/$name.rs"
           done
-          cargo build --locked -p slot --no-default-features --example fixture --example capture
+          cargo build --locked -p slot --no-default-features --example fixture --example capture --example insertion_hero
           mkdir -p /tmp/slot-homepage/stickers
           SLOT_KID_UI_PREVIEW=/tmp/slot-homepage/stickers cargo test --locked -p slot-ui --test cart_motion --test favorite --test kid_smiley
           cargo test --locked -p slot --no-default-features --test kid_controls
@@ -36,12 +36,18 @@ jobs:
         run: |
           set -eu
           mkdir -p /tmp/slot-homepage/out /tmp/slot-homepage/publish/previews/homepage
+          python3 previews/make_hero_art.py /tmp/slot-homepage/out
           for finish in graphite platinum pearl_blue pearl_pink; do
             target/debug/examples/fixture "/tmp/slot-homepage/card-$finish" "$finish"
             python3 previews/prepare_art.py "/tmp/slot-homepage/card-$finish"
             mkdir -p "/tmp/slot-homepage/out/$finish"
             target/debug/examples/capture "/tmp/slot-homepage/card-$finish" previews/homepage.script "/tmp/slot-homepage/out/$finish"
+            target/debug/examples/insertion_hero "/tmp/slot-homepage/card-$finish" /tmp/slot-homepage/out "$finish"
           done
+          python3 previews/compose_homepage.py /tmp/slot-homepage
+          mkdir -p /tmp/slot-homepage/gif
+          ffmpeg -nostdin -v error -y -i /tmp/slot-homepage/out/platinum/hero.mp4 -vf fps=20 /tmp/slot-homepage/gif/%04d.png
+          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/gif /tmp/slot-homepage/out/readme-hero.gif --width 480
           python3 previews/collect_homepage.py /tmp/slot-homepage
       - name: Prepare media blobs for review
         env:
