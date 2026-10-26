@@ -1,0 +1,35 @@
+{
+  "frames": 169,
+  "frame_ms": 80,
+  "duration": 13.5,
+  "bounds": [
+    {
+      "x": 170.69688415527344,
+      "y": 20.24363899230957,
+      "right": 489.37815856933594,
+      "bottom": 354.82966804504395
+    },
+    {
+      "x": 101.55960083007812,
+      "y": 308.6724548339844,
+      "right": 459.1427001953125,
+      "bottom": 715.6832885742188
+    }
+  ],
+  "browser_version": "155.0.8059.39",
+  "native_sha256": "2cefad4eeda860281169be18014076fa110499cac313ccd90d74df0e709296df",
+  "source_commit": "7b930c097f6a75bc181a7b934af10b6c2c2d20e6",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40321485731",
+  "files": [
+    {
+      "path": "previews/readme-model/hero.gif",
+      "bytes": 4123844,
+      "sha256": "07e39665f460163538694d975a41cec9538ebd588841a88ba9b23cd97a41e5e4"
+    },
+    {
+      "path": "previews/readme-model/hero.png",
+      "bytes": 197025,
+      "sha256": "e0226526d2d32831e4c4f62449443744f4318aebd139c0678aca0707a275118b"
+    }
+  ]
+}

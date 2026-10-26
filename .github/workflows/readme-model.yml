@@ -1,0 +1,47 @@
+name: Capture illustrated README hero
+on:
+  push:
+    branches: [docs/readme-model]
+    paths: ['tools/capture-readme-model.cjs', 'previews/collect_readme_model.py', 'previews/extract_model_frames.py', '.github/workflows/readme-model.yml', 'site/overrides/home.html', 'site/overrides/partials/device.svg', 'site/docs/assets/device.css', 'previews/homepage/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Install model capture dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/readme-model" playwright@1.62.1
+          python3 -m pip install pillow==13.0.0 --only-binary=av av==16.0.0
+      - name: Capture the website model with native playback
+        env:
+          NODE_PATH: ${{ runner.temp }}/readme-model/node_modules
+        run: |
+          node tools/capture-readme-model.cjs /tmp/slot-readme-model
+          mkdir -p /tmp/slot-readme-model/publish/previews/readme-model
+          python3 tools/opaque_preview_gif.py /tmp/slot-readme-model/model-frames /tmp/slot-readme-model/publish/previews/readme-model/hero.gif --width 440 --frame-ms 80
+          python3 previews/collect_readme_model.py /tmp/slot-readme-model
+      - name: Prepare reviewed media objects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/slot-readme-model --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: readme-model-media
+          path: |
+            /tmp/slot-readme-model/publish/**
+            /tmp/slot-readme-model/media-entries.json
+            /tmp/slot-readme-model/model-capture.json
+            /tmp/slot-readme-model/model-frames/0000.png
+            /tmp/slot-readme-model/model-frames/0060.png
+            /tmp/slot-readme-model/model-frames/0120.png
+            /tmp/slot-readme-model/model-frames/0168.png
+          if-no-files-found: error

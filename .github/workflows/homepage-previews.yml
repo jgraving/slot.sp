@@ -2,7 +2,7 @@ name: Capture homepage previews
 on:
   push:
     branches: ['docs/homepage-*', 'docs/media-refresh']
-    paths: ['previews/**', 'crates/slot-ui/**', '.github/workflows/homepage-previews.yml']
+    paths: ['previews/**', 'tools/capture-readme-model.cjs', 'crates/slot-ui/**', '.github/workflows/homepage-previews.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -52,6 +52,19 @@ jobs:
           ffmpeg -nostdin -v error -y -i /tmp/slot-homepage/out/platinum/hero.mp4 -vf fps=12.5 /tmp/slot-homepage/gif/%04d.png
           python3 tools/opaque_preview_gif.py /tmp/slot-homepage/gif /tmp/slot-homepage/out/readme-hero.gif --width 440 --frame-ms 80
           python3 previews/collect_homepage.py /tmp/slot-homepage
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Render the illustrated README hero
+        env:
+          NODE_PATH: ${{ runner.temp }}/readme-model/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/readme-model" playwright@1.62.1
+          python3 -m pip install --only-binary=av av==16.0.0
+          node tools/capture-readme-model.cjs /tmp/slot-homepage /tmp/slot-homepage/out/platinum/hero.mp4
+          mkdir -p /tmp/slot-homepage/publish/previews/readme-model
+          python3 tools/opaque_preview_gif.py /tmp/slot-homepage/model-frames /tmp/slot-homepage/publish/previews/readme-model/hero.gif --width 440 --frame-ms 80
+          python3 previews/collect_readme_model.py /tmp/slot-homepage
       - name: Prepare media blobs for review
         env:
           GH_TOKEN: ${{ github.token }}

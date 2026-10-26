@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="previews/homepage/hero-platinum.png">
-  <img src="previews/homepage/readme-hero.gif" width="440" alt="The slot.sp carousel and glass logo animation">
+  <source media="(prefers-reduced-motion: reduce)" srcset="previews/readme-model/hero.png">
+  <img src="previews/readme-model/hero.gif" width="440" alt="An SP model showing the slot.sp carousel and glass logo animation on its screen">
 </picture>
 
 **Your games. SP style.**
