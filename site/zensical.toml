@@ -26,7 +26,7 @@ nav = [
     { "Reference" = ["guide/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
   ] },
   { "Cart Studio" = "https://jakegraving.com/slot.sp/studio/" },
-  { "About" = ["questions.md", "credits.md", "ai.md"] },
+  { "About" = ["questions.md", "credits.md", "ai.md", "impressum.md", "datenschutz.md"] },
 ]
 
 extra_css = ["assets/device.css", "assets/slot.css"]
