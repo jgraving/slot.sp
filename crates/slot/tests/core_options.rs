@@ -335,3 +335,18 @@ fn mgba_always_answers_the_game_boy_player_logo() {
         );
     }
 }
+
+#[test]
+fn both_bundled_cores_declare_every_frame_blending_value_we_expose() {
+    let _g = common::core_lock();
+    for which in Core::ALL {
+        let path=dylib_for(which);
+        if !path.exists() { continue; }
+        let mut core=LibretroCore::open(&path).expect("open core");
+        for on in [false,true] {
+            let (key,value)=slot::frame_blending::option(which,on);
+            core.set_option(key,value);
+            every_option_is_one_the_core_has(&core,"frame blending");
+        }
+    }
+}

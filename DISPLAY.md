@@ -57,6 +57,12 @@ Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** o
 
 Each system remembers its own settings. Game Boy palettes include **Auto**, grayscale, DMG Green, GB Pocket, GB Light, Game Boy Color presets and Super Game Boy palettes.
 
+### Frame blending
+
+During a game, open **Menu → Settings → Screen → Frame Blending**. Choose **Mix** for games that use flickering transparency, such as F-Zero’s minimap.
+
+Frame Blending is **Off** by default and is saved separately for GBA, GBC and GB. It uses the bundled emulator’s existing 50/50 mixing setting; emulator binaries are unchanged. Mixing can soften motion, so enable it for games that benefit. Live changes are unavailable during link play. The paused picture settles before it is shown, without advancing the saved game state.
+
 ### Picture shortcuts
 
 | Button | Action |
