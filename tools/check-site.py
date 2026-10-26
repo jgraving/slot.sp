@@ -53,7 +53,7 @@ for source, page in pages.items():
             if not (tag == 'use' and url.fragment in dynamic_ids):
                 errors.append(f'{source.relative_to(ROOT)}: missing anchor {link}')
         checked += 1
-for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').glob('*.css')):
+for source in list((ROOT / 'assets').rglob('*.css')) + list((ROOT / 'studio').rglob('*.css')):
     for link in re.findall(r'url\([\"\']?([^\)\"\']+)', source.read_text()):
         if not urlsplit(link).scheme and not (source.parent / link).is_file():
             errors.append(f'{source.name}: missing CSS asset {link}')
@@ -69,7 +69,9 @@ studio_pin = json.loads((ROOT.parent / 'studio.json').read_text())
 studio_info = json.loads((ROOT / 'studio/build-info.json').read_text())
 assert studio_info['source_commit'] == studio_pin['ref']
 assert studio_info['repository'] == 'jgraving/slot-cart-studio'
-assert (ROOT / 'studio/pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
+assert studio_info['renderer_repository'] == 'jgraving/slot.sp'
+assert studio_info['assets_base'] == f"assets/{studio_info['source_commit'][:12]}/"
+assert (ROOT / 'studio' / studio_info['assets_base'] / 'pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 hero_durations = []
 hero_revision = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())['source_commit'][:12]

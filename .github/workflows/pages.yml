@@ -57,10 +57,12 @@ jobs:
           path: _studio/slot-cart-studio
       - id: renderer
         name: Read cartridge renderer pin
-        run: echo "ref=$(cat _studio/slot-cart-studio/slot.ref)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "ref=$(cat _studio/slot-cart-studio/slot.ref)" >> "$GITHUB_OUTPUT"
+          echo "repository=$(cat _studio/slot-cart-studio/slot.repo)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
         with:
-          repository: BrandonKowalski/slot
+          repository: ${{ steps.renderer.outputs.repository }}
           ref: ${{ steps.renderer.outputs.ref }}
           path: _studio/slot
       - name: Build Cart Studio WebAssembly
