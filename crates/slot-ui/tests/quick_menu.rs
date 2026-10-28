@@ -257,7 +257,8 @@ fn the_values_read_as_the_menu_prints_them() {
             "7",
             "8",
             "9",
-
+            "Clean",
+            "Filename",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);

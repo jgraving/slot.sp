@@ -1267,10 +1267,12 @@ impl App {
             }),
             QuickRow::BootAnimation => Some(QuickValue::flag(self.state.boot_animation)),
             QuickRow::CarouselSounds => Some(QuickValue::flag(self.state.carousel_sounds)),
-            QuickRow::ShowTitles => Some(if self.state.show_titles {
-                QuickValue::Show
+            QuickRow::ShowTitles => Some(if !self.state.show_titles {
+                QuickValue::Off
+            } else if self.state.clean_titles {
+                QuickValue::Clean
             } else {
-                QuickValue::Hide
+                QuickValue::Filename
             }),
             QuickRow::WallpaperTint => Some(match self.state.wallpaper_tint {
                 WallpaperTint::Off => QuickValue::Off,
@@ -1792,7 +1794,9 @@ impl App {
             return None;
         }
         let shelf = self.shelf();
-        shelf.carts.get(shelf.index).map(slot_ui::label_text)
+        shelf.carts.get(shelf.index).map(|cart| {
+            if self.state.clean_titles { slot_ui::label_text(cart) } else { cart.stem.clone() }
+        })
     }
 
     pub fn set_shelf_title_face(&mut self, face: TexId, w: u32) {
@@ -3078,6 +3082,7 @@ impl App {
             }
             QuickRow::ShutDown => self.hold_power(),
             QuickRow::LidClose | QuickRow::SleepTimeout => {}
+            QuickRow::ShowTitles => self.change_setting(row, true),
             QuickRow::Bluetooth => {
                 if let Some(root) = &self.root {
                     let mut menu =
@@ -3131,7 +3136,6 @@ impl App {
             | QuickRow::LeftStick
             | QuickRow::Theme
             | QuickRow::Recents
-            | QuickRow::ShowTitles
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds
             | QuickRow::Wallpaper
@@ -3277,7 +3281,10 @@ impl App {
             return;
         }
         if row == QuickRow::ShowTitles {
-            self.state.show_titles = !self.state.show_titles;
+            let current = if !self.state.show_titles { 0 } else if self.state.clean_titles { 1 } else { 2 };
+            let next = (current + if right { 1 } else { 2 }) % 3;
+            self.state.show_titles = next != 0;
+            self.state.clean_titles = next != 2;
             self.persist();
             return;
         }

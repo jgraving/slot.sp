@@ -250,6 +250,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             wallpaper_tint: WallpaperTint::Off,
             show_recents: false,
             show_titles: false,
+            clean_titles: true,
             boot_animation: true,
             carousel_sounds: true,
             left_stick_dpad: true,

@@ -235,6 +235,7 @@ pub struct SlotState {
     pub wallpaper_tint: WallpaperTint,
     pub show_recents: bool,
     pub show_titles: bool,
+    pub clean_titles: bool,
     pub boot_animation: bool,
     pub carousel_sounds: bool,
     pub left_stick_dpad: bool,
@@ -384,6 +385,7 @@ impl Default for SlotState {
             wallpaper_tint: WallpaperTint::Off,
             show_recents: false,
             show_titles: false,
+            clean_titles: true,
             boot_animation: true,
             carousel_sounds: true,
             left_stick_dpad: true,
@@ -486,6 +488,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
+    text.push_str(&format!("clean_titles={}\n", s.clean_titles as u8));
     text.push_str(&format!("boot_animation={}\n", s.boot_animation as u8));
     text.push_str(&format!("carousel_sounds={}\n", s.carousel_sounds as u8));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
@@ -549,6 +552,7 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut wallpaper_tint = None;
     let mut show_recents = None;
     let mut show_titles = None;
+    let mut clean_titles = None;
     let mut boot_animation = None;
     let mut carousel_sounds = None;
     let mut left_stick_dpad = None;
@@ -604,6 +608,7 @@ fn parse(text: &str) -> Option<SlotState> {
             "wallpaper_tint" => wallpaper_tint = WallpaperTint::parse(value),
             "show_recents" => show_recents = flag(value),
             "show_titles" => show_titles = flag(value),
+            "clean_titles" => clean_titles = flag(value),
             "boot_animation" => boot_animation = flag(value),
             "carousel_sounds" => carousel_sounds = flag(value),
             "left_stick_dpad" => left_stick_dpad = flag(value),
@@ -664,6 +669,7 @@ fn parse(text: &str) -> Option<SlotState> {
         wallpaper_tint: wallpaper_tint.unwrap_or(fallback.wallpaper_tint),
         show_recents: show_recents.unwrap_or(fallback.show_recents),
         show_titles: show_titles.unwrap_or(fallback.show_titles),
+        clean_titles: clean_titles.unwrap_or(fallback.clean_titles),
         boot_animation: boot_animation.unwrap_or(fallback.boot_animation),
         carousel_sounds: carousel_sounds.unwrap_or(fallback.carousel_sounds),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
