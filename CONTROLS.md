@@ -37,7 +37,7 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | Hold <kbd>L2</kbd> | Rewind. |
 | Hold <kbd>X</kbd> / <kbd>Y</kbd> | Turbo A / Turbo B. |
 | <kbd>SELECT</kbd> + <kbd>MENU</kbd> | Open link play. |
-| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Stretch the picture / restore its original proportions. |
+| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Previous / next scaling mode: Actual, Stretch, Fit and Integer. |
 
 ## Display & volume
 

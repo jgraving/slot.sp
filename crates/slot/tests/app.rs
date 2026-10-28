@@ -1846,8 +1846,8 @@ fn l_and_r_change_the_mode_on_a_game_boy_cart_and_not_on_a_gba_one() {
     s.feed([RawEvent::Down(Btn::L1)], 100);
     assert_eq!(
         s.app().source_rect(),
-        GB_WINDOW,
-        "L did not stretch the picture"
+        slot::video_mode::source_rect(Platform::Gb, VideoMode::Integer),
+        "L did not cycle backward to integer scaling"
     );
     assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
     s.feed([RawEvent::Up(Btn::L1)], 120);
@@ -1943,7 +1943,7 @@ fn the_picture_mode_is_remembered_per_cart() {
     let mut s = session_playing(d.path());
     s.feed([RawEvent::Down(Btn::L1)], 100);
     s.feed([RawEvent::Up(Btn::L1)], 120);
-    assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Stretch);
+    assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Integer);
     assert_eq!(
         video_mode_for(d.path(), "Zzz"),
         VideoMode::Actual,
@@ -1954,8 +1954,8 @@ fn the_picture_mode_is_remembered_per_cart() {
     let mut s = session_playing(d.path());
     assert_eq!(
         s.app().source_rect(),
-        GB_WINDOW,
-        "the cart did not come back stretched"
+        slot::video_mode::source_rect(Platform::Gb, VideoMode::Integer),
+        "the cart did not restore integer scaling"
     );
     s.feed([RawEvent::Down(Btn::R1)], 100);
     assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Actual);

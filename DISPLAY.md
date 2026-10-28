@@ -57,6 +57,19 @@ Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** o
 
 Each system remembers its own settings. Game Boy palettes include **Auto**, grayscale, DMG Green, GB Pocket, GB Light, Game Boy Color presets and Super Game Boy palettes.
 
+### Scaling
+
+During a game, open **Menu → Settings → Screen**:
+
+| Setting | What it does |
+| :--- | :--- |
+| **Scaling → Actual** | Keep the existing original-size presentation and borders. |
+| **Scaling → Stretch** | Keep the existing stretched presentation. |
+| **Scaling → Fit** | Enlarge the game as much as the panel allows while keeping its proportions. |
+| **Scaling → Integer** | Use the largest whole-number pixel scale that fits, with centered black bars. |
+
+Scaling is saved per game. On GB/GBC, **L1 / R1** cycle backward / forward through the four modes unless those buttons are mapped to game controls. GBA shoulder buttons keep their normal game functions. Fit and Integer hide the decorative border without changing its saved setting. On a panel smaller than the original game image, Integer falls back to fitting it without cropping.
+
 ### Picture shortcuts
 
 | Button | Action |
@@ -64,7 +77,7 @@ Each system remembers its own settings. Game Boy palettes include **Auto**, gray
 | <kbd>SELECT</kbd> + <kbd>A</kbd> / <kbd>B</kbd> | Next / previous shader. |
 | <kbd>SELECT</kbd> + <kbd>Y</kbd> | Toggle color correction. |
 | <kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd> | Previous / next Game Boy palette. |
-| <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Stretch the picture / restore its original proportions. |
+| <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Previous / next scaling mode. |
 
 The picture-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
 
@@ -86,7 +99,7 @@ For a custom game border, put a PNG in `Bezels/GB/`, `Bezels/GBC/` or `Bezels/GB
 | 720 × 480 | 480 × 432, starting at x=120, y=24. |
 | 640 × 480 | 427 × 384, starting at x=107, y=48. |
 
-On a 640 × 480 display, the GBA picture is 640 × 427 at x=0, y=27. On a 720 × 480 display, GBA fills the screen. Borders are hidden while a GB/GBC picture is stretched.
+On a 640 × 480 display, the GBA picture is 640 × 427 at x=0, y=27. On a 720 × 480 display, GBA fills the screen. Borders are hidden in Stretch, Fit and Integer modes.
 
 <details>
 <summary><strong>Use a custom startup image</strong></summary>

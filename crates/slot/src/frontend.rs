@@ -693,6 +693,7 @@ impl Frontend {
 
         compositor.set_blue_light(self.session.app().blue_light());
         compositor.set_picture(self.session.app().picture_rect());
+        compositor.set_game_destination(self.session.app().game_destination());
         compositor.set_screen_effect(match self.session.app().screen_shader() {
             slot_store::Shader::Off => ScreenEffect::None,
             slot_store::Shader::Lcd3x => ScreenEffect::Lcd3x,
