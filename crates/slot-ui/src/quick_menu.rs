@@ -111,6 +111,7 @@ pub enum QuickRow {
     FavoriteSort,
     GameDetails,
     PlayDetails,
+    DisplaySchedule,
 }
 
 impl QuickRow {
@@ -120,7 +121,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 100] = [
+    pub const ALL: [QuickRow; 101] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -221,6 +222,7 @@ impl QuickRow {
         QuickRow::FavoriteSort,
         QuickRow::GameDetails,
         QuickRow::PlayDetails,
+        QuickRow::DisplaySchedule,
     ];
 
     pub const MAIN: [QuickRow; 9] = [
@@ -308,7 +310,7 @@ impl QuickRow {
         QuickRow::ScreenGb,
     ];
 
-    pub const SCREEN_GENERAL: [QuickRow; 2] = [QuickRow::Brightness, QuickRow::BlueLight];
+    pub const SCREEN_GENERAL: [QuickRow; 3] = [QuickRow::Brightness, QuickRow::BlueLight, QuickRow::DisplaySchedule];
 
     pub const SCREEN_GBA: [QuickRow; 3] = [
         QuickRow::GbaShader,
@@ -382,7 +384,7 @@ impl QuickRow {
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
-            QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
+            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN_GENERAL,
             QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
@@ -536,6 +538,7 @@ impl QuickRow {
             QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
+            QuickRow::DisplaySchedule => "Day / Night",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
@@ -631,6 +634,7 @@ impl QuickRow {
                 | QuickRow::About
                 | QuickRow::Reference
                 | QuickRow::PlayReference
+                | QuickRow::DisplaySchedule
                 | QuickRow::GameDetails
                 | QuickRow::PlayDetails
                 | QuickRow::Screen

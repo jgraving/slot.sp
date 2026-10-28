@@ -111,7 +111,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
-        ["Brightness", "Blue Light"]
+        ["Brightness", "Blue Light", "Day / Night"]
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
@@ -174,7 +174,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::Reference,
             QuickRow::PlayReference,
             QuickRow::GameDetails,
-            QuickRow::PlayDetails
+            QuickRow::PlayDetails,
+            QuickRow::DisplaySchedule
         ]
     );
     for page in [

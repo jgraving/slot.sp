@@ -66,3 +66,4 @@ pub mod usb_audio;
 pub mod power_settings;
 
 pub mod display_settings;
+pub mod display_schedule;
