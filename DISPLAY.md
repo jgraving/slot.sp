@@ -100,3 +100,9 @@ Remove the custom BMP to return to the bundled startup image.
 ---
 
 [Day & night](NIGHT-DISPLAY.md) · [Games & artwork](LIBRARY.md) · [Buttons & shortcuts](CONTROLS.md)
+
+### Automatic day and night
+
+**Screen → General → Day / Night** lets you enable automatic switching and choose when each display preset begins. Times use the device's local Date & Time setting. Left/right changes a start time by 15 minutes; A opens separate hour/minute controls. Day and night must start at different times.
+
+The day/night shortcut still works while automatic switching is enabled. Your manual choice lasts until the next scheduled change, including across sleep and restart. A clock correction or schedule edit clears that override. Brightness and blue-light adjustments remain separate for each preset. Automatic switching is off by default and requires a valid device clock.

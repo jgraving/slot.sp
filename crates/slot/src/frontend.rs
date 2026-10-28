@@ -64,6 +64,7 @@ pub struct Frontend {
     about: AboutFace,
     quick_clock: QuickClock,
     quick_palette: QuickPalette,
+    schedule_tex: Option<TexId>,
     kid_tex: Option<TexId>,
     kid_lines: Vec<String>,
     wallpaper: WallpaperSync,
@@ -212,6 +213,7 @@ impl Frontend {
             about: AboutFace::default(),
             quick_clock: QuickClock::default(),
             quick_palette: QuickPalette::default(),
+            schedule_tex: None,
             kid_tex: None,
             kid_lines: Vec::new(),
             wallpaper: WallpaperSync::default(),
@@ -718,6 +720,9 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
+        if let Some(menu) = &mut self.session.app_mut().display_schedule {
+            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face())); }
+        }
         if let Some(menu) = &mut self.session.app_mut().kid_menu {
             let lines = menu.lines();
             if lines != self.kid_lines || menu.face.is_none() {

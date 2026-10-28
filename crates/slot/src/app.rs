@@ -344,6 +344,7 @@ struct FavoriteRemoval {
 pub struct App {
     pub kids: crate::kid_policy::Policy,
     pub kid_menu: Option<crate::kid_menu::Menu>,
+    pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
@@ -571,6 +572,7 @@ impl App {
         App {
             kids: crate::kid_policy::Policy::default(),
             kid_menu: None,
+            display_schedule: None,
             kid_error: false,
             catalog,
             bluetooth: None,
@@ -951,6 +953,7 @@ impl App {
     }
 
     fn repeats(&self, btn: Btn) -> bool {
+        if self.display_schedule.is_some() { return true; }
         let vertical = matches!(btn, Btn::Up | Btn::Down);
         if self.game_menu.is_some() {
             return false;
@@ -1068,6 +1071,9 @@ impl App {
         }
         self.state.utc_offset_min = offset as i16;
         self.state.clock_set = true;
+        self.display_settings.override_until = None;
+        self.sync_display_schedule();
+        self.save_display();
         self.persist();
         if from_menu {
             self.phase = Phase::QuickMenu {
@@ -1322,6 +1328,7 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
+            | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
             | QuickRow::Reference
@@ -2446,6 +2453,7 @@ impl App {
             self.hud.toast(toast, self.now());
         }
         self.power = Some(power);
+        self.sync_display_schedule();
         self.battery_at = self.now();
         self.charge_at = self.now();
         self.last_led = None;
@@ -2885,6 +2893,22 @@ impl App {
             Action::PowerOff => return,
             _ => {}
         }
+        if self.display_schedule.is_some() && !matches!(self.phase, Phase::Doze { .. }) {
+            let clock_set = self.state.clock_set && self.utc_clock_valid();
+            let menu = self.display_schedule.as_mut().unwrap();
+            let changed = menu.input(action, clock_set);
+            let close = !menu.visible;
+            if let Some(next) = changed {
+                self.display_settings.schedule = next.schedule;
+                self.display_settings.day_start = next.day_start;
+                self.display_settings.night_start = next.night_start;
+                self.display_settings.override_until = None;
+                self.sync_display_schedule();
+                self.save_display();
+            }
+            if close { self.display_schedule = None; self.held_dir = None; }
+            return;
+        }
         if self.bluetooth.is_some() && !matches!(self.phase, Phase::Doze { .. }) {
             if self.adjust(action) {
                 return;
@@ -3188,6 +3212,9 @@ impl App {
             QuickRow::DateTime => {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
             }
+            QuickRow::DisplaySchedule => {
+                self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
+            }
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
@@ -3456,6 +3483,7 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
+            | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
             | QuickRow::Reference
@@ -3674,10 +3702,30 @@ impl App {
         }
     }
 
+    fn utc_clock_valid(&self) -> bool { self.utc_secs() >= CLOCK_FLOOR }
+
+    fn sync_display_schedule(&mut self) {
+        if !self.state.clock_set || !self.utc_clock_valid() || self.shutting_down()
+            || matches!(self.phase, Phase::Doze { .. }) { return; }
+        let wall = self.wall_secs();
+        let expired = self.display_settings.override_until.is_some() && !self.display_settings.overridden(wall);
+        if expired { self.display_settings.override_until = None; }
+        if let Some(night) = self.display_settings.scheduled_night(wall) {
+            if night != self.display_settings.night { self.set_night(night); }
+            else if expired { self.save_display(); }
+        } else if expired { self.save_display(); }
+    }
+
     fn toggle_night(&mut self) {
+        self.display_settings.override_until = (self.display_settings.schedule && self.state.clock_set && self.utc_clock_valid())
+            .then(|| self.display_settings.next_change(self.wall_secs()));
+        self.set_night(!self.display_settings.night);
+    }
+
+    fn set_night(&mut self, night: bool) {
         self.display_settings
             .remember(self.state.brightness, self.state.blue_light);
-        self.display_settings.night = !self.display_settings.night;
+        self.display_settings.night = night;
         let (brightness, warmth) = self.display_settings.current();
         self.state.brightness = brightness;
         self.state.blue_light = warmth;
@@ -4175,6 +4223,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.sync_display_schedule();
         self.tick_play_history();
         self.tick_kid_policy();
         if self.power_click_at.is_some_and(|at| self.now() >= at) {
@@ -4610,7 +4659,8 @@ impl App {
 
     pub fn draw(&self, out: &mut Vec<Draw>) {
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
-            if let Some(tex) = self.kid_menu.as_ref().and_then(|m| m.face) {
+            if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
+                .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 out.push(Draw::Tex {
                     x: 0.0,
@@ -5845,6 +5895,7 @@ impl App {
         if let Some(power) = &mut self.power {
             power.on_open();
         }
+        self.sync_display_schedule();
         self.history_tick = None;
         self.tick_play_history();
         // Enforce persisted deadlines before the caller can resume the core.

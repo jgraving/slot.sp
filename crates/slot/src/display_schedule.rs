@@ -1,0 +1,88 @@
+//! Small editor for local-time display scheduling; the app owns persistence.
+use crate::display_settings::DisplaySettings;
+use slot_input::{Action, Btn};
+use slot_ui::{TexId, UndoFace};
+
+pub struct Menu {
+    pub settings: DisplaySettings,
+    selected: usize,
+    time_field: Option<usize>,
+    status: String,
+    pub face: Option<TexId>,
+    pub visible: bool,
+}
+
+impl Menu {
+    pub fn new(settings: DisplaySettings) -> Self {
+        Self { settings, selected: 0, time_field: None, status: String::new(), face: None, visible: true }
+    }
+    /// Returns updated schedule preferences, without changing either display preset.
+    pub fn input(&mut self, action: Action, clock_set: bool) -> Option<DisplaySettings> {
+        self.face = None;
+        let Action::GbaDown(button) = action else {
+            if action == Action::QuickMenu { self.visible = false; }
+            return None;
+        };
+        if button == Btn::B {
+            if self.time_field.take().is_none() { self.visible = false; }
+            self.status.clear();
+            return None;
+        }
+        if matches!(button, Btn::Up | Btn::Down) {
+            if let Some(field) = &mut self.time_field { *field = 1 - *field; }
+            else { self.selected = (self.selected + if button == Btn::Down {1} else {2}) % 3; }
+            self.status.clear();
+            return None;
+        }
+        if button == Btn::A && self.selected > 0 {
+            self.time_field = Some(0);
+            return None;
+        }
+        if !matches!(button, Btn::A | Btn::Left | Btn::Right) { return None; }
+        let mut next = self.settings;
+        if self.selected == 0 {
+            if !clock_set { self.status = "Set Date & Time first".into(); return None; }
+            next.schedule = !next.schedule;
+        } else {
+            let step = match self.time_field { Some(0) => 60, Some(_) => 1, None => 15 };
+            let delta = if button == Btn::Left { -step } else { step };
+            let value = if self.selected == 1 { &mut next.day_start } else { &mut next.night_start };
+            *value = (i32::from(*value) + delta).rem_euclid(1440) as u16;
+            if next.day_start == next.night_start {
+                self.status = "Day and night need different times".into(); return None;
+            }
+        }
+        next.override_until = None;
+        self.settings = next;
+        self.status.clear();
+        Some(next)
+    }
+    pub fn screen_face(&self) -> UndoFace {
+        let (title, rows, selected) = if let Some(field) = self.time_field {
+            let minute = if self.selected == 1 { self.settings.day_start } else { self.settings.night_start };
+            (if self.selected == 1 { "Day Begins" } else { "Night Begins" }, vec![
+                ("Hours".into(), format!("{:02}", minute / 60), true),
+                ("Minutes".into(), format!("{:02}", minute % 60), true),
+            ], field)
+        } else {
+            ("Day / Night", vec![
+                ("Automatic".into(), if self.settings.schedule { "On" } else { "Off" }.into(), true),
+                ("Day begins".into(), time(self.settings.day_start), true),
+                ("Night begins".into(), time(self.settings.night_start), true),
+            ], self.selected)
+        };
+        let status = if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
+        let mut face = slot_ui::parent_settings_face(&rows, selected, 0, status);
+        let heading = slot_ui::quick_heading_face(title);
+        let x = face.w.saturating_sub(heading.w) / 2;
+        for y in 0..heading.h.min(face.h.saturating_sub(40)) {
+            for xx in 0..heading.w.min(face.w.saturating_sub(x)) {
+                let from = ((y * heading.w + xx) * 4) as usize;
+                let to = (((y + 40) * face.w + x + xx) * 4) as usize;
+                if heading.rgba[from+3] > 0 { face.rgba[to..to+4].copy_from_slice(&heading.rgba[from..from+4]); }
+            }
+        }
+        face
+    }
+}
+fn time(minutes: u16) -> String { format!("{:02}:{:02}", minutes / 60, minutes % 60) }
