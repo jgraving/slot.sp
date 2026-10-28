@@ -26,10 +26,10 @@ fn switches_use_colour_and_thumb_position_over_a_transparent_background() {
 #[test]
 fn binary_settings_use_switches_while_multi_value_choices_keep_their_values() {
     for row in [QuickRow::AutoLoad, QuickRow::EjectSave, QuickRow::BootAnimation,
-        QuickRow::CarouselSounds, QuickRow::Rumble, QuickRow::Recents, QuickRow::ShowTitles,
+        QuickRow::CarouselSounds, QuickRow::Rumble, QuickRow::Recents,
         QuickRow::FastForwardSound, QuickRow::ColourCorrection, QuickRow::Rewind,
         QuickRow::Turbo, QuickRow::LeftStick] { assert!(row.toggle(), "{row:?}"); }
     for row in [QuickRow::FastForward, QuickRow::BlueLight, QuickRow::GbaShader,
         QuickRow::WallpaperTint, QuickRow::ShellColour, QuickRow::SleepTimeout,
-        QuickRow::Brightness] { assert!(!row.toggle(), "{row:?}"); }
+        QuickRow::Brightness, QuickRow::ShowTitles, QuickRow::FavoriteSort] { assert!(!row.toggle(), "{row:?}"); }
 }

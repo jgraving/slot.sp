@@ -355,6 +355,7 @@ pub struct App {
     bluetooth_route: Option<String>,
     usb_active: bool,
     disconnect_volume: u8,
+    pause_on_disconnect: bool,
     bluetooth_probe: Option<std::sync::mpsc::Receiver<bool>>,
     phase: Phase,
     shelves: Vec<(Rack, Shelf)>,
@@ -583,6 +584,7 @@ impl App {
             bluetooth_route: None,
             usb_active: false,
             disconnect_volume: 0,
+            pause_on_disconnect: false,
             bluetooth_probe: None,
             radio: radio_jobs(),
             state_writer,
@@ -759,6 +761,7 @@ impl App {
         app.root = Some(root.to_path_buf());
         app.bluetooth_probe = crate::bluetooth::probe(root);
         app.disconnect_volume = crate::bluetooth::disconnect_volume(root);
+        app.pause_on_disconnect = crate::bluetooth::pause_on_disconnect(root);
         app.loading = loading;
 
         app.state = read_slot_state(root);
@@ -1614,6 +1617,7 @@ impl App {
         let previous_address = self.bluetooth_route.clone();
         self.bluetooth_route = address.clone();
         if lost {
+            if address.is_some() && address == previous_address { self.pause_after_disconnect(); }
             self.apply_disconnect_volume(self.headphones);
             if let (Some(root), Some(address)) = (self.root.clone(), previous_address) {
                 crate::bluetooth::fallback_to_local(root, address);
@@ -1662,6 +1666,7 @@ impl App {
             }
             return;
         }
+        if !active && unplugged { self.pause_after_disconnect(); }
         self.usb_active = active;
         self.hud.set_usb(active);
         self.vol_before.clear();
@@ -1680,6 +1685,15 @@ impl App {
                 },
                 now,
             );
+        }
+    }
+
+    fn pause_after_disconnect(&mut self) {
+        if self.pause_on_disconnect && matches!(self.phase, Phase::Playing { .. })
+            && self.game_ready && !self.link_active() && !self.shutting_down()
+            && self.in_game_menu.is_none() && self.game_menu.is_none() && self.kid_menu.is_none()
+        {
+            self.apply(Action::QuickMenu);
         }
     }
 
@@ -2916,6 +2930,7 @@ impl App {
             if let Some(menu) = &mut self.bluetooth {
                 let close = menu.input(action);
                 self.disconnect_volume = menu.disconnect_volume;
+                self.pause_on_disconnect = menu.pause_on_disconnect;
                 if close {
                     self.bluetooth = None;
                 }
@@ -4252,6 +4267,7 @@ impl App {
         if let Some(menu) = &mut self.bluetooth {
             menu.poll();
             self.disconnect_volume = menu.disconnect_volume;
+                self.pause_on_disconnect = menu.pause_on_disconnect;
         }
 
         self.play_hold();
@@ -4313,6 +4329,7 @@ impl App {
             if on != self.headphones {
                 self.headphones = on;
                 if !on && !self.bluetooth_connected && !self.usb_active {
+                    self.pause_after_disconnect();
                     self.apply_disconnect_volume(false);
                     self.hud.toast(Toast::HeadphonesDisconnected, self.now());
                 }

@@ -78,3 +78,9 @@ If wired headphones are plugged in when Bluetooth disconnects, the chosen level 
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Kid mode](KID-MODE.md) · [Sleep & power](POWER-OPTIONS.md)
+
+## Pause on disconnect
+
+**Sound → Pause on disconnect** optionally pauses the game when the active wired headphones, Bluetooth device, or USB audio device disconnects. It is off by default. The normal pause menu opens; reconnecting does not resume the game automatically. Kid mode opens its existing child menu.
+
+Intentional output changes do not trigger this pause, and link play keeps running so the other player is not interrupted. The separate **Volume on disconnect** setting still applies. Both choices are saved in `Config/sound.conf`.
