@@ -45,6 +45,12 @@ For your own label PNGs, use these suggested sizes:
 | Game Boy Advance | 1280 × 661 |
 | Game Boy / Game Boy Color | 1024 × 901 |
 
+## Change several cartridges together
+
+Choose **Select carts**, then click or use Space/Enter to select cartridges. Selections stay selected when you switch system tabs. **Select this system** selects every cartridge on the current tab.
+
+Choose a shell color, finish, or both, then **Apply to selected**. **Keep existing** leaves that property alone. Labels and cartridge shapes stay as they are. Each cartridge's editor has Undo, and the edits are saved by the usual **Write to card** or ZIP export action.
+
 ## Save your changes
 
 ### Direct card access
