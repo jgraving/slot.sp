@@ -10,7 +10,7 @@ Use <kbd>Left</kbd> and <kbd>Right</kbd> to move through cartridges. Tap <kbd>A<
 
 <kbd>L1</kbd> and <kbd>R1</kbd> switch between Recents, Favorites and the system carousels: Game Boy Advance, Game Boy Color and Game Boy. Empty carousels are hidden.
 
-Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between starting letters. To display game names above the slot, turn on **Menu → General → Game Titles**.
+Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between starting letters. To display game names above the slot, choose **Menu → General → Game Titles → Clean**. Choose **Filename** to see region/version tags, or **Off** to hide names. These display choices never rename games, saves or labels.
 
 ![Browse game cartridges on the carousel](previews/guide/carousel.png)
 

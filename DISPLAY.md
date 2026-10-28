@@ -38,7 +38,7 @@ Open **Menu → General**:
 | **Wallpaper Tint** | Darken a custom or random background so the games stand out. |
 | **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
-| **Game Titles** | Show game names above the slot. |
+| **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
 
 **Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup.
 

@@ -115,7 +115,7 @@ impl QuickRow {
         matches!(self, Self::FastForwardSound | Self::Rumble | Self::AutoLoad | Self::EjectSave
             | Self::Turbo | Self::Rewind | Self::BootAnimation | Self::CarouselSounds
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
-            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::ShowTitles)
+            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
     pub const ALL: [QuickRow; 97] = [
         QuickRow::FastForward,
@@ -752,10 +752,12 @@ pub enum QuickValue {
     Level7,
     Level8,
     Level9,
+    Clean,
+    Filename,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 42] = [
+    pub const ALL: [QuickValue; 44] = [
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -798,6 +800,8 @@ impl QuickValue {
         QuickValue::Level7,
         QuickValue::Level8,
         QuickValue::Level9,
+        QuickValue::Clean,
+        QuickValue::Filename,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -871,6 +875,8 @@ impl QuickValue {
             QuickValue::Level7 => "7",
             QuickValue::Level8 => "8",
             QuickValue::Level9 => "9",
+            QuickValue::Clean => "Clean",
+            QuickValue::Filename => "Filename",
 
         }
     }

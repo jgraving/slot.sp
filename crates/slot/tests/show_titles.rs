@@ -88,9 +88,9 @@ fn show_titles_is_flipped_from_the_shelf_page_and_saved() {
         press(&mut a, Btn::Down);
     }
     assert_eq!(a.quick_menu(), Some(QuickRow::ShowTitles));
-    assert_eq!(a.quick_value(QuickRow::ShowTitles), Some(QuickValue::Hide));
+    assert_eq!(a.quick_value(QuickRow::ShowTitles), Some(QuickValue::Off));
     press(&mut a, Btn::Right);
-    assert_eq!(a.quick_value(QuickRow::ShowTitles), Some(QuickValue::Show));
+    assert_eq!(a.quick_value(QuickRow::ShowTitles), Some(QuickValue::Clean));
     assert!(
         read_slot_state(d.path()).show_titles,
         "the choice was not saved"
@@ -172,4 +172,29 @@ fn boot_animation_can_be_disabled_in_general_and_survives_boot() {
     assert!(!App::boot(d.path()).boot_animation_enabled());
     press(&mut a, Btn::Left);
     assert!(read_slot_state(d.path()).boot_animation);
+}
+
+#[test]
+fn title_formats_cycle_without_changing_game_identity_and_survive_restart() {
+    let d = card();
+    let mut a = boot(d.path(), false);
+    tick(&mut a, 3.0);
+    a.apply(Action::QuickMenu);
+    for _ in 0..QuickRow::General.position(&[]) { press(&mut a, Btn::Down); }
+    press(&mut a, Btn::A);
+    for _ in 0..QuickRow::ShowTitles.position(&a.hidden_rows()) { press(&mut a, Btn::Down); }
+    press(&mut a, Btn::A);
+    assert_eq!(a.title_text().as_deref(), Some("Emerald"));
+    press(&mut a, Btn::Right);
+    assert_eq!(a.title_text().as_deref(), Some("Emerald (USA, Europe)"));
+    assert_eq!(a.selected_stem(), Some("Emerald (USA, Europe)"));
+    let saved = read_slot_state(d.path());
+    assert!(saved.show_titles && !saved.clean_titles);
+    let restarted = App::boot(d.path());
+    assert_eq!(restarted.title_text(), a.title_text());
+    press(&mut a, Btn::Right);
+    assert_eq!(a.title_text(), None);
+    press(&mut a, Btn::Left);
+    assert_eq!(a.quick_value(QuickRow::ShowTitles), Some(QuickValue::Filename));
+    assert!(d.path().join("Games/GBA/Emerald (USA, Europe).gba").exists());
 }
