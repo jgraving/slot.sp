@@ -346,6 +346,7 @@ impl Session {
     }
 
     pub fn update(&mut self, dt: f32) {
+        let was_overlaid = self.overlaid();
         let awake = !matches!(self.app.phase(), crate::app::Phase::Doze { .. });
         let (changed, watching) = self.bluetooth_events.poll(&self.root, awake);
         let mut automatic_choice = None;
@@ -519,6 +520,12 @@ impl Session {
             self.gestures = Gestures::new();
             self.entries.clear(); // Reinstall remapped shortcuts after clearing held inputs.
             self.sync_speed();
+        }
+        // Disconnects and policy timers can open a pause menu without an input edge.
+        if !was_overlaid && self.overlaid() {
+            self.pad.clear();
+            self.fast = false;
+            self.rewinding = false;
         }
         self.sync_rewind_hud();
         self.sync_ff_hud();

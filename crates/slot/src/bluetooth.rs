@@ -105,6 +105,7 @@ pub struct Manager {
     pub wired: bool,
     pub bluetooth_available: bool,
     pub disconnect_volume: u8,
+    pub pause_on_disconnect: bool,
     pub disconnect_notice: bool,
     pub route_choice: Option<String>,
     choosing_route: bool,
@@ -114,8 +115,10 @@ pub struct Manager {
 impl Manager {
     pub fn new(root: PathBuf, bluetooth_available: bool) -> Self {
         let disconnect_volume = disconnect_volume(&root);
+        let pause_on_disconnect = pause_on_disconnect(&root);
         let mut manager = Self {
             disconnect_volume,
+            pause_on_disconnect,
             bluetooth_available,
             root,
             page: Page::Home,
@@ -281,6 +284,7 @@ impl Manager {
     fn device_start(&self) -> usize { self.local_row() + 1 }
     fn pair_row(&self) -> usize { self.device_start() + self.device_indices().len() + self.usb_devices.len() }
     fn disconnect_row(&self) -> usize { self.pair_row() + usize::from(self.bluetooth_available) }
+    fn pause_row(&self) -> usize { self.disconnect_row() + 1 }
 
     fn device_indices(&self) -> Vec<usize> {
         self.devices
@@ -344,6 +348,7 @@ impl Manager {
                     rows.push("Pair audio device".into());
                 }
                 rows.push(format!("DISCONNECT {}%", self.disconnect_volume));
+                rows.push(format!("PAUSE_DISCONNECT {}", if self.pause_on_disconnect {"On"} else {"Off"}));
                 rows
             }
             Page::Pair => {
@@ -386,6 +391,9 @@ impl Manager {
         match action {
             Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
             Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
+            Action::GbaDown(Btn::A | Btn::Left | Btn::Right)
+                if self.page == Page::Home && self.selected == self.pause_row() =>
+            { self.toggle_pause_on_disconnect(); }
             Action::GbaDown(Btn::Left | Btn::Right)
                 if self.page == Page::Home && self.selected == self.disconnect_row() =>
             {
@@ -459,6 +467,14 @@ impl Manager {
         );
     }
 
+    fn toggle_pause_on_disconnect(&mut self) {
+        let value = !self.pause_on_disconnect;
+        match save_sound_value(&self.root, "pause_on_disconnect", if value {"1"} else {"0"}) {
+            Ok(()) => { self.pause_on_disconnect = value; self.status.clear(); }
+            Err(_) => self.status = "Error: Could not save pause setting".into(),
+        }
+    }
+
     fn change_disconnect_volume(&mut self, increase: bool) {
         let value = if increase {
             self.disconnect_volume.saturating_add(5).min(100)
@@ -516,7 +532,7 @@ impl Manager {
         }
         lines.push(
             if self.page == Page::Home
-                && (self.selected == self.disconnect_row()
+                && (self.selected == self.disconnect_row() || self.selected == self.pause_row()
                     || (self.bluetooth_available && self.selected == 0))
             {
                 "B Back · Change"
@@ -647,12 +663,27 @@ pub fn disconnect_volume(root: &std::path::Path) -> u8 {
         .unwrap_or(0)
 }
 
+pub fn pause_on_disconnect(root: &std::path::Path) -> bool {
+    std::fs::read_to_string(root.join("Config/sound.conf")).ok()
+        .is_some_and(|text| text.lines().any(|line| line == "pause_on_disconnect=1"))
+}
+
+fn save_sound_value(root: &std::path::Path, key: &str, value: &str) -> std::io::Result<()> {
+    let path = root.join("Config/sound.conf");
+    let previous = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e),
+    };
+    let mut text: String = previous.lines().filter(|line| line.split_once('=').is_none_or(|(k, _)| k != key))
+        .map(|line| format!("{line}\n")).collect();
+    text.push_str(&format!("{key}={value}\n"));
+    std::fs::create_dir_all(root.join("Config"))?;
+    slot_store::atomic_write(&path, text.as_bytes())
+}
+
 fn save_disconnect_volume(root: &std::path::Path, value: u8) -> std::io::Result<()> {
-    let config = root.join("Config");
-    std::fs::create_dir_all(&config)?;
-    let temp = config.join("sound.conf.tmp");
-    std::fs::write(&temp, format!("disconnect_volume={}\n", value.min(100)))?;
-    std::fs::rename(temp, config.join("sound.conf"))
+    save_sound_value(root, "disconnect_volume", &value.min(100).to_string())
 }
 
 #[cfg(feature = "device")]
@@ -858,11 +889,12 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         if let Some((name, value)) = label
             .strip_prefix("DISCONNECT ")
             .map(|v| ("Volume on disconnect", v))
+            .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
             let name = slot_ui::quick_value_face(name, highlight);
             blit(&mut rgba, &name, 64 - slot_ui::MENU_PAD, top);
-            if label.starts_with("BLUETOOTH ") {
+            if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
                 let switch = slot_ui::toggle_face(value == "On", highlight);
                 let x = screen_w - 32 + slot_ui::MENU_PAD - switch.w;
                 blit(&mut rgba, &switch, x, top);
@@ -1026,6 +1058,7 @@ mod menu_tests {
             root: PathBuf::new(),
             bluetooth_available: true,
             disconnect_volume: 0,
+            pause_on_disconnect: false,
             page: Page::Home,
             stack: Vec::new(),
             usb_devices: Vec::new(),
@@ -1197,7 +1230,8 @@ mod menu_tests {
             vec![
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "USB_DEVICE AB13X Audio",
-                "DISCONNECT 0%"
+                "DISCONNECT 0%",
+                "PAUSE_DISCONNECT Off"
             ]
         );
         m.observe_output(Some("plughw:CARD=Audio,DEV=0"), true);
@@ -1300,7 +1334,8 @@ mod menu_tests {
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "DEVICE WF-C510",
                 "Pair audio device",
-                "DISCONNECT 0%"
+                "DISCONNECT 0%",
+                "PAUSE_DISCONNECT Off"
             ]
         );
         assert!(m.lines()[0].is_empty());
@@ -1452,7 +1487,7 @@ mod menu_tests {
         let mut m = Manager::new(root.path().into(), false);
         assert_eq!(
             m.rows(),
-            vec!["ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%"]
+            vec!["ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off"]
         );
         assert!(m.pending.is_none());
         m.selected = 1;
