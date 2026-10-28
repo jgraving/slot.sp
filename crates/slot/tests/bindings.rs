@@ -213,7 +213,8 @@ fn the_in_game_settings_have_no_save_changes_page() {
             QuickRow::PlaySound,
             QuickRow::PlayGameplay,
             QuickRow::PlayControls,
-            QuickRow::PlayReference
+            QuickRow::PlayReference,
+            QuickRow::PlayDetails
         ]
     );
 }
