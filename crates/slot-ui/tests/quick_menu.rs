@@ -80,7 +80,7 @@ fn the_fast_forward_row_offers_off_and_the_four_ceilings_the_card_can_hold() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power", "Controls", "Kid Mode", "About"]
+        ["General", "Screen", "Sound", "Gameplay", "Power", "Controls", "Kid Mode", "Game Details", "About"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -91,6 +91,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Theme",
             "Recents",
             "Game Titles",
+            "Sort Favorites",
             "Boot Animation",
             "Carousel Sounds",
             "Date & Time"
@@ -171,7 +172,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::UndoSave,
             QuickRow::UndoLoad,
             QuickRow::Reference,
-            QuickRow::PlayReference
+            QuickRow::PlayReference,
+            QuickRow::GameDetails,
+            QuickRow::PlayDetails
         ]
     );
     for page in [
@@ -259,6 +262,9 @@ fn the_values_read_as_the_menu_prints_them() {
             "9",
             "Clean",
             "Filename",
+            "Alphabetically",
+            "Most used",
+            "Recently used",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -371,7 +377,8 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::PlaySound,
             QuickRow::PlayGameplay,
             QuickRow::PlayControls,
-            QuickRow::PlayReference
+            QuickRow::PlayReference,
+            QuickRow::PlayDetails
         ]
     );
     assert_eq!(
