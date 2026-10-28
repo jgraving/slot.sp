@@ -119,7 +119,10 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
         press(&mut a, Btn::Down);
     }
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
+    for _ in 0..QuickRow::SETTINGS.len() {
+        if a.in_game_menu() == Some(QuickRow::PlayReference) { break; }
+        press(&mut a, Btn::Up);
+    }
     assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
     press(&mut a, Btn::A);
     assert!(a.kid_menu.as_ref().unwrap().reference_open());

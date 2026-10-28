@@ -10,7 +10,7 @@ use slot_power::{Battery, Charge, LedState, LidPolicy, Power, RepairResult};
 use slot_retro::LinkChannel;
 use slot_store::{
     BLUE_LIGHT_MAX, BRIGHTNESS_MAX, BezelPick, Cart, Core, FF_SPEEDS, GbColors, Platform, RING_MAX,
-    Recent, Shader, ShotDir, ShotEntry, SlotState, StateEntry, StateRing, VOLUME_MAX,
+    FavoriteSort, PlayHistory, Recent, Shader, ShotDir, ShotEntry, SlotState, StateEntry, StateRing, VOLUME_MAX,
     WallpaperPick, WallpaperTint, format_stamp, parse_stamp, read_slot_state, scan,
     write_slot_state,
 };
@@ -410,6 +410,11 @@ pub struct App {
     root: Option<PathBuf>,
     state: SlotState,
     display_settings: crate::display_settings::DisplaySettings,
+    play_history: PlayHistory,
+    history_readable: bool,
+    history_dirty: bool,
+    history_queued_at: Millis,
+    history_tick: Option<(Platform, String, Millis)>,
     left_stick: bool,
     controls: Controls,
     capture: Option<BindCapture>,
@@ -646,6 +651,11 @@ impl App {
             root: None,
             state: SlotState::default(),
             display_settings: Default::default(),
+            play_history: PlayHistory::default(),
+            history_readable: true,
+            history_dirty: false,
+            history_queued_at: 0,
+            history_tick: None,
             left_stick: false,
             controls: Controls::default(),
             capture: None,
@@ -750,6 +760,17 @@ impl App {
         app.loading = loading;
 
         app.state = read_slot_state(root);
+        match PlayHistory::read(root) {
+            Ok(history) => app.play_history = history,
+            Err(e) => { app.history_readable = false; eprintln!("slot: play history: {e}"); }
+        }
+        // Seed known recency once from the old list without inventing playtime or dates.
+        if app.history_readable && !root.join("Config/play-history.txt").exists() {
+            for recent in app.state.recents.iter().rev() {
+                app.play_history.started(recent.platform, &recent.stem, None);
+                app.history_dirty = true;
+            }
+        }
         app.display_settings = crate::display_settings::DisplaySettings::read(root, &app.state);
         (app.state.brightness, app.state.blue_light) = app.display_settings.current();
         app.power_settings = crate::power_settings::PowerSettings::read(root);
@@ -1267,6 +1288,11 @@ impl App {
             }),
             QuickRow::BootAnimation => Some(QuickValue::flag(self.state.boot_animation)),
             QuickRow::CarouselSounds => Some(QuickValue::flag(self.state.carousel_sounds)),
+            QuickRow::FavoriteSort => Some(match self.state.favorite_sort {
+                FavoriteSort::Alphabetical => QuickValue::Alphabetical,
+                FavoriteSort::MostUsed => QuickValue::MostUsed,
+                FavoriteSort::RecentlyUsed => QuickValue::RecentlyUsed,
+            }),
             QuickRow::ShowTitles => Some(if !self.state.show_titles {
                 QuickValue::Off
             } else if self.state.clean_titles {
@@ -1296,6 +1322,8 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
+            | QuickRow::GameDetails
+            | QuickRow::PlayDetails
             | QuickRow::Reference
             | QuickRow::PlayReference
             | QuickRow::Screen
@@ -2610,6 +2638,65 @@ impl App {
         self.link_player
     }
 
+    fn tick_play_history(&mut self) {
+        let active = matches!(self.phase, Phase::Playing { .. }) && self.game_ready
+            && self.kid_menu.is_none() && self.in_game_menu.is_none() && self.game_menu.is_none()
+            && !self.repair_prompt && !self.shutting_down();
+        let current = if active { self.seated_cart().map(|c| (c.platform, c.stem.clone())) } else { None };
+        let previous = self.history_tick.take();
+        if let Some((platform, stem)) = current {
+            let now = self.now();
+            if let Some((old_platform, old_stem, at)) = previous {
+                if old_platform == platform && old_stem == stem {
+                    let elapsed = now.saturating_sub(at);
+                    if elapsed > 0 {
+                        self.play_history.add_time(platform, &stem, elapsed);
+                        self.history_dirty = true;
+                    }
+                }
+            }
+            self.history_tick = Some((platform, stem, now));
+        }
+        if !active || self.now().saturating_sub(self.history_queued_at) >= 60_000 {
+            self.flush_play_history();
+        }
+    }
+
+    fn flush_play_history(&mut self) {
+        if self.history_dirty && self.history_readable {
+            if let Some(root) = &self.root {
+                self.state_writer.save_history(root, &self.play_history);
+                self.history_dirty = false;
+                self.history_queued_at = self.now();
+            }
+        }
+    }
+
+    pub fn game_details(&self) -> Option<crate::reference::Page> {
+        let cart = self.seated_cart().or_else(|| self.shelf().carts.get(self.shelf().index))?;
+        let record = self.play_history.get(cart.platform, &cart.stem);
+        let minutes = record.milliseconds / 60_000;
+        let duration = if record.milliseconds == 0 { "Not recorded".into() }
+            else if minutes == 0 { "Less than 1 min".into() }
+            else if minutes < 60 { format!("{minutes} min") }
+            else { format!("{} h {} min", minutes / 60, minutes % 60) };
+        let stamp = record.last_utc.map(|utc| format_stamp(utc + i64::from(self.state.utc_offset_min) * 60));
+        let date = stamp.as_ref().map(|s| s[..10].to_string()).unwrap_or("Not recorded".into());
+        let time = stamp.as_ref().map(|s| s[11..16].replace('-', ":")).unwrap_or("—".into());
+        Some(("Game Details".into(), vec![
+            ("System".into(), cart.platform.dir_name().into(), false),
+            ("Playtime".into(), duration, false),
+            ("Last played".into(), date, false),
+            ("At".into(), time, false),
+        ]))
+    }
+
+    fn open_game_details(&mut self) {
+        if let (Some(root), Some(page)) = (self.root.clone(), self.game_details()) {
+            self.kid_menu = Some(crate::kid_menu::Menu::reference(root, self.kids.clone(), vec![page]));
+        }
+    }
+
     pub fn reference_pages(&self, in_game: bool) -> Vec<crate::reference::Page> {
         crate::reference::pages(self.kid_mode(),in_game,self.playing_platform(),self.controls,self.shortcuts,self.carousel)
     }
@@ -2717,6 +2804,12 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        self.tick_play_history();
+        self.apply_inner(action);
+        self.tick_play_history();
+    }
+
+    fn apply_inner(&mut self, action: Action) {
         if !self.kid_action_allowed(action) {
             return;
         }
@@ -3018,6 +3111,7 @@ impl App {
         if row.toggle() { return self.change_setting(row, true); }
         match row {
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
+            QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
             QuickRow::Resume => self.in_game_menu = None,
             QuickRow::UndoSave | QuickRow::UndoLoad => {
                 self.in_game_menu = None;
@@ -3082,7 +3176,7 @@ impl App {
             }
             QuickRow::ShutDown => self.hold_power(),
             QuickRow::LidClose | QuickRow::SleepTimeout => {}
-            QuickRow::ShowTitles => self.change_setting(row, true),
+            QuickRow::ShowTitles | QuickRow::FavoriteSort => self.change_setting(row, true),
             QuickRow::Bluetooth => {
                 if let Some(root) = &self.root {
                     let mut menu =
@@ -3096,6 +3190,7 @@ impl App {
             }
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
+            QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
             QuickRow::Kids => self.open_kid_controls(),
             QuickRow::Power
             | QuickRow::Screen
@@ -3280,6 +3375,12 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::FavoriteSort {
+            self.state.favorite_sort = self.state.favorite_sort.step(right);
+            self.restock_favorites();
+            self.persist();
+            return;
+        }
         if row == QuickRow::ShowTitles {
             let current = if !self.state.show_titles { 0 } else if self.state.clean_titles { 1 } else { 2 };
             let next = (current + if right { 1 } else { 2 }) % 3;
@@ -3348,12 +3449,15 @@ impl App {
             | QuickRow::Wallpaper
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::FavoriteSort
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
+            | QuickRow::GameDetails
+            | QuickRow::PlayDetails
             | QuickRow::Reference
             | QuickRow::PlayReference
             | QuickRow::Screen
@@ -4052,7 +4156,9 @@ impl App {
     }
 
     pub fn set_game_ready(&mut self, ready: bool) {
+        self.tick_play_history();
         self.game_ready = ready;
+        self.tick_play_history();
     }
 
     pub fn game_ready(&self) -> bool {
@@ -4069,6 +4175,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.tick_play_history();
         self.tick_kid_policy();
         if self.power_click_at.is_some_and(|at| self.now() >= at) {
             self.power_click_at = None;
@@ -4249,15 +4356,14 @@ impl App {
             .filter(|c| self.state.is_favorite(c.platform, &c.stem))
             .cloned()
             .collect();
-        carts.sort_by(|a, b| {
-            (slot_store::sort_key(&a.stem), a.platform as u8)
-                .cmp(&(slot_store::sort_key(&b.stem), b.platform as u8))
-        });
+        self.play_history.sort(&mut carts, self.state.favorite_sort);
         let index = self.shelves[FAVORITES_AT].1.index;
+        let selected = self.shelves[FAVORITES_AT].1.carts.get(index).map(|c| (c.platform, c.stem.clone()));
         self.restock(FAVORITES_AT, carts);
         let shelf = &mut self.shelves[FAVORITES_AT].1;
         if self.shelf_at == FAVORITES_AT && !shelf.carts.is_empty() {
-            shelf.select(index.min(shelf.carts.len() - 1));
+            let keep = selected.and_then(|(p, stem)| shelf.carts.iter().position(|c| c.platform == p && c.stem == stem));
+            shelf.select(keep.unwrap_or(index.min(shelf.carts.len() - 1)));
         }
         self.mark_stars();
         self.mark_kid_approved();
@@ -4382,6 +4488,9 @@ impl App {
     fn record_cart(&mut self, cart: Option<String>) {
         let platform = self.seated_cart().map(|c| c.platform);
         if let (Some(stem), Some(platform)) = (&cart, platform) {
+            self.play_history.started(platform, stem, self.state.clock_set.then(|| self.utc_secs()));
+            self.history_dirty = true;
+            self.flush_play_history();
             let first = self.state.recents.first();
             if first.is_none_or(|r| r.platform != platform || r.stem != *stem) {
                 let stem = stem.clone();
@@ -4390,6 +4499,7 @@ impl App {
                 self.persist();
             }
         }
+        if cart.is_none() { self.restock_favorites(); }
         if self.state.cart == cart && self.state.cart_platform == platform {
             return;
         }
@@ -5713,6 +5823,7 @@ impl App {
         }
         self.polaroids = None;
         self.phase = Phase::Doze { cart };
+        self.tick_play_history();
         // Record the pause even when no frame runs during hardware suspend.
         self.tick_kid_policy();
         self.dozed_at = self.now();
@@ -5734,6 +5845,8 @@ impl App {
         if let Some(power) = &mut self.power {
             power.on_open();
         }
+        self.history_tick = None;
+        self.tick_play_history();
         // Enforce persisted deadlines before the caller can resume the core.
         self.tick_kid_policy();
     }
@@ -6175,6 +6288,9 @@ impl App {
     }
 
     pub fn settle_saves(&mut self) {
+        self.tick_play_history();
+        self.flush_play_history();
+        self.state_writer.flush();
         self.state_writer.flush();
         self.shot_writer.flush();
         if let Some(h) = self.pending_save.take() {
@@ -6236,6 +6352,9 @@ impl App {
     }
 
     pub fn flush_resume(&mut self) {
+        self.tick_play_history();
+        self.flush_play_history();
+        self.state_writer.flush();
         self.settle_saves();
         self.autosave_at = self.now() + AUTOSAVE_MS;
         self.resume_at = self.now() + RESUME_MS;

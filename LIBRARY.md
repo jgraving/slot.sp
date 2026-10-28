@@ -73,3 +73,9 @@ Use lowercase for these values. Shape choices apply to Game Boy cartridges. Rest
 ---
 
 [Add games](GETTING-STARTED.md#add-games) · [Appearance & screen](DISPLAY.md) · [Kid mode](KID-MODE.md)
+
+### Favorites order and game details
+
+Settings → General → **Sort Favorites** chooses **Alphabetically**, **Most used** (total active playtime), or **Recently used** (last game session). Every favorite stays in the list; this is separate from the 20-game Recents shelf. Changing the order keeps the selected game highlighted. Games without recorded use sort alphabetically after games with history.
+
+**Game Details** in the main menu, or **Game Details** in the in-game Settings menu, shows active playtime and the last played date and time. Playtime excludes loading, menus, and sleep. Tracking begins with this version; earlier playtime is not estimated. Existing Recents provide an initial ordering where available, without inventing dates. History is saved on pause/exit/sleep and periodically during play in `Config/play-history.txt`. Keep this file when moving your card or backing up your settings.

@@ -1,0 +1,30 @@
+name: Launcher quality of life checks
+on:
+  push:
+    branches: [main]
+    paths: ['crates/**', '.github/workflows/qol.yml']
+  pull_request:
+    paths: ['crates/**', '.github/workflows/qol.yml']
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    env:
+      SLOT_SILENT: '1'
+      SLOT_QOL_PREVIEW: /tmp/slot-qol-previews
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libgl1-mesa-dri libasound2t64
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Test favorites, history, and settings
+        run: |
+          cargo test --locked -p slot-store --lib --tests
+          cargo test --locked -p slot --no-default-features --test play_history --test favorites --test recents --test state_writer --test sleep --test show_titles --test quick_menu --test in_game_menu -- --test-threads=1
+          cargo test --locked -p slot-ui --lib --test quick_menu --test typography
+      - uses: actions/upload-artifact@v7
+        with:
+          name: launcher-qol-review
+          path: /tmp/slot-qol-previews/*.png
+          if-no-files-found: error

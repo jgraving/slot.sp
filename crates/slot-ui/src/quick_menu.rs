@@ -108,6 +108,9 @@ pub enum QuickRow {
     UndoLoad,
     Reference,
     PlayReference,
+    FavoriteSort,
+    GameDetails,
+    PlayDetails,
 }
 
 impl QuickRow {
@@ -117,7 +120,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 97] = [
+    pub const ALL: [QuickRow; 100] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -215,9 +218,12 @@ impl QuickRow {
         QuickRow::UndoLoad,
         QuickRow::Reference,
         QuickRow::PlayReference,
+        QuickRow::FavoriteSort,
+        QuickRow::GameDetails,
+        QuickRow::PlayDetails,
     ];
 
-    pub const MAIN: [QuickRow; 8] = [
+    pub const MAIN: [QuickRow; 9] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Bluetooth,
@@ -225,6 +231,7 @@ impl QuickRow {
         QuickRow::Power,
         QuickRow::Controls,
         QuickRow::Kids,
+        QuickRow::GameDetails,
         QuickRow::About,
     ];
 
@@ -235,13 +242,14 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    pub const GENERAL: [QuickRow; 10] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
         QuickRow::Theme,
         QuickRow::Recents,
         QuickRow::ShowTitles,
+        QuickRow::FavoriteSort,
         QuickRow::BootAnimation,
         QuickRow::CarouselSounds,
         QuickRow::DateTime,
@@ -342,12 +350,13 @@ impl QuickRow {
         QuickRow::ExitGame,
     ];
 
-    pub const SETTINGS: [QuickRow; 5] = [
+    pub const SETTINGS: [QuickRow; 6] = [
         QuickRow::PlayScreen,
         QuickRow::PlaySound,
         QuickRow::PlayGameplay,
         QuickRow::PlayControls,
         QuickRow::PlayReference,
+        QuickRow::PlayDetails,
     ];
 
     pub const PLAY_SCREEN: [QuickRow; 6] = [
@@ -401,6 +410,7 @@ impl QuickRow {
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::FavoriteSort
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
@@ -417,6 +427,7 @@ impl QuickRow {
             | QuickRow::PlaySound
             | QuickRow::PlayGameplay
             | QuickRow::PlayReference
+            | QuickRow::PlayDetails
             | QuickRow::PlayControls => &QuickRow::SETTINGS,
 
             r if r.game_button().is_some() => &QuickRow::CONTROLS,
@@ -525,6 +536,8 @@ impl QuickRow {
             QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
+            QuickRow::FavoriteSort => "Sort Favorites",
+            QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
             QuickRow::Bluetooth | QuickRow::PlaySound => "Sound",
             QuickRow::GbaShader => "Shader",
@@ -618,6 +631,8 @@ impl QuickRow {
                 | QuickRow::About
                 | QuickRow::Reference
                 | QuickRow::PlayReference
+                | QuickRow::GameDetails
+                | QuickRow::PlayDetails
                 | QuickRow::Screen
                 | QuickRow::Game
                 | QuickRow::Resume
@@ -754,10 +769,13 @@ pub enum QuickValue {
     Level9,
     Clean,
     Filename,
+    Alphabetical,
+    MostUsed,
+    RecentlyUsed,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 44] = [
+    pub const ALL: [QuickValue; 47] = [
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -802,6 +820,9 @@ impl QuickValue {
         QuickValue::Level9,
         QuickValue::Clean,
         QuickValue::Filename,
+        QuickValue::Alphabetical,
+        QuickValue::MostUsed,
+        QuickValue::RecentlyUsed,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -877,6 +898,9 @@ impl QuickValue {
             QuickValue::Level9 => "9",
             QuickValue::Clean => "Clean",
             QuickValue::Filename => "Filename",
+            QuickValue::Alphabetical => "Alphabetically",
+            QuickValue::MostUsed => "Most used",
+            QuickValue::RecentlyUsed => "Recently used",
 
         }
     }

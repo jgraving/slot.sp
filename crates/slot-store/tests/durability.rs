@@ -251,6 +251,7 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             show_recents: false,
             show_titles: false,
             clean_titles: true,
+            favorite_sort: slot_store::FavoriteSort::Alphabetical,
             boot_animation: true,
             carousel_sounds: true,
             left_stick_dpad: true,
