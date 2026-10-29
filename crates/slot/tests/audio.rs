@@ -370,3 +370,194 @@ fn reopening_the_device_forgets_the_released_schedule() {
     pace.reset();
     assert_eq!(pace.wait(start + span * 3), span);
 }
+
+struct ClosingSink {
+    ring: std::sync::Arc<Ring>,
+    closed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl AudioSink for ClosingSink {
+    fn open(&mut self, sample_rate: u32) -> Result<(), slot::audio::AudioError> {
+        self.ring.reopen(sample_rate);
+        Ok(())
+    }
+
+    fn ring(&self) -> std::sync::Arc<Ring> {
+        self.ring.clone()
+    }
+
+    fn shutdown(&mut self) {
+        self.closed
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+struct PowerCut(
+    slot_power::SimPlatform,
+    std::sync::Arc<std::sync::atomic::AtomicBool>,
+);
+
+impl slot_power::Platform for PowerCut {
+    fn headphones(&self) -> bool {
+        self.1.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn set_backlight(&mut self, step: u8) {
+        self.0.set_backlight(step);
+    }
+
+    fn battery(&self) -> Option<slot_power::Battery> {
+        self.0.battery()
+    }
+
+    fn charge(&self) -> slot_power::Charge {
+        self.0.charge()
+    }
+
+    fn set_led(&mut self, state: slot_power::LedState) {
+        self.0.set_led(state);
+    }
+
+    fn poweroff(&mut self) -> ! {
+        panic!("power cut")
+    }
+
+    fn restart(&mut self) -> ! {
+        panic!("restarted")
+    }
+
+    fn root(&self) -> &std::path::Path {
+        self.0.root()
+    }
+
+    fn now(&self) -> i64 {
+        self.0.now()
+    }
+
+    fn set_clock(&mut self, secs: i64) {
+        self.0.set_clock(secs);
+    }
+
+    fn set_rumble(&mut self, strength: u16) {
+        self.0.set_rumble(strength);
+    }
+}
+
+#[test]
+fn the_speaker_is_let_go_before_the_power_is_cut() {
+    let cuts: [(&str, fn(&mut slot::frontend::Frontend)); 2] = [
+        ("power off", |f| f.poweroff()),
+        ("restart", |f| f.restart()),
+    ];
+    for (what, cut) in cuts {
+        let d = tempfile::tempdir().unwrap();
+        let closed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let sink = ClosingSink {
+            ring: std::sync::Arc::new(Ring::new(ring_capacity(OUTPUT_HZ))),
+            closed: closed.clone(),
+        };
+        let mut f = slot::frontend::Frontend::boot_with(
+            Box::new(PowerCut(
+                slot_power::SimPlatform::at(d.path().to_path_buf()),
+                Default::default(),
+            )),
+            Box::new(sink),
+        );
+        let reached = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cut(&mut f)));
+        assert!(reached.is_err(), "{what} never reached the platform");
+        assert!(
+            closed.load(std::sync::atomic::Ordering::Relaxed),
+            "{what}: the audio device was still open when the power was cut, which can pop the speaker"
+        );
+    }
+}
+
+struct HoldingSink {
+    ring: std::sync::Arc<Ring>,
+    held: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+
+impl AudioSink for HoldingSink {
+    fn open(&mut self, rate: u32) -> Result<(), slot::audio::AudioError> {
+        self.ring.reopen(rate);
+        Ok(())
+    }
+
+    fn ring(&self) -> std::sync::Arc<Ring> {
+        self.ring.clone()
+    }
+
+    fn hold_open(&self, held: bool) {
+        self.held.store(held, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+#[test]
+fn only_the_active_wired_output_keeps_the_sink_open() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    let d = tempfile::tempdir().unwrap();
+    let held = Arc::new(AtomicBool::new(false));
+    let jack = Arc::new(AtomicBool::new(false));
+    let ring = Arc::new(Ring::new(ring_capacity(OUTPUT_HZ)));
+    let mut s = slot::session::Session::boot_with(
+        d.path().to_path_buf(),
+        Box::new(HoldingSink {
+            ring: ring.clone(),
+            held: held.clone(),
+        }),
+    );
+    s.app_mut().set_power(slot_power::Power::new(
+        Box::new(PowerCut(
+            slot_power::SimPlatform::at(d.path().to_path_buf()),
+            jack.clone(),
+        )),
+        Duration::from_secs(300),
+    ));
+    s.update(0.0);
+    assert!(
+        !held.load(Ordering::Relaxed),
+        "quiet speaker boot must stay lazy"
+    );
+
+    jack.store(true, Ordering::Relaxed);
+    s.app_mut().tick_ms(1_000);
+    s.update(0.0);
+    assert!(held.load(Ordering::Relaxed));
+    assert!(
+        !ring.warm(),
+        "headphones must not force a never-used PCM open"
+    );
+
+    for (output, expected) in [
+        ("AA:BB:CC:DD:EE:FF", false),
+        ("plughw:CARD=Headset,DEV=0", false),
+        ("", true),
+    ] {
+        let mut menu = slot::bluetooth::Manager::new(d.path().to_path_buf(), false);
+        menu.route_choice = Some(output.to_owned());
+        s.app_mut().bluetooth = Some(menu);
+        s.update(0.0);
+        assert_eq!(held.load(Ordering::Relaxed), expected, "route {output}");
+    }
+
+    jack.store(false, Ordering::Relaxed);
+    s.app_mut().tick_ms(2_000);
+    s.update(0.0);
+    assert!(
+        !held.load(Ordering::Relaxed),
+        "unplug must release the hold"
+    );
+    jack.store(true, Ordering::Relaxed);
+    s.app_mut().tick_ms(3_000);
+    s.update(0.0);
+    assert!(held.load(Ordering::Relaxed));
+    s.prepare_poweroff();
+    assert!(
+        !held.load(Ordering::Relaxed),
+        "shutdown must clear the hold"
+    );
+}

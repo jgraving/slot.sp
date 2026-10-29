@@ -254,16 +254,18 @@ fn fast_forward_steps_through_its_speeds_wraps_at_both_ends_and_saves_each_one()
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::FastForward);
     for (btn, want) in [
-        (Btn::Left, 4),
-        (Btn::Left, 3),
-        (Btn::Left, 2),
-        (Btn::Left, 0),
+        (Btn::Left, 16),
+        (Btn::Left, 12),
+        (Btn::Left, 8),
         (Btn::Left, 6),
+        (Btn::Left, 0),
+        (Btn::Left, 24),
         (Btn::Right, 0),
-        (Btn::Right, 2),
-        (Btn::Right, 3),
-        (Btn::Right, 4),
         (Btn::Right, 6),
+        (Btn::Right, 8),
+        (Btn::Right, 12),
+        (Btn::Right, 16),
+        (Btn::Right, 24),
         (Btn::Right, 0),
     ] {
         press(&mut a, btn);
@@ -961,7 +963,7 @@ fn only_the_clock_from_the_menu_offers_b_back() {
 }
 
 #[test]
-fn brightness_steps_from_one_to_nine_and_never_to_zero() {
+fn brightness_steps_from_zero_to_nine() {
     let (d, mut a, _) = on_carousel_with(SlotState {
         brightness: 3,
         ..SlotState::default()
@@ -971,7 +973,12 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
         a.quick_value(QuickRow::Brightness),
         Some(QuickValue::Level3)
     );
-    for (btn, want) in [(Btn::Left, 2), (Btn::Left, 1), (Btn::Left, 1)] {
+    for (btn, want) in [
+        (Btn::Left, 2),
+        (Btn::Left, 1),
+        (Btn::Left, 0),
+        (Btn::Left, 0),
+    ] {
         press(&mut a, btn);
         assert_eq!(a.brightness(), want, "{btn:?}");
     }
@@ -981,22 +988,6 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
     assert_eq!(a.brightness(), 9);
     a.flush_state();
     assert_eq!(read_slot_state(d.path()).brightness, 9);
-
-    let (_d, mut a, _) = on_carousel_with(SlotState {
-        brightness: 1,
-        ..SlotState::default()
-    });
-    a.apply(Action::BrightnessDown);
-    assert_eq!(a.brightness(), 0);
-    open_at(&mut a, QuickRow::Brightness);
-    assert_eq!(
-        a.quick_value(QuickRow::Brightness),
-        Some(QuickValue::Level0)
-    );
-    press(&mut a, Btn::Left);
-    assert_eq!(a.brightness(), 0, "Left at 0 moved the backlight");
-    press(&mut a, Btn::Right);
-    assert_eq!(a.brightness(), 1);
 }
 
 #[test]
