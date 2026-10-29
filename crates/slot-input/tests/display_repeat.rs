@@ -118,6 +118,16 @@ fn context_binding_changes_and_captured_input_cancel_an_active_ramp() {
 }
 
 #[test]
+fn a_modifier_released_in_a_recorder_cannot_start_a_phantom_repeat() {
+    let mut g = Gestures::new();
+    g.set_entries(vec![entry(Some(Mod::Select), Btn::Up, Action::BrightnessUp)]);
+    g.feed(RawEvent::Down(Btn::Select), 0);
+    g.observe(RawEvent::Up(Btn::Select));
+    g.feed(RawEvent::Down(Btn::Up), 10);
+    assert!(g.tick(10 + VOLUME_REPEAT_DELAY_MS).is_empty());
+}
+
+#[test]
 fn holds_leave_one_shot_shortcuts_as_one_shot_actions() {
     for action in [
         Action::NightToggle,

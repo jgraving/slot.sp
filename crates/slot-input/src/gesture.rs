@@ -394,6 +394,10 @@ impl Gestures {
                 out.push(Action::VolumeDown);
             }
         }
+        self.display_ramps.retain(|r| {
+            self.pressed.contains(&r.button)
+                && r.modifier.is_none_or(|b| self.pressed.contains(&b))
+        });
         for ramp in &mut self.display_ramps {
             if ramp_due(Some(ramp.since), ramp.last, now) {
                 ramp.last = Some(now);
