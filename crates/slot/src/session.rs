@@ -274,6 +274,9 @@ impl Session {
                 self.act(action);
             }
         }
+        if self.app.capturing() || self.app.parent_controls_open() || self.dozing() {
+            self.gestures.cancel_display_ramps();
+        }
         actions.extend(self.gestures.tick(now));
         if !latched && self.app.in_game_menu().is_some() {
             actions.extend(self.gestures.drop_ff_latch());
