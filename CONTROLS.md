@@ -83,6 +83,8 @@ Open **Menu → Controls**, then choose a page:
 | **Shortcuts** | Save/load, screenshots, display shortcuts, day/night, fast-forward and rewind. |
 | **In-Game** | Game buttons and turbo buttons. Also available through in-game **Settings → Controls**. |
 
+**Fast Forward Toggle** is an optional shortcut: press once to start and again to stop. It has no default binding. Assigning it to the current **Fast Forward** button replaces the hold binding.
+
 1. Highlight the action and press <kbd>A</kbd>.
 2. When **Recording** appears, press the button or combination you want.
 3. The new binding appears on that row and saves immediately.

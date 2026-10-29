@@ -77,9 +77,9 @@ Press <kbd>START</kbd> on a GBA cartridge to open its circuit-board view. Use <k
 | Hold <kbd>X</kbd> | Turbo A. |
 | Hold <kbd>Y</kbd> | Turbo B. |
 
-In **Gameplay**, choose a fast-forward cap of **2×, 3×, 4× or 6×**, or turn it off. **Fast Forward Sound** controls audio during fast-forward. **Rewind** and **Turbo Buttons** can each be turned on or off.
+In **Gameplay**, choose a fast-forward cap of **1.5×, 2×, 3×, 4× or 6×**, or turn it off. **Fast Forward Sound** controls audio during fast-forward. **Rewind** and **Turbo Buttons** can each be turned on or off.
 
-Use **Controls → In-Game** to move the turbo buttons, and **Controls → Shortcuts** to change fast-forward or rewind bindings.
+Use **Controls → In-Game** to move the turbo buttons, and **Controls → Shortcuts** to change fast-forward or rewind bindings. Assign **Fast Forward Toggle** to start fast-forward with one press and stop it with the next. It is unassigned by default. Assigning it to the same button as **Fast Forward** replaces that hold binding.
 
 ---
 

@@ -955,6 +955,7 @@ impl Frontend {
     }
 
     pub fn restart(&mut self) {
+        self.session.prepare_poweroff();
         self.session.app_mut().restart();
     }
 

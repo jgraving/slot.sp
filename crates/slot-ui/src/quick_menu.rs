@@ -92,6 +92,7 @@ pub enum QuickRow {
     ScShaderNext,
     ScShaderBack,
     ScFastForward,
+    ScFastForwardToggle,
     ScRewind,
     ScNight,
     Controls,
@@ -121,7 +122,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 101] = [
+    pub const ALL: [QuickRow; 102] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -203,6 +204,7 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::ScNight,
         QuickRow::Controls,
@@ -285,7 +287,7 @@ impl QuickRow {
         QuickRow::GameTurboB,
     ];
 
-    pub const SHORTCUTS: [QuickRow; 15] = [
+    pub const SHORTCUTS: [QuickRow; 16] = [
         QuickRow::ScSave,
         QuickRow::ScLoad,
         QuickRow::ScScreenshot,
@@ -299,6 +301,7 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::ScNight,
     ];
@@ -601,6 +604,7 @@ impl QuickRow {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
             | QuickRow::ScNight => self.shortcut().map_or("", Shortcut::label),
             QuickRow::ShelfPrev | QuickRow::ShelfNext | QuickRow::ShelfFavorite => {
@@ -694,6 +698,7 @@ impl QuickRow {
             QuickRow::ScShaderNext => Shortcut::ShaderNext,
             QuickRow::ScShaderBack => Shortcut::ShaderBack,
             QuickRow::ScFastForward => Shortcut::FastForward,
+            QuickRow::ScFastForwardToggle => Shortcut::FastForwardToggle,
             QuickRow::ScRewind => Shortcut::Rewind,
             QuickRow::ScNight => Shortcut::NightToggle,
             _ => return None,
@@ -728,6 +733,7 @@ impl QuickRow {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum QuickValue {
+    Speed1_5,
     Speed2,
     Speed3,
     Speed4,
@@ -779,7 +785,8 @@ pub enum QuickValue {
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 47] = [
+    pub const ALL: [QuickValue; 48] = [
+        QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -857,6 +864,7 @@ impl QuickValue {
 
     pub fn text(self) -> &'static str {
         match self {
+            QuickValue::Speed1_5 => "1.5×",
             QuickValue::Speed2 => "2×",
             QuickValue::Speed3 => "3×",
             QuickValue::Speed4 => "4×",
@@ -913,13 +921,14 @@ impl QuickValue {
         QuickValue::LEVELS[usize::from(n).min(QuickValue::LEVELS.len() - 1)]
     }
 
-    pub fn speed(frames: u8) -> Option<QuickValue> {
-        match frames {
+    pub fn speed(quarters: u8) -> Option<QuickValue> {
+        match quarters {
             0 => Some(QuickValue::Off),
-            2 => Some(QuickValue::Speed2),
-            3 => Some(QuickValue::Speed3),
-            4 => Some(QuickValue::Speed4),
-            6 => Some(QuickValue::Speed6),
+            6 => Some(QuickValue::Speed1_5),
+            8 => Some(QuickValue::Speed2),
+            12 => Some(QuickValue::Speed3),
+            16 => Some(QuickValue::Speed4),
+            24 => Some(QuickValue::Speed6),
             _ => None,
         }
     }

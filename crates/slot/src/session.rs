@@ -435,6 +435,7 @@ impl Session {
             self.app.bluetooth_state(address.clone(), address.is_some());
             self.app.usb_state(usb, false);
         }
+        self.sink.hold_open(self.app.wired_audio_active());
         if awake {
             if let Some(level) = self
                 .bluetooth_volume
@@ -628,7 +629,7 @@ impl Session {
 
     fn sync_speed(&self) {
         if let Some(emu) = &self.emu {
-            emu.set_fast_steps(u32::from(self.app.ff_speed()));
+            emu.set_fast_quarters(u32::from(self.app.ff_speed()));
             emu.set_ff_sound(self.app.ff_sound());
             emu.set_speed(
                 if self.inserting()
@@ -851,6 +852,9 @@ mod kid_shortcut_tests {
     #[test]
     fn child_shortcuts_cannot_arm_fast_or_rewind_latches() {
         let d = tempfile::tempdir().unwrap();
+        let mut keys = slot_store::ShortcutKeys::default();
+        keys.set(slot_store::Shortcut::FastForwardToggle, slot_store::Binding::plain(slot_store::Device::R2));
+        slot_store::write_shortcuts(d.path(), &keys).unwrap();
         let mut sink = crate::audio::StubSink::new();
         sink.open(48000).unwrap();
         let mut session = Session::boot_with(d.path().to_path_buf(), Box::new(sink));
@@ -872,9 +876,13 @@ mod kid_shortcut_tests {
         );
         assert!(!session.entries.iter().any(|entry| matches!(
             entry.action,
-            Action::SaveState | Action::LoadState | Action::FfStart | Action::RewindStart
+            Action::SaveState
+                | Action::LoadState
+                | Action::FfStart
+                | Action::FfToggle
+                | Action::RewindStart
         )));
-        for action in [Action::FfStart, Action::RewindStart] {
+        for action in [Action::FfStart, Action::FfToggle, Action::RewindStart] {
             session.act(action);
         }
         assert!(!session.fast && !session.rewinding);
@@ -882,7 +890,7 @@ mod kid_shortcut_tests {
             d.path().to_path_buf(),
             session.app.kids.clone(),
         ));
-        for action in [Action::FfStart, Action::RewindStart] {
+        for action in [Action::FfStart, Action::FfToggle, Action::RewindStart] {
             session.act(action);
         }
         assert!(!session.fast && !session.rewinding);

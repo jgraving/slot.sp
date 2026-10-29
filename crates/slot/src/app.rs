@@ -1389,6 +1389,7 @@ impl App {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
             | QuickRow::ScNight
             | QuickRow::Controls
@@ -2445,7 +2446,7 @@ impl App {
         if power.supports_high_refresh() {
             power.set_high_refresh(self.state.high_refresh);
         }
-        power.set_backlight(self.state.brightness);
+        power.set_backlight(self.state.brightness + 1);
         self.headphones = power.headphones();
         self.hud.set_headphones(self.headphones);
         let secs = power.now();
@@ -3323,6 +3324,7 @@ impl App {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
             | QuickRow::ScNight => {}
         }
@@ -3365,13 +3367,9 @@ impl App {
                 }
                 _ => (HudKind::BlueLight, self.state.blue_light, BLUE_LIGHT_MAX),
             };
-            let floor = match kind {
-                HudKind::Brightness => 1,
-                _ => 0,
-            };
             let to = match right {
-                true => up(now, 1, max).max(floor),
-                false => now.saturating_sub(1).max(floor).min(now),
+                true => up(now, 1, max),
+                false => now.saturating_sub(1),
             };
             self.set_level(kind, to);
             return;
@@ -3562,6 +3560,7 @@ impl App {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
             | QuickRow::ScNight
             | QuickRow::Controls
@@ -3693,7 +3692,7 @@ impl App {
         let moved = *level != value;
         *level = value;
         if let (HudKind::Brightness, Some(power)) = (kind, &mut self.power) {
-            power.set_backlight(value);
+            power.set_backlight(value + 1);
         }
         if moved && matches!(kind, HudKind::Brightness | HudKind::BlueLight) {
             self.display_settings
@@ -3745,7 +3744,7 @@ impl App {
         self.state.brightness = brightness;
         self.state.blue_light = warmth;
         if let Some(power) = &mut self.power {
-            power.set_backlight(brightness);
+            power.set_backlight(brightness + 1);
         }
         self.save_display();
         self.persist_soon();
@@ -5620,11 +5619,9 @@ impl App {
             });
         }
         let switchable = self.seated().is_some_and(|stem| self.link_switchable(stem));
-        // Cancel and Mode stay on the left of the footer, Swap and Link on the right, so the
-        // socket in the middle of the strip stays clear.
         let (left, right): (&[LinkLegend], &[LinkLegend]) = match menu {
-            GameMenu::Pick(_) if switchable => (&[LinkLegend::Mode], &[LinkLegend::Link]),
-            GameMenu::Pick(_) => (&[], &[LinkLegend::Link]),
+            GameMenu::Pick(_) if switchable => (&[LinkLegend::Cancel], &[LinkLegend::Mode]),
+            GameMenu::Pick(_) => (&[LinkLegend::Cancel], &[LinkLegend::Link]),
             GameMenu::Working { .. } => (&[LinkLegend::Cancel], &[]),
             GameMenu::Linked { opened: true, .. } => (&[LinkLegend::Back], &[LinkLegend::EndLink]),
             GameMenu::Linked { .. } => (&[], &[]),
