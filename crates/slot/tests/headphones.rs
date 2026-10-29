@@ -7,6 +7,74 @@ use slot_input::Action;
 use slot_store::read_slot_state;
 use slot_ui::Icon;
 
+fn has_indicator(a: &slot::app::App, id: slot_ui::TexId) -> bool {
+    let mut draws = vec![];
+    a.draw(&mut draws);
+    draws.iter().any(
+        |d| matches!(*d, slot_ui::Draw::Tex { tex, y, .. } if tex == id && y < slot_ui::PLATE_H),
+    )
+}
+
+#[test]
+fn persistent_mute_tracks_the_active_audio_route_and_survives_hud_timeout() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let (mut a, jack) = app_playing_with_jack(d.path(), "Emerald");
+    a.set_game_ready(true);
+    let mute = slot_ui::TexId::from_raw(9001);
+    let connection = slot_ui::TexId::from_raw(9002);
+    a.hud_mute_indicator = Some(mute);
+    a.hud_audio_indicator = Some(connection);
+    a.apply(Action::QuickMenu);
+    for _ in 0..60 {
+        a.update(1.0 / 60.0);
+    }
+    assert!(!has_indicator(&a, mute));
+    a.apply(Action::MuteToggle);
+    a.tick_ms(a.now() + 10_000);
+    assert!(has_indicator(&a, mute));
+    assert!(has_indicator(&a, connection));
+
+    // Wired, Bluetooth and USB each have their own mute state. A silent
+    // speaker must not label an audible newly-selected output as muted.
+    jack.store(true, Ordering::Relaxed);
+    a.tick_ms(a.now() + 1_000);
+    assert!(!has_indicator(&a, mute));
+    a.apply(Action::MuteToggle);
+    assert!(has_indicator(&a, mute));
+    a.bluetooth_state(Some("AA:BB:CC:DD:EE:FF".into()), true);
+    a.apply(Action::VolumeUp);
+    assert!(!has_indicator(&a, mute));
+    a.apply_at(Action::MuteToggle, a.now() + 1_000);
+    assert!(has_indicator(&a, mute));
+    a.usb_state(true, false);
+    a.apply(Action::VolumeUp);
+    assert!(!has_indicator(&a, mute));
+    a.apply_at(Action::MuteToggle, a.now() + 1_000);
+    assert!(has_indicator(&a, mute));
+    a.apply(Action::VolumeUp);
+    assert!(!has_indicator(&a, mute));
+}
+
+#[test]
+fn zero_volume_and_mute_are_visible_on_the_carousel_and_in_settings() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    let mut a = common::boot(d.path());
+    let mute = slot_ui::TexId::from_raw(9001);
+    a.mute_indicator = Some(mute);
+    assert!(!has_indicator(&a, mute));
+    for _ in 0..20 {
+        a.apply(Action::VolumeDown);
+    }
+    assert!(!a.muted());
+    assert!(has_indicator(&a, mute));
+    a.apply(Action::QuickMenu);
+    assert!(has_indicator(&a, mute));
+    a.apply(Action::VolumeUp);
+    assert!(!has_indicator(&a, mute));
+    a.apply(Action::MuteToggle);
+    assert!(has_indicator(&a, mute));
+}
+
 #[test]
 fn unplug_uses_disconnect_volume_and_preserves_wired_volume() {
     let d = tmp_root_with_carts(&["Emerald"]);

@@ -42,7 +42,10 @@ pub fn rest_y(h: f32) -> f32 {
 pub fn foot_y(h: f32) -> f32 {
     rest_y(h) + h * height_scale(h)
 }
-const OMEGA: f32 = 16.0;
+// An expressive spatial spring, tuned for the weight of the large cartridges.
+// Keep velocity when retargeting so quick taps and reversals carry momentum.
+const STIFFNESS: f32 = 380.0;
+const DAMPING: f32 = 0.72;
 const PART: f32 = 100.0;
 
 const SLOTS: i32 = 3;
@@ -474,9 +477,39 @@ impl Shelf {
     }
 
     pub fn update(&mut self, dt: f32) {
-        let accel = -2.0 * OMEGA * self.vel - OMEGA * OMEGA * (self.scroll - self.scroll_target());
-        self.vel += accel * dt;
-        self.scroll += self.vel * dt;
+        if !dt.is_finite() || dt <= 0.0 {
+            return;
+        }
+        let target = self.scroll_target();
+        let x = self.scroll - target;
+        let omega = STIFFNESS.sqrt();
+        // Holding a direction should flow forward, including during the initial
+        // repeat delay. Release restores the small overshoot and springy settle.
+        let (x, vel) = if self.held.is_some() {
+            let b = self.vel + omega * x;
+            let dt = dt.min(1.0);
+            let decay = (-omega * dt).exp();
+            ((x + b * dt) * decay, (self.vel - omega * b * dt) * decay)
+        } else {
+            let decay_rate = DAMPING * omega;
+            let frequency = omega * (1.0 - DAMPING * DAMPING).sqrt();
+            let dt = dt.min(1.0);
+            let (sin, cos) = (frequency * dt).sin_cos();
+            let decay = (-decay_rate * dt).exp();
+            (
+                (x * cos + (self.vel + decay_rate * x) / frequency * sin) * decay,
+                (self.vel * cos - (decay_rate * self.vel + STIFFNESS * x) / frequency * sin) * decay,
+            )
+        };
+        // Solve the spring directly: dropped frames cannot destabilise it and
+        // 30/60/120 Hz all describe the same motion. Stop below a visible pixel.
+        if x.abs() < 0.0001 && vel.abs() < 0.001 {
+            self.scroll = target;
+            self.vel = 0.0;
+        } else {
+            self.scroll = target + x;
+            self.vel = vel;
+        }
     }
 
     pub fn draw(

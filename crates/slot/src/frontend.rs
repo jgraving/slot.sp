@@ -40,6 +40,9 @@ pub struct Frontend {
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
     audio_icon_key: Option<(u8, bool)>,
+    mute_icon: Option<TexId>,
+    hud_mute_icon: Option<TexId>,
+    mute_icon_key: Option<bool>,
     bluetooth_lines: Vec<String>,
     session: Session,
     start: Instant,
@@ -189,6 +192,9 @@ impl Frontend {
             audio_icon: None,
             hud_audio_icon: None,
             audio_icon_key: None,
+            mute_icon: None,
+            hud_mute_icon: None,
+            mute_icon_key: None,
             bluetooth_lines: Vec::new(),
             session,
             start: now,
@@ -617,6 +623,22 @@ impl Frontend {
     }
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
+        let light = self.session.app().light();
+        if self.mute_icon_key != Some(light) {
+            let face = |ink| {
+                let f = icon_face(Icon::VolumeMuted, 20.0, ink);
+                UndoFace {
+                    rgba: f.rgba,
+                    w: f.w,
+                    h: f.h,
+                }
+            };
+            upload(compositor, &mut self.mute_icon, face(footer_ink(light)));
+            upload(compositor, &mut self.hud_mute_icon, face(HUD_INK));
+            self.mute_icon_key = Some(light);
+        }
+        self.session.app_mut().mute_indicator = self.mute_icon;
+        self.session.app_mut().hud_mute_indicator = self.hud_mute_icon;
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
