@@ -117,11 +117,30 @@ pub fn draw_corner_connection(
     icon: Option<TexId>,
     out: &mut Vec<Draw>,
 ) {
+    draw_corner_audio(battery, percent, icon, None, out);
+}
+
+/// Keep route and mute visible together, after the entire battery readout.
+pub fn draw_corner_audio(
+    battery: Option<Battery>,
+    percent: Printed,
+    connection: Option<TexId>,
+    mute: Option<TexId>,
+    out: &mut Vec<Draw>,
+) {
     draw_connection(
         battery,
         percent,
-        icon,
+        connection,
         CORNER_MARGIN,
+        (PLATE_H - 20.0) / 2.0,
+        out,
+    );
+    draw_connection(
+        battery,
+        percent,
+        mute,
+        CORNER_MARGIN + if connection.is_some() { 30.0 } else { 0.0 },
         (PLATE_H - 20.0) / 2.0,
         out,
     );
@@ -156,6 +175,50 @@ fn draw_connection(
 #[cfg(test)]
 mod connection_tests {
     use super::*;
+    #[test]
+    fn mute_follows_connection_without_overlapping_the_battery_or_clock() {
+        let connection = TexId::from_raw(2);
+        let mute = TexId::from_raw(3);
+        for battery in [
+            None,
+            Some(Battery {
+                percent: 100,
+                charge: slot_power::Charge::Charging,
+            }),
+        ] {
+            for connected in [false, true] {
+                let mut draws = vec![];
+                let percent = Printed::new(TexId::from_raw(1), 60);
+                draw_corner_audio(
+                    battery,
+                    percent,
+                    connected.then_some(connection),
+                    Some(mute),
+                    &mut draws,
+                );
+                let xs: Vec<f32> = draws
+                    .iter()
+                    .map(|d| match d {
+                        Draw::Tex { x, .. } => *x,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                assert_eq!(xs.len(), if connected { 2 } else { 1 });
+                if connected {
+                    assert!(xs[1] >= xs[0] + 30.0);
+                }
+                let start = CORNER_MARGIN
+                    + if battery.is_some() {
+                        crate::battery::gauge_width(percent) + 10.0
+                    } else {
+                        0.0
+                    };
+                assert_eq!(xs[0], start);
+                assert!(xs.last().unwrap() + 20.0 < 640.0 - CORNER_MARGIN - 100.0);
+            }
+        }
+    }
+
     #[test]
     fn bluetooth_sits_after_the_percentage_and_is_absent_without_a_texture() {
         let mut draws = vec![];

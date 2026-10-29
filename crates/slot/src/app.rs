@@ -351,6 +351,8 @@ pub struct App {
     bluetooth_supported: bool,
     pub audio_indicator: Option<TexId>,
     pub hud_audio_indicator: Option<TexId>,
+    pub mute_indicator: Option<TexId>,
+    pub hud_mute_indicator: Option<TexId>,
     bluetooth_connected: bool,
     bluetooth_route: Option<String>,
     usb_active: bool,
@@ -580,6 +582,8 @@ impl App {
             bluetooth_supported: false,
             audio_indicator: None,
             hud_audio_indicator: None,
+            mute_indicator: None,
+            hud_mute_indicator: None,
             bluetooth_connected: false,
             bluetooth_route: None,
             usb_active: false,
@@ -4995,22 +4999,7 @@ impl App {
                 canvas: self.canvas(),
             }
             .draw(out);
-            {
-                slot_ui::draw_corners(
-                    self.canvas(),
-                    self.battery,
-                    self.battery_percent,
-                    self.hud_bolt,
-                    self.shelf_clock,
-                    out,
-                );
-                slot_ui::draw_corner_connection(
-                    self.battery,
-                    self.battery_percent,
-                    self.hud_audio_indicator,
-                    out,
-                );
-            }
+            self.draw_status_bar(out);
         }
         if matches!(
             self.phase,
@@ -5122,13 +5111,22 @@ impl App {
             self.status_ink(),
             out,
         );
-        slot_ui::draw_corner_connection(
+        slot_ui::draw_corner_audio(
             self.battery,
             self.battery_percent,
             if in_game {
                 self.hud_audio_indicator
             } else {
                 self.audio_indicator
+            },
+            if self.muted() || self.volume() == 0 {
+                if in_game {
+                    self.hud_mute_indicator
+                } else {
+                    self.mute_indicator
+                }
+            } else {
+                None
             },
             out,
         );

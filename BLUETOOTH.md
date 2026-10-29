@@ -51,6 +51,8 @@ Highlight the saved device, press <kbd>Y</kbd>, release it and press <kbd>Y</kbd
 
 The speaker, wired headphones, Bluetooth and USB each remember their own volume and mute state. USB audio starts at **20%**.
 
+A speaker-with-X icon stays at the top of the carousel and menus while the active output is muted or its volume is zero. It appears beside the Bluetooth or headphones indicator, so both the connection and mute state remain visible.
+
 Headphones with their own volume controls may also need those controls adjusted. Use the handheld's volume indicator to set slot.sp's level.
 
 In kid mode, volume stays within the parent's [volume limit](KID-MODE.md#time--volume-limits). The kid menu also has a Volume row.

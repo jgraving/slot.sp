@@ -362,13 +362,69 @@ fn shelf_scroll_settles_on_the_selected_index() {
 }
 
 #[test]
-fn scroll_never_overshoots_the_cart_it_lands_on() {
+fn scroll_has_a_small_springy_overshoot_then_settles() {
+    for (press, way) in [(Shelf::right as fn(&mut Shelf), 1.0), (Shelf::left, -1.0)] {
+        let mut s = shelf_with(5);
+        press(&mut s);
+        let mut peak = 0.0f32;
+        for _ in 0..60 {
+            s.update(1.0 / 60.0);
+            peak = peak.max(s.scroll * way);
+        }
+        assert!((1.02..1.06).contains(&peak), "overshoot was {peak} slots");
+        assert_eq!(
+            s.scroll,
+            s.scroll_target(),
+            "did not stop exactly on the cart"
+        );
+    }
+}
+
+#[test]
+fn spring_motion_matches_at_30_60_and_120_hz_and_after_a_dropped_frame() {
+    let sample = |hz| {
+        let mut s = shelf_with(5);
+        s.right();
+        for _ in 0..hz / 2 {
+            s.update(1.0 / hz as f32);
+        }
+        s.scroll
+    };
+    for hz in [30, 60, 120] {
+        assert!((sample(hz) - sample(60)).abs() < 0.00002);
+    }
+    let mut smooth = shelf_with(5);
+    let mut stalled = shelf_with(5);
+    smooth.right();
+    stalled.right();
+    for _ in 0..24 {
+        smooth.update(1.0 / 60.0);
+    }
+    for dt in [0.05, 0.2, 0.05, 0.1] {
+        stalled.update(dt);
+    }
+    assert!((smooth.scroll - stalled.scroll).abs() < 0.00002);
+    stalled.update(5.0);
+    assert_eq!(stalled.scroll, stalled.scroll_target());
+}
+
+#[test]
+fn reversing_a_moving_row_carries_momentum_without_jumping() {
     let mut s = shelf_with(5);
     s.right();
-    for _ in 0..600 {
+    for _ in 0..6 {
         s.update(1.0 / 60.0);
-        assert!(s.scroll <= 1.0 + 1e-4, "overshot to {}", s.scroll);
     }
+    let before = s.scroll;
+    s.left();
+    assert_eq!(s.scroll, before, "retargeting teleported the row");
+    s.update(0.001);
+    assert!(s.scroll > before, "retargeting discarded forward momentum");
+    for _ in 0..60 {
+        s.update(1.0 / 60.0);
+    }
+    assert_eq!(s.index, 0);
+    assert_eq!(s.scroll, 0.0);
 }
 
 #[test]

@@ -67,7 +67,8 @@ pub use cart::{
 pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    draw_corner_connection, draw_corners, draw_footer, draw_footer_connection, draw_status,
+    draw_corner_audio, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
+    draw_status,
     Printed, FOOTER_Y,
 };
 pub use hud::{
