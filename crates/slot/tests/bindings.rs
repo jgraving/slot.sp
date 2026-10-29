@@ -831,6 +831,82 @@ fn brightness_on_a_shelf_key_does_both_on_the_shelf_and_is_flagged() {
 }
 
 #[test]
+fn held_display_shortcuts_clamp_and_save_the_active_preset_on_shelf_and_menu() {
+    use slot::display_settings::DisplaySettings;
+
+    fn hold(s: &mut Session, now: &mut Millis, direction: Btn) {
+        step(s, now, &[RawEvent::Down(Btn::Select)]);
+        step(s, now, &[RawEvent::Down(direction)]);
+        for _ in 0..120 {
+            step(s, now, &[]);
+        }
+        step(s, now, &[RawEvent::Up(Btn::Select)]);
+        let levels = (s.app().brightness(), s.app().blue_light());
+        for _ in 0..40 {
+            step(s, now, &[]);
+        }
+        assert_eq!((s.app().brightness(), s.app().blue_light()), levels);
+        step(s, now, &[RawEvent::Up(direction)]);
+    }
+
+    for in_menu in [false, true] {
+        let d = shelf_card();
+        DisplaySettings {
+            day: (4, 4),
+            ..Default::default()
+        }
+        .save(d.path())
+        .unwrap();
+        let (mut s, mut now) = on_shelf(d.path());
+        if in_menu {
+            tap(&mut s, &mut now, Btn::Menu);
+        }
+        let row = s.app().quick_menu();
+        hold(&mut s, &mut now, Btn::Down);
+        hold(&mut s, &mut now, Btn::Right);
+        assert_eq!((s.app().brightness(), s.app().blue_light()), (0, 9));
+        assert_eq!(
+            s.app().quick_menu(),
+            row,
+            "a display hold navigated the menu"
+        );
+        chord(&mut s, &mut now, Btn::Select, Btn::X);
+        hold(&mut s, &mut now, Btn::Up);
+        hold(&mut s, &mut now, Btn::Left);
+        assert_eq!((s.app().brightness(), s.app().blue_light()), (9, 0));
+        s.app_mut().settle_saves();
+        let saved = DisplaySettings::read(d.path(), &Default::default());
+        assert_eq!((saved.day, saved.bedtime), ((0, 9), (9, 0)));
+        assert!(saved.night);
+        let reboot = App::boot(d.path());
+        assert_eq!((reboot.brightness(), reboot.blue_light()), (9, 0));
+    }
+}
+
+#[test]
+fn opening_a_binding_recorder_stops_a_display_hold_without_waiting_for_key_up() {
+    let d = shelf_card();
+    let (mut s, mut now) = on_shelf(d.path());
+    tap(&mut s, &mut now, Btn::Menu);
+    for _ in 0..QuickRow::Controls.position(&[]) {
+        tap(&mut s, &mut now, Btn::Down);
+    }
+    tap(&mut s, &mut now, Btn::A);
+    tap(&mut s, &mut now, Btn::Down);
+    tap(&mut s, &mut now, Btn::A);
+    assert_eq!(s.app().quick_menu(), Some(QuickRow::ScSave));
+    step(&mut s, &mut now, &[RawEvent::Down(Btn::Select)]);
+    step(&mut s, &mut now, &[RawEvent::Down(Btn::Down)]);
+    let brightness = s.app().brightness();
+    press(s.app_mut(), Btn::A);
+    assert!(s.app().capturing());
+    for _ in 0..100 {
+        step(&mut s, &mut now, &[]);
+    }
+    assert_eq!(s.app().brightness(), brightness);
+}
+
+#[test]
 fn with_turbo_off_its_rows_are_hidden_and_never_flagged() {
     let mut keys = ShortcutKeys::default();
     keys.set(Shortcut::SaveState, Binding::plain(Device::X));

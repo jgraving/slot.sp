@@ -53,6 +53,8 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | <kbd>SELECT</kbd> + <kbd>Y</kbd>, in game | Toggle color correction. |
 | <kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd>, in GB games | Previous / next palette. |
 
+Hold a brightness or warmth shortcut to keep adjusting it, just like volume. Release either button to stop. Remapped shortcuts work the same way.
+
 ## In menus
 
 | Button | Action |

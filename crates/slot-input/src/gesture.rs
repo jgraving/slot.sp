@@ -121,6 +121,14 @@ enum Release {
     Send(Action),
 }
 
+struct DisplayRamp {
+    button: Btn,
+    modifier: Option<Btn>,
+    action: Action,
+    since: Millis,
+    last: Option<Millis>,
+}
+
 #[derive(Copy, Clone, Default)]
 enum Select {
     #[default]
@@ -142,6 +150,7 @@ pub struct Gestures {
     deferred: Vec<Btn>,
     consumed: Vec<Btn>,
     held: Vec<(Btn, Release)>,
+    display_ramps: Vec<DisplayRamp>,
     ff_button: Option<Btn>,
     rewind_button: Option<Btn>,
     menu_down_at: Option<Millis>,
@@ -194,7 +203,7 @@ impl Gestures {
     }
 
     pub fn set_shortcuts(&mut self, shortcuts: Vec<(Chord, Action)>) {
-        self.entries = shortcuts
+        let entries = shortcuts
             .into_iter()
             .map(|(chord, action)| Entry {
                 chord,
@@ -206,9 +215,13 @@ impl Gestures {
                 },
             })
             .collect();
+        self.set_entries(entries);
     }
 
     pub fn set_entries(&mut self, entries: Vec<Entry>) {
+        if self.entries != entries {
+            self.display_ramps.clear();
+        }
         self.entries = entries;
     }
 
@@ -222,11 +235,14 @@ impl Gestures {
     pub fn set_context(&mut self, context: Context) {
         if context != self.context {
             self.deferred.clear();
+            self.display_ramps.clear();
         }
         self.context = context;
     }
 
     pub fn observe(&mut self, ev: RawEvent) {
+        // Captured inputs belong to a dialog or binding recorder, not a held shortcut.
+        self.cancel_display_ramps();
         match ev {
             RawEvent::Down(b) if !self.pressed.contains(&b) => self.pressed.push(b),
             RawEvent::Down(_) => {}
@@ -237,6 +253,10 @@ impl Gestures {
                 self.held.retain(|(h, _)| *h != b);
             }
         }
+    }
+
+    pub fn cancel_display_ramps(&mut self) {
+        self.display_ramps.clear();
     }
 
     fn active(&self) -> impl Iterator<Item = &Entry> {
@@ -262,15 +282,44 @@ impl Gestures {
         })
     }
 
-    fn hold(&mut self, b: Btn, action: Action) -> Vec<Action> {
+    fn hold(&mut self, b: Btn, modifier: Option<Btn>, action: Action, now: Millis) -> Vec<Action> {
         let release = match action {
             Action::Favorite => Release::Send(Action::FavoriteRelease),
             Action::FfStart => Release::Send(Action::FfStop),
             Action::RewindStart => Release::Send(Action::RewindStop),
             _ => Release::Nothing,
         };
+        self.start_display_ramp(b, modifier, action, now);
         self.held.push((b, release));
         vec![action]
+    }
+
+    fn start_display_ramp(
+        &mut self,
+        button: Btn,
+        modifier: Option<Btn>,
+        action: Action,
+        now: Millis,
+    ) {
+        if matches!(
+            action,
+            Action::BrightnessUp
+                | Action::BrightnessDown
+                | Action::BlueLightUp
+                | Action::BlueLightDown
+        ) && !self
+            .display_ramps
+            .iter()
+            .any(|r| r.button == button && r.action == action)
+        {
+            self.display_ramps.push(DisplayRamp {
+                button,
+                modifier,
+                action,
+                since: now,
+                last: None,
+            });
+        }
     }
 
     fn menu_held(&self) -> bool {
@@ -299,6 +348,7 @@ impl Gestures {
             }
             RawEvent::Up(b) => {
                 self.pressed.retain(|x| *x != b);
+                self.display_ramps.retain(|r| r.button != b && r.modifier != Some(b));
                 self.up(b, now)
             }
         }
@@ -344,6 +394,16 @@ impl Gestures {
                 out.push(Action::VolumeDown);
             }
         }
+        self.display_ramps.retain(|r| {
+            self.pressed.contains(&r.button)
+                && r.modifier.is_none_or(|b| self.pressed.contains(&b))
+        });
+        for ramp in &mut self.display_ramps {
+            if ramp_due(Some(ramp.since), ramp.last, now) {
+                ramp.last = Some(now);
+                out.push(ramp.action);
+            }
+        }
         out
     }
 
@@ -357,7 +417,7 @@ impl Gestures {
             self.menu_last_tap = None;
             self.menu_eject_fired = false;
             return match self.shortcut(Some(Mod::Menu), b) {
-                Some(action) => self.hold(b, action),
+                Some(action) => self.hold(b, Some(Btn::Menu), action, now),
                 None => {
                     self.held.push((b, Release::Send(Action::MenuChordUp(b))));
                     vec![Action::MenuChordDown(b)]
@@ -371,7 +431,7 @@ impl Gestures {
             };
             if let Some(action) = action {
                 self.mark_chorded();
-                return self.hold(b, action);
+                return self.hold(b, Some(Btn::Select), action, now);
             }
         }
         if let Some((first, action)) = self.pair(b) {
@@ -379,7 +439,7 @@ impl Gestures {
                 self.deferred.remove(at);
                 self.consumed.push(first);
             }
-            return self.fire(b, action, now);
+            return self.fire(b, Some(first), action, now);
         }
         let system = matches!(
             b,
@@ -387,7 +447,7 @@ impl Gestures {
         );
         if self.context == Context::Game {
             if let Some(action) = self.shortcut(None, b) {
-                return self.fire(b, action, now);
+                return self.fire(b, None, action, now);
             }
         } else if !system {
             if self.starts_a_chord(b) {
@@ -397,6 +457,9 @@ impl Gestures {
             let actions = self.matches(None, b);
             if !actions.is_empty() {
                 let mut out = self.hand_over_select(now);
+                for &action in &actions {
+                    self.start_display_ramp(b, None, action, now);
+                }
                 out.extend(actions);
                 out.push(Action::GbaDown(b));
                 return out;
@@ -474,7 +537,7 @@ impl Gestures {
             || (self.rewind_button == Some(b) && self.rewinding)
     }
 
-    fn fire(&mut self, b: Btn, action: Action, now: Millis) -> Vec<Action> {
+    fn fire(&mut self, b: Btn, modifier: Option<Btn>, action: Action, now: Millis) -> Vec<Action> {
         match action {
             Action::FfStart => {
                 self.ff_button = Some(b);
@@ -488,7 +551,7 @@ impl Gestures {
                 self.rewind_button = Some(b);
                 self.rewind_start()
             }
-            action => self.hold(b, action),
+            action => self.hold(b, modifier, action, now),
         }
     }
 

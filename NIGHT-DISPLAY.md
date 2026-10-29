@@ -25,6 +25,8 @@ Each adjustment saves to the preset you are using.
 | <kbd>SELECT</kbd> + <kbd>Left</kbd> | Reduce warmth. |
 | <kbd>SELECT</kbd> + <kbd>Right</kbd> | Increase warmth. |
 
+Keep both buttons held to adjust continuously after a short pause. Release either button to stop; a quick tap still changes one step.
+
 The warmth setting is named **Blue Light** in the menu. A higher value gives the picture a warmer tint. The night preset starts at brightness **2** and Blue Light **9**; the day preset starts with your existing display settings.
 
 ## Change the shortcut
