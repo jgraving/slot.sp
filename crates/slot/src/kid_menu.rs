@@ -235,9 +235,11 @@ impl Menu {
             },
         ]
     }
-    pub fn screen_face(&self) -> UndoFace {
+    pub fn page_key(&self) -> u64 { 2000 + self.page as u64 }
+    pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {
         if self.page == Page::Reference {
-            let mut face = slot_ui::parent_footer_face(6,false);
+            let mut face = slot_ui::parent_footer_face_on(canvas, 6,false);
             if let Some((title,rows)) = self.reference.get(self.reference_at) {
                 let title=slot_ui::quick_heading_face(title);
                 let x=face.w.saturating_sub(title.w)/2;
@@ -256,14 +258,14 @@ impl Menu {
             return face;
         }
         if self.page == Page::Warning {
-            let mut face = slot_ui::parent_footer_face(5, false);
+            let mut face = slot_ui::parent_footer_face_on(canvas, 5, false);
             let title = slot_ui::quick_heading_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)));
             let x = face.w.saturating_sub(title.w) / 2;
             blit(&mut face, &title, x, 190);
             return face;
         }
         if self.page == Page::Child {
-            let mut face = slot_ui::parent_settings_face_with_space(&self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
+            let mut face = slot_ui::parent_settings_face_on(canvas, &self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
             self.add_time_meter(&mut face);
             return face;
         }
@@ -280,7 +282,9 @@ impl Menu {
                 ("Set parent code".into(), String::new(), false),
             ];
             let status = if self.status == "Parent code saved" { "" } else { &self.status };
-            let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
+            let mut face = slot_ui::parent_settings_face_on(canvas, &rows, self.selected, 0, status, 0.0);
+            let heading=slot_ui::quick_heading_face("Kid mode");
+            blit(&mut face,&heading,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
             if status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
@@ -288,11 +292,11 @@ impl Menu {
             let minutes = self.time_minutes();
             let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, &self.status);
+            let mut face = slot_ui::parent_settings_face_on(canvas, &rows, self.time_selected, 0, &self.status, 0.0);
             if self.status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
-        let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
+        let mut face = slot_ui::parent_footer_face_on(canvas, if self.page == Page::Notice { 2 } else { 1 }, false);
         let title = match self.page {
             Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
             Page::Notice => "Time for a break", _ => "Parent code",

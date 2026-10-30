@@ -72,7 +72,9 @@ fn main() {
         pointer: up(quick_pointer_face()),
         values: QuickValue::ALL
             .into_iter()
-            .map(|v| [false, true].map(|lit| up(quick_value_face(v.text(), lit))))
+            .map(|v| {
+                [false, true].map(|lit| up(quick_value_face(&menu_sentence_case(v.text()), lit)))
+            })
             .collect(),
         toggles: [false, true].map(|on| [false, true].map(|lit| up(toggle_face(on, lit)))),
         carets: [false, true].map(|r| up(quick_caret_face(r))),
@@ -115,10 +117,11 @@ fn main() {
         ("settings", QuickRow::Screen),
         ("general", QuickRow::BootAnimation),
         ("gameplay", QuickRow::FastForwardSound),
+        ("back", QuickRow::Game),
     ];
     for (scene, (name, row)) in scenarios.into_iter().enumerate() {
         for frame in 0..60 {
-            let row = if name == "settings" && frame < 18 {
+            let row = if name == "settings" && (frame < 18 || frame >= 38) {
                 QuickRow::General
             } else {
                 row
@@ -134,29 +137,53 @@ fn main() {
             values[QuickRow::BootAnimation.index()] = Some(QuickValue::flag(frame < 32));
             values[QuickRow::FastForward.index()] = Some(QuickValue::Speed2);
             values[QuickRow::WallpaperTint.index()] = Some(QuickValue::Off);
+            values[QuickRow::ShowTitles.index()] = Some(QuickValue::Clean);
+            values[QuickRow::FavoriteSort.index()] = Some(QuickValue::Alphabetical);
+            values[QuickRow::ShellColour.index()] = Some(QuickValue::Graphite);
+            values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();
-            QuickMenu {
-                row,
-                hidden: &[],
-                values,
-                clock: None,
-                wallpaper: None,
-                faces: Some(&faces),
-                ground: Some((ground, 720)),
-                palette: None,
-                gba_bezel: None,
-                gb_bezel: None,
-                gbc_bezel: None,
-                bezel: None,
-                bound: None,
-                description: None,
-                over_game: false,
-                footer_legends: true,
-                footer_top: 480.,
-                canvas,
+            if motion.outgoing_row().is_some() {
+                draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
-            .draw_animated(motion.frame(row, &[]), &mut draws);
+            for outgoing in [true, false] {
+                let current = row;
+                let Some(row) = (if outgoing {
+                    motion.outgoing_row()
+                } else {
+                    Some(row)
+                }) else {
+                    continue;
+                };
+                QuickMenu {
+                    row,
+                    hidden: &[],
+                    values,
+                    clock: None,
+                    wallpaper: None,
+                    faces: Some(&faces),
+                    ground: Some((ground, 720)),
+                    palette: None,
+                    gba_bezel: None,
+                    gb_bezel: None,
+                    gbc_bezel: None,
+                    bezel: None,
+                    bound: None,
+                    description: None,
+                    over_game: false,
+                    footer_legends: true,
+                    footer_top: 480.,
+                    canvas,
+                }
+                .draw_animated(
+                    if outgoing {
+                        motion.outgoing_frame(row, &[])
+                    } else {
+                        motion.frame(current, &[])
+                    },
+                    &mut draws,
+                );
+            }
             draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
             for (right, (tex, w)) in [
                 (false, faces.legend[0]),
@@ -181,7 +208,6 @@ fn main() {
             });
             let percent = Printed::new(pt, pw);
             let clock = Printed::new(ct, cw);
-            draw_status_surfaces(canvas, battery, percent, clock, true, true, ink, &mut draws);
             draw_status(canvas, battery, percent, Some(bolt), clock, ink, &mut draws);
             draw_corner_audio(battery, percent, Some(bt), Some(mt), &mut draws);
             cpu += start.elapsed();
@@ -197,13 +223,19 @@ fn main() {
                 enc.set_color(png::ColorType::Rgba);
                 enc.set_depth(png::BitDepth::Eight);
                 enc.write_header().unwrap().write_image_data(&rgba).unwrap();
-                if frame == 59 { std::fs::copy(path.join(format!("motion-{:03}.png", scene * 60 + frame)), path.join(format!("{name}.png"))).unwrap(); }
+                if frame == 59 {
+                    std::fs::copy(
+                        path.join(format!("motion-{:03}.png", scene * 60 + frame)),
+                        path.join(format!("{name}.png")),
+                    )
+                    .unwrap();
+                }
             }
         }
     }
     println!(
-        "Menu/status draw construction: {:.1} us average over 180 frames; peak {peak} quads",
-        cpu.as_secs_f64() * 1e6 / 180.0
+        "Menu/status draw construction: {:.1} us average over 240 frames; peak {peak} quads",
+        cpu.as_secs_f64() * 1e6 / 240.0
     );
 }
 #[cfg(not(target_os = "linux"))]

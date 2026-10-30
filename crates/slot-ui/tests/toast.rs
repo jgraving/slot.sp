@@ -368,7 +368,7 @@ fn the_repair_prompt_line_keeps_every_word() {
     let mut run = 0;
     for i in &inked[first..=last] {
         if *i {
-            if run >= 7 {
+            if run >= 6 {
                 gaps += 1;
             }
             run = 0;

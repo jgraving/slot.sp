@@ -919,7 +919,7 @@ fn labels_and_live_switches_align_to_the_menu_edges() {
         Draw::RoundRect { x, w: 60.0, h: 30.0, .. } => Some((*x,60.0)),
         _ => None,
     }).expect("a switch track");
-    assert_eq!(x + w, right - 4.0, "switch track edge");
+    assert_eq!(x + w, right, "switch track edge");
     let [x, _, w, _] = placed(&out, 301).expect("the right arrow");
     assert_eq!(x + w, right, "the arrow around the selected value");
 }

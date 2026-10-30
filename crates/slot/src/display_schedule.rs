@@ -57,7 +57,9 @@ impl Menu {
         self.status.clear();
         Some(next)
     }
-    pub fn screen_face(&self) -> UndoFace {
+    pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
+    pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {
         let (title, rows, selected) = if let Some(field) = self.time_field {
             let minute = if self.selected == 1 { self.settings.day_start } else { self.settings.night_start };
             (if self.selected == 1 { "Day Begins" } else { "Night Begins" }, vec![
@@ -72,9 +74,9 @@ impl Menu {
             ], self.selected)
         };
         let status = if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
-        let mut face = slot_ui::parent_settings_face(&rows, selected, 0, status);
+        let mut face = slot_ui::parent_settings_face_on(canvas, &rows, selected, 0, status, 0.0);
         let heading = slot_ui::quick_heading_face(title);
-        let x = face.w.saturating_sub(heading.w) / 2;
+        let x = slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD;
         for y in 0..heading.h.min(face.h.saturating_sub(40)) {
             for xx in 0..heading.w.min(face.w.saturating_sub(x)) {
                 let from = ((y * heading.w + xx) * 4) as usize;

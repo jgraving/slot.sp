@@ -66,27 +66,6 @@ pub fn draw_status(
     draw_printed(x, (PLATE_H - HINT_H as f32) / 2.0, clock, out);
 }
 
-/// Two quiet tonal capsules keep status readable over every wallpaper. The
-/// route and mute share the battery capsule; absence never leaves an empty pill.
-pub fn draw_status_surfaces(canvas: Canvas, battery: Option<Battery>, percent: Printed,
-    clock: Printed, connection: bool, mute: bool, ink: [u8; 3], out: &mut Vec<Draw>) {
-    let light_ink = u32::from(ink[0]) + u32::from(ink[1]) + u32::from(ink[2]) > 384;
-    let colour = if light_ink { [0.055, 0.065, 0.08, 0.89] }
-        else { [0.94, 0.95, 0.96, 0.93] };
-    let gauge = if battery.is_some() { crate::battery::gauge_width(percent) } else { 0.0 };
-    let icons = usize::from(connection) + usize::from(mute);
-    let audio = if icons == 0 { 0.0 } else {
-        (if battery.is_some() { 10.0 } else { 0.0 }) + 20.0 + (icons - 1) as f32 * 30.0
-    };
-    if gauge + audio > 0.0 {
-        crate::expressive::rounded(out, CORNER_MARGIN - 8.0, 4.0, gauge + audio + 16.0, 32.0, 16.0, colour);
-    }
-    if clock.w > 0 {
-        crate::expressive::rounded(out, canvas.w - CORNER_MARGIN - clock.w as f32 - 8.0,
-            4.0, clock.w as f32 + 16.0, 32.0, 16.0, colour);
-    }
-}
-
 pub(crate) fn draw_printed(x: f32, y: f32, p: Printed, out: &mut Vec<Draw>) {
     if p.w == 0 {
         return;

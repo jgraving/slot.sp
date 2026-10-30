@@ -448,6 +448,8 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    current_custom_face: Option<(u64, TexId)>,
+    previous_custom_face: Option<(u64, TexId)>,
     status_motion: slot_ui::expressive::StatusMotion,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
@@ -696,6 +698,8 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            current_custom_face: None,
+            previous_custom_face: None,
             status_motion: Default::default(),
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
@@ -4021,11 +4025,13 @@ impl App {
         }
         self.step_screen(dt);
         self.step_footer(dt);
-        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown());
+        let custom = self.custom_menu_key();
+        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids));
         let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
-        self.menu_motion.update(menu, &hidden, on, dt);
+        let selection=self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)});
+        self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
             | (u8::from(self.muted() || self.volume() == 0) << 1);
         self.status_motion.update(status_key, dt);
@@ -4695,14 +4701,8 @@ impl App {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
-                out.push(Draw::Tex {
-                    x: 0.0,
-                    y: 0.0,
-                    w: self.canvas().w,
-                    h: self.canvas().h,
-                    tex,
-                    alpha: 1.0,
-                });
+                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                self.draw_cached_overlay(tex, out);
                 self.draw_status_bar(out);
                 return;
             }
@@ -4769,16 +4769,7 @@ impl App {
                     draw_empty_slot(self.canvas(), self.slot_faces, out);
                 }
             }
-            if let Some(tex) = menu.face {
-                out.push(Draw::Tex {
-                    x: 0.0,
-                    y: 0.0,
-                    w: self.canvas().w,
-                    h: OUT_H as f32,
-                    tex,
-                    alpha: 1.0,
-                });
-            }
+            if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
             if let Some(tex) = menu.progress_face {
                 out.push(Draw::Tex {
                     x: self.canvas().centred(32.),
@@ -4974,7 +4965,11 @@ impl App {
         }
         if matches!(self.phase, Phase::Shelf | Phase::Playing { .. }) {
             if let Some(row) = self.menu_motion.closing_row() {
-                self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }), out);
+                if let Some(key)=self.menu_motion.current_custom_key() {
+                    if let Some((_,tex))=self.previous_custom_face {
+                        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,self.menu_motion.frame_page(row,&[],Some(key)),out);
+                    }
+                } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }), out);}
             }
         }
         if matches!(
@@ -5076,7 +5071,58 @@ impl App {
         self.draw_status_bar(out);
     }
 
+    fn custom_menu_key(&self) -> Option<u64> {
+        self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.page_key())
+            .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
+            .or_else(||self.bluetooth.as_ref().map(|m|m.page_key()))
+    }
+    pub fn note_custom_menu_face(&mut self) {
+        let face=self.display_schedule.as_ref().and_then(|m|m.face)
+            .or_else(||self.kid_menu.as_ref().and_then(|m|m.face))
+            .or_else(||self.bluetooth.as_ref().and_then(|m|m.face));
+        let now=self.custom_menu_key().zip(face);
+        if now.map(|p|p.0) != self.current_custom_face.map(|p|p.0) {
+            self.previous_custom_face=self.current_custom_face;
+        }
+        self.current_custom_face=now;
+    }
+    fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
+        if let Some(previous)=self.menu_motion.outgoing_row() {
+            if self.menu_motion.outgoing_is_custom() {
+                if let Some((_,tex))=self.previous_custom_face {
+                    slot_ui::expressive::draw_cached_menu(self.canvas(),tex,self.menu_motion.outgoing_frame(previous,&[]),out);
+                }
+            } else { self.draw_quick_page(previous,over_game,true,out); }
+        }
+    }
+    fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
+        let over_game=matches!(self.phase,Phase::Playing{..});
+        self.draw_outgoing_menu(over_game,out);
+        let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
+        let frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
+        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+        if let Some(menu)=&self.bluetooth {
+            let (_,total,_,visible)=menu.scroll_info();
+            if total>visible {
+                let h=slot_ui::QUICK_PITCH*visible as f32;
+                let thumb=h*visible as f32/total as f32;
+                let y=88.0+(h-thumb)*(frame.scroll_position/(total-1) as f32).clamp(0.0,1.0);
+                let x=self.canvas().w-44.0;
+                out.push(Draw::Rect{x,y:88.0,w:4.0,h,colour:[0.6,0.6,0.65,0.3]});
+                out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
+            }
+        }
+    }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
+        if self.menu_motion.outgoing_row().is_some() {
+            if over_game { out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:OUT_H as f32-MOUTH_H,colour:[0.0,0.0,0.0,0.65]}); }
+            else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
+            self.draw_outgoing_menu(over_game,out);
+        }
+        self.draw_quick_page(row, over_game, false, out);
+    }
+
+    fn draw_quick_page(&self, row: QuickRow, over_game: bool, outgoing: bool, out: &mut Vec<Draw>) {
         let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
         let bound = self.bound_faces();
         QuickMenu {
@@ -5091,17 +5137,11 @@ impl App {
             bezel: over_game.then(|| self.quick_bezel_faces[bezel_slot(self.playing_platform())]).flatten(),
             over_game, footer_legends: true,
             footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(), canvas: self.canvas(),
-        }.draw_animated(self.menu_motion.frame(row, &hidden), out);
+        }.draw_animated(if outgoing { self.menu_motion.outgoing_frame(row, &hidden) } else { self.menu_motion.frame(row, &hidden) }, out);
     }
 
     fn draw_status_bar(&self, out: &mut Vec<Draw>) {
         let in_game = matches!(self.phase, Phase::Playing { .. } | Phase::Polaroids { .. });
-        let connection = if in_game { self.hud_audio_indicator } else { self.audio_indicator };
-        let mute = if self.muted() || self.volume() == 0 {
-            if in_game { self.hud_mute_indicator } else { self.mute_indicator }
-        } else { None };
-        slot_ui::draw_status_surfaces(self.canvas(), self.battery, self.battery_percent,
-            self.shelf_clock, connection.is_some(), mute.is_some(), self.status_ink(), out);
         slot_ui::draw_status(
             self.canvas(),
             self.battery,
@@ -7279,5 +7319,37 @@ mod bluetooth_tests {
         assert_eq!(app.quick_menu(), Some(QuickRow::Bluetooth));
         app.open_quick_row(QuickRow::Bluetooth);
         assert!(app.bluetooth.is_none());
+    }
+}
+
+#[cfg(test)]
+mod expressive_navigation_tests {
+    use super::*;
+    #[test]
+    fn cached_settings_keep_the_previous_texture_when_sliding_forward_and_back() {
+        let mut app=App::new(vec![]);
+        app.phase=Phase::QuickMenu{row:QuickRow::DisplaySchedule};
+        app.update(1.0);
+        let first=TexId::from_raw(9001);
+        let second=TexId::from_raw(9002);
+        app.display_schedule=Some(crate::display_schedule::Menu::new(Default::default()));
+        app.display_schedule.as_mut().unwrap().face=Some(first);
+        app.note_custom_menu_face();app.update(0.03);
+        let mut draws=vec![];app.draw(&mut draws);
+        assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,x,y,..} if *tex==first && *x>0.0 && *y==40.0)));
+        app.update(1.0);
+        let menu=app.display_schedule.as_mut().unwrap();
+        menu.input(Action::GbaDown(Btn::Down),true);
+        menu.input(Action::GbaDown(Btn::A),true);
+        menu.face=Some(second);
+        app.note_custom_menu_face();app.update(0.03);
+        draws.clear();app.draw(&mut draws);
+        for face in [first,second] {assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,y:40.0,..} if *tex==face)));}
+        app.display_schedule=None;app.note_custom_menu_face();app.update(0.03);
+        assert_eq!(app.quick_menu(),Some(QuickRow::DisplaySchedule),"animation must not delay returning to the parent");
+        draws.clear();app.draw(&mut draws);
+        assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,y:40.0,..} if *tex==second)));
+        app.update(1.0);draws.clear();app.draw(&mut draws);
+        assert!(!draws.iter().any(|d|matches!(d,Draw::Part{tex,..} if *tex==second)));
     }
 }

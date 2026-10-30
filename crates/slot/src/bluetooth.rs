@@ -490,6 +490,12 @@ impl Manager {
         }
     }
 
+    pub fn scroll_info(&self) -> (usize,usize,usize,usize) {
+        let total=self.rows().len();
+        let visible=total.min(slot_ui::QUICK_VISIBLE);
+        (self.selected,total,self.selected.saturating_sub(slot_ui::QUICK_VISIBLE-1),visible)
+    }
+    pub fn page_key(&self) -> u64 { 1000 + self.page.clone() as u64 }
     pub fn lines(&self) -> Vec<String> {
         let title = "";
         let message = if self.forget_confirmation.is_some() {
@@ -517,7 +523,7 @@ impl Manager {
                 String::new()
             },
         ];
-        let visible = if compact { 6 } else { 4 };
+        let visible = if compact { slot_ui::QUICK_VISIBLE } else { 3 };
         let first = self.selected.saturating_sub(visible - 1);
         for (i, row) in self.rows().iter().enumerate().skip(first).take(visible) {
             lines.push(format!(
@@ -801,7 +807,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             h: OUT_H,
         };
     };
-    let label_w = screen_w - 96;
+    let label_w = screen_w - 2 * slot_ui::QUICK_LABEL_X as u32;
     let compact = lines.get(2).is_some_and(|line| line == "COMPACT");
     let clean = lines.iter().take(3).all(String::is_empty);
     let row_count = lines.len().saturating_sub(4) as u32;
@@ -810,20 +816,21 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
     let row_top = if compact {
         88
     } else if clean {
-        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * 42) / 2 + 4
+        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * slot_ui::QUICK_PITCH as u32) / 2 + 4
     } else {
         184
     };
     let selected = lines.iter().skip(3).position(|line|line.starts_with("SELECTED "));
     let mut panel = UndoFace { rgba, w: screen_w, h: OUT_H };
-    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, 42.0, row_count as usize, selected);
+    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, slot_ui::QUICK_PITCH, row_count as usize, selected);
     let mut rgba = panel.rgba;
+    if compact { let title=slot_ui::quick_heading_face("Sound"); blit(&mut rgba,&title,slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD,40); }
     for (i, line) in lines.iter().enumerate() {
         if compact && (i == 0 || i == 2) {
             continue;
         }
         let (label, top, h, px, max_lines, highlight) = match i {
-            1 if compact => (if line.starts_with("Error:") { "Error" } else { line.as_str() }, 12, 64, 20.0, 2, false),
+            1 if compact => (if line.starts_with("Error:") { "Error" } else { line.as_str() }, 346, 26, 16.0, 1, false),
             0 => (line.as_str(), 16, 46, 30.0, 1, false),
             1 => (line.as_str(), 66, 82, 22.0, 3, false),
             2 => (line.as_str(), 146, 30, 20.0, 1, false),
@@ -832,9 +839,9 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                 line.strip_prefix("SELECTED ")
                     .or_else(|| line.strip_prefix("ROW "))
                     .unwrap_or(line),
-                row_top + (i as u32 - 3) * 42 + 1,
+                row_top + (i as u32 - 3) * slot_ui::QUICK_PITCH as u32 + 1,
                 40u32,
-                30.0,
+                26.0,
                 1,
                 line.starts_with("SELECTED "),
             ),
@@ -893,10 +900,10 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
             let name = slot_ui::quick_value_face(name, highlight);
-            blit(&mut rgba, &name, 64 - slot_ui::MENU_PAD, top);
+            blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
             if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
                 let switch = slot_ui::toggle_face(value == "On", highlight);
-                let x = screen_w - 32 + slot_ui::MENU_PAD - switch.w;
+                let x = screen_w - slot_ui::QUICK_EDGE as u32 + slot_ui::MENU_PAD - switch.w;
                 blit(&mut rgba, &switch, x, top);
                 continue;
             }
@@ -904,7 +911,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             if highlight {
                 let left = slot_ui::quick_caret_face(false);
                 let right = slot_ui::quick_caret_face(true);
-                let rx = screen_w - 32 - right.w;
+                let rx = screen_w - slot_ui::QUICK_EDGE as u32 - right.w;
                 let vx = rx - 14 + 18 - value.w;
                 blit(&mut rgba, &right, rx, top);
                 blit(&mut rgba, &value, vx, top);
@@ -919,7 +926,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                     .map(|(i, _)| i as u32 % value.w)
                     .max()
                     .unwrap_or(0);
-                blit(&mut rgba, &value, screen_w - 33 - ink_right, top);
+                blit(&mut rgba, &value, screen_w - slot_ui::QUICK_EDGE as u32 - 1 - ink_right, top);
             }
             continue;
         }
@@ -938,9 +945,9 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         let inset = if !row {
             48
         } else if device {
-            100
+            slot_ui::QUICK_LABEL_X as u32 + 36
         } else {
-            64
+            slot_ui::QUICK_LABEL_X as u32
         };
         let label_w = label_w - if device { 36 } else { 0 };
         if device {
@@ -958,7 +965,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             blit(
                 &mut rgba,
                 &icon,
-                64 + 28u32.saturating_sub(icon.w) / 2,
+                slot_ui::QUICK_LABEL_X as u32 + 28u32.saturating_sub(icon.w) / 2,
                 top + (center - icon.h as f32 / 2.).round().max(0.) as u32,
             );
         }
@@ -966,7 +973,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             if highlight { slot_ui::text::Role::Focus } else { slot_ui::text::Role::Menu }
         } else { slot_ui::text::Role::Detail };
         let font = slot_ui::text::font(role).unwrap_or(font);
-        let layout = slot_ui::text::fit(
+        let layout = slot_ui::text::fit_preserving_case(
             font,
             label,
             (label_w - if active { 44 } else { 0 }) as f32,
@@ -989,7 +996,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             label_w
         };
         if active {
-            draw_check(&mut rgba, screen_w - 32 - 28, top + h / 2, ink);
+            draw_check(&mut rgba, screen_w - slot_ui::QUICK_EDGE as u32 - 28, top + h / 2, ink);
         }
         let mut face = vec![0u8; (face_w * h * 4) as usize];
         slot_ui::text::draw_centred(&mut face, face_w, h, &layout, ink);
@@ -1345,8 +1352,8 @@ mod menu_tests {
             m.status = status.into();
             let busy = screen_face(&m.lines());
             assert_eq!(
-                &idle.rgba[(88 * OUT_W * 4) as usize..],
-                &busy.rgba[(88 * OUT_W * 4) as usize..],
+                &idle.rgba[(88 * OUT_W * 4) as usize..(340 * OUT_W * 4) as usize],
+                &busy.rgba[(88 * OUT_W * 4) as usize..(340 * OUT_W * 4) as usize],
                 "status must not move or redraw the menu rows or hints"
             );
         }

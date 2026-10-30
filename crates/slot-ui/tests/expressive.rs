@@ -83,40 +83,152 @@ fn switch_interruption_stays_in_its_track_and_settles_exactly() {
 }
 
 #[test]
-fn status_capsules_fit_both_canvases_and_do_not_leave_empty_chrome() {
-    use slot_ui::{draw_status_surfaces,Canvas,Draw,Printed};
-    use slot_power::{Battery,Charge};
-    for width in [640.0,720.0] {
-        for ink in [[246,244,239],[32,32,36]] {
-            let canvas=Canvas{w:width,h:480.0};
-            for connection in [false,true] {for mute in [false,true] {
-                let mut out=vec![];
-                draw_status_surfaces(canvas,Some(Battery{percent:100,charge:Charge::Charging}),
-                    Printed{face:None,w:64},Printed{face:None,w:112},connection,mute,ink,&mut out);
-                assert_eq!(out.len(),2);
-                let boxes:Vec<_>=out.iter().map(|d|match d {
-                    Draw::RoundRect{x,y,w,h,colour,..}=>{assert!(*y>=0.0 && y+h<=40.0 && colour[3]>0.5);(*x,*x+*w)},
-                    _=>panic!("status surface should be a single quad"),
-                }).collect();
-                assert!(boxes[0].0>=0.0 && boxes[0].1<boxes[1].0 && boxes[1].1<=width);
-            }}
-            let mut out=vec![];
-            draw_status_surfaces(canvas,None,Printed::default(),Printed::default(),false,false,ink,&mut out);
-            assert!(out.is_empty());
-        }
-    }
+fn status_indicators_have_no_background_surfaces() {
+    use slot_ui::{draw_status, Canvas, Draw, Printed, TexId};
+    let mut out = vec![];
+    draw_status(
+        Canvas::FRAMED,
+        None,
+        Printed::default(),
+        None,
+        Printed::new(TexId::from_raw(0), 100),
+        [255; 3],
+        &mut out,
+    );
+    assert!(out.iter().all(|d| !matches!(d, Draw::RoundRect { .. })));
 }
 #[test]
 fn status_reveal_preserves_icon_centres_and_bounds_opacity() {
-    use slot_ui::{Draw,TexId,expressive::StatusMotion};
-    let mut m=StatusMotion::default();m.update(0,1.0);m.update(3,0.0);
+    use slot_ui::{expressive::StatusMotion, Draw, TexId};
+    let mut m = StatusMotion::default();
+    m.update(0, 1.0);
+    m.update(3, 0.0);
     for _ in 0..60 {
-        m.update(3,1.0/60.0);
-        let mut draws=[Draw::Tex{x:90.0,y:10.0,w:20.0,h:20.0,tex:TexId::from_raw(0),alpha:1.0}];
+        m.update(3, 1.0 / 60.0);
+        let mut draws = [Draw::Tex {
+            x: 90.0,
+            y: 10.0,
+            w: 20.0,
+            h: 20.0,
+            tex: TexId::from_raw(0),
+            alpha: 1.0,
+        }];
         m.apply(&mut draws);
-        if let Draw::Tex{x,y,w,h,alpha,..}=draws[0] {
-            assert!((x+w/2.0-100.0).abs()<0.01 && (y+h/2.0-20.0).abs()<0.01);
-            assert!(w<=21.0 && h<=21.0 && (0.0..=1.0).contains(&alpha));
+        if let Draw::Tex {
+            x, y, w, h, alpha, ..
+        } = draws[0]
+        {
+            assert!((x + w / 2.0 - 100.0).abs() < 0.01 && (y + h / 2.0 - 20.0).abs() < 0.01);
+            assert!(w <= 21.0 && h <= 21.0 && (0.0..=1.0).contains(&alpha));
+        }
+    }
+}
+
+#[test]
+fn child_pages_slide_forward_and_back_without_fading() {
+    let mut m = MenuMotion::default();
+    m.update(Some(QuickRow::General), &[], None, 1.0);
+    m.update(Some(QuickRow::Wallpaper), &[], None, 0.0);
+    assert_eq!(m.outgoing_row(), Some(QuickRow::General));
+    assert_eq!(m.frame(QuickRow::Wallpaper, &[]).page_shift, 1.0);
+    assert_eq!(m.frame(QuickRow::Wallpaper, &[]).opacity, 1.0);
+    m.update(Some(QuickRow::Wallpaper), &[], None, 0.08);
+    let entering = m.frame(QuickRow::Wallpaper, &[]);
+    let leaving = m.outgoing_frame(QuickRow::General, &[]);
+    assert!(entering.page_shift > 0.0 && entering.page_shift < 1.0 && leaving.page_shift < 0.0);
+    assert!((entering.page_shift - leaving.page_shift - 1.0).abs() < 0.001);
+    m.update(Some(QuickRow::General), &[], None, 0.0);
+    assert_eq!(m.frame(QuickRow::General, &[]).page_shift, -1.0);
+    m.update(Some(QuickRow::General), &[], None, 1.0);
+    assert_eq!(m.outgoing_row(), None);
+}
+#[test]
+fn cached_submenus_reverse_and_retarget_the_same_page_motion() {
+    let mut m = MenuMotion::default();
+    m.update(Some(QuickRow::Bluetooth), &[], None, 1.0);
+    m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1000), 0.0);
+    assert!(!m.outgoing_is_custom());
+    assert_eq!(
+        m.frame_page(QuickRow::Bluetooth, &[], Some(1000))
+            .page_shift,
+        1.0
+    );
+    m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1001), 0.05);
+    assert!(m.outgoing_is_custom());
+    m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1000), 0.0);
+    assert_eq!(
+        m.frame_page(QuickRow::Bluetooth, &[], Some(1000))
+            .page_shift,
+        -1.0
+    );
+    m.update_page(Some(QuickRow::Bluetooth), &[], None, None, 0.0);
+    assert_eq!(m.frame(QuickRow::Bluetooth, &[]).page_shift, -1.0);
+}
+#[test]
+fn selection_scrollbar_and_window_share_continuous_spring_positions() {
+    let mut m = MenuMotion::default();
+    m.update(Some(QuickRow::General), &[], None, 1.0);
+    m.update(Some(QuickRow::Power), &[], None, 0.03);
+    let f = m.frame(QuickRow::Power, &[]);
+    assert!(f.scroll_position > 0.0 && f.scroll_position < QuickRow::Power.position(&[]) as f32);
+    assert!(
+        f.window_start > 0.0
+            && f.window_start < slot_ui::quick_window(QuickRow::Power, &[]).0 as f32
+    );
+    m.update(Some(QuickRow::Power), &[], None, 1.0);
+    assert_eq!(
+        m.frame(QuickRow::Power, &[]).scroll_position,
+        QuickRow::Power.position(&[]) as f32
+    );
+}
+#[test]
+fn interface_copy_preserves_case_and_uses_sentence_case_for_authored_labels() {
+    use slot_ui::{menu_sentence_case, quick_label_face, quick_value_face, text};
+    for (from, to) in [
+        ("Fast Forward Sound", "Fast forward sound"),
+        ("Kid Mode", "Kid mode"),
+        ("USB Audio", "USB audio"),
+        ("Left Stick as D-Pad", "Left stick as D-Pad"),
+    ] {
+        assert_eq!(menu_sentence_case(from), to);
+    }
+    let font = text::font(text::Role::Menu).unwrap();
+    assert_eq!(
+        text::fit_preserving_case(font, "Internal speaker", 400.0, 1, 26.0, 26.0).lines,
+        vec!["Internal speaker"]
+    );
+    assert_eq!(
+        quick_label_face(QuickRow::FastForwardSound, false).rgba,
+        quick_value_face("Fast forward sound", false).rgba
+    );
+}
+
+#[test]
+fn cached_settings_share_the_same_native_grid_and_only_one_selection_surface() {
+    use slot_ui::{parent_settings_face_on, Canvas};
+    for width in [640, 720] {
+        let face = parent_settings_face_on(
+            Canvas {
+                w: width as f32,
+                h: 480.0,
+            },
+            &[
+                ("Kid mode".into(), "On".into(), true),
+                ("Play limit".into(), "Daily".into(), true),
+            ],
+            0,
+            0,
+            "",
+            0.0,
+        );
+        assert_eq!(face.w, width);
+        let alpha = |x, y| face.rgba[((y * width + x) * 4 + 3) as usize];
+        assert_eq!(alpha(60, 110), 255);
+        assert_eq!(alpha(60, 162), 0, "unselected rows have no backing card");
+        for y in 88..184 {
+            for x in (0..56).chain(width - 56..width) {
+                assert_eq!(alpha(x, y), 0, "body edge padding");
+            }
         }
     }
 }
