@@ -29,7 +29,7 @@ for css in bundle.glob('*.css'):
 html = (source / 'web/index.html').read_text()
 for name in ['studio.js', 'studio.css', 'slot-sp.css']:
     html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
-html = html.replace('<p id="build"></p>', '<p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p><p id="build"></p>')
+html = html.replace('<div class="foot-meta">', '<div class="foot-meta"><p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p>')
 (target / 'index.html').write_text(html)
 shutil.copyfile(source / 'LICENSE', target / 'LICENSE')
 (target / 'build-info.json').write_text(json.dumps(dict(
