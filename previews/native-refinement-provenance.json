@@ -1,0 +1,102 @@
+{
+  "source_commit": "1acb58b93d7d0ba2619c79e936dfc5038e44ee74",
+  "capture": "Production Rust draw commands rendered locally with surfaceless Mesa. Controls and motion reviewed at 640px GLES and 720px desktop GL; guide layouts composed from production draw exports.",
+  "files": [
+    {
+      "path": "previews/date-time.png",
+      "bytes": 102778,
+      "sha256": "f4809fceaa128694bf8ea7efe7a3563008670968703adde7e62ea7f56dacefad"
+    },
+    {
+      "path": "previews/day-night.png",
+      "bytes": 245171,
+      "sha256": "c2004cd4af3b8ac07dd99e6a5edcf07ea5641dfef85d3d47e88e1b3f44bdfb88"
+    },
+    {
+      "path": "previews/expressive-menu.gif",
+      "bytes": 970123,
+      "sha256": "3f48871eaf271c4a7f66c5b3a19216b08d9b729b1ac9d757f55e297c7d4040e8"
+    },
+    {
+      "path": "previews/guide/appearance.png",
+      "bytes": 173877,
+      "sha256": "3e7727070460c7e850706c168aaa8f8c4e7815684022a5ae7264b58db51dc76b"
+    },
+    {
+      "path": "previews/guide/buttons-shortcuts.png",
+      "bytes": 431107,
+      "sha256": "46f9c2e3562856110f6e385512e230b211f68742d668abf72a631c3d14846e13"
+    },
+    {
+      "path": "previews/guide/general.png",
+      "bytes": 168382,
+      "sha256": "f9cf0807cb9e279fdc9dcd77ef3ca7632a2a2bb68a1f05d2a8005010d16188d1"
+    },
+    {
+      "path": "previews/guide/kid-controls.png",
+      "bytes": 438601,
+      "sha256": "d025508202d5c05cc1470f76ded9e9ae8725d3bba95cc58dadc77ccb62cc5add"
+    },
+    {
+      "path": "previews/guide/kid-menu.png",
+      "bytes": 375854,
+      "sha256": "841bc4f3abe1a02d3f374beb1b9b84afe3f8cb94d01090b61434ac8c02e4bdff"
+    },
+    {
+      "path": "previews/guide/kid-warning.png",
+      "bytes": 382568,
+      "sha256": "e70767db0f5ca3329d95ff9f1afd502f6c82dae3f1788440133276495f99fb96"
+    },
+    {
+      "path": "previews/guide/parent-code.png",
+      "bytes": 393603,
+      "sha256": "d16bece728a9af0b0fdcccc930385dff0b373e61b7ad32e28d0c8b01f8ff43f5"
+    },
+    {
+      "path": "previews/guide/parent-settings.png",
+      "bytes": 385833,
+      "sha256": "062a8b18879fe604f5d8f0abb32c0be80e49fd2feb3615a2e45ba1372360f4c5"
+    },
+    {
+      "path": "previews/guide/parent-time.png",
+      "bytes": 360081,
+      "sha256": "b1bbe98d2b62d08c4f82f43d8396818899b98749e9732f9b62978474d37e4997"
+    },
+    {
+      "path": "previews/guide/power.png",
+      "bytes": 161464,
+      "sha256": "63196ef66af3db7e4db693b3f18332b3a27089c89c1f3b791d5ae9ed2f6e633d"
+    },
+    {
+      "path": "previews/guide/sound.png",
+      "bytes": 397211,
+      "sha256": "72ae14ebaaeb3d439ec2c3e692af69683b959ad495516f6fcae97d0d7f577942"
+    },
+    {
+      "path": "previews/notice.png",
+      "bytes": 203949,
+      "sha256": "053473f49f020c2c1b1e3cbeda77e31b2c3cfc4c0730b65fa2e22d2b3d7d287b"
+    },
+    {
+      "path": "previews/parent-code.gif",
+      "bytes": 419581,
+      "sha256": "96867d90d3731079ecef72ef93ef4ef6367bc98ad5c3b180404f997320a05800"
+    },
+    {
+      "path": "previews/parent-code.mp4",
+      "bytes": 41756,
+      "sha256": "17cfcf8e82b0102a0667e3f96c3b76943807a08878976bffa693215bf8eeaea8"
+    },
+    {
+      "path": "previews/parent-code.png",
+      "bytes": 241964,
+      "sha256": "b7baaa7b88fdd8a8c539ec645958ef1a4fe708fbd4905dbd8d2c2af0c5052e38"
+    },
+    {
+      "path": "previews/pause-menu.png",
+      "bytes": 109824,
+      "sha256": "6a27f08592e17b41f59035825a39085157e436a8313b430f6815e25285adc8ca"
+    }
+  ],
+  "motion_preview": "360px, 15 fps GIF; native 640px GLES and 720px GL captures retained in CI artifacts."
+}
