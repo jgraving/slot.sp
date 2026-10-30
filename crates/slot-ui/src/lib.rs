@@ -24,6 +24,8 @@ pub use expressive::{MenuFrame, MenuMotion};
 pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
+mod settings_notice;
+pub use settings_notice::{SettingsNotice,settings_notice_face};
 mod icon;
 mod link_art;
 mod material;

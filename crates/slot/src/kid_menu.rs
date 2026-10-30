@@ -236,6 +236,10 @@ impl Menu {
         ]
     }
     pub fn page_key(&self) -> u64 { 2000 + self.page as u64 }
+    pub fn notice_text(&self) -> Option<&str> {
+        (self.gate.remaining(Instant::now()) == 0 && !self.status.is_empty() && !self.status.starts_with("Recovery:") && !self.status.starts_with("Use A/B"))
+            .then_some(self.status.as_str())
+    }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         match self.page {
@@ -286,7 +290,7 @@ impl Menu {
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
                 ("Set parent code".into(), String::new(), false),
             ];
-            let status = if self.status == "Parent code saved" { "" } else { &self.status };
+            let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
             let mut face = settings_face(canvas, &rows, self.selected, 0, status, 0.0);
             let heading=slot_ui::quick_heading_face("Kid mode");
             blit(&mut face,&heading,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
@@ -297,8 +301,8 @@ impl Menu {
             let minutes = self.time_minutes();
             let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = settings_face(canvas, &rows, self.time_selected, 0, &self.status, 0.0);
-            if self.status.is_empty() { self.add_time_meter(&mut face); }
+            let mut face = settings_face(canvas, &rows, self.time_selected, 0, if animated { "" } else { &self.status }, 0.0);
+            if animated || self.status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
         let mut face = slot_ui::parent_footer_face_on(canvas, if self.page == Page::Notice { 2 } else { 1 }, false);
@@ -322,7 +326,7 @@ impl Menu {
         let status = if self.page == Page::Unlock && cooldown > 0 { &retry }
         else if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
             ""
-        } else { &self.status };
+        } else if animated { "" } else { &self.status };
         if !status.is_empty() {
             let status = slot_ui::quick_description_face(&[status]);
             let left = face.w.saturating_sub(status.w) / 2;

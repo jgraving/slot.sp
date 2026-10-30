@@ -7,7 +7,7 @@ use common::{
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
 use slot_store::{
-    read_slot_state, write_slot_state, Appearance, BezelPick, GbColors, GbPalette, Platform,
+    read_slot_state, write_slot_state, BezelPick, GbColors, GbPalette, Platform,
     Shader, SlotState, WallpaperPick,
 };
 use slot_ui::{
@@ -207,19 +207,11 @@ fn random_with_an_empty_folder_shows_the_default() {
 }
 
 #[test]
-fn theme_switches_between_dark_and_light_and_saves() {
-    let (d, mut a, _) = on_carousel();
-    open_at(&mut a, QuickRow::Theme);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme));
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    press(&mut a, Btn::Right);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Light));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Light);
-    press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme), "theme opened a page");
-    press(&mut a, Btn::Left);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Dark);
+fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
+    let (_d, a, _) = on_carousel();
+    assert!(a.hidden_rows().contains(&QuickRow::Theme));
+    assert!(!a.hidden_rows().contains(&QuickRow::ShellColour));
+    assert!(!a.hidden_rows().contains(&QuickRow::Wallpaper));
 }
 
 #[test]
@@ -570,13 +562,13 @@ fn confirming_the_clock_from_the_menu_sets_it_and_comes_back_to_the_menu() {
     });
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    for _ in 0..5 {
-        press(&mut a, Btn::Right);
-    }
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
     press(&mut a, Btn::Down);
     let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
-    press(&mut a, Btn::A);
+    press(&mut a, Btn::Start);
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime), "{:?}", a.phase());
     assert_eq!(
         clock.get(),
@@ -1371,9 +1363,7 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
         assert_eq!(a.shell_colour(), colour);
         assert_eq!(read_slot_state(d.path()).shell_colour, colour);
     }
-    press(&mut a, Btn::Down); // Theme
-    press(&mut a, Btn::Right);
-    assert!(a.light());
+    assert!(a.hidden_rows().contains(&QuickRow::Theme));
     assert_eq!(a.shell_colour(), ShellColour::PearlPink);
     let (b, _) = app_booting_at(d.path(), CLOCK_IS_SET);
     assert_eq!(b.shell_colour(), ShellColour::PearlPink);
@@ -1384,7 +1374,7 @@ fn clock_battery_and_audio_stay_at_the_top_on_carousel_and_settings_pages() {
     for page in [
         None,
         Some(QuickRow::General),
-        Some(QuickRow::Theme),
+        Some(QuickRow::ShellColour),
         Some(QuickRow::Bluetooth),
         Some(QuickRow::DateTime),
         Some(QuickRow::About),

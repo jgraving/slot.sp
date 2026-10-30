@@ -151,7 +151,7 @@ fn the_game_does_not_draw_during_the_insert() {
 #[test]
 fn the_reveal_waits_for_the_power_on_to_finish() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
-    let mut a = App::boot(d.path());
+    let mut a = common::boot(d.path());
     a.apply(Action::Insert);
     a.on_core_ready();
     while a.seat() < 1.0 {

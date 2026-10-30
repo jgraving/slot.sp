@@ -1,7 +1,7 @@
 use slot_store::{GbColors, GbPalette};
 use slot_ui::{
     toast_face, toast_rect, Canvas, Draw, Hud, HudKind, Icon, QuickRow, TexId, Toast, ALARM_BAND_H,
-    OUT_H, OUT_W, PLATE_H,
+    OUT_H, OUT_W,
 };
 
 #[test]
@@ -92,7 +92,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
 }
 
 #[test]
-fn no_toast_is_shrunk_to_fit_its_box() {
+fn toast_text_keeps_full_size_with_room_for_lowercase_descenders() {
     let rows = |t: Toast| {
         let f = toast_face(t);
         let (w, h) = (f.w as usize, f.h as usize);
@@ -115,8 +115,8 @@ fn no_toast_is_shrunk_to_fit_its_box() {
     for t in Toast::all().into_iter().filter(|t| !t.alarm()) {
         let (a, b) = rows(t);
         assert!(
-            a.abs_diff(top) <= 1 && b.abs_diff(bottom) <= 1,
-            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, so it was shrunk to fit"
+            a.abs_diff(top) <= 1 && b + 1 >= bottom && b <= bottom + 4,
+            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, outside the full-size ascender/descender bounds"
         );
     }
 }
@@ -163,27 +163,20 @@ fn a_toast_carries_its_own_halo() {
 }
 
 #[test]
-fn a_toast_sits_in_the_plate_band_and_is_backed_by_it() {
+fn transient_notices_fade_into_a_bottom_pill() {
     let mut h = Hud::new();
-    h.toast(Toast::StateSaved, 0);
+    h.set_toasts(Toast::all().iter().map(|_| TexId::from_raw(1)).collect());
+    h.toast(Toast::DeepSleepWake, 0);
     let mut out = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut out);
-
-    let plate = out
-        .iter()
-        .find(|d| matches!(d, Draw::Rect { w, .. } if *w == OUT_W as f32))
-        .expect("the toast has nothing to be read against");
-    let Draw::Rect { colour, h: ph, .. } = plate else {
-        unreachable!()
-    };
-    assert!(colour[3] > 0.6, "the plate is too faint to give contrast");
-    assert!((*ph - PLATE_H).abs() < 0.01, "the plate is not the band");
-
-    let (_, y, _, th) = toast_rect(Canvas::FRAMED, Toast::StateSaved);
-    assert!(
-        y >= 0.0 && y + th <= PLATE_H,
-        "the toast at {y} is outside the band"
-    );
+    h.draw(Canvas::FRAMED, 200, &mut out);
+    let (x,y,w,hh) = toast_rect(Canvas::FRAMED, Toast::DeepSleepWake);
+    assert!(y > 300.0 && y + hh < 420.0);
+    assert_eq!(x + w / 2.0, OUT_W as f32 / 2.0);
+    assert!(out.iter().any(|d| matches!(d, Draw::RoundRect { radius, colour, .. } if *radius > 15.0 && colour[3] > 0.9)));
+    assert!(!out.iter().any(|d| matches!(d, Draw::Rect { w, .. } if *w == OUT_W as f32)));
+    let mut beginning=Vec::new(); h.draw(Canvas::FRAMED, 0, &mut beginning);
+    assert!(beginning.is_empty());
+    assert!(!h.toast_visible(Toast::DeepSleepWake.hold_ms()));
 }
 
 #[test]
@@ -196,7 +189,7 @@ fn a_toast_takes_the_band_from_the_bar() {
 
     h.toast(Toast::StateSaved, 0);
     let mut both = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut both);
+    h.draw(Canvas::FRAMED, 200, &mut both);
     assert!(
         both.len() < bars,
         "the bar is still drawn underneath the toast"

@@ -46,6 +46,10 @@ pub struct Frontend {
     hud_mute_icon: Option<TexId>,
     mute_icon_key: Option<bool>,
     bluetooth_lines: Vec<String>,
+    settings_notice: slot_ui::SettingsNotice,
+    settings_notice_tex: Option<TexId>,
+    settings_notice_face: Option<(TexId,u32,u32)>,
+    settings_notice_text: String,
     session: Session,
     start: Instant,
     last: Instant,
@@ -204,6 +208,10 @@ impl Frontend {
             hud_mute_icon: None,
             mute_icon_key: None,
             bluetooth_lines: Vec::new(),
+            settings_notice: slot_ui::SettingsNotice::default(),
+            settings_notice_tex: None,
+            settings_notice_face: None,
+            settings_notice_text: String::new(),
             session,
             start: now,
             last: now,
@@ -845,6 +853,19 @@ impl Frontend {
         );
         self.draws.clear();
         self.session.app().draw(&mut self.draws);
+        let app=self.session.app();
+        let (now,canvas)=(app.now(),app.canvas());
+        self.settings_notice.observe(app.settings_notice(),now);
+        if let Some(message)=self.settings_notice.text() {
+            if message!=self.settings_notice_text {
+                let face=slot_ui::settings_notice_face(message,canvas);
+                let (w,h)=(face.w,face.h);
+                let tex=upload(compositor,&mut self.settings_notice_tex,face);
+                self.settings_notice_face=Some((tex,w,h));
+                self.settings_notice_text=message.to_string();
+            }
+        }
+        self.settings_notice.draw(canvas,self.settings_notice_face,now,&mut self.draws);
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);

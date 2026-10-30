@@ -59,6 +59,7 @@ impl Menu {
         self.status.clear();
         Some(next)
     }
+    pub fn notice_text(&self) -> Option<&str> { (!self.status.is_empty()).then_some(self.status.as_str()) }
     pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
@@ -85,7 +86,7 @@ impl Menu {
                 ("Night warmth".into(),format!("{}%",u16::from(self.settings.bedtime.1)*100/9),true),
             ], self.selected)
         };
-        let status = if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
+        let status = if animated { "" } else if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
         let mut face = settings_face(canvas, &rows, selected, 0, status, 0.0);
         let heading = slot_ui::quick_heading_face(title);
         let x = slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD;

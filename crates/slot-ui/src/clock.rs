@@ -26,7 +26,7 @@ pub fn hhmm(secs: i64) -> String {
 }
 
 const MONTHS: [&str; 12] = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 pub fn date_time_text(secs: i64) -> String {
@@ -68,6 +68,7 @@ pub struct ClockPicker {
     minute: i64,
     offset_min: i64,
     cursor: usize,
+    editing: bool,
 }
 
 impl ClockPicker {
@@ -82,6 +83,7 @@ impl ClockPicker {
             minute: rem / 60 % 60,
             offset_min: 0,
             cursor: 0,
+            editing: false,
         }
     }
 
@@ -102,6 +104,7 @@ impl ClockPicker {
             minute: 0,
             offset_min: 0,
             cursor: 0,
+            editing: false,
         }
     }
 
@@ -130,6 +133,20 @@ impl ClockPicker {
 
     pub fn field(&mut self, field: Field) {
         self.cursor = Field::ALL.iter().position(|f| *f == field).unwrap_or(0);
+    }
+
+    pub fn editing(&self) -> bool { self.editing }
+
+    pub fn toggle_editing(&mut self) { self.editing = !self.editing; }
+
+    pub fn navigate(&mut self, dx: i32, dy: i32) {
+        if self.editing {
+            self.step(if dx != 0 { i64::from(dx) } else { -i64::from(dy) });
+        } else {
+            let col = (self.cursor as i32 % 3 + dx).clamp(0, 2);
+            let row = (self.cursor as i32 / 3 + dy).clamp(0, 1);
+            self.cursor = (row * 3 + col) as usize;
+        }
     }
 
     pub fn left(&mut self) {
@@ -196,7 +213,7 @@ impl ClockPicker {
         let cell_w = (canvas.w - 152.0) / 3.0;
         for (i, (label, value)) in [
             ("Year", format!("{:04}", self.year)),
-            ("Month", format!("{:02}", self.month)),
+            ("Month", ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][(self.month - 1) as usize].to_string()),
             ("Day", format!("{:02}", self.day)),
             ("Hour", format!("{:02}", self.hour)),
             ("Minute", format!("{:02}", self.minute)),
@@ -237,9 +254,7 @@ impl ClockPicker {
                 put(f, x as u32, y as u32 + dy);
             }
         }
-        let help = crate::quick_description_face(&["Left/right: choose field · Up/down: change"]);
-        let x = w.saturating_sub(help.w) / 2;
-        put(help, x, 330);
+
         UndoFace { rgba, w, h }
     }
 
@@ -282,7 +297,7 @@ impl ClockPicker {
             focus[2],
             focus[3],
             12.0,
-            crate::expressive::SELECTED,
+            if self.editing { [0.24, 0.42, 0.43, 1.0] } else { crate::expressive::SELECTED },
         );
         if let Some(tex) = line {
             out.push(Draw::Tex {
@@ -299,7 +314,7 @@ impl ClockPicker {
                 x: 16.0,
                 y: 378.0,
                 w: w as f32,
-                h: 32.0,
+                h: crate::MENU_HINT_H as f32,
                 tex,
                 alpha: 1.0,
             });
@@ -310,7 +325,7 @@ impl ClockPicker {
                 x: canvas.w - 16.0 - w as f32 + crate::HINT_EDGE as f32,
                 y: 378.0,
                 w: w as f32,
-                h: 32.0,
+                h: crate::MENU_HINT_H as f32,
                 tex,
                 alpha: 1.0,
             });
@@ -320,10 +335,7 @@ impl ClockPicker {
 
 static CLOCK_HINT_WIDTH: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
 pub fn set_clock_hint_face() -> UndoFace {
-    crate::prompt_legends(INK, "Back", "Save")
-        .into_iter()
-        .nth(1)
-        .unwrap()
+    crate::quick_menu::clock_legend()
 }
 
 fn wrap(v: i64, lo: i64, hi: i64) -> i64 {

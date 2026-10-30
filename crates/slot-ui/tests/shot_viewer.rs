@@ -362,10 +362,10 @@ fn zoomed_shows_the_position_box_not_the_count() {
 fn the_zoomed_legend_drops_zoom_at_four() {
     let mut v = full(720, 480);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Pan", "Zoom", "Zoom Out"]);
+    assert_eq!(labels(&v), ["Zoom", "Zoom Out"]);
     v.zoom_in(C720);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Pan", "Zoom Out"]);
+    assert_eq!(labels(&v), ["Zoom Out"]);
 }
 
 #[test]
@@ -381,13 +381,12 @@ fn thumbnail_fits_whole_and_averages() {
 }
 
 #[test]
-fn the_pan_hint_is_drawn_at_its_arrows_width() {
+fn panning_needs_no_explanatory_hint() {
     let mut v = full(720, 480);
     v.set_hint_faces((0..9).map(|i| TexId::from_raw(200 + i)).collect());
     v.zoom_in(C720);
     let out = drawn(&v, C720);
-    let (.., w, _) = tex_at(&out, TexId::from_raw(204)).expect("no pan hint");
-    assert_eq!(w, slot_ui::pad_hint_width("Pan") as f32);
+    assert!(tex_at(&out, TexId::from_raw(204)).is_none());
 }
 
 #[test]

@@ -520,3 +520,21 @@ impl RectMotion {
         r
     }
 }
+
+/// A single opaque surface grows from the pause card into full Settings.
+pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[QuickRow], out: &mut Vec<Draw>) {
+    let compact = frame.focus_compact.clamp(0.0, 1.0);
+    let (_, count) = crate::quick_window(QuickRow::Settings, hidden);
+    let top = quick_row_top_at(QuickRow::Resume, QuickRow::Settings, hidden) - 54.0;
+    let cw = 384.0;
+    let ch = (count as f32 * crate::QUICK_PITCH + 76.0).min(400.0);
+    let x = canvas.centred(cw) * compact;
+    let y = top.max(12.0) * compact;
+    let w = canvas.w + (cw - canvas.w) * compact;
+    let h = canvas.h + (ch - canvas.h) * compact;
+    for spread in [12.0, 8.0, 4.0] {
+        rounded(out, x - spread, y - spread + 4.0, w + spread * 2.0, h + spread * 2.0,
+            24.0 * compact + spread, [0.0, 0.0, 0.0, 0.07 * compact * frame.opacity]);
+    }
+    rounded(out, x, y, w, h, 24.0 * compact, [0.065, 0.075, 0.085, frame.opacity]);
+}

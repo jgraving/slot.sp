@@ -1,7 +1,7 @@
 use slot_gfx::{Canvas, OUT_H};
 use slot_store::GbColors;
 
-use crate::hud::{HUD_INK, PLATE_H};
+use crate::hud::HUD_INK;
 use crate::icon::{haloed, haloed_with, icon_coverage, Icon, HALO_PX, WARNING_INK};
 use crate::text;
 use crate::{CartFace, QuickRow};
@@ -234,7 +234,7 @@ fn setting(toast: Toast) -> Setting {
             h: TOAST_H,
             px: TOAST_PX,
             min_px: TOAST_MIN_PX,
-            middle: PLATE_H / 2.0,
+            middle: OUT_H as f32 - crate::MOUTH_H - 30.0,
         },
     }
 }
@@ -271,13 +271,13 @@ pub fn toast_face(toast: Toast) -> CartFace {
     let room = icon
         .as_ref()
         .map_or(s.w, |(_, iw, _)| s.w.saturating_sub(iw + ICON_GAP));
-    let layout = text::fit(font, &toast.text(), room as f32, 1, s.px, s.min_px);
+    let layout = text::fit_preserving_case(font, &toast.text(), room as f32, 1, s.px, s.min_px);
     let (mut cov, tinted) = match icon {
         Some(icon) => beside(icon, font, &layout, &s),
         None => (text::coverage(s.w, s.h, &layout), 0..0),
     };
     if let Some(detail) = toast.detail() {
-        let layout = text::fit(font, detail, s.w as f32, 1, DETAIL_PX, DETAIL_PX);
+        let layout = text::fit_preserving_case(font, detail, s.w as f32, 1, DETAIL_PX, DETAIL_PX);
         cov.extend(text::coverage(s.w, DETAIL_H, &layout));
     }
     if tinted.is_empty() || toast.icon() != Some(Icon::Alert) {
@@ -325,7 +325,7 @@ mod tests {
     fn ink_width(toast: Toast) -> u32 {
         let font = text::font(text::Role::Detail).expect("label font");
         let s = setting(toast);
-        let layout = text::fit(font, &toast.text(), s.w as f32, 1, s.px, s.min_px);
+        let layout = text::fit_preserving_case(font, &toast.text(), s.w as f32, 1, s.px, s.min_px);
         let cov = text::coverage(s.w, s.h, &layout);
         let cols: Vec<u32> = (0..s.w)
             .filter(|x| (0..s.h).any(|y| cov[(y * s.w + x) as usize] > 0))
@@ -351,7 +351,7 @@ mod tests {
 
     fn ink_height_at(toast: Toast, px: f32) -> u32 {
         let font = text::font(text::Role::Detail).expect("label font");
-        let layout = text::fit(font, &toast.text(), TOAST_W as f32, 1, px, px);
+        let layout = text::fit_preserving_case(font, &toast.text(), TOAST_W as f32, 1, px, px);
         let cov = text::coverage(TOAST_W, TOAST_H, &layout);
         let rows: Vec<u32> = (0..TOAST_H)
             .filter(|y| (0..TOAST_W).any(|x| cov[(y * TOAST_W + x) as usize] > 0))
@@ -396,7 +396,7 @@ mod tests {
                 .icon()
                 .and_then(|i| icon_coverage(i, TOAST_ICON_PX))
                 .map_or(s.w, |(_, iw, _)| s.w - iw - ICON_GAP);
-            let layout = text::fit(font, &t.text(), room as f32, 1, s.px, s.min_px);
+            let layout = text::fit_preserving_case(font, &t.text(), room as f32, 1, s.px, s.min_px);
             assert_eq!(
                 layout.px,
                 s.px,

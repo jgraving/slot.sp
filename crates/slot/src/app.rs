@@ -448,6 +448,7 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
     switch_motion: slot_ui::expressive::SwitchMotion,
     slider_motion: slot_ui::expressive::SliderMotion,
@@ -705,6 +706,7 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            settings_notice_revision: 0,
             current_custom_face: None,
             switch_motion: Default::default(),
             slider_motion:Default::default(),clock_motion:Default::default(),
@@ -1753,7 +1755,7 @@ impl App {
             self.state.wallpaper,
             WallpaperPick::File(_) | WallpaperPick::Random
         );
-        let mut hidden = Vec::new();
+        let mut hidden = vec![QuickRow::Theme];
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -2852,6 +2854,9 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        if self.custom_menu_key().is_some() && matches!(action, Action::GbaDown(_)) {
+            self.settings_notice_revision=self.settings_notice_revision.wrapping_add(1);
+        }
         self.tick_play_history();
         self.apply_inner(action);
         self.tick_play_history();
@@ -2978,11 +2983,13 @@ impl App {
         } = &mut self.phase
         {
             match action {
-                Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.left(),
-                Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.right(),
-                Action::GbaDown(Btn::Up) => picker.up(),
-                Action::GbaDown(Btn::Down) => picker.down(),
-                Action::GbaDown(Btn::A) | Action::Insert => self.confirm_clock(),
+                Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
+                Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.navigate(1, 0),
+                Action::GbaDown(Btn::Up) => picker.navigate(0, -1),
+                Action::GbaDown(Btn::Down) => picker.navigate(0, 1),
+                Action::GbaDown(Btn::A) | Action::Insert => picker.toggle_editing(),
+                Action::GbaDown(Btn::Start) => self.confirm_clock(),
+                Action::GbaDown(Btn::B) if picker.editing() => picker.toggle_editing(),
                 Action::GbaDown(Btn::B) if *from_menu => {
                     self.phase = Phase::QuickMenu {
                         row: QuickRow::DateTime,
@@ -4787,8 +4794,8 @@ impl App {
                         x: 0.0,
                         y: 0.0,
                         w: self.canvas().w,
-                        h: OUT_H as f32 - MOUTH_H,
-                        colour: [0.0, 0.0, 0.0, 0.65],
+                        h: OUT_H as f32,
+                        colour: [0.065, 0.075, 0.085, 1.0],
                     });
                     self.draw_seated_mouth(cart, out);
                 }
@@ -5162,10 +5169,15 @@ impl App {
         }
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
+        if over_game {
+            let hidden = self.in_game_hidden();
+            let frame = self.menu_motion.frame(row, &hidden);
+            slot_ui::expressive::draw_pause_surface(self.canvas(), frame, &hidden, out);
+        } else if self.menu_motion.outgoing_row().is_some() {
+            slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
+        }
         if self.menu_motion.outgoing_row().is_some() {
-            if over_game { out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:OUT_H as f32-MOUTH_H,colour:[0.0,0.0,0.0,0.65]}); }
-            else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
-            self.draw_outgoing_menu(over_game,out);
+            self.draw_outgoing_menu(over_game, out);
         }
         self.draw_quick_page(row, over_game, false, out);
     }
@@ -5174,6 +5186,7 @@ impl App {
         let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
         let bound = self.bound_faces();
         let mut frame=if outgoing {self.menu_motion.outgoing_frame(row,&hidden)}else{self.menu_motion.frame(row,&hidden)};
+        if over_game { frame.background = false; }
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
             row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
@@ -6632,8 +6645,8 @@ impl App {
             (ShotMode::Grid | ShotMode::Full, Btn::Y, _) => {
                 self.delete_prompt = v.selected().is_some()
             }
-            (ShotMode::Full, Btn::Left, _) => v.step(-1),
-            (ShotMode::Full, Btn::Right, _) => v.step(1),
+            (ShotMode::Full, Btn::Left | Btn::Up, _) => v.step(-1),
+            (ShotMode::Full, Btn::Right | Btn::Down, _) => v.step(1),
             (ShotMode::Full | ShotMode::Zoomed, Btn::A, _) => v.zoom_in(canvas),
             (ShotMode::Full, Btn::B, _) => v.to_grid(canvas),
             (ShotMode::Zoomed, Btn::B, _) => v.zoom_out(canvas),
@@ -6951,6 +6964,20 @@ impl App {
 
     pub fn set_icon_faces(&mut self, faces: Vec<TexId>) {
         self.hud.set_icons(faces);
+    }
+
+    pub fn settings_notice(&self) -> Option<(u64,String)> {
+        if self.shutting_down() || matches!(self.phase,Phase::Doze{..}) { return None; }
+        let (page,message)=if let Some(menu)=&self.display_schedule {
+            (menu.page_key(),menu.notice_text()?.to_string())
+        } else if let Some(menu)=&self.kid_menu {
+            (menu.page_key(),menu.notice_text()?.to_string())
+        } else if let Some(menu)=&self.bluetooth {
+            let message=menu.lines().get(1)?.clone();
+            if message.is_empty() || message=="CONFIRM_FORGET" { return None; }
+            (menu.page_key(),message)
+        } else { return None; };
+        Some((page ^ self.settings_notice_revision.wrapping_mul(65536),message))
     }
 
     pub fn set_toast_faces(&mut self, faces: Vec<TexId>) {

@@ -814,7 +814,13 @@ pub fn screen_face_with_ink(lines: &[String], footer_ink: [u8; 3]) -> UndoFace {
 }
 
 pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Canvas) -> UndoFace {render_face(lines,footer_ink,canvas,true)}
-pub fn screen_face_without_switches(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas) -> UndoFace {render_face(lines,footer_ink,canvas,false)}
+pub fn screen_face_without_switches(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas) -> UndoFace {
+    let mut lines=lines.to_vec();
+    if let Some(message)=lines.get_mut(1) {
+        if message != "CONFIRM_FORGET" { message.clear(); }
+    }
+    render_face(&lines,footer_ink,canvas,false)
+}
 fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, switches: bool) -> UndoFace {
     let screen_w=canvas.w.round() as u32;
     let rgba = vec![0u8; (screen_w * OUT_H * 4) as usize];
