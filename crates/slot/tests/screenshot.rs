@@ -45,6 +45,8 @@ fn the_capture_mark_sits_after_the_game_and_before_the_toast() {
     a.set_game_ready(true);
     a.apply(Action::SaveState);
     assert_eq!(a.toast(), Some(Toast::StateSaved));
+    a.set_toast_faces(Toast::all().iter().map(|_| slot_ui::TexId::from_raw(900)).collect());
+    a.tick_ms(a.now() + 200); // Let the notice finish fading in before checking draw order.
     let without = drawn(&a);
     a.apply(Action::Screenshot);
     let with = drawn(&a);
