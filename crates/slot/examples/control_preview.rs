@@ -78,7 +78,7 @@ fn main() {
     );
     let mut schedule = slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings {
         schedule: true,
-        bedtime: (2, 6),
+        bedtime: (2, 9),
         ..Default::default()
     });
     schedule.input(slot_input::Action::GbaDown(slot_input::Btn::Up), true);

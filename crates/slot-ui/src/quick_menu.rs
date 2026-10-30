@@ -1576,7 +1576,7 @@ impl QuickMenu<'_> {
         let panel_x = MENU_INSET;
         let panel_w = self.canvas.w - panel_x * 2.0;
         let panel_y = top - 48.0;
-        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| *key == self.row.page()[0]) {
+        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| !pause && *key == self.row.page()[0]) {
             push(out,*tex,if pause {self.canvas.centred(*w as f32)}else{QUICK_LABEL_X-pad},panel_y,*w,*h);
         }
         // The selection travels as one shape. Keep it within the current

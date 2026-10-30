@@ -197,9 +197,9 @@ fn main() {
                     } else {
                         16.0
                     },
-                    y: 378.,
+                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0,
                     w: w as f32,
-                    h: 32.,
+                    h: MENU_HINT_H as f32,
                     tex,
                     alpha: 1.0,
                 });
