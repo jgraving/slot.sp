@@ -97,6 +97,9 @@ print(f'PASS: {len(pages)} pages; {checked} local links, anchors and assets; pro
 
 # Artwork is served from the same origin; browser CORS must not gate real labels.
 art_root=ROOT/'studio/art'
+site_bytes = sum(path.stat().st_size for path in ROOT.rglob('*') if path.is_file())
+assert site_bytes <= 950 * 1024 * 1024, f'Website exceeds 950 MiB deployment budget: {site_bytes} bytes'
+print(f'Website size: {site_bytes / 1024 / 1024:.1f} MiB (950 MiB budget)')
 art_index=json.loads((art_root/'index.json').read_text())
 assert art_index, 'Studio artwork catalog is empty'
 for entry in art_index.values():
