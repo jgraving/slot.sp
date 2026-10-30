@@ -94,3 +94,13 @@ for video in (ROOT / 'media/fork').rglob('*.mp4'):
 if errors:
     raise SystemExit('\n'.join(sorted(set(errors))))
 print(f'PASS: {len(pages)} pages; {checked} local links, anchors and assets; project base {BASE}')
+
+# Artwork is served from the same origin; browser CORS must not gate real labels.
+art_root=ROOT/'studio/art'
+art_index=json.loads((art_root/'index.json').read_text())
+assert art_index, 'Studio artwork catalog is empty'
+for entry in art_index.values():
+    for kind in ('support-texture','wheel'):
+        if name:=entry.get(kind):
+            path=art_root/name
+            assert path.is_file() and path.read_bytes()[:8]==b'\x89PNG\r\n\x1a\n', name

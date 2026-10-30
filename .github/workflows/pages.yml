@@ -37,7 +37,7 @@ jobs:
   build:
     name: Build and check website
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -72,12 +72,31 @@ jobs:
           curl -fsSL https://github.com/wasm-bindgen/wasm-pack/releases/download/v0.15.0/wasm-pack-v0.15.0-x86_64-unknown-linux-musl.tar.gz | tar -xz -C "$RUNNER_TEMP"
           cd _studio/slot-cart-studio
           "$RUNNER_TEMP/wasm-pack-v0.15.0-x86_64-unknown-linux-musl/wasm-pack" build --release --target web --no-typescript --out-dir web/pkg
+      - id: art
+        name: Read public artwork catalog
+        run: echo "digest=$(python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-source.json --catalog-only)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        if: github.event_name != 'pull_request'
+        with:
+          path: .studio-art-cache
+          key: studio-art-v1-${{ hashFiles('_studio/slot-cart-studio/tools/mirror_art.py') }}-${{ steps.art.outputs.digest }}
+          restore-keys: studio-art-v1-${{ hashFiles('_studio/slot-cart-studio/tools/mirror_art.py') }}-
       - name: Prepare feature guides, font and fork previews
         run: python tools/prepare-site.py
       - name: Build website
         run: zensical build --clean --strict -f site/zensical.build.toml
       - name: Integrate Cart Studio
         run: python tools/assemble-studio.py
+      - name: Mirror Studio artwork under the site origin
+        env:
+          PREVIEW: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -eu
+          if [ "$PREVIEW" = true ]; then
+            python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-cache --catalog .studio-art-source.json --sample 2 --copy-to site/public/studio/art
+          else
+            python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-cache --catalog .studio-art-source.json --copy-to site/public/studio/art
+          fi
       - name: Check published links and assets
         run: python tools/check-site.py
       - uses: actions/upload-pages-artifact@v3
