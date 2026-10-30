@@ -43,6 +43,7 @@ fn the_capture_mark_sits_after_the_game_and_before_the_toast() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let mut a = app_playing_in(d.path(), "Emerald");
     a.set_game_ready(true);
+    a.set_toast_faces(vec![slot_ui::TexId::from_raw(999); Toast::all().len()]);
     a.apply(Action::SaveState);
     assert_eq!(a.toast(), Some(Toast::StateSaved));
     let without = drawn(&a);

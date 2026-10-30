@@ -250,7 +250,7 @@ pub fn draw_album_chrome(
 
     let top = canvas.h - PLATE_H;
     out.push(plate(canvas, top));
-    let y = top + (PLATE_H - HINT_H as f32) / 2.0;
+
     let widths: Vec<f32> = chrome
         .hints
         .iter()
@@ -259,6 +259,11 @@ pub fn draw_album_chrome(
             false => hint_width(h.key, &h.label) as f32,
         })
         .collect();
+    let room=canvas.w-2.0*MARGIN-HINT_GAP*widths.len().saturating_sub(1) as f32;
+    let scale=(32.0/HINT_H as f32).min(room/widths.iter().sum::<f32>().max(1.0));
+    let widths:Vec<f32>=widths.into_iter().map(|w|w*scale).collect();
+    let hint_h=HINT_H as f32*scale;
+    let y=top+(PLATE_H-hint_h)/2.0;
     let tail = &widths[chrome.ways_out.min(widths.len())..];
     let tail_w = tail.iter().sum::<f32>() + HINT_GAP * tail.len().saturating_sub(1) as f32;
     let mut x = MARGIN;
@@ -266,7 +271,9 @@ pub fn draw_album_chrome(
         if i == chrome.ways_out {
             x = canvas.w - MARGIN - tail_w;
         }
-        out.push(hint_quad(x, y, *w, chrome.hint_faces.get(i).copied()));
+        let mut draw=hint_quad(x,y,*w,chrome.hint_faces.get(i).copied());
+        match &mut draw {Draw::Tex{h,..}|Draw::Rect{h,..}=>*h=hint_h,_=>{}}
+        out.push(draw);
         x += w + HINT_GAP;
     }
 

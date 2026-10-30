@@ -4,7 +4,7 @@
 
 [Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
 
-![General settings with SP color, theme, wallpaper and animation options](previews/guide/appearance.png)
+![General settings with SP color, wallpaper and animation options](previews/guide/appearance.png)
 
 ## Type
 
@@ -22,9 +22,8 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Platinum** | Silver. |
 | **Pearl Blue** | Blue. |
 | **Pearl Pink** | Pink. |
-| **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → Theme** changes the light or dark appearance.
+The selected color also appears on the animated power switch and link screen. Shell color and wallpaper control the look; menus use one consistent dark appearance.
 
 ![The four SP colors](previews/rgsp-shell-finishes.png)
 
@@ -106,3 +105,7 @@ Remove the custom BMP to return to the bundled startup image.
 **Screen → General → Day / Night** lets you enable automatic switching and choose when each display preset begins. Times use the device's local Date & Time setting. Left/right changes a start time by 15 minutes; A opens separate hour/minute controls. Day and night must start at different times.
 
 The day/night shortcut still works while automatic switching is enabled. Your manual choice lasts until the next scheduled change, including across sleep and restart. A clock correction or schedule edit clears that override. Brightness and blue-light adjustments remain separate for each preset. Automatic switching is off by default and requires a valid device clock.
+
+## Date and time
+
+Open **General → Date & time**. Use the D-pad to move between fields, then press <kbd>A</kbd> to edit. While editing, Up or Right increases the value and Down or Left decreases it. Press <kbd>A</kbd> or <kbd>B</kbd> to finish editing, <kbd>START</kbd> to save, or <kbd>B</kbd> outside editing to go back. Months use readable names such as October.

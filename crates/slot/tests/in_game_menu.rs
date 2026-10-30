@@ -406,7 +406,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     let scrim = out.iter().any(
-        |d| matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001),
+        |d| matches!(d, slot_ui::Draw::RoundRect { w, radius, .. } if (*w-352.0).abs()<0.1 && (*radius-20.0).abs()<0.1),
     );
     assert!(
         !scrim,
@@ -418,7 +418,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     assert!(out.iter().any(|d| {
-        matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001)
+        matches!(d, slot_ui::Draw::RoundRect { w, radius, .. } if (*w-352.0).abs()<0.1 && (*radius-20.0).abs()<0.1)
     }));
 }
 

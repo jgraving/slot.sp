@@ -155,6 +155,8 @@ pub struct Hud {
     usb: bool,
     ff: FfState,
     said: Option<(Toast, Millis)>,
+    custom_notice: Option<(String, Millis)>,
+    notice_face: Option<(TexId, u32, u32)>,
     alarm: Option<Millis>,
     alarm_toast: Option<Toast>,
     icons: Vec<TexId>,
@@ -177,13 +179,25 @@ impl Hud {
     }
 
     pub fn toast(&mut self, toast: Toast, now: Millis) {
+        self.custom_notice = None;
         self.said = Some((toast, now));
     }
 
     pub fn hush(&mut self) {
         self.said = None;
+        self.custom_notice = None;
     }
 
+    pub fn notice(&mut self, text: &str, now: Millis) {
+        self.said = None;
+        self.custom_notice = Some((text.to_owned(), now));
+    }
+    pub fn notice_text(&self) -> Option<&str> {
+        self.custom_notice.as_ref().map(|n| n.0.as_str())
+    }
+    pub fn set_notice_face(&mut self, face: (TexId, u32, u32)) {
+        self.notice_face = Some(face);
+    }
     pub fn set_alarm(&mut self, on: bool, now: Millis) {
         self.alarm = match (on, self.alarm) {
             (true, Some(since)) => Some(since),
@@ -298,25 +312,11 @@ impl Hud {
     pub fn draw(&self, canvas: Canvas, now: Millis, out: &mut Vec<Draw>) {
         let alpha = self.alpha(now);
         let toast = self.toast_alpha(now);
-        let audio_notice = toast > 0.0 && self.said.is_some_and(|(t, _)| t.audio_change());
         if toast > 0.0 {
-            out.push(Draw::Rect {
-                x: 0.0,
-                y: 0.0,
-                w: canvas.w,
-                h: PLATE_H,
-                colour: faded(PLATE, toast),
-            });
             self.draw_toast(canvas, now, out);
         }
-        if alpha > 0.0 && (toast == 0.0 || audio_notice) {
-            self.draw_bar(
-                canvas,
-                alpha,
-                if audio_notice { PLATE_H } else { 0.0 },
-                now,
-                out,
-            );
+        if alpha > 0.0 {
+            self.draw_bar(canvas, alpha, 0.0, now, out);
         }
         let link = self
             .link
@@ -438,25 +438,28 @@ impl Hud {
         if alpha <= 0.0 {
             return;
         }
-        let Some(tex) = self
-            .said
-            .and_then(|(t, _)| self.toasts.get(t.index()))
-            .copied()
-        else {
+        if let Some((_, since)) = &self.custom_notice {
+            if let Some((tex, w, h)) = self.notice_face {
+                crate::toast::draw_notice(
+                    canvas,
+                    tex,
+                    w as f32,
+                    h as f32,
+                    now.saturating_sub(*since),
+                    alpha,
+                    out,
+                );
+            }
+            return;
+        }
+        let Some((said, since)) = self.said else {
             return;
         };
-        let Some((said, _)) = self.said else {
+        let Some(tex) = self.toasts.get(said.index()).copied() else {
             return;
         };
-        let (x, y, w, h) = toast_rect(canvas, said);
-        out.push(Draw::Tex {
-            x,
-            y,
-            w,
-            h,
-            tex,
-            alpha,
-        });
+        let (_, _, w, h) = toast_rect(canvas, said);
+        crate::toast::draw_notice(canvas, tex, w, h, now.saturating_sub(since), alpha, out);
     }
 
     fn icon(&self) -> Option<TexId> {
@@ -484,6 +487,9 @@ impl Hud {
     }
 
     fn toast_alpha(&self, now: Millis) -> f32 {
+        if let Some((_, since)) = &self.custom_notice {
+            return fade_over(*since, now, 4000);
+        }
         match self.said {
             Some((toast, shown)) => fade_over(shown, now, toast.hold_ms()),
             None => 0.0,
@@ -507,8 +513,4 @@ fn pulse(age: Millis) -> [f32; 4] {
     let phase = (age % PULSE_MS) as f32 / PULSE_MS as f32;
     let t = 0.5 + 0.5 * (phase * std::f32::consts::TAU).cos();
     std::array::from_fn(|i| ALARM_DIM[i] + (ALARM_BRIGHT[i] - ALARM_DIM[i]) * t)
-}
-
-fn faded(colour: [f32; 4], alpha: f32) -> [f32; 4] {
-    [colour[0], colour[1], colour[2], colour[3] * alpha]
 }

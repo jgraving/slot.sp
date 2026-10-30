@@ -235,6 +235,7 @@ impl Menu {
             },
         ]
     }
+    pub fn notice_text(&self)->&str {&self.status}
     pub fn page_key(&self) -> u64 { 2000 + self.page as u64 }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
@@ -323,7 +324,7 @@ impl Menu {
         else if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
             ""
         } else { &self.status };
-        if !status.is_empty() {
+        if !animated && !status.is_empty() {
             let status = slot_ui::quick_description_face(&[status]);
             let left = face.w.saturating_sub(status.w) / 2;
             blit(&mut face, &status, left, 332);

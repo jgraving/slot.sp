@@ -107,5 +107,5 @@ fn round_buttons_stay_round_at_the_compact_hint_height() {
     assert_eq!(f.h,MENU_HINT_H);
     let xs:Vec<_>=(0..MENU_HINT_H).filter(|&x|(0..f.h).any(|y| f.rgba[((y*f.w+x)*4+3) as usize]>128)).collect();
     let ys:Vec<_>=(0..f.h).filter(|&y|(0..MENU_HINT_H).any(|x| f.rgba[((y*f.w+x)*4+3) as usize]>128)).collect();
-    assert!((xs.len() as i32-ys.len() as i32).abs()<=1,"button icon was stretched");
+    assert!((xs.len() as i32-ys.len() as i32).abs()<=1,"button icon was stretched: {} x {}",xs.len(),ys.len());
 }

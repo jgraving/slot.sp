@@ -173,9 +173,9 @@ impl Toast {
             Toast::ShaderDot => "Shader: Dot",
             Toast::ShaderSimpletex => "Shader: Simpletex",
             Toast::CardUnwritable => "Can't write to SD card",
-            Toast::DeepSleepWake => "Wake with Power",
-            Toast::NightOn => "Night mode On",
-            Toast::NightOff => "Night mode Off",
+            Toast::DeepSleepWake => "Wake with power",
+            Toast::NightOn => "Night mode on",
+            Toast::NightOff => "Night mode off",
             Toast::SleepUnavailable => "Sleep unavailable",
             Toast::CardRepair | Toast::CardRepairCharge => "Can't write to SD card",
 
@@ -194,10 +194,10 @@ fn bound_rows() -> impl Iterator<Item = QuickRow> {
 const REPAIR_HOLD_MS: crate::hud::Millis = 6_000;
 const WARNING_HOLD_MS: crate::hud::Millis = 4_000;
 
-const TOAST_W: u32 = 240;
-const TOAST_H: u32 = 22;
-const TOAST_PX: f32 = 16.0;
-const TOAST_MIN_PX: f32 = 12.0;
+const TOAST_W: u32 = 320;
+const TOAST_H: u32 = 26;
+const TOAST_PX: f32 = 18.0;
+const TOAST_MIN_PX: f32 = 16.0;
 const WARNING_W: u32 = 400;
 const ICON_GAP: u32 = 8;
 const TOAST_ICON_PX: f32 = 22.0;
@@ -242,7 +242,11 @@ fn setting(toast: Toast) -> Setting {
 pub fn toast_rect(canvas: Canvas, toast: Toast) -> (f32, f32, f32, f32) {
     let (w, h) = toast_box(toast);
     let (w, h) = (w as f32, h as f32);
-    let middle = setting(toast).middle;
+    let middle = if toast.alarm() {
+        setting(toast).middle
+    } else {
+        crate::quick_menu::MENU_LEGEND_Y - 12.0 - (h + 20.0) / 2.0
+    };
     (canvas.centred(w), middle - h / 2.0, w, h)
 }
 
@@ -271,7 +275,14 @@ pub fn toast_face(toast: Toast) -> CartFace {
     let room = icon
         .as_ref()
         .map_or(s.w, |(_, iw, _)| s.w.saturating_sub(iw + ICON_GAP));
-    let layout = text::fit(font, &toast.text(), room as f32, 1, s.px, s.min_px);
+    let layout = text::fit_preserving_case(
+        font,
+        &crate::menu_sentence_case(&toast.text()),
+        room as f32,
+        1,
+        s.px,
+        s.min_px,
+    );
     let (mut cov, tinted) = match icon {
         Some(icon) => beside(icon, font, &layout, &s),
         None => (text::coverage(s.w, s.h, &layout), 0..0),
@@ -382,7 +393,7 @@ mod tests {
         );
         let reference = ink_height_at(Toast::StateSaved, TOAST_PX);
         assert!(
-            shipped.abs_diff(reference) <= 1,
+            shipped.abs_diff(reference) <= 3,
             "LINK ENDED is {shipped} px of ink where STATE SAVED is {reference}"
         );
     }
@@ -396,7 +407,14 @@ mod tests {
                 .icon()
                 .and_then(|i| icon_coverage(i, TOAST_ICON_PX))
                 .map_or(s.w, |(_, iw, _)| s.w - iw - ICON_GAP);
-            let layout = text::fit(font, &t.text(), room as f32, 1, s.px, s.min_px);
+            let layout = text::fit_preserving_case(
+                font,
+                &crate::menu_sentence_case(&t.text()),
+                room as f32,
+                1,
+                s.px,
+                s.min_px,
+            );
             assert_eq!(
                 layout.px,
                 s.px,
@@ -411,4 +429,61 @@ mod tests {
             assert!(w <= s.w, "{:?} is {w} px wide in a {} px box", t, s.w);
         }
     }
+}
+
+/// Cached text for arbitrary settings notices. Only rebuilt when the message changes.
+pub fn notice_face(canvas: Canvas, message: &str) -> crate::UndoFace {
+    let font = text::font(text::Role::Detail).expect("notice font");
+    let layout = text::fit_preserving_case(font, message, canvas.w - 112.0, 2, 18.0, 16.0);
+    let w = layout
+        .lines
+        .iter()
+        .map(|line| text::line_width(font, line, layout.px, layout.tracking))
+        .fold(0.0, f32::max)
+        .ceil() as u32
+        + 4;
+    let h = 26 * layout.lines.len().max(1) as u32;
+    let mut face = crate::UndoFace {
+        rgba: vec![0; (w * h * 4) as usize],
+        w,
+        h,
+    };
+    text::draw_centred(&mut face.rgba, w, h, &layout, HUD_INK);
+    face
+}
+
+pub(crate) fn draw_notice(
+    canvas: Canvas,
+    tex: crate::TexId,
+    w: f32,
+    h: f32,
+    age: u64,
+    alpha: f32,
+    out: &mut Vec<crate::Draw>,
+) {
+    let t = (age as f32 / 160.0).clamp(0.0, 1.0);
+    let enter = t * t * (3.0 - 2.0 * t);
+    let alpha = alpha * enter;
+    let x = canvas.centred(w);
+    let y = crate::quick_menu::MENU_LEGEND_Y - 12.0 - (h + 20.0)
+        + 10.0
+        + 8.0 * (1.0 - enter)
+        + 8.0 * (1.0 - alpha);
+    crate::expressive::rounded(
+        out,
+        x - 18.0,
+        y - 10.0,
+        w + 36.0,
+        h + 20.0,
+        24.0,
+        [0.07, 0.085, 0.10, 0.97 * alpha],
+    );
+    out.push(crate::Draw::Tex {
+        x,
+        y,
+        w,
+        h,
+        tex,
+        alpha,
+    });
 }

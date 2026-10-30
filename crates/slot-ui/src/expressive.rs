@@ -84,6 +84,8 @@ pub struct MenuFrame {
     pub switch: Option<f32>,
     pub sliders: [Option<f32>; 2],
     pub focus_compact: f32,
+    pub surface_top: f32,
+    pub surface_height: f32,
     pub suppress_focus: bool,
     pub content_opacity: f32,
     pub closing: bool,
@@ -106,6 +108,16 @@ impl MenuFrame {
             } else {
                 0.0
             },
+            surface_top: if row.page() == QuickRow::PLAY {
+                crate::quick_menu::pause_card_geometry(row, hidden).0
+            } else {
+                28.0
+            },
+            surface_height: if row.page() == QuickRow::PLAY {
+                crate::quick_menu::pause_card_geometry(row, hidden).1
+            } else {
+                328.0
+            },
             suppress_focus: false,
             content_opacity: 1.0,
             closing: false,
@@ -120,6 +132,8 @@ pub struct MenuMotion {
     custom: Option<u64>,
     outgoing_custom: bool,
     pause_morph: bool,
+    pause_top: f32,
+    pause_height: f32,
     pause_from_y: f32,
     pause_from_compact: f32,
     row: Option<QuickRow>,
@@ -173,6 +187,11 @@ impl MenuMotion {
             return;
         };
         self.active = true;
+        if row.page() == QuickRow::PLAY {
+            let (top, height) = crate::quick_menu::pause_card_geometry(row, hidden);
+            self.pause_top = top;
+            self.pause_height = height;
+        }
         let target = selection.map_or_else(|| row.position(hidden), |s| s.0) as f32;
         let window = selection.map_or_else(|| crate::quick_window(row, hidden).0, |s| s.1) as f32;
         let page = custom.unwrap_or(row.page()[0].index() as u64);
@@ -271,7 +290,7 @@ impl MenuMotion {
             focus_y: quick_row_top_at(row, row, hidden)
                 + ((self.scroll.value - target_position(row, hidden))
                     - (self.window.value - crate::quick_window(row, hidden).0 as f32))
-                    * crate::QUICK_PITCH,
+                    * crate::quick_menu::quick_pitch(row),
             scroll_position: self.scroll.value,
             window_start: self.window.value,
             page_shift: if self.active {
@@ -289,6 +308,8 @@ impl MenuMotion {
             } else {
                 0.0
             },
+            surface_top: self.pause_top,
+            surface_height: self.pause_height,
             suppress_focus: false,
             content_opacity: 1.0,
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
@@ -416,21 +437,40 @@ pub fn draw_cached_menu(
         x: dx,
         y: 40.0,
         w: canvas.w,
-        h: 338.0,
+        h: crate::quick_menu::MENU_LEGEND_Y - 40.0,
         tex,
         alpha: frame.opacity,
-        uv: [0.0, 40.0 / 480.0, 1.0, 338.0 / 480.0],
+        uv: [
+            0.0,
+            40.0 / 480.0,
+            1.0,
+            (crate::quick_menu::MENU_LEGEND_Y - 40.0) / 480.0,
+        ],
     });
-    crate::quick_menu::clip_quads(out, begin, [MENU_INSET, 40.0, canvas.w - MENU_INSET, 378.0]);
+    crate::quick_menu::clip_quads(
+        out,
+        begin,
+        [
+            MENU_INSET,
+            40.0,
+            canvas.w - MENU_INSET,
+            crate::quick_menu::MENU_LEGEND_Y,
+        ],
+    );
     if !frame.outgoing {
         out.push(Draw::Part {
             x: 0.0,
-            y: 378.0,
+            y: crate::quick_menu::MENU_LEGEND_Y,
             w: canvas.w,
-            h: 44.0,
+            h: 422.0 - crate::quick_menu::MENU_LEGEND_Y,
             tex,
             alpha: frame.opacity,
-            uv: [0.0, 378.0 / 480.0, 1.0, 44.0 / 480.0],
+            uv: [
+                0.0,
+                crate::quick_menu::MENU_LEGEND_Y / 480.0,
+                1.0,
+                (422.0 - crate::quick_menu::MENU_LEGEND_Y) / 480.0,
+            ],
         });
     }
 }
@@ -519,4 +559,35 @@ impl RectMotion {
         }
         r
     }
+}
+
+/// One anchored game-menu surface. Pause expands into full Settings without
+/// moving scrim boundaries or framebuffer effects.
+pub fn draw_game_menu_surface(canvas: crate::Canvas, frame: MenuFrame, out: &mut Vec<Draw>) {
+    let t = frame.focus_compact.clamp(0.0, 1.0);
+    let width = canvas.w + (352.0 - canvas.w) * t;
+    let x = (canvas.w - width) / 2.0;
+    let y = frame.surface_top * t;
+    let full_height = canvas.h - crate::slot_chrome::MOUTH_H;
+    let height = full_height + (frame.surface_height - full_height) * t;
+    for (spread, alpha) in [(12.0, 0.035), (8.0, 0.055), (4.0, 0.09)] {
+        rounded(
+            out,
+            x - spread,
+            y - spread,
+            width + 2.0 * spread,
+            height + 2.0 * spread,
+            20.0 * t + spread,
+            [0.0, 0.0, 0.0, alpha * t * frame.opacity],
+        );
+    }
+    rounded(
+        out,
+        x,
+        y,
+        width,
+        height,
+        20.0 * t,
+        [0.065, 0.08, 0.10, frame.opacity],
+    );
 }

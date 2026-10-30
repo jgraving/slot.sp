@@ -45,6 +45,7 @@ fn the_clock_comes_before_a_seated_cart() {
 fn confirming_writes_the_picked_time_to_the_platform() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let (mut a, clock) = app_booting_with_clock(d.path());
+    a.apply(Action::GbaDown(Btn::A));
     a.apply(Action::GbaDown(Btn::Up));
     a.confirm_clock();
     assert_ne!(clock.get(), 0, "the platform clock was never set");
@@ -154,9 +155,10 @@ fn the_offset_is_part_of_the_line_of_type() {
 fn confirming_persists_the_offset_and_sets_the_platform_to_utc() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let (mut a, clock) = app_booting_at(d.path(), 1_700_000_000);
-    for _ in 0..8 {
-        a.apply(Action::GbaDown(Btn::Right));
-    }
+    a.apply(Action::GbaDown(Btn::Right));
+    a.apply(Action::GbaDown(Btn::Right));
+    a.apply(Action::GbaDown(Btn::Down));
+    a.apply(Action::GbaDown(Btn::A));
     for _ in 0..4 {
         a.apply(Action::GbaDown(Btn::Down));
     }
@@ -269,7 +271,7 @@ fn confirming_the_clock_untouched_leaves_it_where_it_is() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (_d, mut a, clock) = clock_screen(way);
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR,
@@ -283,13 +285,13 @@ fn confirming_the_clock_untouched_leaves_it_where_it_is() {
 fn changing_the_minute_moves_the_clock_by_exactly_that_minute() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (_d, mut a, clock) = clock_screen(way);
-        for _ in 0..4 {
-            a.apply(Action::GbaDown(Btn::Right));
-        }
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Down));
+        a.apply(Action::GbaDown(Btn::A));
         assert_eq!(a.picker().expect("on the clock").cursor(), Field::Minute);
         a.apply(Action::GbaDown(Btn::Up));
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR + 60,
@@ -304,12 +306,13 @@ fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (d, mut a, clock) = clock_screen(way);
         let before = a.picker().expect("on the clock").offset_min();
-        for _ in 0..5 {
-            a.apply(Action::GbaDown(Btn::Right));
-        }
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Down));
+        a.apply(Action::GbaDown(Btn::A));
         a.apply(Action::GbaDown(Btn::Down));
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR + 30 * 60,
@@ -322,4 +325,24 @@ fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
             "{way:?}: the offset was not saved"
         );
     }
+}
+
+#[test]
+fn dpad_moves_in_both_dimensions_and_start_saves_an_edited_field() {
+    let d=tmp_root_with_carts(&["Emerald"]);let (mut a,clock)=app_booting_at(d.path(),1_700_000_000);
+    let start=a.picker().unwrap().secs();
+    a.apply(Action::GbaDown(Btn::Right));a.apply(Action::GbaDown(Btn::Down));
+    assert_eq!(a.picker().unwrap().cursor(),Field::Minute);assert_eq!(a.picker().unwrap().secs(),start);
+    a.apply(Action::GbaDown(Btn::A));assert!(a.picker().unwrap().editing());
+    a.apply(Action::GbaDown(Btn::Up));a.apply(Action::GbaDown(Btn::B));
+    assert!(!a.picker().unwrap().editing());assert_eq!(a.picker().unwrap().cursor(),Field::Minute);
+    a.apply(Action::GbaDown(Btn::Start));assert!(a.picker().is_none());assert_eq!(clock.get(),1_700_000_060);
+}
+
+#[test]
+fn the_generic_confirm_action_edits_the_clock_instead_of_saving_it() {
+    let d=tmp_root_with_carts(&["Emerald"]);let(mut a,_)=app_booting_at(d.path(),1_700_000_000);
+    a.apply(Action::Insert);assert!(a.picker().unwrap().editing());
+    a.apply(Action::Insert);assert!(!a.picker().unwrap().editing());
+    a.apply(Action::GbaDown(Btn::Start));assert!(a.picker().is_none());
 }

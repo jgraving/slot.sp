@@ -109,6 +109,7 @@ fn main() {
     let ground = compositor.create_texture(720, 480, default_background().unwrap());
     let parts = shell_slot_faces(slot_store::ShellColour::FINISHES[0]);
     let slot = parts.map(|f| compositor.create_texture(SLOT_W, SLOT_H, &f));
+    let hidden = [QuickRow::UndoSave, QuickRow::UndoLoad];
     let mut motion = MenuMotion::default();
     let mut draws = Vec::with_capacity(96);
     let mut peak = 0;
@@ -129,7 +130,7 @@ fn main() {
             } else {
                 row
             };
-            motion.update(Some(row), &[], Some(frame < 32), 1.0 / 60.0);
+            motion.update(Some(row), &hidden, Some(frame < 32), 1.0 / 60.0);
             let mut values = [None; QuickRow::ALL.len()];
             for r in QuickRow::ALL {
                 if r.toggle() {
@@ -146,9 +147,20 @@ fn main() {
             values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();
-            if motion.outgoing_row().is_some() {
+            let over_game = row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS;
+            if over_game {
+                draws.push(Draw::Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    w: canvas.w,
+                    h: 480.0,
+                    colour: [0.12, 0.16, 0.18, 1.0],
+                });
+                expressive::draw_game_menu_surface(canvas, motion.frame(row, &hidden), &mut draws);
+            } else if motion.outgoing_row().is_some() {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
+
             for outgoing in [true, false] {
                 let current = row;
                 let Some(row) = (if outgoing {
@@ -160,7 +172,7 @@ fn main() {
                 };
                 QuickMenu {
                     row,
-                    hidden: &[],
+                    hidden: &hidden,
                     values,
                     clock: None,
                     wallpaper: None,
@@ -179,17 +191,26 @@ fn main() {
                     canvas,
                 }
                 .draw_animated(
-                    if outgoing {
-                        motion.outgoing_frame(row, &[])
-                    } else {
-                        motion.frame(current, &[])
+                    {
+                        let mut frame = if outgoing {
+                            motion.outgoing_frame(row, &hidden)
+                        } else {
+                            motion.frame(current, &hidden)
+                        };
+                        if over_game {
+                            frame.background = false;
+                        }
+                        frame
                     },
                     &mut draws,
                 );
             }
             draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
             for (right, (tex, w)) in [
-                (false, faces.legend[0]),
+                (
+                    false,
+                    faces.legend[if row.page() == QuickRow::PLAY { 3 } else { 0 }],
+                ),
                 (true, faces.legend[if row.opens() { 2 } else { 1 }]),
             ] {
                 draws.push(Draw::Tex {
@@ -198,9 +219,9 @@ fn main() {
                     } else {
                         16.0
                     },
-                    y: 378.,
+                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0,
                     w: w as f32,
-                    h: 32.,
+                    h: MENU_HINT_H as f32,
                     tex,
                     alpha: 1.0,
                 });

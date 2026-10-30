@@ -17,7 +17,7 @@ pub const SHOT_HINTS: [(&str, &str); 9] = [
     ("Y", "Delete"),
     ("A", "Zoom"),
     (PAN_KEY, "Pan"),
-    ("B", "Zoom Out"),
+    ("B", "Zoom out"),
     ("SELECT", "Multi"),
     ("A", "Tick"),
     ("B", "Done"),
@@ -26,8 +26,8 @@ pub const SHOT_HINTS: [(&str, &str); 9] = [
 const GRID_LEGEND: [usize; 4] = [0, 1, 2, 6];
 const PICK_LEGEND: [usize; 3] = [7, 2, 8];
 const FULL_LEGEND: [usize; 3] = [3, 1, 2];
-const ZOOM_LEGEND: [usize; 3] = [4, 3, 5];
-const ZOOM_MAX_LEGEND: [usize; 2] = [4, 5];
+const ZOOM_LEGEND: [usize; 2] = [3, 5];
+const ZOOM_MAX_LEGEND: [usize; 1] = [5];
 
 pub const GRID_COLS: usize = 3;
 pub const GRID_GAP: f32 = 16.0;

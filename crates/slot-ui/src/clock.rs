@@ -26,7 +26,7 @@ pub fn hhmm(secs: i64) -> String {
 }
 
 const MONTHS: [&str; 12] = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 pub fn date_time_text(secs: i64) -> String {
@@ -68,6 +68,7 @@ pub struct ClockPicker {
     minute: i64,
     offset_min: i64,
     cursor: usize,
+    editing: bool,
 }
 
 impl ClockPicker {
@@ -82,6 +83,7 @@ impl ClockPicker {
             minute: rem / 60 % 60,
             offset_min: 0,
             cursor: 0,
+            editing: false,
         }
     }
 
@@ -102,6 +104,7 @@ impl ClockPicker {
             minute: 0,
             offset_min: 0,
             cursor: 0,
+            editing: false,
         }
     }
 
@@ -130,6 +133,37 @@ impl ClockPicker {
 
     pub fn field(&mut self, field: Field) {
         self.cursor = Field::ALL.iter().position(|f| *f == field).unwrap_or(0);
+    }
+
+    pub fn editing(&self) -> bool {
+        self.editing
+    }
+    pub fn toggle_edit(&mut self) {
+        self.editing = !self.editing;
+    }
+    pub fn finish_edit(&mut self) {
+        self.editing = false;
+    }
+    pub fn move_selection(&mut self, dx: i32, dy: i32) {
+        let col = (self.cursor as i32 % 3 + dx).clamp(0, 2);
+        let row = (self.cursor as i32 / 3 + dy).clamp(0, 1);
+        self.cursor = (row * 3 + col) as usize;
+    }
+    pub fn month_name(&self) -> &'static str {
+        [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+        ][(self.month - 1).clamp(0, 11) as usize]
     }
 
     pub fn left(&mut self) {
@@ -188,6 +222,9 @@ impl ClockPicker {
         ]
     }
     pub fn face_on(&self, canvas: Canvas) -> UndoFace {
+        self.face_with_back(canvas, true)
+    }
+    pub fn face_with_back(&self, canvas: Canvas, back: bool) -> UndoFace {
         let (w, h) = (canvas.w as u32, OUT_H);
         let mut rgba = vec![0; (w * h * 4) as usize];
         let mut put = |f: UndoFace, x: u32, y: u32| blit(&mut rgba, w, &f.rgba, f.w, f.h, x, y);
@@ -196,7 +233,7 @@ impl ClockPicker {
         let cell_w = (canvas.w - 152.0) / 3.0;
         for (i, (label, value)) in [
             ("Year", format!("{:04}", self.year)),
-            ("Month", format!("{:02}", self.month)),
+            ("Month", self.month_name().to_owned()),
             ("Day", format!("{:02}", self.day)),
             ("Hour", format!("{:02}", self.hour)),
             ("Minute", format!("{:02}", self.minute)),
@@ -237,9 +274,21 @@ impl ClockPicker {
                 put(f, x as u32, y as u32 + dy);
             }
         }
-        let help = crate::quick_description_face(&["Left/right: choose field · Up/down: change"]);
-        let x = w.saturating_sub(help.w) / 2;
-        put(help, x, 330);
+        let [back_face, edit_face, save_face] =
+            crate::quick_menu::clock_legends(self.editing, back);
+        let seen = |f: &UndoFace| f.w - crate::HINT_EDGE;
+        if back || self.editing {
+            put(back_face, 16, crate::quick_menu::MENU_LEGEND_Y as u32);
+        }
+        let total = seen(&edit_face) + 20 + seen(&save_face);
+        let x = w.saturating_sub(16 + total);
+        let edit_width = seen(&edit_face);
+        put(edit_face, x, crate::quick_menu::MENU_LEGEND_Y as u32);
+        put(
+            save_face,
+            x + edit_width + 20,
+            crate::quick_menu::MENU_LEGEND_Y as u32,
+        );
         UndoFace { rgba, w, h }
     }
 
@@ -263,8 +312,8 @@ impl ClockPicker {
         &self,
         canvas: Canvas,
         line: Option<TexId>,
-        hint: Option<TexId>,
-        back: Option<(TexId, u32)>,
+        _hint: Option<TexId>,
+        _back: Option<(TexId, u32)>,
         focus: [f32; 4],
         out: &mut Vec<Draw>,
     ) {
@@ -282,7 +331,11 @@ impl ClockPicker {
             focus[2],
             focus[3],
             12.0,
-            crate::expressive::SELECTED,
+            if self.editing {
+                [0.22, 0.40, 0.40, 1.0]
+            } else {
+                crate::expressive::SELECTED
+            },
         );
         if let Some(tex) = line {
             out.push(Draw::Tex {
@@ -294,31 +347,9 @@ impl ClockPicker {
                 alpha: 1.0,
             });
         }
-        if let Some((tex, w)) = back {
-            out.push(Draw::Tex {
-                x: 16.0,
-                y: 378.0,
-                w: w as f32,
-                h: 32.0,
-                tex,
-                alpha: 1.0,
-            });
-        }
-        if let Some(tex) = hint {
-            let w = *CLOCK_HINT_WIDTH.get_or_init(|| set_clock_hint_face().w);
-            out.push(Draw::Tex {
-                x: canvas.w - 16.0 - w as f32 + crate::HINT_EDGE as f32,
-                y: 378.0,
-                w: w as f32,
-                h: 32.0,
-                tex,
-                alpha: 1.0,
-            });
-        }
     }
 }
 
-static CLOCK_HINT_WIDTH: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
 pub fn set_clock_hint_face() -> UndoFace {
     crate::prompt_legends(INK, "Back", "Save")
         .into_iter()

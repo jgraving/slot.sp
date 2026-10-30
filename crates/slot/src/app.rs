@@ -485,6 +485,7 @@ pub struct App {
     shelf_named: Option<Millis>,
     shelf_clock: slot_ui::Printed,
     hud: Hud,
+    settings_notice: String,
     screen: f32,
     blank_s: f32,
     lift: f32,
@@ -739,6 +740,7 @@ impl App {
             shelf_named: None,
             shelf_clock: slot_ui::Printed::default(),
             hud: Hud::new(),
+            settings_notice: String::new(),
             screen: 0.0,
             blank_s: 0.0,
             lift: 1.0,
@@ -1341,7 +1343,7 @@ impl App {
                 WallpaperTint::High => QuickValue::High,
             }),
             QuickRow::ShellColour => Some(match self.state.shell_colour {
-                slot_store::ShellColour::Theme => QuickValue::MatchTheme,
+                slot_store::ShellColour::Theme => match self.shell_colour() {slot_store::ShellColour::Platinum=>QuickValue::Platinum,_=>QuickValue::Graphite},
                 slot_store::ShellColour::Graphite => QuickValue::Graphite,
                 slot_store::ShellColour::Platinum => QuickValue::Platinum,
                 slot_store::ShellColour::PearlBlue => QuickValue::PearlBlue,
@@ -1782,6 +1784,8 @@ impl App {
         self.clock_faces = Some((line, hint));
     }
 
+    pub fn notice_text(&self)->Option<&str> {self.hud.notice_text()}
+    pub fn set_notice_face(&mut self,face:(TexId,u32,u32)) {self.hud.set_notice_face(face);}
     pub fn set_clock_back_face(&mut self, back: (TexId, u32)) {
         self.clock_back = Some(back);
     }
@@ -2585,11 +2589,11 @@ impl App {
     }
 
     pub fn shell_colour(&self) -> slot_store::ShellColour {
-        self.state.shell_colour.resolved(self.light())
+        self.state.shell_colour.resolved(self.state.appearance.light())
     }
 
     pub fn light(&self) -> bool {
-        self.state.appearance.light()
+        false
     }
 
     pub fn status_ink(&self) -> [u8; 3] {
@@ -2978,16 +2982,14 @@ impl App {
         } = &mut self.phase
         {
             match action {
-                Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.left(),
-                Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.right(),
-                Action::GbaDown(Btn::Up) => picker.up(),
-                Action::GbaDown(Btn::Down) => picker.down(),
-                Action::GbaDown(Btn::A) | Action::Insert => self.confirm_clock(),
-                Action::GbaDown(Btn::B) if *from_menu => {
-                    self.phase = Phase::QuickMenu {
-                        row: QuickRow::DateTime,
-                    }
-                }
+                Action::GbaDown(Btn::Start) => self.confirm_clock(),
+                Action::GbaDown(Btn::A) | Action::Insert => picker.toggle_edit(),
+                Action::GbaDown(Btn::B) if picker.editing() => picker.finish_edit(),
+                Action::GbaDown(Btn::B) if *from_menu => {self.phase=Phase::QuickMenu{row:QuickRow::DateTime};}
+                Action::GbaDown(Btn::Left) | Action::ShelfLeft => {if picker.editing(){picker.down()}else{picker.move_selection(-1,0)}}
+                Action::GbaDown(Btn::Right) | Action::ShelfRight => {if picker.editing(){picker.up()}else{picker.move_selection(1,0)}}
+                Action::GbaDown(Btn::Up) => {if picker.editing(){picker.up()}else{picker.move_selection(0,-1)}}
+                Action::GbaDown(Btn::Down) => {if picker.editing(){picker.down()}else{picker.move_selection(0,1)}}
                 _ => {}
             }
             return;
@@ -3514,7 +3516,7 @@ impl App {
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
-            QuickRow::ShellColour => s.shell_colour = s.shell_colour.step(right),
+            QuickRow::ShellColour => {let choices=slot_store::ShellColour::FINISHES;let current=s.shell_colour.resolved(s.appearance.light());let at=choices.iter().position(|c|*c==current).unwrap_or(0);s.shell_colour=choices[(at+if right{1}else{choices.len()-1})%choices.len()];},
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::ScreenGeneral
             | QuickRow::Brightness
@@ -4062,6 +4064,13 @@ impl App {
         let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
             | (u8::from(self.muted() || self.volume() == 0) << 1);
+        let notice=self.bluetooth.as_ref().map(|m|m.notice_text())
+            .or_else(||self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.notice_text()))
+            .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.notice_text())).unwrap_or("");
+        if notice!=self.settings_notice {
+            self.settings_notice=notice.to_owned();
+            if !notice.is_empty() {let text=notice.to_owned();let now=self.now();self.hud.notice(&text,now);}
+        }
         self.status_motion.update(status_key, dt);
     }
 
@@ -4732,6 +4741,7 @@ impl App {
                 draw_empty_slot(self.canvas(), self.slot_faces, out);
                 self.draw_cached_overlay(tex, out);
                 self.draw_status_bar(out);
+                self.hud.draw(self.canvas(),self.now(),out);
                 return;
             }
         }
@@ -4783,13 +4793,6 @@ impl App {
             match &self.phase {
                 Phase::Playing { cart } => {
                     self.push_game(out);
-                    out.push(Draw::Rect {
-                        x: 0.0,
-                        y: 0.0,
-                        w: self.canvas().w,
-                        h: OUT_H as f32 - MOUTH_H,
-                        colour: [0.0, 0.0, 0.0, 0.65],
-                    });
                     self.draw_seated_mouth(cart, out);
                 }
                 _ => {
@@ -4996,6 +4999,7 @@ impl App {
                 if let Some(key)=self.menu_motion.current_custom_key() {
                     if let Some((_,tex))=self.previous_custom_face {
                         let frame=self.menu_motion.frame_page(row,&[],Some(key));
+                        if matches!(self.phase,Phase::Playing{..}) {slot_ui::expressive::draw_game_menu_surface(self.canvas(),frame,out);}
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
@@ -5143,9 +5147,10 @@ impl App {
     }
     fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
         let over_game=matches!(self.phase,Phase::Playing{..});
-        self.draw_outgoing_menu(over_game,out);
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
+        if over_game {slot_ui::expressive::draw_game_menu_surface(self.canvas(),frame,out);}
+        self.draw_outgoing_menu(over_game,out);
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
@@ -5162,18 +5167,19 @@ impl App {
         }
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
-        if self.menu_motion.outgoing_row().is_some() {
-            if over_game { out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:OUT_H as f32-MOUTH_H,colour:[0.0,0.0,0.0,0.65]}); }
-            else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
-            self.draw_outgoing_menu(over_game,out);
-        }
-        self.draw_quick_page(row, over_game, false, out);
+        if over_game {
+            let frame=self.menu_motion.frame(row,&self.in_game_hidden());
+            slot_ui::expressive::draw_game_menu_surface(self.canvas(),frame,out);
+        } else if self.menu_motion.outgoing_row().is_some() {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
+        if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
+        self.draw_quick_page(row,over_game,false,out);
     }
 
     fn draw_quick_page(&self, row: QuickRow, over_game: bool, outgoing: bool, out: &mut Vec<Draw>) {
         let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
         let bound = self.bound_faces();
         let mut frame=if outgoing {self.menu_motion.outgoing_frame(row,&hidden)}else{self.menu_motion.frame(row,&hidden)};
+        if over_game {frame.background=false;}
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
             row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
@@ -6632,8 +6638,8 @@ impl App {
             (ShotMode::Grid | ShotMode::Full, Btn::Y, _) => {
                 self.delete_prompt = v.selected().is_some()
             }
-            (ShotMode::Full, Btn::Left, _) => v.step(-1),
-            (ShotMode::Full, Btn::Right, _) => v.step(1),
+            (ShotMode::Full, Btn::Left | Btn::Up, _) => v.step(-1),
+            (ShotMode::Full, Btn::Right | Btn::Down, _) => v.step(1),
             (ShotMode::Full | ShotMode::Zoomed, Btn::A, _) => v.zoom_in(canvas),
             (ShotMode::Full, Btn::B, _) => v.to_grid(canvas),
             (ShotMode::Zoomed, Btn::B, _) => v.zoom_out(canvas),

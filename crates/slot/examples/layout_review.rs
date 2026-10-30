@@ -26,6 +26,18 @@ impl Scene {
                 Draw::Tex{x,y,w,h,tex,alpha}=>(x,y,w,h,tex,alpha,[0.,0.,1.,1.],0.),
                 Draw::Part{x,y,w,h,tex,alpha,uv}=>(x,y,w,h,tex,alpha,uv,0.),
                 Draw::Turned{x,y,w,h,tex,alpha,turn}=>(x,y,w,h,tex,alpha,[0.,0.,1.,1.],turn),
+                Draw::RoundRect{x,y,w,h,radius,colour}=>{
+                    let (iw,ih)=(w.ceil() as u32,h.ceil() as u32);let mut rgba=vec![0;(iw*ih*4) as usize];
+                    for yy in 0..ih {for xx in 0..iw {
+                        let qx=(xx as f32+0.5-w/2.0).abs()-w/2.0+radius;
+                        let qy=(yy as f32+0.5-h/2.0).abs()-h/2.0+radius;
+                        let d=(qx.max(0.0).powi(2)+qy.max(0.0).powi(2)).sqrt()+qx.max(qy).min(0.0)-radius;
+                        let at=((yy*iw+xx)*4) as usize;
+                        for k in 0..3 {rgba[at+k]=(colour[k]*255.0).round() as u8;}
+                        rgba[at+3]=((0.5-d).clamp(0.0,1.0)*colour[3]*255.0).round() as u8;
+                    }}
+                    let tex=self.add(&rgba,iw,ih);(x,y,w,h,tex,1.0,[0.,0.,1.,1.],0.)
+                },
                 Draw::Rect{x,y,w,h,colour}=>{let tex=self.add(&colour.map(|v|(v*255.) as u8),1,1);(x,y,w,h,tex,1.,[0.,0.,1.,1.],0.)},
                 _=>continue,
             };
@@ -39,6 +51,7 @@ fn main(){
  for (name,row) in [("menu-general",QuickRow::ShellColour),("menu-general-bottom",QuickRow::DateTime),("menu-game-top",QuickRow::FastForward),("menu-game-bottom",QuickRow::EjectSave),("menu-power",QuickRow::LidClose)] {
   let mut s=Scene::new(&root,name);
   let faces=QuickMenuFaces {
+   headings:QuickRow::ALL.into_iter().filter(|r|r.page()[0]==*r).map(|r|(r,s.face(quick_heading_face(r.heading())))).collect(),
    labels:QuickRow::ALL.map(|r|[s.face(quick_label_face(r,false)),s.face(quick_label_face(r,true))]).to_vec(),
    values:QuickValue::ALL.map(|v|[s.face(quick_value_face(v.text(),false)),s.face(quick_value_face(v.text(),true))]).to_vec(),
    toggles:[false,true].map(|on|[false,true].map(|lit|s.face(toggle_face(on,lit)))),
@@ -53,11 +66,12 @@ fn main(){
   let mut out=vec![];
   let app=slot::app::App::new(vec![]);
   let mut values=QuickRow::ALL.map(|r|app.quick_value(r));values[QuickRow::ShellColour.index()]=Some(QuickValue::PearlBlue);
-  values[QuickRow::Theme.index()]=Some(QuickValue::Dark);values[QuickRow::Recents.index()]=Some(QuickValue::On);
+  values[QuickRow::Recents.index()]=Some(QuickValue::On);
   values[QuickRow::ShowTitles.index()]=Some(QuickValue::Show);values[QuickRow::FastForward.index()]=Some(QuickValue::Speed3);
   values[QuickRow::FastForwardSound.index()]=Some(QuickValue::On);values[QuickRow::Rumble.index()]=Some(QuickValue::On);
-  let wallpaper=Some([s.face(quick_value_face("Flowing Gradient",false)),s.face(quick_value_face("Flowing Gradient",true))]);
-  QuickMenu{row,hidden:&[],values,clock:None,wallpaper,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
+  let wallpaper=Some([s.face(quick_value_face("Flowing gradient",false)),s.face(quick_value_face("Flowing gradient",true))]);
+  let hidden=app.hidden_rows();
+  QuickMenu{row,hidden:&hidden,values,clock:None,wallpaper,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
    gba_bezel:None,gb_bezel:None,gbc_bezel:None,bezel:None,over_game:false,footer_legends:true,footer_top:480.,canvas:Canvas::FRAMED}.draw(&mut out);
   draw_empty_slot(Canvas::FRAMED,slot,&mut out);
   for (i,(tex,w)) in [faces.legend[0],faces.legend[if row.opens(){2}else{1}]].into_iter().enumerate(){

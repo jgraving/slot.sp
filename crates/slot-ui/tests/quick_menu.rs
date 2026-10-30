@@ -25,7 +25,7 @@ fn the_type_sits_exactly_menu_pad_in_from_both_sides_of_its_face() {
         quick_label_face(QuickRow::Rumble, true),
         quick_value_face("Off", false),
         quick_value_face(QuickValue::Speed6.text(), true),
-        quick_value_face("SEP 15 16:35", true),
+        quick_value_face("Sep 15 16:35", true),
     ] {
         let (first, last) = ink_columns(&f);
         let right = f.w - 1 - MENU_PAD;
@@ -90,7 +90,6 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Wallpaper",
             "Wallpaper Tint",
             "Shell Color",
-            "Theme",
             "Recents",
             "Game Titles",
             "Sort Favorites",
@@ -278,8 +277,8 @@ fn the_values_read_as_the_menu_prints_them() {
 #[test]
 fn the_date_and_time_read_as_a_month_a_day_and_the_carousels_24_hour_clock() {
     let at = |stamp: &str| date_time_text(parse_stamp(stamp).expect("a stamp"));
-    assert_eq!(at("2026-09-15_16-35-00"), "SEP 15 16:35");
-    assert_eq!(at("2027-01-05_04-07-59"), "JAN 5 04:07");
+    assert_eq!(at("2026-09-15_16-35-00"), "Sep 15 16:35");
+    assert_eq!(at("2027-01-05_04-07-59"), "Jan 5 04:07");
 }
 
 #[test]

@@ -5,6 +5,7 @@ from PIL import Image,ImageDraw,ImageFont
 root=Path(sys.argv[1]);kind=sys.argv[3] if len(sys.argv)>3 else 'menu'
 names=['menu-general','menu-general-bottom','menu-game-top','menu-game-bottom'] if kind=='menu' else ['link-cable-pick','link-cable-seated','link-wireless-seated','link-cable-unplug']
 if kind=='sound':names=['sound-720','sound-640']
+if kind=='power':names=['menu-power']
 if kind=='ports':
  board=Image.new('RGB',(1040,4*146),'#191d23');d=ImageDraw.Draw(board);font=ImageFont.load_default(size=20)
  for n,p in enumerate(['graphite','platinum','pearl_blue','pearl_pink']):

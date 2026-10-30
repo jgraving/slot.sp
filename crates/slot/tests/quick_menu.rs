@@ -207,19 +207,13 @@ fn random_with_an_empty_folder_shows_the_default() {
 }
 
 #[test]
-fn theme_switches_between_dark_and_light_and_saves() {
-    let (d, mut a, _) = on_carousel();
-    open_at(&mut a, QuickRow::Theme);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme));
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    press(&mut a, Btn::Right);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Light));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Light);
-    press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme), "theme opened a page");
-    press(&mut a, Btn::Left);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Dark);
+fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
+    let (_d,mut a,_)=on_carousel_with(SlotState{appearance:Appearance::Light,..Default::default()});
+    assert!(!QuickRow::GENERAL.contains(&QuickRow::Theme));
+    assert!(!a.light());
+    assert_eq!(a.shell_colour(),slot_store::ShellColour::Platinum,"old automatic shell color is preserved");
+    open_at(&mut a,QuickRow::ShellColour);
+    assert_eq!(a.quick_value(QuickRow::ShellColour),Some(QuickValue::Platinum));
 }
 
 #[test]
@@ -570,13 +564,14 @@ fn confirming_the_clock_from_the_menu_sets_it_and_comes_back_to_the_menu() {
     });
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    for _ in 0..5 {
-        press(&mut a, Btn::Right);
-    }
     press(&mut a, Btn::Down);
-    let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Right);
     press(&mut a, Btn::A);
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
+    let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
+    press(&mut a, Btn::Start);
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime), "{:?}", a.phase());
     assert_eq!(
         clock.get(),
@@ -925,7 +920,7 @@ fn labels_and_live_switches_align_to_the_menu_edges() {
 }
 
 #[test]
-fn only_the_clock_from_the_menu_offers_b_back() {
+fn clock_uses_one_cached_face_with_its_integrated_action_hints() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     a.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
@@ -933,23 +928,9 @@ fn only_the_clock_from_the_menu_offers_b_back() {
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
     let out = frame(&a);
-    assert!(drawn(&out, 601), "the clock lost its own key");
-    assert!(
-        drawn(&out, 602),
-        "the clock from the menu does not offer B BACK"
-    );
-
-    let d = tmp_root_with_carts(&["Emerald", "Fusion"]);
-    let (mut first, _) = app_booting_with_clock(d.path());
-    fake_faces(&mut first);
-    first.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
-    first.set_clock_back_face((TexId::from_raw(602), 40));
-    let out = frame(&first);
-    assert!(drawn(&out, 601), "the first boot clock lost its key");
-    assert!(
-        !drawn(&out, 602),
-        "the first boot clock offers a way back it does not have"
-    );
+    assert!(drawn(&out, 600));
+    assert!(!drawn(&out, 601), "legacy hints duplicate the integrated footer");
+    assert!(!drawn(&out, 602), "legacy Back duplicates the integrated footer");
 }
 
 #[test]
@@ -1358,10 +1339,9 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
     open_at(&mut a, QuickRow::ShellColour);
     assert_eq!(
         a.quick_value(QuickRow::ShellColour),
-        Some(QuickValue::MatchTheme)
+        Some(QuickValue::Graphite)
     );
     for (colour, value) in [
-        (ShellColour::Graphite, QuickValue::Graphite),
         (ShellColour::Platinum, QuickValue::Platinum),
         (ShellColour::PearlBlue, QuickValue::PearlBlue),
         (ShellColour::PearlPink, QuickValue::PearlPink),
@@ -1371,9 +1351,9 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
         assert_eq!(a.shell_colour(), colour);
         assert_eq!(read_slot_state(d.path()).shell_colour, colour);
     }
-    press(&mut a, Btn::Down); // Theme
+    press(&mut a, Btn::Down); // Recents
     press(&mut a, Btn::Right);
-    assert!(a.light());
+    assert!(!a.light());
     assert_eq!(a.shell_colour(), ShellColour::PearlPink);
     let (b, _) = app_booting_at(d.path(), CLOCK_IS_SET);
     assert_eq!(b.shell_colour(), ShellColour::PearlPink);
@@ -1384,7 +1364,7 @@ fn clock_battery_and_audio_stay_at_the_top_on_carousel_and_settings_pages() {
     for page in [
         None,
         Some(QuickRow::General),
-        Some(QuickRow::Theme),
+        Some(QuickRow::ShellColour),
         Some(QuickRow::Bluetooth),
         Some(QuickRow::DateTime),
         Some(QuickRow::About),

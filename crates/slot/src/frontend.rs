@@ -66,6 +66,8 @@ pub struct Frontend {
     undo_tex: Option<TexId>,
     switcher: Switcher,
     clocks: Clocks,
+    notice_tex: Option<TexId>,
+    notice_text: String,
     about: AboutFace,
     quick_clock: QuickClock,
     quick_palette: QuickPalette,
@@ -224,6 +226,8 @@ impl Frontend {
             undo_tex: None,
             switcher: Switcher::default(),
             clocks: Clocks::default(),
+            notice_tex: None,
+            notice_text: String::new(),
             about: AboutFace::default(),
             quick_clock: QuickClock::default(),
             quick_palette: QuickPalette::default(),
@@ -714,6 +718,16 @@ impl Frontend {
         } else {
             None
         };
+        if let Some(text)=self.session.app().notice_text() {
+            if text!=self.notice_text {
+                let text=text.to_owned();
+                let face=slot_ui::notice_face(self.session.app().canvas(),&text);
+                let (w,h)=(face.w,face.h);
+                let tex=upload(compositor,&mut self.notice_tex,face);
+                self.session.app_mut().set_notice_face((tex,w,h));
+                self.notice_text=text;
+            }
+        }
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         if let Some(menu) = &mut self.session.app_mut().bluetooth {
@@ -1397,10 +1411,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| format!("{}:{}",app.canvas().w,p.text()));
+    let picked = app.picker().map(|p| format!("{}:{}:{}:{}",app.canvas().w,p.editing(),matches!(app.phase(),crate::app::Phase::SetClock{from_menu:true,..}),p.text()));
     if picked != clocks.picked {
         clocks.picked = picked;
-        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_on(app.canvas())), clocks.hint) {
+        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_with_back(app.canvas(),matches!(app.phase(),crate::app::Phase::SetClock{from_menu:true,..}))), clocks.hint) {
             let line = upload(compositor, &mut clocks.line, face);
             app.set_clock_faces(line, hint);
         }

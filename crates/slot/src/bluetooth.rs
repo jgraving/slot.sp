@@ -511,6 +511,7 @@ impl Manager {
         let visible=total.min(slot_ui::QUICK_VISIBLE);
         (self.selected,total,self.selected.saturating_sub(slot_ui::QUICK_VISIBLE-1),visible)
     }
+    pub fn notice_text(&self)->&str {&self.status}
     pub fn page_key(&self) -> u64 { 1000 + self.page.clone() as u64 }
     pub fn lines(&self) -> Vec<String> {
         let title = "";
@@ -844,6 +845,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     let mut rgba = panel.rgba;
     if compact { let title=slot_ui::quick_heading_face("Sound"); blit(&mut rgba,&title,slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD,40); }
     for (i, line) in lines.iter().enumerate() {
+        if !switches && i==1 && line!="CONFIRM_FORGET" {continue;}
         if compact && (i == 0 || i == 2) {
             continue;
         }

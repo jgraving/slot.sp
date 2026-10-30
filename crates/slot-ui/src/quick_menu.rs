@@ -2,7 +2,7 @@ use crate::bitmaps::{ButtonLegend, button_legend};
 use crate::draw::{Canvas, Draw, OUT_H, OUT_W, TexId};
 use crate::icon::{Icon, WARNING_INK};
 use crate::plate::{
-    CAP_GAP, HINT_EDGE, LEGEND_GAP, UndoFace, blit, centred_hints, word_face, word_ink,
+    CAP_GAP, HINT_EDGE, LEGEND_GAP, UndoFace, blit, centred_hints,
 };
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
 use crate::slot_chrome::{MOUTH_H, opening};
@@ -246,11 +246,10 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 10] = [
+    pub const GENERAL: [QuickRow; 9] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
-        QuickRow::Theme,
         QuickRow::Recents,
         QuickRow::ShowTitles,
         QuickRow::FavoriteSort,
@@ -951,7 +950,7 @@ impl QuickValue {
 }
 
 pub const QUICK_PITCH: f32 = 52.0;
-pub const MENU_HINT_H: u32 = 32;
+pub const MENU_HINT_H: u32 = 40;
 pub const QUICK_VISIBLE_ROWS: usize = 5;
 pub const QUICK_EDGE: f32 = 80.0;
 pub const QUICK_LABEL_X: f32 = 80.0;
@@ -964,7 +963,8 @@ const POINTER_BLEED: u32 = 4;
 const GROUND_SCRIM: f32 = 0.65;
 const TYPE_DROP: f32 = 1.0;
 const CARET_GAP: f32 = 14.0;
-const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
+pub const MENU_LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
+const LEGEND_Y:f32=MENU_LEGEND_Y;
 const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
 const DESCRIPTION_GAP: f32 = 8.0;
@@ -1245,7 +1245,7 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
             }
         }
     }
-    if !status.is_empty() {
+    if switches && !status.is_empty() {
         let description = quick_description_face(&[status]);
         parent_blit(&mut face, &description, (width - description.w) as f32 / 2.0,
             LEGEND_Y - description.h as f32 - DESCRIPTION_GAP);
@@ -1438,12 +1438,19 @@ pub fn prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {
     ]
 }
 
+pub(crate) fn clock_legends(editing: bool, _back: bool) -> [UndoFace;3] {
+    [with_hint(button_face(ButtonLegend::B),"Back",Some(MENU_INK),true),
+     with_hint(button_face(ButtonLegend::A),if editing {"Set"}else{"Edit"},Some(MENU_INK),false),
+     with_hint(button_face(ButtonLegend::Start),"Save",Some(MENU_INK),false)]
+}
+
 /// `hint_on_right` puts the word after the button, for a legend parked on the left of the footer.
 fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right: bool) -> UndoFace {
-    let word = match ink {
-        Some(ink) => word_ink(label, ink),
-        None => word_face(label),
-    };
+    let font=text::font(text::Role::Detail).expect("menu hint font");
+    let layout=text::Layout{lines:vec![label.to_owned()],px:18.0,tracking:0.0,role:text::Role::Detail};
+    let width=text::line_width(font,label,18.0,0.0).ceil() as u32;
+    let mut word=UndoFace{rgba:vec![0;(width*MENU_HINT_H*4) as usize],w:width,h:MENU_HINT_H};
+    text::draw_centred(&mut word.rgba,word.w,word.h,&layout,ink.unwrap_or(MENU_INK));
     let w = button.w + CAP_GAP + word.w + HINT_EDGE;
     let h = MENU_HINT_H;
     let mut rgba = vec![0u8; (w * h * 4) as usize];
@@ -1522,8 +1529,11 @@ impl QuickMenu<'_> {
     }
 
     pub fn draw_animated(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
+        if frame.background && self.over_game {crate::expressive::draw_game_menu_surface(self.canvas,frame,out);}
         let begin = out.len();
-        self.draw_content(frame, out);
+        let mut content_frame=frame;
+        if self.over_game {content_frame.background=false;}
+        self.draw_content(content_frame, out);
         // The scene is a few existing sprites. Transform them in place: no
         // framebuffer copies, live blur, text rasterisation or texture uploads.
         let dy = (1.0 - frame.entry) * 18.0;
@@ -1570,6 +1580,8 @@ impl QuickMenu<'_> {
             return;
         };
         let pause=self.row.page()==QuickRow::PLAY;
+        let pitch=quick_pitch(self.row);
+        let row_bottom=if pause {0.0}else{8.0};
         let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);
         let (start, len) = quick_window(self.row, self.hidden);
@@ -1577,20 +1589,20 @@ impl QuickMenu<'_> {
         let top = quick_row_top_at(shown[start], self.row, self.hidden);
         let panel_x = MENU_INSET;
         let panel_w = self.canvas.w - panel_x * 2.0;
-        let panel_y = top - 48.0;
+        let panel_y = top-48.0;
         if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| *key == self.row.page()[0]) {
             push(out,*tex,if pause {self.canvas.centred(*w as f32)}else{QUICK_LABEL_X-pad},panel_y,*w,*h);
         }
         // The selection travels as one shape. Keep it within the current
         // window during wraparound and scrolling so it never covers a heading.
-        let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * QUICK_PITCH + 2.0);
+        let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * pitch + 2.0);
         if !frame.suppress_focus {
             let w=panel_w+(320.0-panel_w)*frame.focus_compact;
             rounded(out,self.canvas.centred(w),focus_y,w,ROW_H,ROW_RADIUS,SELECTED);
         }
         for (index, row) in shown.iter().copied().enumerate() {
-            let y = top + (index as f32 - frame.window_start) * QUICK_PITCH + TYPE_DROP;
-            if y + MENU_H as f32 <= top || y >= top + len as f32 * QUICK_PITCH { continue; }
+            let y = top + (index as f32 - frame.window_start) * pitch + TYPE_DROP;
+            if y + MENU_H as f32 <= top || y >= top + len as f32 * pitch { continue; }
             let row_begin = out.len();
             let lit = row == self.row;
             if let Some(&(tex, w, h)) = faces.labels.get(row.index()).map(|l| &l[lit as usize]) {
@@ -1608,7 +1620,7 @@ impl QuickMenu<'_> {
                         else if on { 1.0 } else { 0.0 };
                     crate::draw_switch(out,right-crate::SWITCH_W,y+5.0,t,1.0);
                 }
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * pitch - row_bottom]);
                 continue;
             }
             let value = match row {
@@ -1633,7 +1645,7 @@ impl QuickMenu<'_> {
                     .map(|v| v[lit as usize]),
             };
             let Some((tex, w, h)) = value else {
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * pitch - row_bottom]);
                 continue;
             };
             if matches!(row,QuickRow::Brightness|QuickRow::PlayBrightness|QuickRow::BlueLight|QuickRow::PlayBlueLight) {
@@ -1651,7 +1663,7 @@ impl QuickMenu<'_> {
             }
             if !lit || row.binds() || row.toggle() {
                 push(out, tex, right + pad - w as f32, y, w, h);
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * pitch - row_bottom]);
                 continue;
             }
             let [(left_tex, lw, lh), (right_tex, rw, rh)] = faces.carets;
@@ -1660,7 +1672,7 @@ impl QuickMenu<'_> {
             let vx = rx - CARET_GAP + pad - w as f32;
             push(out, tex, vx, y, w, h);
             push(out, left_tex, vx + pad - CARET_GAP - lw as f32, y, lw, lh);
-            clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+            clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * pitch - row_bottom]);
         }
         if let Some(mut bar) = quick_scroll(self.row, self.hidden).filter(|_| !frame.outgoing) {
             let along = (frame.scroll_position / (shown.len() - 1) as f32).clamp(0.0, 1.0);
@@ -1774,7 +1786,7 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
         return None;
     }
     let y = quick_row_top_at(shown[start], selected, hidden);
-    let h = QUICK_PITCH * len as f32;
+    let h = quick_pitch(selected) * len as f32;
     let thumb_h = h * len as f32 / shown.len() as f32;
     let along = selected.position(hidden) as f32 / (shown.len() - 1) as f32;
     Some(QuickScroll {
@@ -1785,14 +1797,25 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
     })
 }
 
+pub(crate) fn pause_card_geometry(row:QuickRow,hidden:&[QuickRow])->(f32,f32) {
+    let (start,len)=quick_window(row,hidden);
+    let shown=row.shown(hidden);
+    let top=shown.get(start).map_or(86.0,|first|quick_row_top_at(*first,row,hidden));
+    (top-64.0,len as f32*44.0+80.0)
+}
+
+pub fn quick_pitch(row: QuickRow) -> f32 {if row.page()==QuickRow::PLAY {44.0}else if row.binds(){50.0}else{QUICK_PITCH}}
+
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let rows = QUICK_PITCH * len as f32;
-    let top = match row.page() == QuickRow::PLAY_SCREEN {
-        true => LEGEND_Y - PANEL_GAP - rows,
-        false => 88.0,
-    };
-    top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
+    let pitch=quick_pitch(row);
+    let rows=pitch*len as f32;
+    let top=if row.page()==QuickRow::PLAY {
+        let settings=selected.shown(hidden).iter().position(|r|*r==QuickRow::Settings).unwrap_or(3);
+        (218.0-pitch*(settings as f32-start as f32)).max(86.0)
+    } else if row.page()==QuickRow::PLAY_SCREEN {LEGEND_Y-PANEL_GAP-rows}else{88.0};
+    top+pitch*(row.position(hidden) as f32-start as f32)
+
 }
 
 pub fn quick_row_top(row: QuickRow, hidden: &[QuickRow]) -> f32 {

@@ -18,7 +18,7 @@ Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures
 | :--- | :--- | :--- |
 | Thumbnails | D-pad | Move between pictures. |
 | Thumbnails | <kbd>A</kbd> | Open a picture. |
-| Open picture | <kbd>Left</kbd> / <kbd>Right</kbd> | Previous / next picture. |
+| Open picture | D-pad | Left / Up: previous. Right / Down: next. |
 | Open picture | <kbd>A</kbd> | Zoom in, up to 4×. |
 | Zoomed picture | D-pad | Pan around the picture. |
 | Zoomed picture | <kbd>B</kbd> | Zoom out. |

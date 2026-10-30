@@ -1,6 +1,6 @@
 use crate::{Canvas, Draw, MenuFrame, UndoFace, MENU_PAD};
 pub const MENU_SLIDER_W: f32 = 160.0;
-pub const MENU_SLIDER_SPAN: f32 = 220.0;
+pub const MENU_SLIDER_SPAN: f32 = 250.0;
 pub const SLIDER_TRACK_H: f32 = 6.0;
 pub const SLIDER_THUMB: f32 = 14.0;
 

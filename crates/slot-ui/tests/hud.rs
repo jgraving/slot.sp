@@ -267,7 +267,7 @@ fn volume_on_headphones_shows_headphones() {
 }
 
 #[test]
-fn audio_notice_keeps_volume_bar_visible_below_the_text() {
+fn audio_notice_and_volume_use_separate_bottom_and_top_pills() {
     let mut hud = Hud::new();
     hud.set_toasts(
         slot_ui::Toast::all()
@@ -282,10 +282,10 @@ fn audio_notice_keeps_volume_bar_visible_below_the_text() {
     hud.draw(Canvas::FRAMED, 300, &mut out);
     assert!(out
         .iter()
-        .any(|d| matches!(d, Draw::Tex {y, ..} if *y < 40.0)));
+        .any(|d| matches!(d, Draw::Tex {y, ..} if *y > 250.0)));
     assert!(out
         .iter()
-        .any(|d| matches!(d, Draw::RoundRect {y, w, ..} if *y > 40.0 && (*w - 360.0).abs() < 0.1)));
+        .any(|d| matches!(d, Draw::RoundRect {y, w, ..} if *y < 16.0 && (*w - 360.0).abs() < 0.1)));
     assert!(!hud.visible(1500));
     assert!(!hud.toast_visible(1500));
 }

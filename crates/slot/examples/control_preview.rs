@@ -78,7 +78,7 @@ fn main() {
     );
     let mut schedule = slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings {
         schedule: true,
-        bedtime: (2, 6),
+        bedtime: (2, 9),
         ..Default::default()
     });
     schedule.input(slot_input::Action::GbaDown(slot_input::Btn::Up), true);
@@ -108,6 +108,30 @@ fn main() {
         controls,
         None,
     );
+    let mut parents = slot::kid_menu::Menu::new(path.join("parent-fixture"), Default::default());
+    for _ in 0..4 {
+        parents.input(
+            slot_input::Action::GbaDown(slot_input::Btn::Down),
+            1_793_000_000,
+        );
+    }
+    parents.input(
+        slot_input::Action::GbaDown(slot_input::Btn::A),
+        1_793_000_000,
+    );
+    parents.input(
+        slot_input::Action::GbaDown(slot_input::Btn::A),
+        1_793_000_000,
+    );
+    parents.input(
+        slot_input::Action::GbaDown(slot_input::Btn::B),
+        1_793_000_000,
+    );
+    parents.input(
+        slot_input::Action::GbaDown(slot_input::Btn::X),
+        1_793_000_000,
+    );
+    save("parent-code", parents.screen_face_on(canvas), vec![], None);
     drop(save);
     let icons = Icon::ALL
         .into_iter()
@@ -131,7 +155,25 @@ fn main() {
             &gpu.read_frame(),
         );
     }
-    let picker = ClockPicker::local(1_800_000_000, 840);
+    let mut notice = Hud::new();
+    notice.set_toasts(
+        Toast::all()
+            .into_iter()
+            .map(|toast| {
+                let f = toast_face(toast);
+                gpu.create_texture(f.w, f.h, &f.rgba)
+            })
+            .collect(),
+    );
+    notice.toast(Toast::DeepSleepWake, 0);
+    let mut out = vec![];
+    draw_menu_ground(canvas, Some((ground, 720)), &mut out);
+    notice.draw(canvas, 300, &mut out);
+    draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut out);
+    gpu.begin_frame();
+    gpu.draw_list(&out);
+    write(&path.join("notice.png"), width, &gpu.read_frame());
+    let picker = ClockPicker::local(1_793_000_000, 120);
     let f = picker.face_on(canvas);
     let line = gpu.create_texture(f.w, f.h, &f.rgba);
     let f = set_clock_hint_face();

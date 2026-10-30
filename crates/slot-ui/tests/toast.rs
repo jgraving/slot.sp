@@ -92,7 +92,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
 }
 
 #[test]
-fn no_toast_is_shrunk_to_fit_its_box() {
+fn sentence_case_toasts_keep_cap_height_and_allow_descenders() {
     let rows = |t: Toast| {
         let f = toast_face(t);
         let (w, h) = (f.w as usize, f.h as usize);
@@ -115,8 +115,8 @@ fn no_toast_is_shrunk_to_fit_its_box() {
     for t in Toast::all().into_iter().filter(|t| !t.alarm()) {
         let (a, b) = rows(t);
         assert!(
-            a.abs_diff(top) <= 1 && b.abs_diff(bottom) <= 1,
-            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, so it was shrunk to fit"
+            a.abs_diff(top) <= 2 && b.abs_diff(bottom) <= 4,
+            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, outside the cap-height and descender allowance"
         );
     }
 }
@@ -163,44 +163,23 @@ fn a_toast_carries_its_own_halo() {
 }
 
 #[test]
-fn a_toast_sits_in_the_plate_band_and_is_backed_by_it() {
-    let mut h = Hud::new();
-    h.toast(Toast::StateSaved, 0);
-    let mut out = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut out);
-
-    let plate = out
-        .iter()
-        .find(|d| matches!(d, Draw::Rect { w, .. } if *w == OUT_W as f32))
-        .expect("the toast has nothing to be read against");
-    let Draw::Rect { colour, h: ph, .. } = plate else {
-        unreachable!()
-    };
-    assert!(colour[3] > 0.6, "the plate is too faint to give contrast");
-    assert!((*ph - PLATE_H).abs() < 0.01, "the plate is not the band");
-
-    let (_, y, _, th) = toast_rect(Canvas::FRAMED, Toast::StateSaved);
-    assert!(
-        y >= 0.0 && y + th <= PLATE_H,
-        "the toast at {y} is outside the band"
-    );
+fn transient_notices_use_a_bottom_pill_clear_of_status_and_button_hints() {
+    let mut hud=Hud::new();hud.set_toasts(Toast::all().iter().map(|t|TexId::from_raw(t.index()+1)).collect());hud.toast(Toast::DeepSleepWake,0);
+    for canvas in [Canvas::FRAMED,Canvas{w:640.0,h:480.0}] {
+        let mut out=vec![];hud.draw(canvas,200,&mut out);
+        let (x,y,w,h)=out.iter().find_map(|d|match d {Draw::RoundRect{x,y,w,h,..}=>Some((*x,*y,*w,*h)),_=>None}).expect("notice pill");
+        assert!((x+w/2.0-canvas.w/2.0).abs()<0.1);assert!(x>=16.0 && x+w<=canvas.w-16.0);
+        assert!(y>250.0 && y+h<374.0);assert!(!out.iter().any(|d|matches!(d,Draw::Rect{w,..} if *w==canvas.w)));
+    }
 }
 
 #[test]
-fn a_toast_takes_the_band_from_the_bar() {
-    let mut h = Hud::new();
-    h.show(HudKind::Volume, 50, false, 0);
-    let mut bar_only = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut bar_only);
-    let bars = bar_only.len();
-
-    h.toast(Toast::StateSaved, 0);
-    let mut both = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut both);
-    assert!(
-        both.len() < bars,
-        "the bar is still drawn underneath the toast"
-    );
+fn a_bottom_notice_coexists_with_the_top_adjustment_slider() {
+    let mut hud=Hud::new();hud.set_toasts(Toast::all().iter().map(|t|TexId::from_raw(t.index()+1)).collect());
+    hud.show(HudKind::Volume,50,false,0);hud.toast(Toast::StateSaved,0);
+    let mut out=vec![];hud.draw(Canvas::FRAMED,200,&mut out);
+    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,w,..}if *y<16.0&&*w==360.0)));
+    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,..}if *y>250.0)));
 }
 
 #[test]

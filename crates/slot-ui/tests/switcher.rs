@@ -3,7 +3,7 @@ use std::path::Path;
 use slot_gfx::{Draw, OUT_H, OUT_W};
 use slot_store::{StateEntry, RING_MAX};
 use slot_ui::{
-    hint_face, hint_width, Polaroids, Printed, DOT, HINT_H, LEGEND, PHOTO_H, PHOTO_W, PLATE_H,
+    hint_face, hint_width, Polaroids, Printed, DOT, LEGEND, PHOTO_H, PHOTO_W, PLATE_H,
 };
 
 fn entry(stamp: &str) -> StateEntry {
@@ -85,7 +85,7 @@ fn highlighted_dots(out: &[Draw]) -> Vec<Quad> {
 fn hint_quads(out: &[Draw]) -> Vec<Quad> {
     quads(out)
         .into_iter()
-        .filter(|q| q.h == HINT_H as f32)
+        .filter(|q| q.y >= OUT_H as f32 - PLATE_H && q.h > DOT && q.h <= 32.0 && q.w < OUT_W as f32)
         .collect()
 }
 
