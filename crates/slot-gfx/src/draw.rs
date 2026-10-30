@@ -169,6 +169,9 @@ impl Sprites {
             gl::UseProgram(self.prog);
             gl::ActiveTexture(gl::TEXTURE0);
         }
+        // Leave ordinary carousel sprites at zero without an extra uniform
+        // call per sprite. Consecutive equal-sized row shapes also share it.
+        let mut previous_round = [-1.0; 3];
         for item in items {
             let whole = [0.0, 0.0, 1.0, 1.0];
             let mut flow = None;
@@ -226,7 +229,10 @@ impl Sprites {
                 (turn.cos(), turn.sin())
             };
             unsafe {
-                gl::Uniform3f(self.u_round, rounded[0], rounded[1], rounded[2]);
+                if rounded != previous_round {
+                    gl::Uniform3f(self.u_round, rounded[0], rounded[1], rounded[2]);
+                    previous_round = rounded;
+                }
                 gl::Uniform1f(self.u_lava, if flow.is_some() { 1.0 } else { 0.0 });
                 if let Some(centres) = flow {
                     for (location, c) in self.u_flow.iter().zip(centres) {
