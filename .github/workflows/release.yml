@@ -60,14 +60,14 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: parent-controls-previews
-          retention-days: 7
+          retention-days: 90
           path: /tmp/slot-parent-previews/*.png
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v7
         with:
           name: about-sticker-preview
-          retention-days: 7
+          retention-days: 90
           path: /tmp/slot-about-sticker.png
           if-no-files-found: error
 
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: release-downloads
-          retention-days: 1
+          retention-days: 90
           path: release-assets/*
           if-no-files-found: error
 
@@ -104,6 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -163,3 +164,41 @@ jobs:
           fi
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" \
             --notes-file notes.md --draft=false --latest
+
+      - name: Remove superseded Actions artifacts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const names = new Set(["release-downloads","parent-controls-previews","about-sticker-preview"]);
+            const repo = context.repo;
+            const current = (await github.rest.actions.getWorkflowRun({
+              ...repo, run_id: context.runId
+            })).data;
+            const own = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              ...repo, run_id: context.runId, per_page: 100
+            });
+            // Never remove the previous set unless every replacement exists.
+            for (const name of names) {
+              if (!own.some(a => a.name === name && !a.expired)) {
+                throw new Error(`Missing replacement artifact: ${name}`);
+              }
+            }
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              ...repo, per_page: 100
+            });
+            const runs = new Map();
+            for (const artifact of artifacts) {
+              const runId = artifact.workflow_run?.id;
+              // Preserve this run, newer runs, and unrelated artifact names.
+              if (!names.has(artifact.name) || !runId || runId >= context.runId) continue;
+              if (!runs.has(runId)) {
+                runs.set(runId, (await github.rest.actions.getWorkflowRun({
+                  ...repo, run_id: runId
+                })).data);
+              }
+              const run = runs.get(runId);
+              // Older in-progress runs may still need their handoff artifacts.
+              if (run.workflow_id !== current.workflow_id || run.status !== 'completed') continue;
+              core.info(`Deleting superseded artifact ${artifact.name} (${artifact.id})`);
+              await github.rest.actions.deleteArtifact({...repo, artifact_id: artifact.id});
+            }
