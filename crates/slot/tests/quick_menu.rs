@@ -7,7 +7,7 @@ use common::{
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
 use slot_store::{
-    read_slot_state, write_slot_state, Appearance, BezelPick, GbColors, GbPalette, Platform,
+    read_slot_state, write_slot_state, BezelPick, GbColors, GbPalette, Platform,
     Shader, SlotState, WallpaperPick,
 };
 use slot_ui::{

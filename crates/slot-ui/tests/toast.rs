@@ -92,7 +92,7 @@ fn the_banner_says_what_happened_and_never_what_is_on_screen() {
 }
 
 #[test]
-fn no_toast_is_shrunk_to_fit_its_box() {
+fn toast_text_keeps_full_size_with_room_for_lowercase_descenders() {
     let rows = |t: Toast| {
         let f = toast_face(t);
         let (w, h) = (f.w as usize, f.h as usize);
@@ -115,8 +115,8 @@ fn no_toast_is_shrunk_to_fit_its_box() {
     for t in Toast::all().into_iter().filter(|t| !t.alarm()) {
         let (a, b) = rows(t);
         assert!(
-            a.abs_diff(top) <= 1 && b.abs_diff(bottom) <= 1,
-            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, so it was shrunk to fit"
+            a.abs_diff(top) <= 1 && b + 1 >= bottom && b <= bottom + 4,
+            "{t:?} sits on rows {a}..{b} where the others sit on {top}..{bottom}, outside the full-size ascender/descender bounds"
         );
     }
 }

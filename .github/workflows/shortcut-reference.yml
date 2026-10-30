@@ -22,8 +22,8 @@ jobs:
       - name: Test shortcut guides and kid-mode access
         run: |
           mkdir -p "$SLOT_FEATURE_PREVIEW"
-          cargo test --locked -p slot --no-default-features --lib --test app --test shortcut_reference --test kid_controls --test kid_policy --test in_game_menu --test quick_menu --test bindings --test play --test emu --test core_options -- --test-threads=1
-          cargo test --locked -p slot-ui --lib --test quick_menu --test typography --test native_menus --test kid_time
+          cargo test --locked -p slot --no-default-features --lib --test app --test shortcut_reference --test settings_notices --test kid_controls --test kid_policy --test in_game_menu --test quick_menu --test bindings --test play --test emu --test core_options -- --test-threads=1
+          cargo test --locked -p slot-ui --test settings_notice --lib --test quick_menu --test typography --test native_menus --test kid_time
           cargo test --locked -p slot-gfx --no-default-features --lib --test grade --test layout --test lava --test scale --test blit --test power
       - uses: actions/upload-artifact@v7
         with:

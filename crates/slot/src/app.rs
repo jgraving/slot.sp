@@ -448,6 +448,7 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
     switch_motion: slot_ui::expressive::SwitchMotion,
     slider_motion: slot_ui::expressive::SliderMotion,
@@ -705,6 +706,7 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            settings_notice_revision: 0,
             current_custom_face: None,
             switch_motion: Default::default(),
             slider_motion:Default::default(),clock_motion:Default::default(),
@@ -2852,6 +2854,9 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        if self.custom_menu_key().is_some() && matches!(action, Action::GbaDown(_)) {
+            self.settings_notice_revision=self.settings_notice_revision.wrapping_add(1);
+        }
         self.tick_play_history();
         self.apply_inner(action);
         self.tick_play_history();
@@ -4789,8 +4794,8 @@ impl App {
                         x: 0.0,
                         y: 0.0,
                         w: self.canvas().w,
-                        h: OUT_H as f32 - MOUTH_H,
-                        colour: [0.0, 0.0, 0.0, 0.65],
+                        h: OUT_H as f32,
+                        colour: [0.065, 0.075, 0.085, 1.0],
                     });
                     self.draw_seated_mouth(cart, out);
                 }
@@ -6959,6 +6964,20 @@ impl App {
 
     pub fn set_icon_faces(&mut self, faces: Vec<TexId>) {
         self.hud.set_icons(faces);
+    }
+
+    pub fn settings_notice(&self) -> Option<(u64,String)> {
+        if self.shutting_down() || matches!(self.phase,Phase::Doze{..}) { return None; }
+        let (page,message)=if let Some(menu)=&self.display_schedule {
+            (menu.page_key(),menu.notice_text()?.to_string())
+        } else if let Some(menu)=&self.kid_menu {
+            (menu.page_key(),menu.notice_text()?.to_string())
+        } else if let Some(menu)=&self.bluetooth {
+            let message=menu.lines().get(1)?.clone();
+            if message.is_empty() || message=="CONFIRM_FORGET" { return None; }
+            (menu.page_key(),message)
+        } else { return None; };
+        Some((page ^ self.settings_notice_revision.wrapping_mul(65536),message))
     }
 
     pub fn set_toast_faces(&mut self, faces: Vec<TexId>) {
