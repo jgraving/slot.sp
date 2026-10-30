@@ -100,7 +100,9 @@ jobs:
       - name: Check published links and assets
         run: python tools/check-site.py
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
+          retention-days: 1
           path: site/public
 
   deploy:
@@ -111,6 +113,7 @@ jobs:
     permissions:
       pages: write
       id-token: write
+      actions: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -118,3 +121,13 @@ jobs:
       - uses: actions/configure-pages@v5
       - id: deploy
         uses: actions/deploy-pages@v4
+      - name: Remove the deployed Pages upload
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {owner, repo, run_id: context.runId, per_page: 100});
+            for (const artifact of artifacts.filter(a => a.name === 'github-pages')) {
+              await github.rest.actions.deleteArtifact({owner, repo, artifact_id: artifact.id});
+            }

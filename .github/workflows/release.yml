@@ -59,15 +59,15 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: parent-controls-previews
-          retention-days: 90
           path: /tmp/slot-parent-previews/*.png
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: about-sticker-preview
-          retention-days: 90
           path: /tmp/slot-about-sticker.png
           if-no-files-found: error
 
@@ -92,8 +92,8 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: release-downloads
-          retention-days: 90
           path: release-assets/*
           if-no-files-found: error
 

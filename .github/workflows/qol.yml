@@ -32,6 +32,9 @@ jobs:
           cargo run --locked -p slot --no-default-features --example control_preview -- "$SLOT_QOL_PREVIEW/controls-gl" gl 720
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: launcher-qol-review
-          path: /tmp/slot-qol-previews/**/*.png
+          path: |
+            /tmp/slot-qol-previews/**/*.png
+            !/tmp/slot-qol-previews/**/motion-*.png
           if-no-files-found: error

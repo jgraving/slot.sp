@@ -27,6 +27,7 @@ jobs:
           cargo test --locked -p slot-gfx --no-default-features --lib --test grade --test layout --test lava --test scale --test blit --test power
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: shortcut-guide-review
           path: /tmp/slot-feature-previews/*.png
           if-no-files-found: error
