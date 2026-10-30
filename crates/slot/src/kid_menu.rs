@@ -245,7 +245,7 @@ impl Menu {
                 let x=face.w.saturating_sub(title.w)/2;
                 blit(&mut face,&title,x,40);
                 for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
-                    let label=slot_ui::quick_value_face(label,false);
+                    let label=slot_ui::quick_value_face(&slot_ui::menu_sentence_case(label),false);
                     let value=slot_ui::quick_value_face(value,true);
                     let right=face.w.saturating_sub(value.w+32);
                     blit(&mut face,&label,32,108+i as u32*42);
