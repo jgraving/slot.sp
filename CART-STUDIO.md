@@ -14,13 +14,13 @@ It downloads game databases and artwork to find matches. Your changes stay in th
 
 1. Shut down the handheld and put its content card in your computer.
 2. Open **[Cart Studio](https://jakegraving.com/slot.sp/studio/)**.
-3. Choose the card's **top folder**, with `Games` and `Labels` inside it.
+3. Choose **Get Started**, then the card's **top folder**, with `Games` and `Labels` inside it.
 
 In Chrome or Edge, **Choose SD Card** allows Studio to save directly to the card. **Open folder for ZIP export** lets you work with a folder and download the changes instead. Other browsers offer folder import and ZIP export.
 
 ## Choose artwork
 
-Studio identifies the games in `Games/GBA`, `Games/GBC` and `Games/GB`. Choose a cartridge to edit it.
+Studio downloads scanned labels and logos from the published artwork catalog. Studio identifies the games in `Games/GBA`, `Games/GBC` and `Games/GB`. Choose a cartridge to edit it.
 
 | Choice | What it does |
 | :--- | :--- |
@@ -36,7 +36,7 @@ Rounded black or white scanner backgrounds are cleaned automatically, using the 
 
 ## Change the look
 
-The editor lets you change the label's background, cartridge color and finish. Use presets or pick your own color, then preview the result before saving.
+The editor lets you change the label's background, cartridge color and finish. Use presets or pick your own color, then preview the result before saving. Finish buttons also work with the automatic shell color; you do not need to choose a new color first.
 
 For your own label PNGs, use these suggested sizes:
 
@@ -49,7 +49,9 @@ For your own label PNGs, use these suggested sizes:
 
 Choose **Select carts**, then click or use Space/Enter to select cartridges. Selections stay selected when you switch system tabs. **Select this system** selects every cartridge on the current tab.
 
-Choose a shell color, finish, or both, then **Apply to selected**. **Keep existing** leaves that property alone. Labels and cartridge shapes stay as they are. Each cartridge's editor has Undo, and the edits are saved by the usual **Write to card** or ZIP export action.
+Choose **Label** or **Logo**, a shell color, a finish, or any combination. Changes preview immediately on the selected carts, including while you adjust a color. **Keep existing** leaves that property alone. If a label or logo is unavailable, Studio keeps that cartridge’s current artwork and reports it. Cartridge shapes stay as they are. Each cartridge’s editor has Undo.
+
+The **Select carts** switch shows **On** while selecting. Turn it off or choose **Done** to return to editing individual carts. Save edits with **Write to card** or ZIP export.
 
 ## Save your changes
 
