@@ -1,7 +1,7 @@
 use slot_gfx::{Canvas, OUT_H};
 use slot_store::GbColors;
 
-use crate::hud::{HUD_INK, PLATE_H};
+use crate::hud::HUD_INK;
 use crate::icon::{haloed, haloed_with, icon_coverage, Icon, HALO_PX, WARNING_INK};
 use crate::text;
 use crate::{CartFace, QuickRow};
@@ -234,7 +234,7 @@ fn setting(toast: Toast) -> Setting {
             h: TOAST_H,
             px: TOAST_PX,
             min_px: TOAST_MIN_PX,
-            middle: PLATE_H / 2.0,
+            middle: OUT_H as f32 - crate::MOUTH_H - 30.0,
         },
     }
 }

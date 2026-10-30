@@ -113,6 +113,7 @@ fn main() {
     let mut draws = Vec::with_capacity(96);
     let mut peak = 0;
     let mut cpu = std::time::Duration::ZERO;
+    let hidden = [QuickRow::Theme, QuickRow::UndoSave, QuickRow::UndoLoad];
     let scenarios = [
         ("settings", QuickRow::Screen),
         ("general", QuickRow::BootAnimation),
@@ -129,7 +130,7 @@ fn main() {
             } else {
                 row
             };
-            motion.update(Some(row), &[], Some(frame < 32), 1.0 / 60.0);
+            motion.update(Some(row), &hidden, Some(frame < 32), 1.0 / 60.0);
             let mut values = [None; QuickRow::ALL.len()];
             for r in QuickRow::ALL {
                 if r.toggle() {
@@ -146,7 +147,10 @@ fn main() {
             values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();
-            if motion.outgoing_row().is_some() {
+            let over_game = row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS;
+            if over_game {
+                expressive::draw_pause_surface(canvas, motion.frame(row, &hidden), &hidden, &mut draws);
+            } else if motion.outgoing_row().is_some() {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
             for outgoing in [true, false] {
@@ -158,9 +162,11 @@ fn main() {
                 }) else {
                     continue;
                 };
+                let mut frame_state = if outgoing { motion.outgoing_frame(row, &hidden) } else { motion.frame(current, &hidden) };
+                if over_game { frame_state.background = false; }
                 QuickMenu {
                     row,
-                    hidden: &[],
+                    hidden: &hidden,
                     values,
                     clock: None,
                     wallpaper: None,
@@ -178,14 +184,7 @@ fn main() {
                     footer_top: 480.,
                     canvas,
                 }
-                .draw_animated(
-                    if outgoing {
-                        motion.outgoing_frame(row, &[])
-                    } else {
-                        motion.frame(current, &[])
-                    },
-                    &mut draws,
-                );
+                .draw_animated(frame_state, &mut draws);
             }
             draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
             for (right, (tex, w)) in [

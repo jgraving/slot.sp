@@ -1753,7 +1753,7 @@ impl App {
             self.state.wallpaper,
             WallpaperPick::File(_) | WallpaperPick::Random
         );
-        let mut hidden = Vec::new();
+        let mut hidden = vec![QuickRow::Theme];
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -2978,11 +2978,13 @@ impl App {
         } = &mut self.phase
         {
             match action {
-                Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.left(),
-                Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.right(),
-                Action::GbaDown(Btn::Up) => picker.up(),
-                Action::GbaDown(Btn::Down) => picker.down(),
-                Action::GbaDown(Btn::A) | Action::Insert => self.confirm_clock(),
+                Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
+                Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.navigate(1, 0),
+                Action::GbaDown(Btn::Up) => picker.navigate(0, -1),
+                Action::GbaDown(Btn::Down) => picker.navigate(0, 1),
+                Action::GbaDown(Btn::A) | Action::Insert => picker.toggle_editing(),
+                Action::GbaDown(Btn::Start) => self.confirm_clock(),
+                Action::GbaDown(Btn::B) if picker.editing() => picker.toggle_editing(),
                 Action::GbaDown(Btn::B) if *from_menu => {
                     self.phase = Phase::QuickMenu {
                         row: QuickRow::DateTime,
@@ -5162,10 +5164,15 @@ impl App {
         }
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
+        if over_game {
+            let hidden = self.in_game_hidden();
+            let frame = self.menu_motion.frame(row, &hidden);
+            slot_ui::expressive::draw_pause_surface(self.canvas(), frame, &hidden, out);
+        } else if self.menu_motion.outgoing_row().is_some() {
+            slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
+        }
         if self.menu_motion.outgoing_row().is_some() {
-            if over_game { out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:OUT_H as f32-MOUTH_H,colour:[0.0,0.0,0.0,0.65]}); }
-            else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
-            self.draw_outgoing_menu(over_game,out);
+            self.draw_outgoing_menu(over_game, out);
         }
         self.draw_quick_page(row, over_game, false, out);
     }
@@ -5174,6 +5181,7 @@ impl App {
         let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
         let bound = self.bound_faces();
         let mut frame=if outgoing {self.menu_motion.outgoing_frame(row,&hidden)}else{self.menu_motion.frame(row,&hidden)};
+        if over_game { frame.background = false; }
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
             row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
@@ -6632,8 +6640,8 @@ impl App {
             (ShotMode::Grid | ShotMode::Full, Btn::Y, _) => {
                 self.delete_prompt = v.selected().is_some()
             }
-            (ShotMode::Full, Btn::Left, _) => v.step(-1),
-            (ShotMode::Full, Btn::Right, _) => v.step(1),
+            (ShotMode::Full, Btn::Left | Btn::Up, _) => v.step(-1),
+            (ShotMode::Full, Btn::Right | Btn::Down, _) => v.step(1),
             (ShotMode::Full | ShotMode::Zoomed, Btn::A, _) => v.zoom_in(canvas),
             (ShotMode::Full, Btn::B, _) => v.to_grid(canvas),
             (ShotMode::Zoomed, Btn::B, _) => v.zoom_out(canvas),

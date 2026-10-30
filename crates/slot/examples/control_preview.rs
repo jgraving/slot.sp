@@ -108,6 +108,7 @@ fn main() {
         controls,
         None,
     );
+    save("parent-code", slot_ui::button_code_face(&[0,1,2,3]), vec![], None);
     drop(save);
     let icons = Icon::ALL
         .into_iter()
@@ -131,7 +132,14 @@ fn main() {
             &gpu.read_frame(),
         );
     }
-    let picker = ClockPicker::local(1_800_000_000, 840);
+    let toasts = Toast::all().into_iter().map(|t| {
+        let f=toast_face(t); gpu.create_texture(f.w,f.h,&f.rgba)
+    }).collect();
+    hud.hush(); hud.set_toasts(toasts); hud.toast(Toast::DeepSleepWake,0);
+    let mut notice=vec![]; draw_menu_ground(canvas,Some((ground,720)),&mut notice);
+    hud.draw(canvas,200,&mut notice); gpu.begin_frame(); gpu.draw_list(&notice);
+    write(&path.join("wake-notice.png"),width,&gpu.read_frame());
+    let picker = ClockPicker::local(slot_store::parse_stamp("2026-10-30_12-00-00").unwrap(), 60);
     let f = picker.face_on(canvas);
     let line = gpu.create_texture(f.w, f.h, &f.rgba);
     let f = set_clock_hint_face();

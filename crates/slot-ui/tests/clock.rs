@@ -29,3 +29,18 @@ fn the_clock_is_24_hour_and_shows_no_seconds() {
         "not 24 hour, or showing seconds"
     );
 }
+
+#[test]
+fn navigation_does_not_change_time_until_a_field_is_opened() {
+    use slot_ui::{ClockPicker, Field};
+    let mut picker=ClockPicker::from_ymd(2026,10,30);
+    let before=picker.secs();
+    picker.navigate(1,0); picker.navigate(0,1);
+    assert_eq!(picker.cursor(),Field::Minute);
+    assert_eq!(picker.secs(),before);
+    picker.toggle_editing(); picker.navigate(0,-1);
+    assert_eq!(picker.secs(),before+60);
+    picker.toggle_editing(); picker.navigate(-1,0);
+    assert_eq!(picker.cursor(),Field::Hour);
+    assert_eq!(picker.secs(),before+60);
+}

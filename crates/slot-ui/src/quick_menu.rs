@@ -951,7 +951,7 @@ impl QuickValue {
 }
 
 pub const QUICK_PITCH: f32 = 52.0;
-pub const MENU_HINT_H: u32 = 32;
+pub const MENU_HINT_H: u32 = 40;
 pub const QUICK_VISIBLE_ROWS: usize = 5;
 pub const QUICK_EDGE: f32 = 80.0;
 pub const QUICK_LABEL_X: f32 = 80.0;
@@ -1457,6 +1457,16 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
     UndoFace { rgba, w, h }
 }
 
+pub(crate) fn clock_legend() -> UndoFace {
+    let a = with_hint(button_face(ButtonLegend::A), "Edit", Some([246,244,239]), true);
+    let start = with_hint(button_face(ButtonLegend::Start), "Save", Some([246,244,239]), true);
+    let w = a.w + start.w + 16;
+    let mut rgba = vec![0; (w * MENU_HINT_H * 4) as usize];
+    blit(&mut rgba, w, &a.rgba, a.w, a.h, 0, 0);
+    blit(&mut rgba, w, &start.rgba, start.w, start.h, a.w + 16, 0);
+    UndoFace { rgba, w, h: MENU_HINT_H }
+}
+
 pub(crate) fn button_face(which: ButtonLegend) -> UndoFace {
     let (rgba, w, h) = button_legend(which);
     let target_h = MENU_HINT_H;
@@ -1544,27 +1554,15 @@ impl QuickMenu<'_> {
 
     fn draw_content(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
         use crate::expressive::{rounded, SELECTED, MENU_INSET, ROW_H, ROW_RADIUS};
-        if frame.background { if frame.closing {
-            out.push(Draw::Rect { x: 0.0, y: 0.0, w: self.canvas.w,
-                h: OUT_H as f32 - MOUTH_H, colour: [0.0, 0.0, 0.0, GROUND_SCRIM] });
-        } else { match (self.over_game, self.row.page() == QuickRow::PLAY_SCREEN) {
-            (false, _) => draw_menu_ground(self.canvas, self.ground, out),
-            (true, panel) => {
-                let y = match panel {
-                    true => quick_row_top(self.row.page()[0], self.hidden) - 52.0,
-                    false => 0.0,
-                };
-                let bottom = self.footer_top.max(y);
-                out.push(Draw::Rect {
-                    x: 0.0,
-                    y,
-                    w: self.canvas.w,
-                    h: bottom - y,
-                    colour: [0.0, 0.0, 0.0, GROUND_SCRIM],
-                });
+        if frame.background {
+            if self.over_game {
+                crate::expressive::draw_pause_surface(self.canvas, frame, self.hidden, out);
+            } else if frame.closing {
+                out.push(Draw::Rect { x: 0.0, y: 0.0, w: self.canvas.w,
+                    h: OUT_H as f32 - MOUTH_H, colour: [0.0, 0.0, 0.0, GROUND_SCRIM] });
+            } else {
+                draw_menu_ground(self.canvas, self.ground, out);
             }
-        }
-        }
         }
         let Some(faces) = self.faces else {
             return;
@@ -1684,7 +1682,7 @@ impl QuickMenu<'_> {
             });
         }
         if let Some((tex, w, h)) = self.description {
-            let y = LEGEND_Y - h as f32 - DESCRIPTION_GAP;
+            let y = LEGEND_Y - h as f32 - if self.row.binds() { 8.0 } else { DESCRIPTION_GAP };
             push(out, tex, self.canvas.centred(w as f32), y, w, h);
         }
         if self.over_game || self.footer_legends {
@@ -1790,6 +1788,12 @@ pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) 
     let rows = QUICK_PITCH * len as f32;
     let top = match row.page() == QuickRow::PLAY_SCREEN {
         true => LEGEND_Y - PANEL_GAP - rows,
+        false if row.page() == QuickRow::PLAY => {
+            let settings = QuickRow::Settings.position(hidden) as f32 - start as f32;
+            (OUT_H as f32 / 2.0 - crate::expressive::ROW_H / 2.0 - settings * QUICK_PITCH)
+                .clamp(56.0, (LEGEND_Y - rows).max(56.0))
+        }
+        false if row.binds() => 80.0,
         false => 88.0,
     };
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)

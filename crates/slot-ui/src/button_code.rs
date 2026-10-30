@@ -10,6 +10,8 @@ pub fn button_code_face(code: &[u8]) -> UndoFace {
         let x = i * 80 + 8;
         if let Some(which) = code.get(i as usize).and_then(|b| buttons.get(*b as usize)) {
             let face = button_face(*which);
+            let key_rgba = crate::art::cover_rgba(&face.rgba, face.w, face.h, 56, 56).expect("code keycap");
+            let face = UndoFace { rgba: key_rgba, w: 56, h: 56 };
             crate::plate::blit(&mut rgba, w, &face.rgba, face.w, face.h,
                 x + (64 - face.w) / 2, (h - face.h) / 2);
         } else {

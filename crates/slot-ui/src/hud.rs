@@ -210,9 +210,7 @@ impl Hud {
     }
 
     pub fn said(&self, now: Millis) -> Option<Toast> {
-        self.toast_visible(now)
-            .then(|| self.said.map(|(t, _)| t))
-            .flatten()
+        self.said.filter(|(t, shown)| now.saturating_sub(*shown) < t.hold_ms()).map(|(t, _)| t)
     }
 
     pub fn show(&mut self, kind: HudKind, value: u8, muted: bool, now: Millis) {
@@ -300,20 +298,13 @@ impl Hud {
         let toast = self.toast_alpha(now);
         let audio_notice = toast > 0.0 && self.said.is_some_and(|(t, _)| t.audio_change());
         if toast > 0.0 {
-            out.push(Draw::Rect {
-                x: 0.0,
-                y: 0.0,
-                w: canvas.w,
-                h: PLATE_H,
-                colour: faded(PLATE, toast),
-            });
             self.draw_toast(canvas, now, out);
         }
         if alpha > 0.0 && (toast == 0.0 || audio_notice) {
             self.draw_bar(
                 canvas,
                 alpha,
-                if audio_notice { PLATE_H } else { 0.0 },
+                0.0,
                 now,
                 out,
             );
@@ -449,6 +440,8 @@ impl Hud {
             return;
         };
         let (x, y, w, h) = toast_rect(canvas, said);
+        crate::expressive::rounded(out, x - 16.0, y - 10.0, w + 32.0, h + 20.0,
+            (h + 20.0) / 2.0, [0.10, 0.12, 0.14, 0.97 * alpha]);
         out.push(Draw::Tex {
             x,
             y,
@@ -485,7 +478,10 @@ impl Hud {
 
     fn toast_alpha(&self, now: Millis) -> f32 {
         match self.said {
-            Some((toast, shown)) => fade_over(shown, now, toast.hold_ms()),
+            Some((toast, shown)) => {
+                let arrival = (now.saturating_sub(shown) as f32 / 140.0).clamp(0.0, 1.0);
+                fade_over(shown, now, toast.hold_ms()) * arrival * arrival * (3.0 - 2.0 * arrival)
+            },
             None => 0.0,
         }
     }
@@ -507,8 +503,4 @@ fn pulse(age: Millis) -> [f32; 4] {
     let phase = (age % PULSE_MS) as f32 / PULSE_MS as f32;
     let t = 0.5 + 0.5 * (phase * std::f32::consts::TAU).cos();
     std::array::from_fn(|i| ALARM_DIM[i] + (ALARM_BRIGHT[i] - ALARM_DIM[i]) * t)
-}
-
-fn faded(colour: [f32; 4], alpha: f32) -> [f32; 4] {
-    [colour[0], colour[1], colour[2], colour[3] * alpha]
 }

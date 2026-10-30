@@ -364,3 +364,20 @@ fn details_and_clock_content_fit_both_native_canvases() {
         }
     }
 }
+
+#[test]
+fn pause_settings_is_centered_and_the_card_expands_to_the_whole_canvas() {
+    use slot_ui::*;
+    let hidden = [QuickRow::UndoSave, QuickRow::UndoLoad];
+    for w in [640.0,720.0] {
+        let canvas=Canvas {w,h:480.0};
+        let frame=MenuFrame::settled(QuickRow::Settings,&hidden);
+        assert_eq!(frame.focus_y + expressive::ROW_H / 2.0,240.0);
+        let mut out=vec![];
+        expressive::draw_pause_surface(canvas,frame,&hidden,&mut out);
+        assert!(matches!(out.last(),Some(Draw::RoundRect {w,h,..}) if *w==384.0 && *h<480.0));
+        let mut full=vec![];
+        expressive::draw_pause_surface(canvas,MenuFrame::settled(QuickRow::PlayScreen,&hidden),&hidden,&mut full);
+        assert!(matches!(full.last(),Some(Draw::RoundRect {x,y,w:ww,h,radius,..}) if *x==0.0 && *y==0.0 && *ww==w && *h==480.0 && *radius==0.0));
+    }
+}
