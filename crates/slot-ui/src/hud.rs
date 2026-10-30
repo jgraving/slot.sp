@@ -30,7 +30,6 @@ pub fn footer_ink(light: bool) -> [u8; 3] {
         FOOTER_INK
     }
 }
-const ICON_GAP: f32 = 10.0;
 
 const BADGE_MARGIN: f32 = 12.0;
 
@@ -38,9 +37,7 @@ pub fn badge_at(canvas: Canvas, w: f32, h: f32) -> (f32, f32) {
     (canvas.w - BADGE_MARGIN - w, (PLATE_H - h) / 2.0)
 }
 
-const BAR_W: f32 = 320.0;
-const BAR_H: f32 = 6.0;
-const BAR_Y: f32 = (PLATE_H - BAR_H) / 2.0;
+const BAR_W: f32 = 280.0;
 pub(crate) const TRACK: [f32; 4] = [1.0, 1.0, 1.0, 0.18];
 pub(crate) const FILL: [f32; 4] = [
     HUD_INK[0] as f32 / 255.0,
@@ -144,6 +141,13 @@ pub struct Hud {
     pub kind: HudKind,
     pub value: u8,
     pub shown_at: Option<Millis>,
+    entered_at: Option<Millis>,
+    value_at: Millis,
+    from_offset: f32,
+    offset_velocity: f32,
+    from_alpha: f32,
+    from_fraction: f32,
+    from_velocity: f32,
     held: bool,
     muted: bool,
     headphones: bool,
@@ -212,6 +216,17 @@ impl Hud {
     }
 
     pub fn show(&mut self, kind: HudKind, value: u8, muted: bool, now: Millis) {
+        let active = self.visible(now);
+        let previous = self.visual_state(now);
+        let position = self.slide_state(now);
+        self.from_alpha = if active { self.alpha(now) } else { 1.0 };
+        self.from_offset = if active { position.0 } else { -60.0 };
+        self.offset_velocity = if active { position.1 } else { 0.0 };
+        self.entered_at = Some(now);
+        let target = value.min(kind.max()) as f32 / kind.max().max(1) as f32;
+        self.from_fraction = if active { previous.0 } else { target };
+        self.from_velocity = if active { previous.1 } else { 0.0 };
+        self.value_at = now;
         self.kind = kind;
         self.value = value;
         self.muted = muted;
@@ -284,22 +299,24 @@ impl Hud {
         let alpha = self.alpha(now);
         let toast = self.toast_alpha(now);
         let audio_notice = toast > 0.0 && self.said.is_some_and(|(t, _)| t.audio_change());
-        if alpha > 0.0 || toast > 0.0 {
+        if toast > 0.0 {
             out.push(Draw::Rect {
                 x: 0.0,
                 y: 0.0,
                 w: canvas.w,
-                h: if audio_notice { PLATE_H * 2.0 } else { PLATE_H },
-                colour: faded(PLATE, alpha.max(toast)),
+                h: PLATE_H,
+                colour: faded(PLATE, toast),
             });
-            if toast > 0.0 {
-                self.draw_toast(canvas, now, out);
-                if audio_notice {
-                    self.draw_bar(canvas, alpha, PLATE_H, out);
-                }
-            } else {
-                self.draw_bar(canvas, alpha, 0.0, out);
-            }
+            self.draw_toast(canvas, now, out);
+        }
+        if alpha > 0.0 && (toast == 0.0 || audio_notice) {
+            self.draw_bar(
+                canvas,
+                alpha,
+                if audio_notice { PLATE_H } else { 0.0 },
+                now,
+                out,
+            );
         }
         let link = self
             .link
@@ -314,33 +331,69 @@ impl Hud {
         }
     }
 
-    fn draw_bar(&self, canvas: Canvas, alpha: f32, offset: f32, out: &mut Vec<Draw>) {
-        let x = canvas.centred(BAR_W);
+    fn draw_bar(&self, canvas: Canvas, alpha: f32, offset: f32, now: Millis, out: &mut Vec<Draw>) {
+        let y = 8.0 + offset + self.slide_state(now).0;
+        let x = canvas.centred(360.0);
+        crate::expressive::rounded(
+            out,
+            x,
+            y,
+            360.0,
+            48.0,
+            24.0,
+            [0.07, 0.085, 0.10, 0.97 * alpha],
+        );
         if let Some(tex) = self.icon() {
             let (w, h) = crate::icon::glyph_box(self.glyph(), HUD_ICON_PX);
             out.push(Draw::Tex {
-                x: x - ICON_GAP - w as f32,
-                y: offset + (PLATE_H - h as f32) / 2.0,
+                x: x + 16.0,
+                y: y + (48.0 - h as f32) / 2.0,
                 w: w as f32,
                 h: h as f32,
                 tex,
                 alpha,
             });
         }
-        out.push(Draw::Rect {
-            x,
-            y: offset + BAR_Y,
-            w: BAR_W,
-            h: BAR_H,
-            colour: faded(TRACK, alpha),
-        });
-        out.push(Draw::Rect {
-            x,
-            y: offset + BAR_Y,
-            w: BAR_W * self.fraction(),
-            h: BAR_H,
-            colour: faded(FILL, alpha),
-        });
+        crate::draw_slider(
+            out,
+            x + 58.0,
+            y + 9.0,
+            BAR_W,
+            self.visual_state(now).0,
+            alpha,
+        );
+    }
+    fn slide_state(&self, now: Millis) -> (f32, f32) {
+        let t = now.saturating_sub(self.entered_at.unwrap_or(now)) as f32 / 1000.0;
+        let omega = 30.0;
+        let b = self.offset_velocity + omega * self.from_offset;
+        let decay = (-omega * t).exp();
+        let base = (self.from_offset + b * t) * decay;
+        let velocity = (self.offset_velocity - omega * b * t) * decay;
+        let progress = if self.held {
+            0.0
+        } else {
+            1.0 - self.shown_at.map_or(0.0, |shown| fade(shown, now))
+        };
+        let travel = -60.0 * progress * progress * (3.0 - 2.0 * progress);
+        let speed = if progress > 0.0 && progress < 1.0 {
+            -60.0 * 6.0 * progress * (1.0 - progress) * 1000.0 / FADE_MS as f32
+        } else {
+            0.0
+        };
+        (base + travel, velocity + speed)
+    }
+    fn visual_state(&self, now: Millis) -> (f32, f32) {
+        let target = self.fraction();
+        let t = now.saturating_sub(self.value_at) as f32 / 1000.0;
+        let omega = 40.0;
+        let x = self.from_fraction - target;
+        let b = self.from_velocity + omega * x;
+        let decay = (-omega * t).exp();
+        (
+            (target + (x + b * t) * decay).clamp(0.0, 1.0),
+            (self.from_velocity - omega * b * t) * decay,
+        )
     }
 
     fn place_badge(&self, canvas: Canvas, tex: TexId, out: &mut Vec<Draw>) {
@@ -425,7 +478,9 @@ impl Hud {
         if self.held {
             return 1.0;
         }
-        fade(shown, now)
+        let t = now.saturating_sub(shown) as f32 / 1000.0;
+        let arrival = 1.0 - (1.0 - self.from_alpha) * (1.0 + 40.0 * t) * (-40.0 * t).exp();
+        fade(shown, now) * arrival
     }
 
     fn toast_alpha(&self, now: Millis) -> f32 {

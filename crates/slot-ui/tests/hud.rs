@@ -18,11 +18,13 @@ fn fill(kind: HudKind, value: u8) -> f32 {
     let mut h = Hud::new();
     h.show(kind, value, false, 0);
     let mut out = Vec::new();
-    h.draw(Canvas::FRAMED, 0, &mut out);
-    match out.last().expect("no bar in the list") {
-        Draw::Rect { w, .. } => *w,
-        _ => panic!("the bar must be a rect"),
-    }
+    h.draw(Canvas::FRAMED, 300, &mut out);
+    out.iter()
+        .find_map(|d| match d {
+            Draw::RoundRect { w, colour, .. } if colour[1] > 0.7 && colour[0] < 0.5 => Some(*w),
+            _ => None,
+        })
+        .unwrap_or(0.0)
 }
 
 #[test]
@@ -62,16 +64,25 @@ fn the_hud_sits_at_the_top_of_the_screen() {
 }
 
 #[test]
-fn the_hud_draws_a_dark_plate_behind_itself() {
+fn the_hud_floats_in_a_compact_dark_pill() {
     let mut h = Hud::new();
     h.show(HudKind::Brightness, 5, false, 0);
     let mut out = Vec::new();
     h.draw(Canvas::FRAMED, 0, &mut out);
     let plate = out.first().expect("nothing drawn");
-    let Draw::Rect { w, colour, .. } = plate else {
+    let Draw::RoundRect {
+        x,
+        w,
+        radius,
+        colour,
+        ..
+    } = plate
+    else {
         panic!("first draw is not the plate")
     };
-    assert_eq!(*w, OUT_W as f32, "the plate does not span the screen");
+    assert_eq!(*w, 360.0);
+    assert_eq!(*radius, 24.0);
+    assert!(*x >= 56.0 && x + w <= OUT_W as f32 - 56.0);
     assert!(
         colour[0] < 0.2 && colour[1] < 0.2 && colour[2] < 0.2,
         "the plate is not dark"
@@ -172,7 +183,7 @@ fn the_badge_leaves_when_fast_forward_stops() {
 }
 
 #[test]
-fn the_ff_badge_draws_no_plate_but_the_bar_still_does() {
+fn the_ff_badge_and_slider_avoid_full_width_backgrounds() {
     let full = |out: &Vec<Draw>| {
         out.iter()
             .filter(|d| matches!(d, Draw::Rect { w, .. } if *w == OUT_W as f32))
@@ -193,7 +204,10 @@ fn the_ff_badge_draws_no_plate_but_the_bar_still_does() {
     with_bar.show(HudKind::Volume, 50, false, 0);
     let mut out = Vec::new();
     with_bar.draw(Canvas::FRAMED, 0, &mut out);
-    assert_eq!(full(&out), 1, "the bar lost the plate it is read against");
+    assert_eq!(full(&out), 0);
+    assert!(out
+        .iter()
+        .any(|d| matches!(d, Draw::RoundRect {w, h, ..} if *w == 360.0 && *h == 48.0)));
 }
 
 fn badges() -> Vec<TexId> {
@@ -265,13 +279,13 @@ fn audio_notice_keeps_volume_bar_visible_below_the_text() {
     hud.show(HudKind::Volume, 35, false, 0);
     hud.toast(slot_ui::Toast::BluetoothConnected, 0);
     let mut out = Vec::new();
-    hud.draw(Canvas::FRAMED, 0, &mut out);
+    hud.draw(Canvas::FRAMED, 300, &mut out);
     assert!(out
         .iter()
         .any(|d| matches!(d, Draw::Tex {y, ..} if *y < 40.0)));
     assert!(out
         .iter()
-        .any(|d| matches!(d, Draw::Rect {y, w, ..} if *y > 40.0 && (*w - 112.0).abs() < 0.1)));
+        .any(|d| matches!(d, Draw::RoundRect {y, w, ..} if *y > 40.0 && (*w - 360.0).abs() < 0.1)));
     assert!(!hud.visible(1500));
     assert!(!hud.toast_visible(1500));
 }
@@ -320,7 +334,7 @@ fn muted_headphones_render_at_native_width_without_stretching() {
         .unwrap();
     assert_eq!((w, h), (face.w as f32, face.h as f32));
     assert!(out.iter().any(
-        |d| matches!(d, Draw::Rect {x: bar_x, w: bar_w, ..} if *bar_w == 320. && *bar_x > x + w)
+        |d| matches!(d, Draw::RoundRect {x: bar_x, w: bar_w, ..} if *bar_w == 280. && *bar_x > x + w)
     ));
 }
 
@@ -332,5 +346,63 @@ fn hushing_drops_the_toast_but_keeps_the_alarm() {
     h.hush();
     assert_eq!(h.said(20), None);
     assert!(h.alarmed());
+}
 
+#[test]
+fn pill_slides_both_ways_and_repeated_adjustments_preserve_motion() {
+    let mut hud = Hud::new();
+    hud.show(HudKind::Volume, 20, false, 0);
+    let sample = |hud: &Hud, now| {
+        let mut out = vec![];
+        hud.draw(Canvas::FRAMED, now, &mut out);
+        let y = out
+            .iter()
+            .find_map(|d| match d {
+                Draw::RoundRect { y, w, .. } if *w == 360.0 => Some(*y),
+                _ => None,
+            })
+            .unwrap();
+        let thumb = out
+            .iter()
+            .find_map(|d| match d {
+                Draw::RoundRect { x, w, .. } if *w == 14.0 => Some(*x),
+                _ => None,
+            })
+            .unwrap();
+        (y, thumb)
+    };
+    assert!(sample(&hud, 0).0 < 0.0);
+    assert!(sample(&hud, 80).0 < sample(&hud, 300).0);
+    let start = sample(&hud, 300);
+    hud.show(HudKind::Volume, 80, false, 300);
+    assert_eq!(sample(&hud, 300), start);
+    let middle = sample(&hud, 340);
+    assert!(middle.1 > start.1);
+    hud.show(HudKind::Volume, 10, false, 340);
+    assert_eq!(sample(&hud, 340), middle);
+    assert!(sample(&hud, 1840 - 10).0 < sample(&hud, 640).0);
+    assert!(!hud.visible(1840));
+}
+
+#[test]
+fn adjusting_during_dismissal_reverses_the_pill_without_a_position_jump() {
+    let mut hud = Hud::new();
+    hud.show(HudKind::Brightness, 5, false, 0);
+    let sample = |h: &Hud, t| {
+        let mut out = vec![];
+        h.draw(Canvas::FRAMED, t, &mut out);
+        out.into_iter()
+            .find_map(|d| match d {
+                Draw::RoundRect { y, w, colour, .. } if w == 360.0 => Some((y, colour[3])),
+                _ => None,
+            })
+            .unwrap()
+    };
+    let before = sample(&hud, 1400);
+    assert!(before.0 < 0.0);
+    hud.show(HudKind::Brightness, 6, false, 1400);
+    let after = sample(&hud, 1400);
+    assert!((after.0 - before.0).abs() < 0.001);
+    assert!((after.1 - before.1).abs() < 0.001);
+    assert!((sample(&hud, 1800).0 - 8.0).abs() < 0.1);
 }

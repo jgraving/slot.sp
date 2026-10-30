@@ -108,3 +108,29 @@ fn sound_hints_keep_sixteen_pixel_margins_and_round_buttons_on_both_canvases() {
         previous=Some(button);
     }
 }
+
+#[test]
+fn sound_and_schedule_leave_switches_to_the_live_animation_layer() {
+    use slot_input::{Action,Btn};
+    use slot_ui::{Canvas,MenuFrame,QuickRow,expressive::SwitchMotion,draw_menu_switches};
+    for width in [640,720] {
+        let canvas=Canvas{w:width as f32,h:480.0};
+        let mut schedule=slot::display_schedule::Menu::new(Default::default());
+        let specs=schedule.visible_switches();let mut motion=SwitchMotion::default();motion.update(&specs,0.0);
+        schedule.input(Action::GbaDown(Btn::Right),true);
+        motion.update(&schedule.visible_switches(),0.05);
+        assert!((0.0..1.0).contains(&motion.value(specs[0].id,true)));
+        let face=schedule.screen_face_animated_on(canvas);
+        // The unselected switch lane contains no baked thumb or track.
+        schedule.input(Action::GbaDown(Btn::Down),true);
+        let blank=schedule.screen_face_animated_on(canvas);
+        let x=width-110;let y=109;
+        assert_eq!(blank.rgba[((y*width+x)*4+3) as usize],0);
+        assert_eq!(face.w,width);
+        let mut out=vec![];draw_menu_switches(canvas,&schedule.visible_switches(),&motion,MenuFrame::settled(QuickRow::DisplaySchedule,&[]),&mut out);
+        assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::RoundRect{w,h,..} if *w==60.0 && *h==30.0)));
+        let lines=["","","COMPACT","ROW BLUETOOTH On","SELECTED SPEAKER_DEVICE Internal speaker","B Back · A Select"].map(str::to_owned);
+        let sound=slot::bluetooth::screen_face_without_switches(&lines,[246,244,239],canvas);
+        assert_eq!(sound.rgba[((y*width+x)*4+3) as usize],0);
+    }
+}

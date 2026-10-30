@@ -82,6 +82,10 @@ pub struct MenuFrame {
     pub entry: f32,
     pub opacity: f32,
     pub switch: Option<f32>,
+    pub sliders: [Option<f32>; 2],
+    pub focus_compact: f32,
+    pub suppress_focus: bool,
+    pub content_opacity: f32,
     pub closing: bool,
 }
 impl MenuFrame {
@@ -96,6 +100,14 @@ impl MenuFrame {
             entry: 1.0,
             opacity: 1.0,
             switch: None,
+            sliders: [None; 2],
+            focus_compact: if row.page() == QuickRow::PLAY {
+                1.0
+            } else {
+                0.0
+            },
+            suppress_focus: false,
+            content_opacity: 1.0,
             closing: false,
         }
     }
@@ -107,6 +119,9 @@ pub struct MenuMotion {
     page: Option<u64>,
     custom: Option<u64>,
     outgoing_custom: bool,
+    pause_morph: bool,
+    pause_from_y: f32,
+    pause_from_compact: f32,
     row: Option<QuickRow>,
     scroll: Spring,
     window: Spring,
@@ -163,6 +178,15 @@ impl MenuMotion {
         let page = custom.unwrap_or(row.page()[0].index() as u64);
         if self.page != Some(page) {
             let opening = self.page.is_none();
+            let previous_frame = self.row.map(|old| self.frame(old, hidden));
+            self.pause_morph = self.custom.is_none()
+                && custom.is_none()
+                && self.row.is_some_and(|old| {
+                    (old.page() == QuickRow::PLAY && row.page() == QuickRow::SETTINGS)
+                        || (old.page() == QuickRow::SETTINGS && row.page() == QuickRow::PLAY)
+                });
+            self.pause_from_y = previous_frame.map_or(88.0, |f| f.focus_y);
+            self.pause_from_compact = previous_frame.map_or(0.0, |f| f.focus_compact);
             self.outgoing = self.row.filter(|_| !opening);
             self.outgoing_custom = self.custom.is_some();
             self.direction = if (self.custom.is_some() && custom.is_none())
@@ -218,7 +242,15 @@ impl MenuMotion {
     }
     pub fn outgoing_frame(&self, row: QuickRow, hidden: &[QuickRow]) -> MenuFrame {
         let mut frame = MenuFrame::settled(row, hidden);
-        frame.page_shift = -self.direction * self.slide.value;
+        frame.page_shift = if self.pause_morph {
+            0.0
+        } else {
+            -self.direction * self.slide.value
+        };
+        if self.pause_morph {
+            frame.suppress_focus = true;
+            frame.content_opacity = 1.0 - self.slide.value.clamp(0.0, 1.0);
+        }
         frame.background = false;
         frame.outgoing = true;
         frame.opacity = self.opacity.value.clamp(0.0, 1.0);
@@ -235,7 +267,7 @@ impl MenuMotion {
         if self.page != Some(custom.unwrap_or(row.page()[0].index() as u64)) {
             return MenuFrame::settled(row, hidden);
         }
-        MenuFrame {
+        let mut frame = MenuFrame {
             focus_y: quick_row_top_at(row, row, hidden)
                 + ((self.scroll.value - target_position(row, hidden))
                     - (self.window.value - crate::quick_window(row, hidden).0 as f32))
@@ -251,9 +283,30 @@ impl MenuMotion {
             outgoing: false,
             entry: self.entry.value,
             opacity: self.opacity.value.clamp(0.0, 1.0),
+            sliders: [None; 2],
+            focus_compact: if row.page() == QuickRow::PLAY {
+                1.0
+            } else {
+                0.0
+            },
+            suppress_focus: false,
+            content_opacity: 1.0,
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
             closing: !self.active,
+        };
+        if self.pause_morph && self.outgoing.is_some() {
+            let p = self.slide.value;
+            frame.page_shift = 0.0;
+            frame.focus_y = self.pause_from_y + (frame.focus_y - self.pause_from_y) * p;
+            let target = if row.page() == QuickRow::PLAY {
+                1.0
+            } else {
+                0.0
+            };
+            frame.focus_compact = self.pause_from_compact + (target - self.pause_from_compact) * p;
+            frame.content_opacity = p.clamp(0.0, 1.0);
         }
+        frame
     }
 }
 
@@ -283,7 +336,7 @@ pub fn raster_menu_rows(
     }
 }
 
-fn raster_round(
+pub(crate) fn raster_round(
     face: &mut crate::UndoFace,
     left: f32,
     top: f32,
@@ -379,5 +432,91 @@ pub fn draw_cached_menu(
             alpha: frame.opacity,
             uv: [0.0, 378.0 / 480.0, 1.0, 44.0 / 480.0],
         });
+    }
+}
+
+/// Bounded collection of independent switch springs. A new control snaps to
+/// its saved state; subsequent changes retain velocity, including reversals.
+#[derive(Default, Debug)]
+pub struct SwitchMotion {
+    states: Vec<(u64, bool, Spring)>,
+}
+impl SwitchMotion {
+    pub fn update(&mut self, controls: &[crate::MenuSwitch], dt: f32) {
+        for c in controls {
+            if let Some(state) = self.states.iter_mut().find(|s| s.0 == c.id) {
+                state.1 = c.on;
+            } else {
+                self.states
+                    .push((c.id, c.on, Spring::at(if c.on { 1.0 } else { 0.0 })));
+            }
+        }
+        for (_, on, spring) in &mut self.states {
+            spring.step(if *on { 1.0 } else { 0.0 }, dt, 800.0, 0.76);
+        }
+    }
+    pub fn value(&self, id: u64, on: bool) -> f32 {
+        self.states
+            .iter()
+            .find(|s| s.0 == id)
+            .map_or(if on { 1.0 } else { 0.0 }, |s| s.2.value.clamp(0.0, 1.0))
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct SliderMotion {
+    states: Vec<(u64, f32, Spring)>,
+}
+impl SliderMotion {
+    pub fn update<'a>(
+        &mut self,
+        controls: impl IntoIterator<Item = &'a crate::MenuSlider>,
+        dt: f32,
+    ) {
+        for c in controls {
+            if let Some(s) = self.states.iter_mut().find(|s| s.0 == c.id) {
+                s.1 = c.fraction;
+            } else {
+                self.states.push((c.id, c.fraction, Spring::at(c.fraction)));
+            }
+        }
+        for (_, target, spring) in &mut self.states {
+            spring.step(*target, dt, 1600.0, 1.0);
+        }
+    }
+    pub fn value(&self, id: u64, fallback: f32) -> f32 {
+        self.states
+            .iter()
+            .find(|s| s.0 == id)
+            .map_or(fallback, |s| s.2.value.clamp(0.0, 1.0))
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct RectMotion {
+    x: Spring,
+    y: Spring,
+    ready: bool,
+}
+impl RectMotion {
+    pub fn update(&mut self, rect: Option<[f32; 4]>, dt: f32) {
+        if let Some(r) = rect {
+            if !self.ready {
+                self.x = Spring::at(r[0]);
+                self.y = Spring::at(r[1]);
+                self.ready = true;
+            }
+            self.x.step(r[0], dt, 800.0, 0.76);
+            self.y.step(r[1], dt, 800.0, 0.76);
+        } else {
+            self.ready = false;
+        }
+    }
+    pub fn frame(&self, mut r: [f32; 4]) -> [f32; 4] {
+        if self.ready {
+            r[0] = self.x.value;
+            r[1] = self.y.value;
+        }
+        r
     }
 }

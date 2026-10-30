@@ -319,7 +319,7 @@ impl Frontend {
         self.session.app_mut().set_shot_tick_face(tick);
         let hint = set_clock_hint_face();
         self.clocks.hint = Some(compositor.create_texture(hint.w, hint.h, &hint.rgba));
-        let back = hint_face("B", "Back");
+        let back = slot_ui::prompt_legends(slot_ui::HUD_INK,"Back","Save").into_iter().next().unwrap();
         let tex = compositor.create_texture(back.w, back.h, &back.rgba);
         self.session.app_mut().set_clock_back_face((tex, back.w));
         let removal = slot_ui::favorite_remove_face();
@@ -727,7 +727,7 @@ impl Frontend {
                 menu.face = Some(upload(
                     compositor,
                     &mut self.bluetooth_tex,
-                    crate::bluetooth::screen_face_on(&lines, sound_footer_ink, sound_canvas),
+                    crate::bluetooth::screen_face_without_switches(&lines, sound_footer_ink, sound_canvas),
                 ));
                 self.bluetooth_lines = lines;
             }
@@ -765,7 +765,7 @@ impl Frontend {
                 std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
                 self.schedule_page=Some(menu.page_key()); menu.face=None;
             }
-            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face_on(sound_canvas))); }
+            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face_animated_on(sound_canvas))); }
         }
         if let Some(menu) = &mut self.session.app_mut().kid_menu {
             if self.kid_page != Some(menu.page_key()) {
@@ -774,7 +774,7 @@ impl Frontend {
             }
             let lines = menu.lines();
             if lines != self.kid_lines || menu.face.is_none() {
-                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face_on(sound_canvas)));
+                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face_animated_on(sound_canvas)));
                 self.kid_lines = lines;
             }
         }
@@ -1397,10 +1397,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| p.text());
+    let picked = app.picker().map(|p| format!("{}:{}",app.canvas().w,p.text()));
     if picked != clocks.picked {
         clocks.picked = picked;
-        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face()), clocks.hint) {
+        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_on(app.canvas())), clocks.hint) {
             let line = upload(compositor, &mut clocks.line, face);
             app.set_clock_faces(line, hint);
         }

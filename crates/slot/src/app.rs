@@ -449,6 +449,13 @@ pub struct App {
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
     current_custom_face: Option<(u64, TexId)>,
+    switch_motion: slot_ui::expressive::SwitchMotion,
+    slider_motion: slot_ui::expressive::SliderMotion,
+    clock_motion: slot_ui::expressive::RectMotion,
+    current_custom_sliders: Vec<slot_ui::MenuSlider>,
+    previous_custom_sliders: Vec<slot_ui::MenuSlider>,
+    current_custom_switches: Vec<slot_ui::MenuSwitch>,
+    previous_custom_switches: Vec<slot_ui::MenuSwitch>,
     previous_custom_face: Option<(u64, TexId)>,
     status_motion: slot_ui::expressive::StatusMotion,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
@@ -699,6 +706,11 @@ impl App {
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
             current_custom_face: None,
+            switch_motion: Default::default(),
+            slider_motion:Default::default(),clock_motion:Default::default(),
+            current_custom_sliders:Vec::new(),previous_custom_sliders:Vec::new(),
+            current_custom_switches: Vec::new(),
+            previous_custom_switches: Vec::new(),
             previous_custom_face: None,
             status_motion: Default::default(),
             quick_clock_faces: None,
@@ -2930,6 +2942,8 @@ impl App {
                 self.display_settings.schedule = next.schedule;
                 self.display_settings.day_start = next.day_start;
                 self.display_settings.night_start = next.night_start;
+                self.display_settings.bedtime.1=next.bedtime.1;
+                if self.display_settings.night {self.state.blue_light=next.bedtime.1;self.persist_soon();}
                 self.display_settings.override_until = None;
                 self.sync_display_schedule();
                 self.save_display();
@@ -2938,6 +2952,14 @@ impl App {
             return;
         }
         if self.bluetooth.is_some() && !matches!(self.phase, Phase::Doze { .. }) {
+            if self.bluetooth.as_ref().is_some_and(|m|m.volume_selected()) && matches!(action,Action::GbaDown(Btn::Left|Btn::Right)) {
+                self.remember_volume();
+                let was_muted=std::mem::take(self.muted_mut());
+                let now=self.volume().min(self.kid_volume_limit());
+                let to=if action==Action::GbaDown(Btn::Right){now.saturating_add(VOLUME_STEP).min(self.kid_volume_limit())}else{now.saturating_sub(VOLUME_STEP)};
+                if !self.set_level(HudKind::Volume,to) && was_muted {self.persist_soon();}
+                return;
+            }
             if self.adjust(action) {
                 return;
             }
@@ -4032,6 +4054,12 @@ impl App {
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
         let selection=self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)});
         self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
+        self.switch_motion.update(&self.visible_custom_switches(),dt);
+        let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
+        let sliders=self.visible_custom_sliders();
+        let global=[slot_ui::MenuSlider{id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
+        self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
+        let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
             | (u8::from(self.muted() || self.volume() == 0) << 1);
         self.status_motion.update(status_key, dt);
@@ -4813,7 +4841,7 @@ impl App {
                     None => (None, None),
                 };
                 let back = self.clock_back.filter(|_| *from_menu);
-                picker.draw(self.canvas(), line, hint, back, out);
+                picker.draw_animated(self.canvas(),line,hint,back,self.clock_motion.frame(picker.field_rect(self.canvas())),out);
                 if *from_menu {
                     self.draw_status_bar(out);
                 }
@@ -4967,7 +4995,10 @@ impl App {
             if let Some(row) = self.menu_motion.closing_row() {
                 if let Some(key)=self.menu_motion.current_custom_key() {
                     if let Some((_,tex))=self.previous_custom_face {
-                        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,self.menu_motion.frame_page(row,&[],Some(key)),out);
+                        let frame=self.menu_motion.frame_page(row,&[],Some(key));
+                        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+                        slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
+                    slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
                     }
                 } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }), out);}
             }
@@ -5076,6 +5107,14 @@ impl App {
             .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(||self.bluetooth.as_ref().map(|m|m.page_key()))
     }
+    fn visible_custom_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        self.display_schedule.as_ref().map(|m|m.visible_sliders()).or_else(||self.kid_menu.as_ref().map(|m|m.visible_sliders())).or_else(||self.bluetooth.as_ref().map(|m|m.visible_sliders())).unwrap_or_default()
+    }
+    fn visible_custom_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        self.display_schedule.as_ref().map(|m|m.visible_switches())
+            .or_else(||self.kid_menu.as_ref().map(|m|m.visible_switches()))
+            .or_else(||self.bluetooth.as_ref().map(|m|m.visible_switches())).unwrap_or_default()
+    }
     pub fn note_custom_menu_face(&mut self) {
         let face=self.display_schedule.as_ref().and_then(|m|m.face)
             .or_else(||self.kid_menu.as_ref().and_then(|m|m.face))
@@ -5083,14 +5122,21 @@ impl App {
         let now=self.custom_menu_key().zip(face);
         if now.map(|p|p.0) != self.current_custom_face.map(|p|p.0) {
             self.previous_custom_face=self.current_custom_face;
+            self.previous_custom_switches=self.current_custom_switches.clone();
+            self.previous_custom_sliders=self.current_custom_sliders.clone();
         }
         self.current_custom_face=now;
+        self.current_custom_switches=self.visible_custom_switches();
+        self.current_custom_sliders=self.visible_custom_sliders();
     }
     fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
         if let Some(previous)=self.menu_motion.outgoing_row() {
             if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
-                    slot_ui::expressive::draw_cached_menu(self.canvas(),tex,self.menu_motion.outgoing_frame(previous,&[]),out);
+                    let frame=self.menu_motion.outgoing_frame(previous,&[]);
+                    slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+                    slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
+                    slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
                 }
             } else { self.draw_quick_page(previous,over_game,true,out); }
         }
@@ -5101,6 +5147,8 @@ impl App {
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+        slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
+        slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         if let Some(menu)=&self.bluetooth {
             let (_,total,_,visible)=menu.scroll_info();
             if total>visible {
@@ -5125,6 +5173,8 @@ impl App {
     fn draw_quick_page(&self, row: QuickRow, over_game: bool, outgoing: bool, out: &mut Vec<Draw>) {
         let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
         let bound = self.bound_faces();
+        let mut frame=if outgoing {self.menu_motion.outgoing_frame(row,&hidden)}else{self.menu_motion.frame(row,&hidden)};
+        frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
             row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
             values: QuickRow::ALL.map(|r| self.quick_value(r)),
@@ -5137,7 +5187,7 @@ impl App {
             bezel: over_game.then(|| self.quick_bezel_faces[bezel_slot(self.playing_platform())]).flatten(),
             over_game, footer_legends: true,
             footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(), canvas: self.canvas(),
-        }.draw_animated(if outgoing { self.menu_motion.outgoing_frame(row, &hidden) } else { self.menu_motion.frame(row, &hidden) }, out);
+        }.draw_animated(frame,out);
     }
 
     fn draw_status_bar(&self, out: &mut Vec<Draw>) {

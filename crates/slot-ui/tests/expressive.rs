@@ -232,3 +232,135 @@ fn cached_settings_share_the_same_native_grid_and_only_one_selection_surface() {
         }
     }
 }
+
+#[test]
+fn pause_selector_expands_and_reverses_without_jumping() {
+    let mut motion = MenuMotion::default();
+    motion.update(Some(QuickRow::Settings), &[], None, 1.0);
+    let start = motion.frame(QuickRow::Settings, &[]);
+    assert_eq!(start.focus_compact, 1.0);
+    motion.update(Some(QuickRow::PlayScreen), &[], None, 0.0);
+    let first = motion.frame(QuickRow::PlayScreen, &[]);
+    assert_eq!(first.focus_y, start.focus_y);
+    assert_eq!(first.focus_compact, 1.0);
+    motion.update(Some(QuickRow::PlayScreen), &[], None, 0.05);
+    let middle = motion.frame(QuickRow::PlayScreen, &[]);
+    assert!(middle.focus_compact > 0.0 && middle.focus_compact < 1.0);
+    assert_eq!(middle.page_shift, 0.0);
+    assert!(
+        motion
+            .outgoing_frame(QuickRow::Settings, &[])
+            .suppress_focus
+    );
+    motion.update(Some(QuickRow::Settings), &[], None, 0.0);
+    let reversed = motion.frame(QuickRow::Settings, &[]);
+    assert!((reversed.focus_compact - middle.focus_compact).abs() < 0.001);
+    assert!((reversed.focus_y - middle.focus_y).abs() < 0.001);
+    motion.update(Some(QuickRow::Settings), &[], None, 1.0);
+    assert_eq!(motion.frame(QuickRow::Settings, &[]).focus_compact, 1.0);
+    assert!(!QuickRow::Resume.disclosure());
+    assert!(!QuickRow::ExitGame.disclosure());
+    assert!(QuickRow::Settings.disclosure());
+}
+
+#[test]
+fn independent_cached_switches_and_sliders_animate_continuously() {
+    use slot_ui::{
+        expressive::{SliderMotion, SwitchMotion},
+        MenuSlider, MenuSwitch,
+    };
+    let mut switches = SwitchMotion::default();
+    let mut sliders = SliderMotion::default();
+    let controls = [
+        MenuSwitch {
+            id: 100,
+            on: false,
+            y: 94.0,
+        },
+        MenuSwitch {
+            id: 200,
+            on: true,
+            y: 146.0,
+        },
+    ];
+    switches.update(&controls, 0.0);
+    let changed = [
+        MenuSwitch {
+            on: true,
+            ..controls[0]
+        },
+        controls[1],
+    ];
+    switches.update(&changed, 0.04);
+    let before = switches.value(100, true);
+    assert!(before > 0.0 && before < 1.0);
+    assert_eq!(switches.value(200, true), 1.0);
+    switches.update(&controls, 0.0);
+    assert_eq!(switches.value(100, false), before);
+    switches.update(&controls, 1.0);
+    assert_eq!(switches.value(100, false), 0.0);
+    sliders.update(
+        &[MenuSlider {
+            id: 1,
+            fraction: 0.0,
+            y: 0.0,
+        }],
+        0.0,
+    );
+    sliders.update(
+        &[MenuSlider {
+            id: 1,
+            fraction: 1.0,
+            y: 0.0,
+        }],
+        0.04,
+    );
+    let before = sliders.value(1, 1.0);
+    assert!(before > 0.0 && before < 1.0);
+    sliders.update(
+        &[MenuSlider {
+            id: 1,
+            fraction: 0.0,
+            y: 0.0,
+        }],
+        0.0,
+    );
+    assert_eq!(sliders.value(1, 0.0), before);
+    sliders.update(&[], 1.0);
+    assert_eq!(sliders.value(1, 0.0), 0.0);
+}
+
+#[test]
+fn details_and_clock_content_fit_both_native_canvases() {
+    use slot_ui::{reference_face, Canvas, ClockPicker};
+    for w in [640, 720] {
+        let canvas = Canvas {
+            w: w as f32,
+            h: 480.0,
+        };
+        let rows = [
+            ("Last played", "Oct 30, 2026 23:59"),
+            (
+                "Game name",
+                "A very long game title with additional release information",
+            ),
+            ("Play time", "123 hours 59 minutes"),
+        ]
+        .map(|(a, b)| (a.into(), b.into(), false));
+        let details = reference_face(canvas, "Game details", &rows, 0, 1);
+        let clock = ClockPicker::local(1_800_000_000, 840).face_on(canvas);
+        for face in [&details, &clock] {
+            for y in 40..370 {
+                for x in 0..w {
+                    if x < 80 || x >= w - 80 {
+                        assert_eq!(
+                            face.rgba[((y * w + x) * 4 + 3) as usize],
+                            0,
+                            "content outside safe ink lane at {x},{y}, width {w}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}

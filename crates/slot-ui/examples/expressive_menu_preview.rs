@@ -118,6 +118,9 @@ fn main() {
         ("general", QuickRow::BootAnimation),
         ("gameplay", QuickRow::FastForwardSound),
         ("back", QuickRow::Game),
+        ("pause", QuickRow::Settings),
+        ("expanded", QuickRow::PlayScreen),
+        ("collapsed", QuickRow::Settings),
     ];
     for (scene, (name, row)) in scenarios.into_iter().enumerate() {
         for frame in 0..60 {
@@ -170,7 +173,7 @@ fn main() {
                     bezel: None,
                     bound: None,
                     description: None,
-                    over_game: false,
+                    over_game: row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS,
                     footer_legends: true,
                     footer_top: 480.,
                     canvas,
@@ -234,8 +237,8 @@ fn main() {
         }
     }
     println!(
-        "Menu/status draw construction: {:.1} us average over 240 frames; peak {peak} quads",
-        cpu.as_secs_f64() * 1e6 / 240.0
+        "Menu/status draw construction: {:.1} us average over 420 frames; peak {peak} quads",
+        cpu.as_secs_f64() * 1e6 / 420.0
     );
 }
 #[cfg(not(target_os = "linux"))]

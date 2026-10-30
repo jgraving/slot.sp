@@ -43,7 +43,9 @@ mod sticker;
 pub mod text;
 mod toast;
 mod toggle;
-pub use toggle::toggle_face;
+mod slider;
+pub use slider::{draw_slider,draw_menu_sliders,MenuSlider,setting_slider,slider_face,MENU_SLIDER_W,MENU_SLIDER_SPAN};
+pub use toggle::{toggle_face, draw_switch, draw_menu_switches, MenuSwitch, SWITCH_W, SWITCH_H};
 
 pub use art::decode as decode_png;
 pub use backdrop::{
@@ -103,8 +105,8 @@ pub use quick_menu::{
     core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
-    menu_sentence_case, quick_value_face, quick_heading_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
-    kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
+    reference_face, menu_sentence_case, quick_value_face, quick_heading_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
+    kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
 };
