@@ -447,6 +447,8 @@ pub struct App {
     clock_faces: Option<(TexId, TexId)>,
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
+    menu_motion: slot_ui::MenuMotion,
+    status_motion: slot_ui::expressive::StatusMotion,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
@@ -553,7 +555,8 @@ fn shift_down(draws: &mut [Draw], dy: f32) {
     }
     for draw in draws {
         match draw {
-            Draw::Rect { y, .. }
+            Draw::RoundRect { y, .. }
+            | Draw::Rect { y, .. }
             | Draw::Tex { y, .. }
             | Draw::Part { y, .. }
             | Draw::Turned { y, .. } => *y += dy,
@@ -692,6 +695,8 @@ impl App {
             clock_faces: None,
             clock_back: None,
             quick_menu_faces: None,
+            menu_motion: slot_ui::MenuMotion::default(),
+            status_motion: Default::default(),
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_palette_faces: None,
@@ -4016,6 +4021,14 @@ impl App {
         }
         self.step_screen(dt);
         self.step_footer(dt);
+        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown());
+        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
+        let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
+            .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
+        self.menu_motion.update(menu, &hidden, on, dt);
+        let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
+            | (u8::from(self.muted() || self.volume() == 0) << 1);
+        self.status_motion.update(status_key, dt);
     }
 
     fn step_screen(&mut self, dt: f32) {
@@ -4815,27 +4828,7 @@ impl App {
                 }
                 return;
             }
-            Phase::QuickMenu { row } => QuickMenu {
-                row: *row,
-                hidden: &self.hidden_rows(),
-                bound: Some(&self.bound_faces()),
-                description: self.description(*row),
-                values: QuickRow::ALL.map(|r| self.quick_value(r)),
-                clock: self.quick_clock_faces,
-                wallpaper: self.quick_wallpaper_faces,
-                faces: self.quick_menu_faces.as_ref(),
-                ground: self.menu_ground(),
-                palette: self.quick_palette_faces,
-                gba_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gba)],
-                gb_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gb)],
-                gbc_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gbc)],
-                bezel: None,
-                over_game: false,
-                footer_legends: true,
-                footer_top: OUT_H as f32,
-                canvas: self.canvas(),
-            }
-            .draw(out),
+            Phase::QuickMenu { row } => self.draw_quick_overlay(*row, false, out),
             Phase::Shelf => {
                 self.draw_background(out);
                 match (self.core_picker_shown(), self.selected_stem()) {
@@ -4976,30 +4969,13 @@ impl App {
         if let (Some(row), Phase::Playing { .. }, true) =
             (self.in_game_menu_shown(), &self.phase, self.screen >= 1.0)
         {
-            let hidden = self.in_game_hidden();
-            let bound = self.bound_faces();
-            QuickMenu {
-                row,
-                bound: Some(&bound),
-                description: self.description(row),
-                hidden: &hidden,
-                values: QuickRow::ALL.map(|r| self.quick_value(r)),
-                clock: None,
-                wallpaper: None,
-                faces: self.quick_menu_faces.as_ref(),
-                ground: None,
-                palette: self.quick_palette_faces,
-                gba_bezel: None,
-                gb_bezel: None,
-                gbc_bezel: None,
-                bezel: self.quick_bezel_faces[bezel_slot(self.playing_platform())],
-                over_game: true,
-                footer_legends: false,
-                footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(),
-                canvas: self.canvas(),
-            }
-            .draw(out);
+            self.draw_quick_overlay(row, true, out);
             self.draw_status_bar(out);
+        }
+        if matches!(self.phase, Phase::Shelf | Phase::Playing { .. }) {
+            if let Some(row) = self.menu_motion.closing_row() {
+                self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }), out);
+            }
         }
         if matches!(
             self.phase,
@@ -5100,8 +5076,32 @@ impl App {
         self.draw_status_bar(out);
     }
 
+    fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
+        let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
+        let bound = self.bound_faces();
+        QuickMenu {
+            row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
+            values: QuickRow::ALL.map(|r| self.quick_value(r)),
+            clock: self.quick_clock_faces, wallpaper: self.quick_wallpaper_faces,
+            faces: self.quick_menu_faces.as_ref(), ground: self.menu_ground(),
+            palette: self.quick_palette_faces,
+            gba_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gba)],
+            gb_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gb)],
+            gbc_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gbc)],
+            bezel: over_game.then(|| self.quick_bezel_faces[bezel_slot(self.playing_platform())]).flatten(),
+            over_game, footer_legends: true,
+            footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(), canvas: self.canvas(),
+        }.draw_animated(self.menu_motion.frame(row, &hidden), out);
+    }
+
     fn draw_status_bar(&self, out: &mut Vec<Draw>) {
         let in_game = matches!(self.phase, Phase::Playing { .. } | Phase::Polaroids { .. });
+        let connection = if in_game { self.hud_audio_indicator } else { self.audio_indicator };
+        let mute = if self.muted() || self.volume() == 0 {
+            if in_game { self.hud_mute_indicator } else { self.mute_indicator }
+        } else { None };
+        slot_ui::draw_status_surfaces(self.canvas(), self.battery, self.battery_percent,
+            self.shelf_clock, connection.is_some(), mute.is_some(), self.status_ink(), out);
         slot_ui::draw_status(
             self.canvas(),
             self.battery,
@@ -5111,6 +5111,7 @@ impl App {
             self.status_ink(),
             out,
         );
+        let audio_start = out.len();
         slot_ui::draw_corner_audio(
             self.battery,
             self.battery_percent,
@@ -5130,6 +5131,7 @@ impl App {
             },
             out,
         );
+        self.status_motion.apply(&mut out[audio_start..]);
     }
 
     fn draw_seated_mouth(&self, stem: &str, out: &mut Vec<Draw>) {

@@ -19,6 +19,8 @@ mod draw;
 mod favorite;
 mod favorite_remove;
 mod footer;
+pub mod expressive;
+pub use expressive::{MenuFrame, MenuMotion};
 pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
@@ -68,7 +70,7 @@ pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPic
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
     draw_corner_audio, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
-    draw_status,
+    draw_status, draw_status_surfaces,
     Printed, FOOTER_Y,
 };
 pub use hud::{

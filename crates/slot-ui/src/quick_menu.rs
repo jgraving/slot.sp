@@ -475,6 +475,17 @@ impl QuickRow {
         }
     }
 
+    /// The title is cached once per page, never built during an animation.
+    pub fn heading(self) -> &'static str {
+        match self.page()[0] {
+            QuickRow::General => "Settings",
+            QuickRow::Resume => "Paused",
+            QuickRow::PlayScreen => "Settings",
+            QuickRow::Shader => "Screen",
+            _ => self.parent().map_or("Settings", QuickRow::label),
+        }
+    }
+
     pub fn centred(self) -> bool {
         [
             &QuickRow::MAIN[..],
@@ -938,12 +949,11 @@ impl QuickValue {
     }
 }
 
-pub const QUICK_PITCH: f32 = 48.0;
+pub const QUICK_PITCH: f32 = 42.0;
 pub const MENU_HINT_H: u32 = 32;
 pub const QUICK_VISIBLE_ROWS: usize = 6;
 pub const QUICK_EDGE: f32 = 32.0;
 pub const QUICK_LABEL_X: f32 = 64.0;
-const POINTER_GAP: f32 = 14.0;
 const POINTER_SCALE: usize = 4;
 const POINTER: [&str; 11] = [
     "X.......", "XX......", "XoX.....", "XooX....", "XoooX...", "XooooX..", "XoooX...", "XooX....",
@@ -951,9 +961,8 @@ const POINTER: [&str; 11] = [
 ];
 const POINTER_BLEED: u32 = 4;
 const GROUND_SCRIM: f32 = 0.65;
-const TYPE_DROP: f32 = 4.0;
+const TYPE_DROP: f32 = 1.0;
 const CARET_GAP: f32 = 14.0;
-const CARET_PX: f32 = 24.0;
 const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
 const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
@@ -1060,7 +1069,8 @@ fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
             h: 0,
         };
     };
-    let layout = text::fit(font, label, OUT_W as f32, 1, MENU_PX, MENU_PX);
+    let layout = text::Layout { lines: vec![label.to_string()],
+        px: if role == text::Role::Display { MENU_PX } else { 26.0 }, tracking: 0.0, role };
     let set = layout
         .lines
         .iter()
@@ -1073,28 +1083,21 @@ fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
 }
 
 pub fn quick_caret_face(right: bool) -> UndoFace {
-    let glyph = if right { '\u{f0da}' } else { '\u{f0d9}' };
-    let (Some(symbols), Some(label)) = (crate::icon::symbols_font(), text::font(text::Role::Focus)) else {
-        return UndoFace {
-            rgba: Vec::new(),
-            w: 0,
-            h: 0,
-        };
-    };
-    let (m, cov) = symbols.rasterize(glyph, CARET_PX);
-    let (w, h) = (m.width as u32, MENU_H);
-    let centre = cap_centre(label, h);
-    let top = (centre - m.height as f32 / 2.0).round() as i32;
-    let mut rgba = vec![0u8; (w * h * 4) as usize];
-    for gy in 0..m.height {
-        let y = top + gy as i32;
-        if y < 0 || y >= h as i32 {
-            continue;
-        }
-        for gx in 0..m.width {
-            let at = ((y as u32 * w + gx as u32) * 4) as usize;
-            let a = cov[gy * m.width + gx];
-            rgba[at..at + 4].copy_from_slice(&[MENU_INK[0], MENU_INK[1], MENU_INK[2], a]);
+    // Small vector chevrons avoid adding glyphs to the symbols-font subset.
+    let (w, h) = (14, MENU_H);
+    let mut rgba = vec![0; (w * h * 4) as usize];
+    for y in 0..h {
+        for x in 0..w {
+            let px = if right { x as f32 + 0.5 } else { w as f32 - x as f32 - 0.5 };
+            let py = y as f32 + 0.5;
+            let distance = |ay: f32, by: f32| {
+                let (dx, dy) = (6.0, by - ay);
+                let t = (((px - 4.0) * dx + (py - ay) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+                ((px - 4.0 - t * dx).powi(2) + (py - ay - t * dy).powi(2)).sqrt()
+            };
+            let a = ((1.9 - distance(14.0, 20.0).min(distance(26.0, 20.0))).clamp(0.0, 1.0) * 255.0).round() as u8;
+            let at = ((y * w + x) * 4) as usize;
+            rgba[at..at+4].copy_from_slice(&[MENU_INK[0], MENU_INK[1], MENU_INK[2], a]);
         }
     }
     UndoFace { rgba, w, h }
@@ -1185,7 +1188,8 @@ pub fn parent_settings_face_with_space(rows: &[(String, String, bool)], selected
     let mut face = parent_footer_face(footer, rows.get(selected).is_some_and(|r| r.2));
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = (LEGEND_Y - reserve.max(0.0) - QUICK_PITCH * visible as f32) / 2.0;
+    let top = 84.0 + (QUICK_VISIBLE - visible) as f32 * QUICK_PITCH / 2.0 - reserve.max(0.0) / 2.0;
+    crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, Some(selected - start));
     let pad = MENU_PAD as f32;
     let right = OUT_W as f32 - QUICK_EDGE;
     for (i, (label, value, adjustable)) in rows.iter().enumerate().skip(start).take(visible) {
@@ -1193,11 +1197,6 @@ pub fn parent_settings_face_with_space(rows: &[(String, String, bool)], selected
         let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
         let label = parent_label_face(label, lit, !value.is_empty());
         parent_blit(&mut face, &label, QUICK_LABEL_X - pad, y);
-        if lit {
-            let pointer = quick_pointer_face();
-            parent_blit(&mut face, &pointer, QUICK_LABEL_X - POINTER_GAP - pointer.w as f32,
-                y - POINTER_BLEED as f32);
-        }
         if value.is_empty() { continue; }
         let toggle = matches!(value.as_str(), "On" | "Off");
         let value = if toggle { crate::toggle_face(value == "On", lit) }
@@ -1462,6 +1461,7 @@ fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
 pub type FacePair = [(TexId, u32, u32); 2];
 
 pub struct QuickMenuFaces {
+    pub headings: Vec<(QuickRow, (TexId, u32, u32))>,
     pub labels: Vec<[(TexId, u32, u32); 2]>,
     pub pointer: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
@@ -1497,7 +1497,33 @@ pub struct QuickMenu<'a> {
 
 impl QuickMenu<'_> {
     pub fn draw(&self, out: &mut Vec<Draw>) {
-        match (self.over_game, self.row.page() == QuickRow::PLAY_SCREEN) {
+        self.draw_animated(crate::MenuFrame::settled(self.row, self.hidden), out);
+    }
+
+    pub fn draw_animated(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
+        let begin = out.len();
+        self.draw_content(frame, out);
+        // The scene is a few existing sprites. Transform them in place: no
+        // framebuffer copies, live blur, text rasterisation or texture uploads.
+        let dy = (1.0 - frame.entry) * 18.0;
+        for draw in &mut out[begin..] {
+            match draw {
+                Draw::RoundRect { y, colour, .. } => { *y += dy; colour[3] *= frame.opacity; }
+                Draw::Tex { y, alpha, .. } => { *y += dy; *alpha *= frame.opacity; }
+                // Keep full-screen grounds anchored.
+                Draw::Rect { colour, .. } => colour[3] *= frame.opacity,
+                Draw::Part { alpha, .. } => *alpha *= frame.opacity,
+                _ => {}
+            }
+        }
+    }
+
+    fn draw_content(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
+        use crate::expressive::{rounded, SURFACE, CONTAINER, SELECTED, ACCENT};
+        if frame.closing {
+            out.push(Draw::Rect { x: 0.0, y: 0.0, w: self.canvas.w,
+                h: OUT_H as f32 - MOUTH_H, colour: [0.0, 0.0, 0.0, GROUND_SCRIM] });
+        } else { match (self.over_game, self.row.page() == QuickRow::PLAY_SCREEN) {
             (false, _) => draw_menu_ground(self.canvas, self.ground, out),
             (true, panel) => {
                 let y = match panel {
@@ -1514,34 +1540,57 @@ impl QuickMenu<'_> {
                 });
             }
         }
+        }
         let Some(faces) = self.faces else {
             return;
         };
         let (right, pad) = (self.canvas.w - QUICK_EDGE, MENU_PAD as f32);
-        let main_w = self
-            .row
-            .page()
-            .iter()
-            .filter_map(|r| faces.labels.get(r.index()))
-            .map(|l| l[1].1)
-            .max()
-            .unwrap_or(0);
         let shown = self.row.shown(self.hidden);
         let (start, len) = quick_window(self.row, self.hidden);
+        if len == 0 { return; }
+        let top = quick_row_top_at(shown[start], self.row, self.hidden);
+        let panel_x = 24.0;
+        let panel_w = self.canvas.w - panel_x * 2.0;
+        let panel_y = top - 44.0;
+        let panel_h = 44.0 + len as f32 * QUICK_PITCH + 8.0;
+        rounded(out, panel_x, panel_y + 3.0, panel_w, panel_h, 26.0, [0.0, 0.0, 0.0, 0.22]);
+        rounded(out, panel_x, panel_y, panel_w, panel_h, 26.0, SURFACE);
+        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| *key == self.row.page()[0]) {
+            push(out, *tex, QUICK_LABEL_X - pad, panel_y + 3.0, *w, *h);
+        }
+        for i in 0..len {
+            rounded(out, panel_x + 8.0, top + i as f32 * QUICK_PITCH, panel_w - 16.0, QUICK_PITCH - 2.0, 10.0, CONTAINER);
+        }
+        // The selection travels as one shape. Keep it within the current
+        // window during wraparound and scrolling so it never covers a heading.
+        let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * QUICK_PITCH + 2.0);
+        rounded(out, panel_x + 8.0, focus_y, panel_w - 16.0, QUICK_PITCH - 2.0, 20.0, SELECTED);
+        rounded(out, panel_x + 16.0, focus_y + 13.0, 3.0, 14.0, 1.5, ACCENT);
         for row in shown.iter().copied().skip(start).take(len) {
             let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
             let lit = row == self.row;
             if let Some(&(tex, w, h)) = faces.labels.get(row.index()).map(|l| &l[lit as usize]) {
-                let x = match row.centred() {
-                    true => self.canvas.centred(main_w as f32),
-                    false => QUICK_LABEL_X - pad,
-                };
+                let x = QUICK_LABEL_X - pad;
                 push(out, tex, x, y, w, h);
-                if lit {
-                    let (tex, pw, ph) = faces.pointer;
-                    let px = x + pad - POINTER_GAP - pw as f32;
-                    push(out, tex, px, y - POINTER_BLEED as f32, pw, ph);
+            }
+            if row.opens() && !row.binds() {
+                let (tex, w, h) = faces.carets[1];
+                push(out, tex, right - w as f32, y, w, h);
+            }
+            if row.toggle() {
+                if let Some(value) = self.values[row.index()] {
+                    let on = matches!(value, QuickValue::On | QuickValue::Show);
+                    let t = if lit { frame.switch.unwrap_or(if on { 1.0 } else { 0.0 }) }
+                        else if on { 1.0 } else { 0.0 };
+                    let x = right - 64.0;
+                    let off = [0.33, 0.36, 0.40, 1.0];
+                    let track = std::array::from_fn(|i| off[i] + (ACCENT[i] - off[i]) * t);
+                    rounded(out, x, y + 5.0, 60.0, 30.0, 15.0, track);
+                    let size = 19.0 + t * 3.0;
+                    rounded(out, x + 5.0 + 28.0 * t, y + 20.0 - size / 2.0,
+                        size, size, size / 2.0, [0.95, 0.97, 0.96, 1.0]);
                 }
+                continue;
             }
             let value = match row {
                 _ if row.toggle() => self.values[row.index()].and_then(|value| match value {
@@ -1704,7 +1753,7 @@ pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) 
     let rows = QUICK_PITCH * len as f32;
     let top = match row.page() == QuickRow::PLAY_SCREEN {
         true => LEGEND_Y - PANEL_GAP - rows,
-        false => (LEGEND_Y - rows) / 2.0,
+        false => 84.0 + (QUICK_VISIBLE - len) as f32 * QUICK_PITCH / 2.0,
     };
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }

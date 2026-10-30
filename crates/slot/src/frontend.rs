@@ -452,6 +452,7 @@ impl Frontend {
             .into_iter()
             .map(|l| l.map(&mut up))
             .collect();
+        let headings = faces.quick_headings.into_iter().map(|(r, f)| (r, up(f))).collect();
         let pointer = up(faces.quick_pointer);
         let values = faces
             .quick_values
@@ -505,6 +506,7 @@ impl Frontend {
         app.set_delete_faces(delete);
         app.set_delete_shot_faces(delete_shot);
         app.set_quick_menu_faces(QuickMenuFaces {
+            headings,
             labels,
             pointer,
             values,
@@ -1018,6 +1020,7 @@ fn legend_faces(compositor: &mut Compositor, legend: &[(&str, &str)]) -> Vec<Tex
 struct UiFaces {
     link_badges: Vec<CartFace>,
     shutdown: Vec<UndoFace>,
+    quick_headings: Vec<(QuickRow, UndoFace)>,
     quick_labels: Vec<[UndoFace; 2]>,
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
@@ -1067,6 +1070,8 @@ impl UiFaces {
                     })
                 })
                 .collect(),
+            quick_headings: QuickRow::ALL.into_iter().filter(|r| r.page()[0] == *r)
+                .map(|r| (r, slot_ui::quick_heading_face(r.heading()))).collect(),
             quick_labels: QuickRow::ALL
                 .iter()
                 .map(|r| [false, true].map(|lit| quick_label_face(*r, lit)))

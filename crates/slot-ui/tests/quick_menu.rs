@@ -588,6 +588,7 @@ fn long_pages_scroll_six_rows_with_the_selection_and_keep_clear_of_status_and_hi
     use slot_ui::*;
     let id = |n| TexId::from_raw(n);
     let faces = QuickMenuFaces {
+        headings: vec![],
         labels: QuickRow::ALL
             .iter()
             .map(|r| {

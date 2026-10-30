@@ -1,40 +1,15 @@
 use slot::bluetooth::screen_face;
-use slot_ui::{quick_pointer_face, OUT_W};
+use slot_ui::OUT_W;
 
 #[test]
-fn sound_uses_the_shared_pointer_over_a_transparent_menu_background() {
-    let lines = [
-        "",
-        "",
-        "COMPACT",
-        "ROW SPEAKER_DEVICE Internal speaker",
-        "SELECTED DEVICE Headphones",
-        "ROW BLUETOOTH On",
-        "B Back · A Connect · Y Forget",
-    ]
-    .map(str::to_owned);
+fn sound_uses_shared_tonal_rows_and_keeps_the_hardware_footer_clear() {
+    let lines = ["", "", "COMPACT", "ROW SPEAKER_DEVICE Internal speaker", "SELECTED DEVICE Headphones", "ROW BLUETOOTH On", "B Back · A Connect · Y Forget"].map(str::to_owned);
     let face = screen_face(&lines);
-    let pointer = quick_pointer_face();
-    for y in 0..pointer.h {
-        for x in 0..pointer.w {
-            let a = ((y * pointer.w + x) * 4) as usize;
-            let b = (((136 + y) * OUT_W + 18 + x) * 4) as usize;
-            if pointer.rgba[a + 3] > 0 {
-                assert_eq!(&face.rgba[b..b + 4], &pointer.rgba[a..a + 4]);
-            }
-        }
-    }
-    // No old full-width highlight or opaque screen hiding the wallpaper/game.
-    for y in 88..378 {
-        assert_eq!(face.rgba[((y * OUT_W + 710) * 4 + 3) as usize], 0);
-    }
-    assert!(face.rgba.chunks_exact(4).any(|p| p == [154, 154, 164, 255]));
-    // The central slot opening remains clear between the two footer groups.
-    for y in 422..480 {
-        for x in 300..400 {
-            assert_eq!(face.rgba[((y * OUT_W + x) * 4 + 3) as usize], 0);
-        }
-    }
+    let pixel=|x:u32,y:u32| { let i=((y*face.w+x)*4) as usize; &face.rgba[i..i+4] };
+    assert_eq!(pixel(36,150)[3],255,"selected row should have a tonal background");
+    assert!(pixel(41,150)[1]>pixel(41,150)[0],"teal focus accent");
+    for y in 88..378 { assert_eq!(pixel(710,y)[3],0,"card keeps its outer margin"); }
+    for y in 422..480 { for x in 300..400 {assert_eq!(pixel(x,y)[3],0,"physical slot stays clear");} }
 }
 
 #[test]
@@ -91,13 +66,16 @@ fn device_icons_have_equal_visible_heights_and_the_check_uses_the_value_edge() {
     let face = screen_face(&lines);
     let right = |top| {
         (600..720)
-            .filter(|&x| (top..top + 40).any(|y| face.rgba[((y * 720 + x) * 4 + 3) as usize] > 127))
+            .filter(|&x| (top..top + 40).any(|y| { let at=((y*720+x)*4) as usize; face.rgba[at+3]>127 && face.rgba[at..at+3].iter().any(|v|*v>120) }))
             .max()
             .unwrap()
     };
+    if let Ok(path)=std::env::var("SLOT_SOUND_PREVIEW") {
+        let mut e=png::Encoder::new(std::fs::File::create(path).unwrap(),face.w,face.h);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&face.rgba).unwrap();
+    }
     assert_eq!(right(92), 687);
-    assert!((right(92) as i32 - right(140) as i32).abs() <= 1);
-    assert!((right(92) as i32 - right(188) as i32).abs() <= 1);
+    assert!((right(92) as i32 - right(131) as i32).abs() <= 1);
+    assert!((right(92) as i32 - right(173) as i32).abs() <= 1);
 }
 
 #[test]

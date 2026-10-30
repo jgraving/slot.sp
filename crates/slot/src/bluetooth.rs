@@ -793,7 +793,7 @@ pub fn screen_face_with_ink(lines: &[String], footer_ink: [u8; 3]) -> UndoFace {
 
 pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Canvas) -> UndoFace {
     let screen_w=canvas.w.round() as u32;
-    let mut rgba = vec![0u8; (screen_w * OUT_H * 4) as usize];
+    let rgba = vec![0u8; (screen_w * OUT_H * 4) as usize];
     let Some(font) = slot_ui::text::label_font() else {
         return UndoFace {
             rgba,
@@ -810,10 +810,14 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
     let row_top = if compact {
         88
     } else if clean {
-        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * 48) / 2 + 4
+        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * 42) / 2 + 4
     } else {
         184
     };
+    let selected = lines.iter().skip(3).position(|line|line.starts_with("SELECTED "));
+    let mut panel = UndoFace { rgba, w: screen_w, h: OUT_H };
+    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, 42.0, row_count as usize, selected);
+    let mut rgba = panel.rgba;
     for (i, line) in lines.iter().enumerate() {
         if compact && (i == 0 || i == 2) {
             continue;
@@ -828,7 +832,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                 line.strip_prefix("SELECTED ")
                     .or_else(|| line.strip_prefix("ROW "))
                     .unwrap_or(line),
-                row_top + (i as u32 - 3) * 48 + 4,
+                row_top + (i as u32 - 3) * 42 + 1,
                 40u32,
                 30.0,
                 1,
@@ -841,10 +845,6 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         } else {
             [246, 244, 239]
         };
-        if highlight {
-            let pointer = slot_ui::quick_pointer_face();
-            blit(&mut rgba, &pointer, 18, top.saturating_sub(4));
-        }
         if i == lines.len() - 1 {
             let faces = slot_ui::sound_button_legends(footer_ink);
             let left: Vec<_> = [line.contains("B Back").then_some(0)]
