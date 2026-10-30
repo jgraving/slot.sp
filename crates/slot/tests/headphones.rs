@@ -216,7 +216,7 @@ fn sound_pause_setting_and_volume_save_without_clobbering_each_other() {
     use slot::bluetooth::{Manager,disconnect_volume,pause_on_disconnect};
     use slot_input::Btn;
     let d=tmp_root_with_carts(&[]);let mut m=Manager::new(d.path().into(),false);
-    m.selected=m.rows().len()-1;m.input(Action::GbaDown(Btn::A));assert!(pause_on_disconnect(d.path()));
+    m.selected=m.rows().iter().position(|r|r.starts_with("PAUSE_DISCONNECT ")).unwrap();m.input(Action::GbaDown(Btn::A));assert!(pause_on_disconnect(d.path()));
     m.selected-=1;m.input(Action::GbaDown(Btn::Right));assert!(pause_on_disconnect(d.path()));assert_eq!(disconnect_volume(d.path()),5);
     m.selected+=1;m.input(Action::GbaDown(Btn::Left));assert!(!pause_on_disconnect(d.path()));assert_eq!(disconnect_volume(d.path()),5);
     m.input(Action::GbaDown(Btn::Right));

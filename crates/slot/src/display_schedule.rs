@@ -16,7 +16,7 @@ impl Menu {
     pub fn new(settings: DisplaySettings) -> Self {
         Self { settings, selected: 0, time_field: None, status: String::new(), face: None, visible: true }
     }
-    /// Returns updated schedule preferences, without changing either display preset.
+    /// Returns updated schedule preferences, including the shared night warmth preset.
     pub fn input(&mut self, action: Action, clock_set: bool) -> Option<DisplaySettings> {
         self.face = None;
         let Action::GbaDown(button) = action else {
@@ -30,11 +30,11 @@ impl Menu {
         }
         if matches!(button, Btn::Up | Btn::Down) {
             if let Some(field) = &mut self.time_field { *field = 1 - *field; }
-            else { self.selected = (self.selected + if button == Btn::Down {1} else {2}) % 3; }
+            else { self.selected = (self.selected + if button == Btn::Down {1} else {3}) % 4; }
             self.status.clear();
             return None;
         }
-        if button == Btn::A && self.selected > 0 {
+        if button == Btn::A && matches!(self.selected,1|2) {
             self.time_field = Some(0);
             return None;
         }
@@ -43,6 +43,8 @@ impl Menu {
         if self.selected == 0 {
             if !clock_set { self.status = "Set Date & Time first".into(); return None; }
             next.schedule = !next.schedule;
+        } else if self.selected==3 {
+            next.bedtime.1=if button==Btn::Left {next.bedtime.1.saturating_sub(1)} else {next.bedtime.1.saturating_add(1).min(9)};
         } else {
             let step = match self.time_field { Some(0) => 60, Some(_) => 1, None => 15 };
             let delta = if button == Btn::Left { -step } else { step };
@@ -57,7 +59,18 @@ impl Menu {
         self.status.clear();
         Some(next)
     }
-    pub fn screen_face(&self) -> UndoFace {
+    pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
+    pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
+    pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        if self.time_field.is_none(){vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.settings.bedtime.1 as f32/9.0,y:94.0+3.0*slot_ui::QUICK_PITCH}]}else{vec![]}
+    }
+    pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        if self.time_field.is_none() {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.settings.schedule,y:94.0}]} else {vec![]}
+    }
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,false)}
+    pub fn screen_face_animated_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,true)}
+    fn render_face(&self, canvas: slot_ui::Canvas, animated: bool) -> UndoFace {
+        let settings_face=if animated {slot_ui::parent_settings_face_animated_on} else {slot_ui::parent_settings_face_on};
         let (title, rows, selected) = if let Some(field) = self.time_field {
             let minute = if self.selected == 1 { self.settings.day_start } else { self.settings.night_start };
             (if self.selected == 1 { "Day Begins" } else { "Night Begins" }, vec![
@@ -69,12 +82,13 @@ impl Menu {
                 ("Automatic".into(), if self.settings.schedule { "On" } else { "Off" }.into(), true),
                 ("Day begins".into(), time(self.settings.day_start), true),
                 ("Night begins".into(), time(self.settings.night_start), true),
+                ("Night warmth".into(),format!("{}%",u16::from(self.settings.bedtime.1)*100/9),true),
             ], self.selected)
         };
         let status = if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
-        let mut face = slot_ui::parent_settings_face(&rows, selected, 0, status);
+        let mut face = settings_face(canvas, &rows, selected, 0, status, 0.0);
         let heading = slot_ui::quick_heading_face(title);
-        let x = face.w.saturating_sub(heading.w) / 2;
+        let x = slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD;
         for y in 0..heading.h.min(face.h.saturating_sub(40)) {
             for xx in 0..heading.w.min(face.w.saturating_sub(x)) {
                 let from = ((y * heading.w + xx) * 4) as usize;

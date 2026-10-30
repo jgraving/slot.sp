@@ -37,7 +37,7 @@ pub fn menu_face(label: &str) -> UndoFace {
     let ink = text::line_width(font, label, MENU_PX, 0.0).ceil() as u32;
     let w = ink + 2 * MENU_PAD;
     let mut rgba = vec![0u8; (w * MENU_H * 4) as usize];
-    let layout = text::fit(font, label, w as f32, 1, MENU_PX, MENU_MIN_PX);
+    let layout = text::fit_preserving_case(font, label, w as f32, 1, MENU_PX, MENU_MIN_PX);
     text::draw_centred(&mut rgba, w, MENU_H, &layout, MENU_INK);
     UndoFace { rgba, w, h: MENU_H }
 }
@@ -143,12 +143,12 @@ pub fn menu_detail_face(label: &str) -> UndoFace {
             h: 0,
         };
     };
-    let shown = label.to_uppercase();
+    let shown = label.to_string();
     let ink =
         text::line_width(font, &shown, DETAIL_PX, text::tracking_for(DETAIL_PX)).ceil() as u32;
     let w = ink + 2 * MENU_PAD;
     let mut rgba = vec![0u8; (w * DETAIL_H * 4) as usize];
-    let layout = text::fit(font, label, w as f32, 1, DETAIL_PX, DETAIL_PX);
+    let layout = text::fit_preserving_case(font, label, w as f32, 1, DETAIL_PX, DETAIL_PX);
     text::draw_centred(&mut rgba, w, DETAIL_H, &layout, MENU_INK);
     UndoFace {
         rgba,

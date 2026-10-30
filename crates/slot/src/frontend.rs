@@ -36,6 +36,8 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
     bluetooth_tex: Option<TexId>,
+    bluetooth_old_tex: Option<TexId>,
+    bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
@@ -68,7 +70,11 @@ pub struct Frontend {
     quick_clock: QuickClock,
     quick_palette: QuickPalette,
     schedule_tex: Option<TexId>,
+    schedule_old_tex: Option<TexId>,
+    schedule_page: Option<u64>,
     kid_tex: Option<TexId>,
+    kid_old_tex: Option<TexId>,
+    kid_page: Option<u64>,
     kid_lines: Vec<String>,
     wallpaper: WallpaperSync,
     game_bezel: BezelSync,
@@ -188,6 +194,8 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             bluetooth_tex: None,
+            bluetooth_old_tex: None,
+            bluetooth_page: None,
             bluetooth_spinner: Vec::new(),
             audio_icon: None,
             hud_audio_icon: None,
@@ -220,7 +228,11 @@ impl Frontend {
             quick_clock: QuickClock::default(),
             quick_palette: QuickPalette::default(),
             schedule_tex: None,
+            schedule_old_tex: None,
+            schedule_page: None,
             kid_tex: None,
+            kid_old_tex: None,
+            kid_page: None,
             kid_lines: Vec::new(),
             wallpaper: WallpaperSync::default(),
             game_bezel: BezelSync::default(),
@@ -307,7 +319,7 @@ impl Frontend {
         self.session.app_mut().set_shot_tick_face(tick);
         let hint = set_clock_hint_face();
         self.clocks.hint = Some(compositor.create_texture(hint.w, hint.h, &hint.rgba));
-        let back = hint_face("B", "Back");
+        let back = slot_ui::prompt_legends(slot_ui::HUD_INK,"Back","Save").into_iter().next().unwrap();
         let tex = compositor.create_texture(back.w, back.h, &back.rgba);
         self.session.app_mut().set_clock_back_face((tex, back.w));
         let removal = slot_ui::favorite_remove_face();
@@ -452,6 +464,7 @@ impl Frontend {
             .into_iter()
             .map(|l| l.map(&mut up))
             .collect();
+        let headings = faces.quick_headings.into_iter().map(|(r, f)| (r, up(f))).collect();
         let pointer = up(faces.quick_pointer);
         let values = faces
             .quick_values
@@ -505,6 +518,7 @@ impl Frontend {
         app.set_delete_faces(delete);
         app.set_delete_shot_faces(delete_shot);
         app.set_quick_menu_faces(QuickMenuFaces {
+            headings,
             labels,
             pointer,
             values,
@@ -703,13 +717,17 @@ impl Frontend {
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         if let Some(menu) = &mut self.session.app_mut().bluetooth {
+            if self.bluetooth_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.bluetooth_tex, &mut self.bluetooth_old_tex);
+                self.bluetooth_page=Some(menu.page_key()); menu.face=None;
+            }
             menu.progress_face = progress;
             let lines = menu.lines();
             if lines != self.bluetooth_lines || menu.face.is_none() {
                 menu.face = Some(upload(
                     compositor,
                     &mut self.bluetooth_tex,
-                    crate::bluetooth::screen_face_on(&lines, sound_footer_ink, sound_canvas),
+                    crate::bluetooth::screen_face_without_switches(&lines, sound_footer_ink, sound_canvas),
                 ));
                 self.bluetooth_lines = lines;
             }
@@ -743,15 +761,24 @@ impl Frontend {
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
         if let Some(menu) = &mut self.session.app_mut().display_schedule {
-            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face())); }
+            if self.schedule_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
+                self.schedule_page=Some(menu.page_key()); menu.face=None;
+            }
+            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face_animated_on(sound_canvas))); }
         }
         if let Some(menu) = &mut self.session.app_mut().kid_menu {
+            if self.kid_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.kid_tex,&mut self.kid_old_tex);
+                self.kid_page=Some(menu.page_key()); menu.face=None;
+            }
             let lines = menu.lines();
             if lines != self.kid_lines || menu.face.is_none() {
-                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face()));
+                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face_animated_on(sound_canvas)));
                 self.kid_lines = lines;
             }
         }
+        self.session.app_mut().note_custom_menu_face();
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
@@ -1018,6 +1045,7 @@ fn legend_faces(compositor: &mut Compositor, legend: &[(&str, &str)]) -> Vec<Tex
 struct UiFaces {
     link_badges: Vec<CartFace>,
     shutdown: Vec<UndoFace>,
+    quick_headings: Vec<(QuickRow, UndoFace)>,
     quick_labels: Vec<[UndoFace; 2]>,
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
@@ -1067,6 +1095,8 @@ impl UiFaces {
                     })
                 })
                 .collect(),
+            quick_headings: QuickRow::ALL.into_iter().filter(|r| r.page()[0] == *r)
+                .map(|r| (r, slot_ui::quick_heading_face(r.heading()))).collect(),
             quick_labels: QuickRow::ALL
                 .iter()
                 .map(|r| [false, true].map(|lit| quick_label_face(*r, lit)))
@@ -1074,7 +1104,7 @@ impl UiFaces {
             quick_pointer: quick_pointer_face(),
             quick_values: QuickValue::ALL
                 .iter()
-                .map(|v| [false, true].map(|lit| quick_value_face(v.text(), lit)))
+                .map(|v| [false, true].map(|lit| quick_value_face(&slot_ui::menu_sentence_case(v.text()), lit)))
                 .collect(),
             quick_toggles: [false, true].map(|on| [false, true].map(|lit| slot_ui::toggle_face(on, lit))),
             quick_carets: [false, true].map(quick_caret_face),
@@ -1367,10 +1397,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| p.text());
+    let picked = app.picker().map(|p| format!("{}:{}",app.canvas().w,p.text()));
     if picked != clocks.picked {
         clocks.picked = picked;
-        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face()), clocks.hint) {
+        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_on(app.canvas())), clocks.hint) {
             let line = upload(compositor, &mut clocks.line, face);
             app.set_clock_faces(line, hint);
         }

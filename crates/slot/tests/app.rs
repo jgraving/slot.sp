@@ -583,7 +583,8 @@ fn a_cart_in_flight_is_not_also_left_standing_on_the_shelf() {
     let carts = out
         .iter()
         .filter(|d| match **d {
-            Draw::Rect { w, h, .. }
+            Draw::RoundRect { w, h, .. }
+            | Draw::Rect { w, h, .. }
             | Draw::Tex { w, h, .. }
             | Draw::Part { w, h, .. }
             | Draw::Turned { w, h, .. } => {

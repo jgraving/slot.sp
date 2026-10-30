@@ -120,6 +120,7 @@ precision mediump float;
 uniform sampler2D u_tex;
 uniform vec4 u_colour;
 uniform float u_lava;
+uniform vec3 u_round;
 uniform vec4 u_flow0;
 uniform vec4 u_flow1;
 uniform vec4 u_flow2;
@@ -139,7 +140,11 @@ vec2 eddy(vec2 p, vec4 flow) {
     return vec2(-q.y, q.x) / (0.06 + dot(q, q));
 }
 void main() {
-    if (u_lava < 0.5) {
+    if (u_round.z > 0.0) {
+        vec2 q = abs((v_uv - 0.5) * u_round.xy) - u_round.xy * 0.5 + u_round.z;
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_round.z;
+        FRAG_COLOR = vec4(u_colour.rgb, u_colour.a * (1.0 - smoothstep(-0.7, 0.7, d)));
+    } else if (u_lava < 0.5) {
         FRAG_COLOR = texture2D(u_tex, v_uv) * u_colour;
     } else {
         float calm = 1.0 - smoothstep(0.54, 0.90, v_uv.y);

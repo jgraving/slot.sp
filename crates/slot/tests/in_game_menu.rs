@@ -572,6 +572,7 @@ fn legend_at(a: &App, id: usize) -> (f32, f32, f32) {
 fn menu_faces(a: &mut App) {
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(100 + i), 80, 40), (id(130 + i), 80, 40)])
             .collect(),

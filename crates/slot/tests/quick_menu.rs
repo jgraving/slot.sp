@@ -657,6 +657,7 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
 fn fake_faces(a: &mut App) {
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(1000 + i), 200, 40), (id(1100 + i), 200, 40)])
             .collect(),
@@ -844,14 +845,8 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
         drawn(&out, value(QuickValue::Speed6, true)),
         "6× is not lit"
     );
-    assert!(
-        drawn(&out, 4000),
-        "sound's OFF is not grey"
-    );
-    assert!(
-        drawn(&out, 4002),
-        "rumble's ON is not grey"
-    );
+    assert!(!drawn(&out, 4000) && !drawn(&out, 4002), "switches should use live vector geometry");
+    assert!(out.iter().filter(|d| matches!(d, Draw::RoundRect { w: 60.0, h: 30.0, .. })).count() >= 2);
     press(&mut a, Btn::B);
     for _ in QuickRow::General.position(&[])..QuickRow::Game.position(&[]) {
         press(&mut a, Btn::Up);
@@ -869,35 +864,27 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
     let out = frame(&a);
     assert!(
-        !drawn(&out, 300) && !drawn(&out, 301),
-        "arrows on a row that opens"
+        !drawn(&out, 300) && drawn(&out, 301),
+        "an opening row keeps only its trailing disclosure"
     );
     assert!(drawn(&out, 501), "the date and time in hand is not lit");
 }
 
 #[test]
-fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
+fn the_selection_container_tracks_the_lit_row_without_a_pixel_pointer() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     a.apply(Action::QuickMenu);
     for row in QuickRow::General.shown(&a.hidden_rows()) {
         let out = frame(&a);
-        let pointers: Vec<_> = out
-            .iter()
-            .filter(|d| matches!(d, Draw::Tex { tex, .. } if *tex == TexId::from_raw(700)))
-            .collect();
-        assert_eq!(pointers.len(), 1, "{row:?}: {} pointers", pointers.len());
-        let [px, py, pw, ph] = placed(&out, 700).expect("the pointer");
+        assert!(!drawn(&out, 700), "the retired pointer is still present");
         let [lx, ly, _, lh] = placed(&out, label(row, true)).expect("the lit label");
-        assert!(
-            px + pw <= lx + MENU_PAD as f32,
-            "{row:?}: the pointer runs into its label"
-        );
-        assert_eq!(
-            py + ph / 2.0,
-            ly + lh / 2.0,
-            "{row:?}: the pointer is off the row"
-        );
+        let focus = out.iter().find_map(|d| match d {
+            Draw::RoundRect { x, y, w, h, colour, .. } if *colour == slot_ui::expressive::SELECTED => Some((*x,*y,*w,*h)),
+            _ => None,
+        }).expect("the selection surface");
+        assert!(focus.0 < lx + MENU_PAD as f32 && focus.0 + focus.2 > lx + 200.0);
+        assert!((focus.1 + focus.3/2.0 - ly - lh/2.0).abs() < 2.0);
         for other in QuickRow::General
             .shown(&a.hidden_rows())
             .into_iter()
@@ -913,7 +900,7 @@ fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
 }
 
 #[test]
-fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
+fn labels_and_live_switches_align_to_the_menu_edges() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::FastForward);
@@ -928,8 +915,11 @@ fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
         let [x, ..] = placed(&out, label(row, lit)).expect("a label was not drawn");
         assert_eq!(x + MENU_PAD as f32, QUICK_LABEL_X, "{row:?}'s label");
     }
-    let [x, _, w, _] = placed(&out, 4002).expect("rumble's switch");
-    assert_eq!(x + w - MENU_PAD as f32, right, "an unselected value");
+    let (x,w) = out.iter().find_map(|d| match d {
+        Draw::RoundRect { x, w: 60.0, h: 30.0, .. } => Some((*x,60.0)),
+        _ => None,
+    }).expect("a switch track");
+    assert_eq!(x + w, right, "switch track edge");
     let [x, _, w, _] = placed(&out, 301).expect("the right arrow");
     assert_eq!(x + w, right, "the arrow around the selected value");
 }
@@ -1045,6 +1035,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
     let (_d, mut a) = on_own_wallpaper(slot_store::WallpaperTint::Off);
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: QuickRow::ALL
             .iter()
             .enumerate()

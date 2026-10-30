@@ -94,7 +94,7 @@ pub fn hint_coloured(key: &str, label: &str, ink: [u8; 3]) -> UndoFace {
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
     if let Some(font) = caption_font(label) {
-        let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
+        let layout = text::fit_preserving_case(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, ink);
     }
     blit(&mut rgba, w, &band, text_w, HINT_H, cap_w + CAP_GAP, 0);
@@ -114,7 +114,7 @@ pub fn word_ink(text: &str, ink: [u8; 3]) -> UndoFace {
     let w = word_width(text);
     let mut rgba = vec![0u8; (w * HINT_H * 4) as usize];
     if let Some(font) = caption_font(text) {
-        let layout = text::fit(font, text, w as f32, 1, LABEL_PX, LABEL_MIN_PX);
+        let layout = text::fit_preserving_case(font, text, w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut rgba, w, HINT_H, &layout, ink);
     }
     UndoFace { rgba, w, h: HINT_H }
@@ -166,7 +166,7 @@ fn capped_width(label: &str, max_w: f32) -> u32 {
     let Some(font) = caption_font(label) else {
         return max_w as u32;
     };
-    let layout = text::fit(font, label, max_w, 1, LABEL_PX, LABEL_MIN_PX);
+    let layout = text::fit_preserving_case(font, label, max_w, 1, LABEL_PX, LABEL_MIN_PX);
     let ink = layout
         .lines
         .iter()
@@ -257,7 +257,7 @@ pub fn arrows_hint_coloured(label: &str, ink: [u8; 3]) -> UndoFace {
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
     if let Some(font) = caption_font(label) {
-        let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
+        let layout = text::fit_preserving_case(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, ink);
     }
     blit(
@@ -314,7 +314,7 @@ pub fn pad_hint_face(label: &str) -> UndoFace {
     let text_w = band_width(label);
     let mut band = vec![0u8; (text_w * HINT_H * 4) as usize];
     if let Some(font) = caption_font(label) {
-        let layout = text::fit(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
+        let layout = text::fit_preserving_case(font, label, text_w as f32, 1, LABEL_PX, LABEL_MIN_PX);
         text::draw_centred(&mut band, text_w, HINT_H, &layout, INK);
     }
     blit(&mut rgba, w, &band, text_w, HINT_H, CAP + CAP_GAP, 0);

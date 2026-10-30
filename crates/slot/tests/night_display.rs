@@ -140,3 +140,27 @@ fn schedule_editor_is_a_persisted_setting_and_returns_to_screen_menu() {
     }
     press(&mut a,Btn::B);assert!(a.display_schedule.is_none());assert_eq!(a.quick_menu(),Some(QuickRow::DisplaySchedule));
 }
+
+#[test]
+fn edited_night_warmth_is_shared_by_schedule_shortcut_and_reboot() {
+    use slot::{display_settings::DisplaySettings,display_schedule};
+    let d=common::tmp_root_with_carts(&["Alpha","Beta"]);common::clocked(d.path());
+    let midnight=1_800_000_000i64.div_euclid(86_400)*86_400;
+    DisplaySettings{schedule:true,day:(8,1),bedtime:(2,8),..Default::default()}.save(d.path()).unwrap();
+    let (mut a,clock)=common::app_booting_at(d.path(),midnight+19*3600);
+    a.display_schedule=Some(display_schedule::Menu::new(DisplaySettings::read(d.path(),&Default::default())));
+    let press=|a:&mut App,b|{a.apply(Action::GbaDown(b));a.apply(Action::GbaUp(b));};
+    for _ in 0..3 {press(&mut a,Btn::Down);}
+    press(&mut a,Btn::Left);assert_eq!(a.blue_light(),1,"editing the night preset must leave day warmth alone");
+    assert_eq!(DisplaySettings::read(d.path(),&Default::default()).bedtime.1,7);
+    press(&mut a,Btn::B);
+    clock.advance(3600);a.update(0.1);assert!(a.night_mode());assert_eq!(a.blue_light(),7);
+    a.display_schedule=Some(display_schedule::Menu::new(DisplaySettings::read(d.path(),&Default::default())));
+    for _ in 0..3 {press(&mut a,Btn::Down);}press(&mut a,Btn::Left);
+    assert_eq!(a.blue_light(),6,"editing at night applies immediately");press(&mut a,Btn::B);
+    a.apply(Action::NightToggle);assert_eq!(a.blue_light(),1);
+    a.apply(Action::NightToggle);assert_eq!(a.blue_light(),6);
+    a.settle_saves();a.flush_state();drop(a);
+    let (b,_)=common::app_booting_at(d.path(),midnight+20*3600);
+    assert!(b.night_mode());assert_eq!(b.blue_light(),6);
+}

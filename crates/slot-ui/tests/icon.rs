@@ -39,17 +39,16 @@ fn icons_are_distinguishable_from_each_other() {
 }
 
 #[test]
-fn all_icons_share_one_box() {
+fn icons_share_one_box_and_composite_mute_icons_keep_extra_width() {
     let first = icon_face(Icon::Volume, 18.0, [255, 255, 255]);
     for icon in Icon::ALL {
         let f = icon_face(icon, 18.0, [255, 255, 255]);
-        assert_eq!(
-            (f.w, f.h),
-            (first.w, first.h),
-            "{icon:?} is {}x{}, the row would reflow",
-            f.w,
-            f.h
-        );
+        assert_eq!(f.h, first.h, "{icon:?} changed the shared height");
+        if matches!(icon, Icon::HeadphonesMuted | Icon::BluetoothMuted) {
+            assert!(f.w >= first.w, "composite route/mute icon lost its extra glyph");
+        } else {
+            assert_eq!(f.w, first.w, "{icon:?} changed the shared width");
+        }
     }
 }
 

@@ -235,35 +235,42 @@ impl Menu {
             },
         ]
     }
-    pub fn screen_face(&self) -> UndoFace {
-        if self.page == Page::Reference {
-            let mut face = slot_ui::parent_footer_face(6,false);
-            if let Some((title,rows)) = self.reference.get(self.reference_at) {
-                let title=slot_ui::quick_heading_face(title);
-                let x=face.w.saturating_sub(title.w)/2;
-                blit(&mut face,&title,x,40);
-                for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
-                    let label=slot_ui::quick_value_face(label,false);
-                    let value=slot_ui::quick_value_face(value,true);
-                    let right=face.w.saturating_sub(value.w+32);
-                    blit(&mut face,&label,32,108+i as u32*42);
-                    blit(&mut face,&value,right,108+i as u32*42);
-                }
-                let page=slot_ui::quick_description_face(&[&format!("{} / {}",self.reference_at+1,self.reference.len())]);
-                let x=face.w.saturating_sub(page.w)/2;
-                blit(&mut face,&page,x,370);
-            }
-            return face;
+    pub fn page_key(&self) -> u64 { 2000 + self.page as u64 }
+    pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
+    pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        match self.page {
+            Page::Home=>vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
+            Page::Child=>{
+                let count=self.child_rows().len();
+                let visible=count.min(slot_ui::QUICK_VISIBLE);
+                let start=self.selected.saturating_sub(visible/2).min(count-visible);
+                let top=94.0-if self.child_in_game {16.0}else{0.0};
+                [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
+            },_=>vec![]
         }
+    }
+    pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        if self.page==Page::Home {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.draft.active,y:94.0}]} else {vec![]}
+    }
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,false)}
+    pub fn screen_face_animated_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,true)}
+    fn render_face(&self, canvas: slot_ui::Canvas, animated: bool) -> UndoFace {
+        let settings_face=if animated {slot_ui::parent_settings_face_animated_on} else {slot_ui::parent_settings_face_on};
+        if self.page == Page::Reference {
+            return self.reference.get(self.reference_at).map_or_else(
+                ||slot_ui::parent_footer_face_on(canvas,6,false),
+                |(title,rows)|slot_ui::reference_face(canvas,title,rows,self.reference_at,self.reference.len()));
+        }
+
         if self.page == Page::Warning {
-            let mut face = slot_ui::parent_footer_face(5, false);
+            let mut face = slot_ui::parent_footer_face_on(canvas, 5, false);
             let title = slot_ui::quick_heading_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)));
             let x = face.w.saturating_sub(title.w) / 2;
             blit(&mut face, &title, x, 190);
             return face;
         }
         if self.page == Page::Child {
-            let mut face = slot_ui::parent_settings_face_with_space(&self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
+            let mut face = settings_face(canvas, &self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
             self.add_time_meter(&mut face);
             return face;
         }
@@ -280,7 +287,9 @@ impl Menu {
                 ("Set parent code".into(), String::new(), false),
             ];
             let status = if self.status == "Parent code saved" { "" } else { &self.status };
-            let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
+            let mut face = settings_face(canvas, &rows, self.selected, 0, status, 0.0);
+            let heading=slot_ui::quick_heading_face("Kid mode");
+            blit(&mut face,&heading,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
             if status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
@@ -288,11 +297,11 @@ impl Menu {
             let minutes = self.time_minutes();
             let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, &self.status);
+            let mut face = settings_face(canvas, &rows, self.time_selected, 0, &self.status, 0.0);
             if self.status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
-        let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
+        let mut face = slot_ui::parent_footer_face_on(canvas, if self.page == Page::Notice { 2 } else { 1 }, false);
         let title = match self.page {
             Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
             Page::Notice => "Time for a break", _ => "Parent code",

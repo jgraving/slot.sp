@@ -493,8 +493,8 @@ fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h / 6.0).abs() < 0.5,
-        "the thumb is not one row of six"
+        (top.thumb_h - top.h * 3.0 / 6.0).abs() < 0.5,
+        "the thumb does not represent the three visible rows of six"
     );
     let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
     assert!(
@@ -584,10 +584,11 @@ fn show_titles_sits_under_recents_on_the_general_page() {
 }
 
 #[test]
-fn long_pages_scroll_six_rows_with_the_selection_and_keep_clear_of_status_and_hints() {
+fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_status_and_hints() {
     use slot_ui::*;
     let id = |n| TexId::from_raw(n);
     let faces = QuickMenuFaces {
+        headings: vec![],
         labels: QuickRow::ALL
             .iter()
             .map(|r| {
@@ -643,6 +644,10 @@ fn long_pages_scroll_six_rows_with_the_selection_and_keep_clear_of_status_and_hi
                     canvas: Canvas { w: width, h: 480. },
                 }
                 .draw(&mut out);
+                let surfaces:Vec<_> = out.iter().filter_map(|d| match d {
+                    Draw::RoundRect{x,w,radius,..}=>Some((*x,*w,*radius)),_=>None,
+                }).collect();
+                assert_eq!(surfaces,vec![(56.0,width-112.0,12.0)],"only selection gets a surface");
                 let labels: Vec<_> = out
                     .iter()
                     .filter_map(|d| match d {

@@ -447,6 +447,17 @@ pub struct App {
     clock_faces: Option<(TexId, TexId)>,
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
+    menu_motion: slot_ui::MenuMotion,
+    current_custom_face: Option<(u64, TexId)>,
+    switch_motion: slot_ui::expressive::SwitchMotion,
+    slider_motion: slot_ui::expressive::SliderMotion,
+    clock_motion: slot_ui::expressive::RectMotion,
+    current_custom_sliders: Vec<slot_ui::MenuSlider>,
+    previous_custom_sliders: Vec<slot_ui::MenuSlider>,
+    current_custom_switches: Vec<slot_ui::MenuSwitch>,
+    previous_custom_switches: Vec<slot_ui::MenuSwitch>,
+    previous_custom_face: Option<(u64, TexId)>,
+    status_motion: slot_ui::expressive::StatusMotion,
     quick_clock_faces: Option<[(TexId, u32, u32); 2]>,
     quick_wallpaper_faces: Option<[(TexId, u32, u32); 2]>,
     quick_palette_faces: Option<[(TexId, u32, u32); 2]>,
@@ -553,7 +564,8 @@ fn shift_down(draws: &mut [Draw], dy: f32) {
     }
     for draw in draws {
         match draw {
-            Draw::Rect { y, .. }
+            Draw::RoundRect { y, .. }
+            | Draw::Rect { y, .. }
             | Draw::Tex { y, .. }
             | Draw::Part { y, .. }
             | Draw::Turned { y, .. } => *y += dy,
@@ -692,6 +704,15 @@ impl App {
             clock_faces: None,
             clock_back: None,
             quick_menu_faces: None,
+            menu_motion: slot_ui::MenuMotion::default(),
+            current_custom_face: None,
+            switch_motion: Default::default(),
+            slider_motion:Default::default(),clock_motion:Default::default(),
+            current_custom_sliders:Vec::new(),previous_custom_sliders:Vec::new(),
+            current_custom_switches: Vec::new(),
+            previous_custom_switches: Vec::new(),
+            previous_custom_face: None,
+            status_motion: Default::default(),
             quick_clock_faces: None,
             quick_wallpaper_faces: None,
             quick_palette_faces: None,
@@ -2921,6 +2942,8 @@ impl App {
                 self.display_settings.schedule = next.schedule;
                 self.display_settings.day_start = next.day_start;
                 self.display_settings.night_start = next.night_start;
+                self.display_settings.bedtime.1=next.bedtime.1;
+                if self.display_settings.night {self.state.blue_light=next.bedtime.1;self.persist_soon();}
                 self.display_settings.override_until = None;
                 self.sync_display_schedule();
                 self.save_display();
@@ -2929,6 +2952,14 @@ impl App {
             return;
         }
         if self.bluetooth.is_some() && !matches!(self.phase, Phase::Doze { .. }) {
+            if self.bluetooth.as_ref().is_some_and(|m|m.volume_selected()) && matches!(action,Action::GbaDown(Btn::Left|Btn::Right)) {
+                self.remember_volume();
+                let was_muted=std::mem::take(self.muted_mut());
+                let now=self.volume().min(self.kid_volume_limit());
+                let to=if action==Action::GbaDown(Btn::Right){now.saturating_add(VOLUME_STEP).min(self.kid_volume_limit())}else{now.saturating_sub(VOLUME_STEP)};
+                if !self.set_level(HudKind::Volume,to) && was_muted {self.persist_soon();}
+                return;
+            }
             if self.adjust(action) {
                 return;
             }
@@ -4016,6 +4047,22 @@ impl App {
         }
         self.step_screen(dt);
         self.step_footer(dt);
+        let custom = self.custom_menu_key();
+        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids));
+        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
+        let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
+            .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
+        let selection=self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)});
+        self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
+        self.switch_motion.update(&self.visible_custom_switches(),dt);
+        let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
+        let sliders=self.visible_custom_sliders();
+        let global=[slot_ui::MenuSlider{id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
+        self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
+        let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
+        let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
+            | (u8::from(self.muted() || self.volume() == 0) << 1);
+        self.status_motion.update(status_key, dt);
     }
 
     fn step_screen(&mut self, dt: f32) {
@@ -4682,14 +4729,8 @@ impl App {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
-                out.push(Draw::Tex {
-                    x: 0.0,
-                    y: 0.0,
-                    w: self.canvas().w,
-                    h: self.canvas().h,
-                    tex,
-                    alpha: 1.0,
-                });
+                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                self.draw_cached_overlay(tex, out);
                 self.draw_status_bar(out);
                 return;
             }
@@ -4756,16 +4797,7 @@ impl App {
                     draw_empty_slot(self.canvas(), self.slot_faces, out);
                 }
             }
-            if let Some(tex) = menu.face {
-                out.push(Draw::Tex {
-                    x: 0.0,
-                    y: 0.0,
-                    w: self.canvas().w,
-                    h: OUT_H as f32,
-                    tex,
-                    alpha: 1.0,
-                });
-            }
+            if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
             if let Some(tex) = menu.progress_face {
                 out.push(Draw::Tex {
                     x: self.canvas().centred(32.),
@@ -4809,33 +4841,13 @@ impl App {
                     None => (None, None),
                 };
                 let back = self.clock_back.filter(|_| *from_menu);
-                picker.draw(self.canvas(), line, hint, back, out);
+                picker.draw_animated(self.canvas(),line,hint,back,self.clock_motion.frame(picker.field_rect(self.canvas())),out);
                 if *from_menu {
                     self.draw_status_bar(out);
                 }
                 return;
             }
-            Phase::QuickMenu { row } => QuickMenu {
-                row: *row,
-                hidden: &self.hidden_rows(),
-                bound: Some(&self.bound_faces()),
-                description: self.description(*row),
-                values: QuickRow::ALL.map(|r| self.quick_value(r)),
-                clock: self.quick_clock_faces,
-                wallpaper: self.quick_wallpaper_faces,
-                faces: self.quick_menu_faces.as_ref(),
-                ground: self.menu_ground(),
-                palette: self.quick_palette_faces,
-                gba_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gba)],
-                gb_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gb)],
-                gbc_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gbc)],
-                bezel: None,
-                over_game: false,
-                footer_legends: true,
-                footer_top: OUT_H as f32,
-                canvas: self.canvas(),
-            }
-            .draw(out),
+            Phase::QuickMenu { row } => self.draw_quick_overlay(*row, false, out),
             Phase::Shelf => {
                 self.draw_background(out);
                 match (self.core_picker_shown(), self.selected_stem()) {
@@ -4976,30 +4988,20 @@ impl App {
         if let (Some(row), Phase::Playing { .. }, true) =
             (self.in_game_menu_shown(), &self.phase, self.screen >= 1.0)
         {
-            let hidden = self.in_game_hidden();
-            let bound = self.bound_faces();
-            QuickMenu {
-                row,
-                bound: Some(&bound),
-                description: self.description(row),
-                hidden: &hidden,
-                values: QuickRow::ALL.map(|r| self.quick_value(r)),
-                clock: None,
-                wallpaper: None,
-                faces: self.quick_menu_faces.as_ref(),
-                ground: None,
-                palette: self.quick_palette_faces,
-                gba_bezel: None,
-                gb_bezel: None,
-                gbc_bezel: None,
-                bezel: self.quick_bezel_faces[bezel_slot(self.playing_platform())],
-                over_game: true,
-                footer_legends: false,
-                footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(),
-                canvas: self.canvas(),
-            }
-            .draw(out);
+            self.draw_quick_overlay(row, true, out);
             self.draw_status_bar(out);
+        }
+        if matches!(self.phase, Phase::Shelf | Phase::Playing { .. }) {
+            if let Some(row) = self.menu_motion.closing_row() {
+                if let Some(key)=self.menu_motion.current_custom_key() {
+                    if let Some((_,tex))=self.previous_custom_face {
+                        let frame=self.menu_motion.frame_page(row,&[],Some(key));
+                        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+                        slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
+                    slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
+                    }
+                } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }), out);}
+            }
         }
         if matches!(
             self.phase,
@@ -5100,6 +5102,94 @@ impl App {
         self.draw_status_bar(out);
     }
 
+    fn custom_menu_key(&self) -> Option<u64> {
+        self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.page_key())
+            .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
+            .or_else(||self.bluetooth.as_ref().map(|m|m.page_key()))
+    }
+    fn visible_custom_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        self.display_schedule.as_ref().map(|m|m.visible_sliders()).or_else(||self.kid_menu.as_ref().map(|m|m.visible_sliders())).or_else(||self.bluetooth.as_ref().map(|m|m.visible_sliders())).unwrap_or_default()
+    }
+    fn visible_custom_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        self.display_schedule.as_ref().map(|m|m.visible_switches())
+            .or_else(||self.kid_menu.as_ref().map(|m|m.visible_switches()))
+            .or_else(||self.bluetooth.as_ref().map(|m|m.visible_switches())).unwrap_or_default()
+    }
+    pub fn note_custom_menu_face(&mut self) {
+        let face=self.display_schedule.as_ref().and_then(|m|m.face)
+            .or_else(||self.kid_menu.as_ref().and_then(|m|m.face))
+            .or_else(||self.bluetooth.as_ref().and_then(|m|m.face));
+        let now=self.custom_menu_key().zip(face);
+        if now.map(|p|p.0) != self.current_custom_face.map(|p|p.0) {
+            self.previous_custom_face=self.current_custom_face;
+            self.previous_custom_switches=self.current_custom_switches.clone();
+            self.previous_custom_sliders=self.current_custom_sliders.clone();
+        }
+        self.current_custom_face=now;
+        self.current_custom_switches=self.visible_custom_switches();
+        self.current_custom_sliders=self.visible_custom_sliders();
+    }
+    fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
+        if let Some(previous)=self.menu_motion.outgoing_row() {
+            if self.menu_motion.outgoing_is_custom() {
+                if let Some((_,tex))=self.previous_custom_face {
+                    let frame=self.menu_motion.outgoing_frame(previous,&[]);
+                    slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+                    slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
+                    slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
+                }
+            } else { self.draw_quick_page(previous,over_game,true,out); }
+        }
+    }
+    fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
+        let over_game=matches!(self.phase,Phase::Playing{..});
+        self.draw_outgoing_menu(over_game,out);
+        let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
+        let frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
+        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+        slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
+        slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
+        if let Some(menu)=&self.bluetooth {
+            let (_,total,_,visible)=menu.scroll_info();
+            if total>visible {
+                let h=slot_ui::QUICK_PITCH*visible as f32;
+                let thumb=h*visible as f32/total as f32;
+                let y=88.0+(h-thumb)*(frame.scroll_position/(total-1) as f32).clamp(0.0,1.0);
+                let x=self.canvas().w-44.0;
+                out.push(Draw::Rect{x,y:88.0,w:4.0,h,colour:[0.6,0.6,0.65,0.3]});
+                out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
+            }
+        }
+    }
+    fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
+        if self.menu_motion.outgoing_row().is_some() {
+            if over_game { out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:OUT_H as f32-MOUTH_H,colour:[0.0,0.0,0.0,0.65]}); }
+            else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
+            self.draw_outgoing_menu(over_game,out);
+        }
+        self.draw_quick_page(row, over_game, false, out);
+    }
+
+    fn draw_quick_page(&self, row: QuickRow, over_game: bool, outgoing: bool, out: &mut Vec<Draw>) {
+        let hidden = if over_game { self.in_game_hidden() } else { self.hidden_rows() };
+        let bound = self.bound_faces();
+        let mut frame=if outgoing {self.menu_motion.outgoing_frame(row,&hidden)}else{self.menu_motion.frame(row,&hidden)};
+        frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
+        QuickMenu {
+            row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
+            values: QuickRow::ALL.map(|r| self.quick_value(r)),
+            clock: self.quick_clock_faces, wallpaper: self.quick_wallpaper_faces,
+            faces: self.quick_menu_faces.as_ref(), ground: self.menu_ground(),
+            palette: self.quick_palette_faces,
+            gba_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gba)],
+            gb_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gb)],
+            gbc_bezel: self.quick_bezel_faces[bezel_slot(Platform::Gbc)],
+            bezel: over_game.then(|| self.quick_bezel_faces[bezel_slot(self.playing_platform())]).flatten(),
+            over_game, footer_legends: true,
+            footer_top: OUT_H as f32 - MOUTH_H + self.menu_footer_offset(), canvas: self.canvas(),
+        }.draw_animated(frame,out);
+    }
+
     fn draw_status_bar(&self, out: &mut Vec<Draw>) {
         let in_game = matches!(self.phase, Phase::Playing { .. } | Phase::Polaroids { .. });
         slot_ui::draw_status(
@@ -5111,6 +5201,7 @@ impl App {
             self.status_ink(),
             out,
         );
+        let audio_start = out.len();
         slot_ui::draw_corner_audio(
             self.battery,
             self.battery_percent,
@@ -5130,6 +5221,7 @@ impl App {
             },
             out,
         );
+        self.status_motion.apply(&mut out[audio_start..]);
     }
 
     fn draw_seated_mouth(&self, stem: &str, out: &mut Vec<Draw>) {
@@ -7277,5 +7369,37 @@ mod bluetooth_tests {
         assert_eq!(app.quick_menu(), Some(QuickRow::Bluetooth));
         app.open_quick_row(QuickRow::Bluetooth);
         assert!(app.bluetooth.is_none());
+    }
+}
+
+#[cfg(test)]
+mod expressive_navigation_tests {
+    use super::*;
+    #[test]
+    fn cached_settings_keep_the_previous_texture_when_sliding_forward_and_back() {
+        let mut app=App::new(vec![]);
+        app.phase=Phase::QuickMenu{row:QuickRow::DisplaySchedule};
+        app.update(1.0);
+        let first=TexId::from_raw(9001);
+        let second=TexId::from_raw(9002);
+        app.display_schedule=Some(crate::display_schedule::Menu::new(Default::default()));
+        app.display_schedule.as_mut().unwrap().face=Some(first);
+        app.note_custom_menu_face();app.update(0.03);
+        let mut draws=vec![];app.draw(&mut draws);
+        assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,x,y,..} if *tex==first && *x>0.0 && *y==40.0)));
+        app.update(1.0);
+        let menu=app.display_schedule.as_mut().unwrap();
+        menu.input(Action::GbaDown(Btn::Down),true);
+        menu.input(Action::GbaDown(Btn::A),true);
+        menu.face=Some(second);
+        app.note_custom_menu_face();app.update(0.03);
+        draws.clear();app.draw(&mut draws);
+        for face in [first,second] {assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,y:40.0,..} if *tex==face)));}
+        app.display_schedule=None;app.note_custom_menu_face();app.update(0.03);
+        assert_eq!(app.quick_menu(),Some(QuickRow::DisplaySchedule),"animation must not delay returning to the parent");
+        draws.clear();app.draw(&mut draws);
+        assert!(draws.iter().any(|d|matches!(d,Draw::Part{tex,y:40.0,..} if *tex==second)));
+        app.update(1.0);draws.clear();app.draw(&mut draws);
+        assert!(!draws.iter().any(|d|matches!(d,Draw::Part{tex,..} if *tex==second)));
     }
 }
