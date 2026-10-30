@@ -529,9 +529,11 @@ pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[Qui
     let cw = 384.0;
     let ch = (count as f32 * crate::QUICK_PITCH + 76.0).min(400.0);
     let x = canvas.centred(cw) * compact;
-    let y = top.max(12.0) * compact;
+    // Leave the status band clear, including the widest shadow (12 px, offset 4).
+    let y = top.max(48.0) * compact;
     let w = canvas.w + (cw - canvas.w) * compact;
-    let h = canvas.h + (ch - canvas.h) * compact;
+    let compact_h = ch.min(canvas.h - crate::MOUTH_H - 56.0);
+    let h = canvas.h + (compact_h - canvas.h) * compact;
     for spread in [12.0, 8.0, 4.0] {
         rounded(out, x - spread, y - spread + 4.0, w + spread * 2.0, h + spread * 2.0,
             24.0 * compact + spread, [0.0, 0.0, 0.0, 0.07 * compact * frame.opacity]);

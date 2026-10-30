@@ -43,6 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
+          retention-days: 1
           name: typography-previews
           path: /tmp/slot-native/previews/*.png
           if-no-files-found: warn
@@ -54,6 +55,7 @@ jobs:
           target/debug/examples/cart_motion /tmp/slot-motion/card /tmp/slot-motion/out
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: cartridge-motion-preview
           path: /tmp/slot-motion/out/*
           if-no-files-found: error

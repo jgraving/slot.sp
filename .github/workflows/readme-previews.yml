@@ -55,6 +55,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
+          retention-days: 1
           name: documentation-media
           path: |
             /tmp/slot-docs/publish/**
