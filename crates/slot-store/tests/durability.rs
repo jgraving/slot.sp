@@ -228,6 +228,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             muted: true,
             muted_hp: true,
             clock_set: true,
+            clock_12h: false,
+            carousel_wheel: true,
             utc_offset_min: -300,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
