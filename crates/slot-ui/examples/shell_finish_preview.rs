@@ -38,7 +38,7 @@ fn main() {
         png(&dir, "5.png", 720, 480, slot_ui::default_background().unwrap());
         let ink=slot_ui::footer_ink(false);
         let clock=slot_ui::word_ink("12:34",ink);
-        let percent=slot_ui::word_ink("82%",ink);
+        let percent=slot_ui::status_battery_face(slot_power::Battery{percent:82,charge:slot_power::Charge::Discharging});
         let audio=slot_ui::icon_face(slot_ui::Icon::Bluetooth,20.0,ink);
         for (id,w,h,rgba) in [(6,clock.w,clock.h,&clock.rgba),(7,percent.w,percent.h,&percent.rgba),(8,audio.w,audio.h,&audio.rgba)] {
             png(&dir,&format!("{id}.png"),w,h,rgba);
@@ -57,7 +57,7 @@ fn main() {
         let battery=Some(slot_power::Battery {percent:82,charge:slot_power::Charge::Discharging});
         slot_ui::draw_status(Canvas::FRAMED,battery,slot_ui::Printed::new(TexId::from_raw(7),percent.w),None,
             slot_ui::Printed::new(TexId::from_raw(6),clock.w),ink,&mut draws);
-        slot_ui::draw_corner_connection(battery,slot_ui::Printed::new(TexId::from_raw(7),percent.w),Some(TexId::from_raw(8)),&mut draws);
+        slot_ui::draw_corner_connection(Canvas::FRAMED,battery,slot_ui::Printed::new(TexId::from_raw(7),percent.w),Some(TexId::from_raw(8)),&mut draws);
         let mut csv = File::create(dir.join(if animation { format!("draws-{frame:03}.csv") } else { "draws.csv".into() })).unwrap();
         writeln!(csv, "id,x,y,w,h,alpha,u,v,uw,vh").unwrap();
         for (index,draw) in draws.into_iter().enumerate() {

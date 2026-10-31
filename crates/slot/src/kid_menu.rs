@@ -33,6 +33,7 @@ pub struct Menu {
     start_after_code: bool,
     status: String,
     pub visible: bool,
+    pub twelve: bool,
     pub face: Option<TexId>,
     pub changed: Option<Policy>,
     pub child_action: Option<Action>,
@@ -70,6 +71,7 @@ impl Menu {
                 String::new()
             },
             visible: true,
+            twelve:false,
             face: None,
             changed: None,
             child_action: None,
@@ -117,14 +119,14 @@ impl Menu {
         if let Some((seconds, budget)) = self.remaining {
             let meter = slot_ui::kid_time_meter(seconds, budget);
             let x = face.w.saturating_sub(meter.w) / 2;
-            let y = 334;
+            let y = 342;
             blit(face, &meter, x, y);
         }
     }
     pub fn in_game_card(&self) -> bool { self.child_in_game && self.page == Page::Child }
     fn meter_visible(&self)->bool {self.draft.active && self.remaining.is_some() && self.notice_text().is_none()}
     fn reserved_bottom(&self)->bool {(self.draft.active && self.remaining.is_some()) || self.notice_text().is_some()}
-    fn visible_rows(&self,count:usize)->usize {count.min(if self.reserved_bottom() && !self.in_game_card(){4}else{slot_ui::QUICK_VISIBLE})}
+    fn visible_rows(&self,count:usize)->usize {count.min(if self.reserved_bottom() && !self.in_game_card(){3}else{slot_ui::QUICK_VISIBLE})}
     pub fn focus_info(&self) -> Option<(usize,usize)> {
         let count=match self.page {Page::Child|Page::ChildSettings=>self.child_rows().len(),Page::Home=>5,Page::Time=>2,_=>return None};
         let visible=self.visible_rows(count);
@@ -254,18 +256,18 @@ impl Menu {
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         match self.page {
-            Page::Home=>{let(_,start)=self.focus_info().unwrap();let visible=self.visible_rows(5);if (start..start+visible).contains(&3){vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+(3-start)as f32*slot_ui::QUICK_PITCH}]}else{vec![]}},
+            Page::Home=>{let(_,start)=self.focus_info().unwrap();let visible=self.visible_rows(5);if (start..start+visible).contains(&3){vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:118.0+(3-start)as f32*slot_ui::QUICK_PITCH}]}else{vec![]}},
             Page::Child|Page::ChildSettings if !self.in_game_card()=>{
                 let count=self.child_rows().len();
                 let visible=self.visible_rows(count);
                 let start=self.selected.saturating_sub(visible/2).min(count-visible);
-                let top=94.0;
+                let top=118.0;
                 [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
             },_=>vec![]
         }
     }
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
-        if self.page==Page::Home && self.focus_info().is_some_and(|(_,start)|start==0) {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.draft.active,y:94.0}]} else {vec![]}
+        if self.page==Page::Home && self.focus_info().is_some_and(|(_,start)|start==0) {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.draft.active,y:118.0}]} else {vec![]}
     }
     pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,false)}
     pub fn screen_face_animated_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,true)}
@@ -286,11 +288,10 @@ impl Menu {
         }
         if self.in_game_card() {
             let mut face=slot_ui::parent_footer_face_on(canvas,0,false);
-            for (i,(label,_,_)) in self.child_rows().iter().enumerate() {
-                let text=slot_ui::quick_heading_face(label);
-                let x=face.w.saturating_sub(text.w)/2;
-                blit(&mut face,&text,x,166+i as u32*slot_ui::QUICK_PITCH as u32);
-                if i==1 {let caret=slot_ui::quick_caret_face(true);blit(&mut face,&caret,(canvas.w/2.0+152.0)as u32,166+i as u32*slot_ui::QUICK_PITCH as u32);}
+            for (i,row) in [slot_ui::QuickRow::Resume,slot_ui::QuickRow::Settings,slot_ui::QuickRow::ExitGame].into_iter().enumerate(){
+                let tile=slot_ui::menu_grid::tile_face(row,i==self.selected);
+                let [x,y,w,h]=slot_ui::menu_grid::cell(canvas,i,3,3,true);
+                blit(&mut face,&tile,(x+(w-tile.w as f32)/2.0)as u32,(y+(h-tile.h as f32)/2.0)as u32);
             }
             self.add_time_meter(&mut face);
             return face;
@@ -298,14 +299,15 @@ impl Menu {
         if matches!(self.page,Page::Child|Page::ChildSettings) {
             let mut face = settings_face(canvas, &self.child_rows(), self.selected, 0, "", if self.reserved_bottom(){48.0}else{0.0});
             let title=slot_ui::quick_heading_face("Kid settings");
-            blit(&mut face,&title,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
+            let x=face.w.saturating_sub(title.w)/2;
+            blit(&mut face,&title,x,40);
             self.add_time_meter(&mut face);
             return face;
         }
         if self.page == Page::Home {
             let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
             let time = if self.draft.rule == Rule::Until {
-                format!("{:02}:{:02}", self.draft.bedtime / 60, self.draft.bedtime % 60)
+                slot_ui::clock_text(i64::from(self.draft.bedtime)*60,self.twelve)
             } else { duration_label(self.draft.minutes) };
             let rows = vec![
                 ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
@@ -317,15 +319,17 @@ impl Menu {
             let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
             let mut face = settings_face(canvas, &rows, self.selected, 0, status, if self.reserved_bottom(){48.0}else{0.0});
             let heading=slot_ui::quick_heading_face("Parental controls");
-            blit(&mut face,&heading,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
+            let x=face.w.saturating_sub(heading.w)/2;
+            blit(&mut face,&heading,x,40);
             if status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
         if self.page == Page::Time {
             let minutes = self.time_minutes();
-            let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
+            let rows = vec![("Hours".into(), if self.twelve && self.draft.rule==Rule::Until {let hour=minutes/60;format!("{} {}",if hour%12==0 {12}else{hour%12},if hour<12 {"AM"}else{"PM"})}else{(minutes/60).to_string()}, true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
             let mut face = settings_face(canvas, &rows, self.time_selected, 0, if animated { "" } else { &self.status }, 0.0);
+            let title=slot_ui::quick_heading_face(if self.draft.rule==Rule::Until {"Bedtime"}else{"Play limit"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,40);
             if animated || self.status.is_empty() { self.add_time_meter(&mut face); }
             return face;
         }
@@ -514,8 +518,8 @@ impl Menu {
         if self.in_game_card() {
             match action {
                 Action::GbaDown(Btn::B)=>self.visible=false,
-                Action::GbaDown(Btn::Up)=>self.selected=(self.selected+2)%3,
-                Action::GbaDown(Btn::Down)=>self.selected=(self.selected+1)%3,
+                Action::GbaDown(Btn::Up|Btn::Left)=>self.selected=(self.selected+2)%3,
+                Action::GbaDown(Btn::Down|Btn::Right)=>self.selected=(self.selected+1)%3,
                 Action::GbaDown(Btn::A)=>match self.selected {
                     0=>self.visible=false,
                     1=>{self.page=Page::ChildSettings;self.selected=0;},
@@ -594,7 +598,7 @@ impl Menu {
                     }
                     if self.selected == 1 { self.draft.rule = self.draft.rule.next(by); }
                     if self.selected == 3 {
-                        self.draft.volume_limit = (self.draft.volume_limit as i32 + 10 * by).clamp(10, 80) as u8;
+                        self.draft.volume_limit = (self.draft.volume_limit as i32 + 10 * by).clamp(0, 100) as u8;
                     }
                     if matches!(self.selected, 1 | 3) {
                         let mut next = self.draft.clone();

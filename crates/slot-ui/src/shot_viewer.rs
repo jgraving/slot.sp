@@ -377,9 +377,10 @@ impl ShotViewer {
         format!("{} of {}", self.index + 1, self.entries.len())
     }
 
-    pub fn title(&self, now: &str) -> String {
+    pub fn title(&self, now: &str) -> String {self.title_format(now,false)}
+    pub fn title_format(&self, now: &str,twelve:bool) -> String {
         match self.selected() {
-            Some(e) => Polaroids::relative_time(&e.stamp, now),
+            Some(e) => Polaroids::relative_time_format(&e.stamp, now,twelve),
             None => String::new(),
         }
     }

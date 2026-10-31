@@ -110,17 +110,9 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
     assert_eq!(a.quick_menu(), Some(QuickRow::Reference));
     let mut a = common::app_playing_in(d.path(), "Alpha");
     a.apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if a.in_game_menu() == Some(QuickRow::Settings) {
-            break;
-        }
-        press(&mut a, Btn::Down);
-    }
+    common::navigate_in_game_menu(&mut a,QuickRow::Settings);
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::SETTINGS.len() {
-        if a.in_game_menu() == Some(QuickRow::PlayReference) { break; }
-        press(&mut a, Btn::Up);
-    }
+    common::navigate_in_game_menu(&mut a,QuickRow::PlayReference);
     assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
     press(&mut a, Btn::A);
     assert!(a.kid_menu.as_ref().unwrap().reference_open());

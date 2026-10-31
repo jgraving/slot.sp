@@ -139,10 +139,10 @@ fn the_gauge_stays_clear_of_the_title_on_the_left() {
         .collect();
     assert!(!gauge.is_empty(), "no gauge drew at the left margin at all");
     let leftmost = gauge.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min);
-    assert_eq!(leftmost, 16.0, "the plate margin is 16");
+    assert!(leftmost>540.0);
     let rightmost = gauge.iter().map(|(x, w)| x + w).fold(0.0, f32::max);
     assert!(
-        rightmost < 180.0,
+        rightmost == OUT_W as f32-16.0,
         "the gauge reached into the title's texture"
     );
 }
@@ -161,7 +161,7 @@ fn the_clock_stays_clear_of_the_title_on_the_right() {
     let clock: Vec<_> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, .. } | Draw::RoundRect { x, y, w, .. } | Draw::Tex { x, y, w, .. } if y < PLATE_H && x > 540.0 => {
+            Draw::Rect { x, y, w, .. } | Draw::RoundRect { x, y, w, .. } | Draw::Tex { x, y, w, .. } if y < PLATE_H && x >=16.0 && x < 180.0 && w <180.0 => {
                 Some((x, w))
             }
             _ => None,
@@ -170,11 +170,11 @@ fn the_clock_stays_clear_of_the_title_on_the_right() {
     assert!(!clock.is_empty(), "no clock drew past the title at all");
     let leftmost = clock.iter().map(|(x, _)| *x).fold(f32::MAX, f32::min);
     assert!(
-        leftmost > 540.0,
+        leftmost ==16.0,
         "the clock reached into the title's texture"
     );
     let rightmost = clock.iter().map(|(x, w)| x + w).fold(0.0, f32::max);
-    assert_eq!(rightmost, OUT_W as f32 - 16.0, "the plate margin is 16");
+    assert!(rightmost<180.0);
 }
 
 #[test]

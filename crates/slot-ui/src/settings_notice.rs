@@ -55,7 +55,14 @@ impl SettingsNotice {
         let base = canvas.h - MOUTH_H - 8.0 - h;
         let y=base+(1.0-alpha)*(canvas.h-base+h+16.0);
         let begin=out.len();
-        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {[0.69,0.94,0.80,1.0]}else{[0.10, 0.12, 0.14, 1.0]});
+        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {[0.16,0.29,0.23,1.0]}else{[0.10, 0.12, 0.14, 1.0]});
+        if charging {
+            let level=self.text().and_then(|s|s.strip_prefix("Charging: ")).and_then(|s|s.trim_end_matches('%').parse::<f32>().ok()).unwrap_or(0.0).clamp(0.0,100.0)/100.0;
+            let mut fill=vec![];
+            crate::expressive::rounded(&mut fill,x,y,w,h,h/2.0,[0.69,0.94,0.80,1.0]);
+            crate::quick_menu::clip_quads(&mut fill,0,[x,y,x+w*level,y+h]);
+            out.extend(fill);
+        }
         out.push(Draw::Tex {
             x,
             y,
@@ -109,5 +116,7 @@ fn charging_notice_face(percent:&str)->UndoFace {
     let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#103023" d="M13 1 4 14h7l-1 9 10-14h-7z"/></svg>"##;
     let bolt=crate::art::render_svg(svg,26,30).expect("charging bolt");
     crate::plate::blit(&mut face.rgba,w,&bolt,26,30,18,11);
+    let level=percent.trim_end_matches('%').parse::<f32>().unwrap_or(0.0).clamp(0.0,100.0)/100.0;
+    for (i,pixel) in face.rgba.chunks_exact_mut(4).enumerate(){if (i as u32%w)as f32>=w as f32*level && pixel[3]>0 {pixel[..3].copy_from_slice(&[218,250,230]);}}
     face
 }

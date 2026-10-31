@@ -352,15 +352,7 @@ impl QuickRow {
         QuickRow::EjectSave,
     ];
 
-    pub const PLAY: [QuickRow; 7] = [
-        QuickRow::Resume,
-        QuickRow::UndoSave,
-        QuickRow::UndoLoad,
-        QuickRow::States,
-        QuickRow::Screenshots,
-        QuickRow::Settings,
-        QuickRow::ExitGame,
-    ];
+    pub const PLAY: [QuickRow; 7] = [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
 
     pub const SETTINGS: [QuickRow; 5] = [
         QuickRow::PlayScreen,
@@ -371,12 +363,12 @@ impl QuickRow {
     ];
 
     pub const PLAY_SCREEN: [QuickRow; 6] = [
+        QuickRow::PlayBrightness,
+        QuickRow::PlayBlueLight,
         QuickRow::Shader,
         QuickRow::Bezel,
         QuickRow::Palette,
         QuickRow::ColourCorrection,
-        QuickRow::PlayBrightness,
-        QuickRow::PlayBlueLight,
     ];
 
     pub fn index(self) -> usize {
@@ -463,7 +455,7 @@ impl QuickRow {
             QuickRow::GbShader => Some(QuickRow::ScreenGb),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
-            QuickRow::Shader => Some(QuickRow::PlayScreen),
+            QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Wallpaper => Some(QuickRow::General),
@@ -487,7 +479,7 @@ impl QuickRow {
             QuickRow::General => "Settings",
             QuickRow::Resume => "Paused",
             QuickRow::PlayScreen => "Settings",
-            QuickRow::Shader => "Screen",
+            QuickRow::PlayBrightness => "Screen",
             _ => self.parent().map_or("Settings", QuickRow::label),
         }
     }
@@ -1012,9 +1004,9 @@ impl QuickValue {
 
 pub const QUICK_PITCH: f32 = 52.0;
 pub const MENU_HINT_H: u32 = 32;
-pub const QUICK_VISIBLE_ROWS: usize = 5;
-pub const QUICK_EDGE: f32 = 80.0;
-pub const QUICK_LABEL_X: f32 = 80.0;
+pub const QUICK_VISIBLE_ROWS: usize = 4;
+pub const QUICK_EDGE: f32 = 96.0;
+pub const QUICK_LABEL_X: f32 = 96.0;
 const POINTER_SCALE: usize = 4;
 const POINTER: [&str; 11] = [
     "X.......", "XX......", "XoX.....", "XooX....", "XoooX...", "XooooX..", "XoooX...", "XooX....",
@@ -1032,7 +1024,7 @@ const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
-    if row.page()==QuickRow::MAIN {return crate::menu_grid::tile_face(row,lit);}
+    if crate::menu_grid::is_page(row.page()) {return crate::menu_grid::tile_face(row,lit);}
     quick_text_face(&menu_sentence_case(row.label()), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
@@ -1347,7 +1339,7 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
     let mut face = parent_footer_face_on(canvas,footer,rows.get(selected).is_some_and(|r|r.2));
     let visible = rows.len().min(if reserve>0.0 {QUICK_VISIBLE-1}else{QUICK_VISIBLE});
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = 88.0;
+    let top = 112.0;
     crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, switches.then_some(selected - start));
     let pad = MENU_PAD as f32;
     let right = width as f32 - QUICK_EDGE;
@@ -1743,7 +1735,7 @@ impl QuickMenu<'_> {
             // the viewport as the shared container shrinks.
             clip_quads(out,begin,[crate::expressive::MENU_INSET,40.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
         }
-        if self.row.page()!=QuickRow::MAIN {crate::expressive::tile_transform(self.canvas,frame,out,begin);}
+
         clip_quads(out, begin, [crate::expressive::MENU_INSET, 40.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
     }
 
@@ -1759,25 +1751,23 @@ impl QuickMenu<'_> {
         let Some(faces) = self.faces else {
             return;
         };
-        if self.row.page()==QuickRow::MAIN {crate::menu_grid::draw(self,frame,out);return;}
-        if !self.over_game {rounded(out,MENU_INSET,80.0,self.canvas.w-2.0*MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
+        if crate::menu_grid::is_page(self.row.page()) {crate::menu_grid::draw(self,frame,out);return;}
+        if !self.over_game && frame.tile_origin.is_none() {rounded(out,72.0,88.0,self.canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
         let pause=self.row.page()==QuickRow::PLAY;
         let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);
         let (start, len) = quick_window(self.row, self.hidden);
         if len == 0 { return; }
         let top = quick_row_top_at(shown[start], self.row, self.hidden);
-        let panel_x = MENU_INSET;
-        let panel_w = self.canvas.w - panel_x * 2.0;
-        let panel_y = top - 48.0;
+        let panel_y = 40.0;
         if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| !pause && *key == self.row.page()[0]) {
-            push(out,*tex,if pause {self.canvas.centred(*w as f32)}else{QUICK_LABEL_X-pad},panel_y,*w,*h);
+            push(out,*tex,self.canvas.centred(*w as f32),panel_y,*w,*h);
         }
         // The selection travels as one shape. Keep it within the current
         // window during wraparound and scrolling so it never covers a heading.
         let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * QUICK_PITCH + 2.0);
         if !frame.suppress_focus {
-            let expanded=panel_w-16.0;
+            let expanded=self.canvas.w-168.0;
             let w=expanded+(320.0-expanded)*frame.focus_compact;
             rounded(out,self.canvas.centred(w),focus_y,w,ROW_H,ROW_RADIUS,SELECTED);
         }
@@ -1898,7 +1888,7 @@ impl QuickMenu<'_> {
 /// The scene owns the wallpaper. Cards are the only opaque menu surface.
 pub fn draw_menu_ground(_canvas: Canvas, _ground: Option<(TexId, u32)>, _out: &mut Vec<Draw>) {}
 
-pub const QUICK_VISIBLE: usize = 5;
+pub const QUICK_VISIBLE: usize = 4;
 
 
 const SCROLL_INSET: f32 = 40.0;
@@ -1948,7 +1938,7 @@ pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) 
     let (start, len) = quick_window(selected, hidden);
     let top=if row.page()==QuickRow::PLAY {
         (OUT_H as f32-((len.saturating_sub(1))as f32*QUICK_PITCH+crate::expressive::ROW_H))/2.0
-    } else {88.0};
+    } else {112.0};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
 
@@ -2010,11 +2000,11 @@ pub fn reference_face(canvas: Canvas, title: &str, rows: &[(String,String,bool)]
     let label_w=(content-24.0)*0.44;
     let value_w=content-24.0-label_w;
     let heading=bounded_menu_face(&menu_sentence_case(title),text::Role::Display,MENU_INK,content,30.0);
-    parent_blit(&mut face,&heading,QUICK_LABEL_X-MENU_PAD as f32,40.0);
+    parent_blit(&mut face,&heading,(canvas.w-heading.w as f32)/2.0,40.0);
     for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
         let label=bounded_menu_face(&menu_sentence_case(label),text::Role::Menu,DIM_INK,label_w,26.0);
         let value=reference_binding_face(value,value_w);
-        let y=96.0+i as f32*42.0;
+        let y=104.0+i as f32*36.0;
         parent_blit(&mut face,&label,QUICK_LABEL_X-MENU_PAD as f32,y);
         parent_blit(&mut face,&value,canvas.w-QUICK_EDGE+MENU_PAD as f32-value.w as f32,y);
     }

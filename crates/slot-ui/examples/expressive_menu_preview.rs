@@ -97,7 +97,7 @@ fn main() {
     };
     let ink = footer_ink(false);
     let (ct, cw, _) = up(status_word_face("12:34", ink));
-    let (pt, pw, _) = up(status_word_face("82%", ink));
+    let (pt, pw, _) = up(status_battery_face(slot_power::Battery{percent:82,charge:slot_power::Charge::Charging}));
     let as_undo = |f: CartFace| UndoFace {
         rgba: f.rgba,
         w: f.w,
@@ -169,6 +169,7 @@ fn main() {
             } else if visible {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
+            expressive::draw_shared_card(canvas,motion.frame(row,&hidden),row.page()==QuickRow::MAIN,&mut draws);
             for outgoing in if row.page()==QuickRow::MAIN {[false,true]}else{[true,false]} {
                 if !visible {continue;}
                 let current = row;
@@ -234,7 +235,7 @@ fn main() {
             draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut draws);
             let clock = Printed::new(ct, cw);
             draw_status(canvas, battery, percent, Some(bolt), clock, ink, &mut draws);
-            draw_corner_audio(battery, percent, Some(bt), Some(mt), &mut draws);
+            draw_corner_audio(canvas,battery, percent, Some(bt), Some(mt), &mut draws);
             if name=="settings" {charge_notice.draw(canvas,Some((charge_tex,charge_size.0,charge_size.1)),500,&mut draws);}
             cpu += start.elapsed();
             peak = peak.max(draws.len());

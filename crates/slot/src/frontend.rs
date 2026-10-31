@@ -1248,11 +1248,10 @@ fn sync_switcher(app: &mut App, compositor: &mut Compositor, texes: Faces, state
             .map(|l| upload(compositor, texes.undo, hint_face("X", l)));
         app.set_undo_face(label);
     }
-    if state.titled.as_deref() != app.polaroid_stamp() {
-        state.titled = app.polaroid_stamp().map(str::to_string);
-        let face = title_face(&app.polaroid_title(&format_stamp(app.wall_secs())));
-        let id = upload(compositor, texes.title, face);
-        app.set_polaroid_title_face(id);
+    let title=app.polaroid_title(&format_stamp(app.wall_secs()));
+    if state.titled.as_deref()!=Some(title.as_str()) {
+        state.titled=Some(title.clone());let face=title_face(&title);
+        let id=upload(compositor,texes.title,face);app.set_polaroid_title_face(id);
     }
     sync_gallery(app, compositor, state);
 }
@@ -1468,12 +1467,12 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     }
     let battery_shown = app
         .battery()
-        .map(|b| format!("{}%", b.percent))
+        .map(|b| format!("{}:{:?}", b.percent,b.charge))
         .unwrap_or_default();
     if battery_shown != clocks.battery {
         clocks.battery = battery_shown.clone();
         if !battery_shown.is_empty() {
-            let face = slot_ui::status_word_face(&battery_shown, clocks.ink);
+            let face = slot_ui::status_battery_face(app.battery().unwrap());
             let w = face.w;
             let id = upload(compositor, &mut clocks.battery_tex, face);
             app.set_battery_percent_face(id, w);

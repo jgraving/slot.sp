@@ -212,10 +212,10 @@ impl ClockPicker {
         self.face_on(Canvas::FRAMED)
     }
     pub fn field_rect(&self, canvas: Canvas) -> [f32; 4] {
-        let w = (canvas.w - 112.0 - 40.0) / 3.0;
+        let w = (canvas.w - 216.0) / 3.0;
         [
-            56.0 + (self.cursor % 3) as f32 * (w + 20.0),
-            104.0 + (self.cursor / 3) as f32 * 112.0,
+            88.0 + (self.cursor % 3) as f32 * (w + 20.0),
+            112.0 + (self.cursor / 3) as f32 * 112.0,
             w,
             88.0,
         ]
@@ -225,8 +225,9 @@ impl ClockPicker {
         let mut rgba = vec![0; (w * h * 4) as usize];
         let mut put = |f: UndoFace, x: u32, y: u32| blit(&mut rgba, w, &f.rgba, f.w, f.h, x, y);
         let heading = crate::quick_heading_face("Date & time");
-        put(heading, crate::QUICK_LABEL_X as u32 - crate::MENU_PAD, 40);
-        let cell_w = (canvas.w - 152.0) / 3.0;
+        let x=canvas.centred(heading.w as f32)as u32;
+        put(heading,x,40);
+        let cell_w = (canvas.w - 216.0) / 3.0;
         for (i, (label, value)) in [
             ("Year", format!("{:04}", self.year)),
             ("Month", ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][(self.month - 1) as usize].to_string()),
@@ -238,8 +239,8 @@ impl ClockPicker {
         .into_iter()
         .enumerate()
         {
-            let x = 56.0 + (i % 3) as f32 * (cell_w + 20.0);
-            let y = 104.0 + (i / 3) as f32 * 112.0;
+            let x = 88.0 + (i % 3) as f32 * (cell_w + 20.0);
+            let y = 112.0 + (i / 3) as f32 * 112.0;
             for (text, role, px, dy, hh, ink) in [
                 (
                     label.to_string(),
@@ -299,7 +300,7 @@ impl ClockPicker {
         focus: [f32; 4],
         out: &mut Vec<Draw>,
     ) {
-        crate::expressive::rounded(out,56.0,80.0,canvas.w-112.0,280.0,28.0,[0.095,0.12,0.14,1.0]);
+        crate::expressive::rounded(out,72.0,88.0,canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);
         crate::expressive::rounded(
             out,
             focus[0],

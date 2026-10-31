@@ -733,7 +733,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
         "the slot back is missing"
     );
     assert!(
-        !drawn(&open, 79),
+        !open.iter().any(|d|matches!(d,Draw::Tex{tex,y,h,..}|Draw::Part{tex,y,h,..}if *tex==TexId::from_raw(79) && *y<480.0 && y+h>0.0)),
         "a cart is inserted in the footer while no game is playing"
     );
     let (lx, ly, _) = legend_box(&open, 400);
@@ -764,7 +764,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
         (right - (OUT_W as f32 - 16.0)).abs() < 1.0,
         "Change is not on the right: {right}"
     );
-    assert!(!drawn(&values, 79), "the value page seated a cart");
+    assert!(!values.iter().any(|d|matches!(d,Draw::Tex{tex,y,h,..}|Draw::Part{tex,y,h,..}if *tex==TexId::from_raw(79)&&*y<480.0&&y+h>0.0)), "the value page seated a cart");
 }
 
 fn strip_y(a: &App, id: usize) -> f32 {
@@ -1555,4 +1555,12 @@ fn clock_and_carousel_choices_change_and_persist() {
     assert!(!read_slot_state(d.path()).carousel_wheel);
     press(&mut a,Btn::A);
     assert_eq!(a.quick_value(QuickRow::CarouselMotion),Some(QuickValue::Wheel));
+}
+
+#[test]
+fn games_retreat_once_stay_offscreen_on_subpages_and_return_continuously(){
+    let (_d,mut app,_)=on_carousel();for shelf in 0..6{for i in 0..8{app.set_cart_face(shelf,i,TexId::from_raw(7900));}}
+    let y=|app:&App|frame(app).iter().filter_map(|d|match d{Draw::Tex{tex,y,..}|Draw::Part{tex,y,..}if *tex==TexId::from_raw(7900)=>Some(*y),_=>None}).fold(f32::INFINITY,f32::min);
+    let rest=y(&app);app.apply(Action::QuickMenu);app.update(0.06);let departing=y(&app);assert!(departing>rest);app.update(1.0);let parked=y(&app);assert!(parked>480.0);
+    press(&mut app,Btn::A);app.update(0.1);assert!((y(&app)-parked).abs()<0.1);press(&mut app,Btn::B);press(&mut app,Btn::B);app.update(0.06);let returning=y(&app);assert!(returning>rest&&returning<parked);app.update(1.0);assert!((y(&app)-rest).abs()<0.1);
 }

@@ -105,7 +105,7 @@ impl MenuFrame {
     pub fn settled(row: QuickRow, hidden: &[QuickRow]) -> Self {
         Self {
             focus_y: quick_row_top_at(row, row, hidden),
-            grid_focus:[(row.position(hidden)%4) as f32,(row.position(hidden)/4) as f32],
+            grid_focus:crate::menu_grid::position(row,hidden),
             tile_origin:None,
             tile_reveal:1.0,
             scroll_position: row.position(hidden) as f32,
@@ -187,7 +187,7 @@ impl MenuMotion {
         let Some(row) = row else {
             self.active = false;
             self.entry.step(0.0, dt, 800.0, 1.0);
-            self.slide.step(1.0,dt,600.0,1.0);
+            self.slide.step(1.0,dt,600.0,0.82);
             self.scroll.step(self.target_scroll,dt,800.0,0.76);
             self.window.step(self.target_window,dt,800.0,0.76);
             self.pause_focus.step(self.target_focus,dt,800.0,0.76);
@@ -214,8 +214,8 @@ impl MenuMotion {
                 self.tile_origin=Some([(i%4) as f32,(i/4) as f32]);
             }else{self.tile_origin=None;}
             if new_root {
-                self.grid_x=Spring::at((row.position(hidden)%4) as f32);
-                self.grid_y=Spring::at((row.position(hidden)/4) as f32);
+                self.grid_x=Spring::at(crate::menu_grid::position(row,hidden)[0]);
+                self.grid_y=Spring::at(crate::menu_grid::position(row,hidden)[1]);
             }
             let previous_frame = self.row.map(|old| self.frame_page(old,hidden,self.custom));
             let reversing=self.outgoing.is_some() && self.outgoing_page==Some(page);
@@ -262,15 +262,15 @@ impl MenuMotion {
             self.switch = Spring::at(if on == Some(true) { 1.0 } else { 0.0 });
         }
         self.row = Some(row);
-        if row.page()==QuickRow::MAIN && custom.is_none() {
-            self.grid_x.step((row.position(hidden)%4) as f32,dt,800.0,0.76);
-            self.grid_y.step((row.position(hidden)/4) as f32,dt,800.0,0.76);
+        if crate::menu_grid::is_page(row.page()) && custom.is_none() {
+            self.grid_x.step(crate::menu_grid::position(row,hidden)[0],dt,800.0,0.76);
+            self.grid_y.step(crate::menu_grid::position(row,hidden)[1],dt,800.0,0.76);
         }
         // Expressive fast spatial for focus and switches, default spatial for
         // page arrival. Critically damp opacity: it must never bounce.
         self.scroll.step(target, dt, 800.0, 0.76);
         self.window.step(window, dt, 800.0, 0.76);
-        self.slide.step(1.0, dt, 600.0, 1.0);
+        self.slide.step(1.0, dt, 600.0, 0.82);
         if self.slide.value == 1.0 && self.slide.velocity == 0.0 {
             self.outgoing = None;
         }
@@ -281,6 +281,10 @@ impl MenuMotion {
             self.switch
                 .step(if on { 1.0 } else { 0.0 }, dt, 800.0, 0.76);
         }
+    }
+    pub fn retreat_shelf(&self,canvas:crate::Canvas,draws:&mut[Draw]){
+        let t=self.entry.value.clamp(0.0,1.0);let dy=t*(canvas.h+96.0);
+        for draw in draws {match draw {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}|Draw::Turned{y,..}=>*y+=dy,_=>{}}}
     }
     pub fn displacement(&self, canvas: crate::Canvas) -> f32 {
         (1.0-self.entry.value)*(canvas.h+32.0)
@@ -318,7 +322,6 @@ impl MenuMotion {
         frame.page_shift = -self.direction * self.slide.value;
         frame.focus_y=self.outgoing_focus_y;
         if let Some(origin)=self.tile_origin {
-            frame.page_shift=0.0;
             frame.tile_origin=Some(origin);
             frame.tile_reveal=1.0-self.slide.value.clamp(0.0,1.0);
         }
@@ -369,7 +372,7 @@ impl MenuMotion {
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
             closing: !self.active,
         };
-        if self.tile_origin.is_some() && self.outgoing.is_some() {frame.page_shift=0.0;}
+
         if custom==Some(2001) {frame.focus_y+=78.0;}
         if self.pause_morph && self.outgoing.is_some() {
             frame.focus_y=self.pause_focus.value;
@@ -394,9 +397,9 @@ pub fn raster_menu_rows(
     if let Some(i) = selected.filter(|i| *i < count) {
         raster_round(
             face,
-            MENU_INSET,
+            84.0,
             top + i as f32 * pitch,
-            face.w as f32 - MENU_INSET * 2.0,
+            face.w as f32 - 168.0,
             ROW_H,
             ROW_RADIUS,
             SELECTED,
@@ -464,7 +467,7 @@ impl StatusMotion {
                 *y += *h * (1.0 - scale) / 2.0;
                 *w *= scale;
                 *h *= scale;
-                *alpha *= self.opacity.value.clamp(0.0, 1.0);
+                *alpha = 1.0;
             }
         }
     }
@@ -590,30 +593,22 @@ impl RectMotion {
 }
 
 /// A single opaque surface grows from the pause card into full Settings.
-pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[QuickRow], out: &mut Vec<Draw>) {
-    let (_, count) = crate::quick_window(QuickRow::Settings, hidden);
-    let ch=(count.saturating_sub(1)as f32*crate::QUICK_PITCH+ROW_H+24.0).min(400.0);
-    draw_pause_surface_at(canvas,frame,(canvas.h-ch)/2.0,ch,out);
+pub fn draw_pause_surface(canvas:crate::Canvas,frame:MenuFrame,hidden:&[QuickRow],out:&mut Vec<Draw>){
+    let count=QuickRow::Resume.shown(hidden).len();let compact=crate::menu_grid::pause_rect(canvas,count);
+    draw_pause_surface_at(canvas,frame,compact,out);
 }
-
-pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>) {
-    draw_pause_surface_at(canvas,frame,154.0,172.0,out);
+pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>){draw_pause_surface_at(canvas,frame,crate::menu_grid::pause_rect(canvas,3),out);}
+fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,small:[f32;4],out:&mut Vec<Draw>){
+    let t=frame.focus_compact.clamp(0.0,1.0);let full=[72.0,88.0,canvas.w-144.0,248.0];
+    let a=std::array::from_fn::<_,4,_>(|i|full[i]+(small[i]-full[i])*t);
+    rounded(out,a[0],a[1],a[2],a[3],28.0,[0.095,0.12,0.14,1.0]);
 }
-
-fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,top:f32,ch:f32,out:&mut Vec<Draw>) {
-    let compact=frame.focus_compact.clamp(0.0,1.0);
-    let cw=384.0;
-    let x = canvas.centred(cw) * compact;
-    // Leave the status band clear, including the widest shadow (12 px, offset 4).
-    let y = top.max(48.0) * compact;
-    let w = canvas.w + (cw - canvas.w) * compact;
-    let compact_h = ch.min(canvas.h - crate::MOUTH_H - 56.0);
-    let h = canvas.h + (compact_h - canvas.h) * compact;
-    for spread in [12.0, 8.0, 4.0] {
-        rounded(out, x - spread, y - spread + 4.0, w + spread * 2.0, h + spread * 2.0,
-            24.0 * compact + spread, [0.0, 0.0, 0.0, 0.07 * compact * frame.opacity]);
-    }
-    rounded(out, x, y, w, h, 24.0 * compact, [0.065, 0.075, 0.085, frame.opacity]);
+pub fn draw_shared_card(canvas:crate::Canvas,frame:MenuFrame,root:bool,out:&mut Vec<Draw>){
+    if frame.tile_origin.is_none(){return;}
+    let t=if root {1.0-frame.tile_reveal}else{frame.tile_reveal};
+    let from=[MENU_INSET,88.0,canvas.w-2.0*MENU_INSET,260.0];let to=[72.0,88.0,canvas.w-144.0,248.0];
+    let a=std::array::from_fn::<_,4,_>(|i|from[i]+(to[i]-from[i])*t);
+    rounded(out,a[0],a[1],a[2],a[3],28.0,[0.095,0.12,0.14,1.0]);
 }
 
 /// The hardware bay occludes moving sheets; menu ink cannot pass over it.
@@ -621,27 +616,9 @@ pub fn clip_panel(out:&mut Vec<Draw>,begin:usize,canvas:crate::Canvas) {
     crate::quick_menu::clip_quads(out,begin,[0.0,0.0,canvas.w,canvas.h-crate::MOUTH_H]);
 }
 
-/// Only the container changes shape. Ink keeps its native proportions and is
-/// revealed by the expanding surface, so small tile text never stretches.
-pub fn tile_transform(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>,begin:usize) {
-    let Some([col,row])=frame.tile_origin else{return;};
-    let t=frame.tile_reveal.clamp(0.0,1.0);
-    let [ox,oy,ow,oh]=crate::menu_grid::rect(canvas,row as usize*4+col as usize);
-    let full=[MENU_INSET,80.0,canvas.w-2.0*MENU_INSET,280.0];
-    let x=ox+(full[0]-ox)*t;
-    let y=oy+(full[1]-oy)*t;
-    let w=ow+(full[2]-ow)*t;
-    let h=oh+(full[3]-oh)*t;
-    let dx=(ox+ow/2.0-canvas.w/2.0)*(1.0-t);
-    let dy=(oy+oh/2.0-220.0)*(1.0-t);
-    for draw in &mut out[begin..] {
-        match draw {
-            Draw::RoundRect{x:rx,y:ry,w:rw,h:rh,radius,colour} if (*rw-full[2]).abs()<0.1 && (*rh-full[3]).abs()<0.1 => {
-                *rx=x;*ry=y;*rw=w;*rh=h;*radius=22.0+6.0*t;
-                for c in 0..3 {colour[c]=SELECTED[c]+(colour[c]-SELECTED[c])*t;}
-            },
-            Draw::Rect{x,y,..}|Draw::RoundRect{x,y,..}|Draw::Tex{x,y,..}|Draw::Part{x,y,..}|Draw::Turned{x,y,..}=>{*x+=dx;*y+=dy;},_=>{}
-        }
-    }
-    crate::quick_menu::clip_quads(out,begin,[x,y-48.0*t,x+w,y+h]);
+
+pub fn draw_kid_grid_focus(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>){
+    let index=((frame.focus_y-190.0)/crate::QUICK_PITCH).clamp(0.0,2.0);
+    let [x,y,w,h]=crate::menu_grid::cell(canvas,0,3,3,true);
+    rounded(out,x+index*120.0+frame.page_shift*(canvas.w-112.0),y,w,h,22.0,SELECTED);
 }

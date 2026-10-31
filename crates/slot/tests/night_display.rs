@@ -164,3 +164,8 @@ fn edited_night_warmth_is_shared_by_schedule_shortcut_and_reboot() {
     let (b,_)=common::app_booting_at(d.path(),midnight+20*3600);
     assert!(b.night_mode());assert_eq!(b.blue_light(),6);
 }
+
+#[test]
+fn night_schedule_clock_format_changes_labels_without_changing_schedule(){
+    let mut menu=slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings::default());let before=menu.settings;let a=menu.screen_face();menu.twelve=true;let b=menu.screen_face();assert_ne!(a.rgba,b.rgba);assert_eq!(menu.settings.day_start,before.day_start);assert_eq!(menu.settings.night_start,before.night_start);
+}
