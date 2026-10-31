@@ -133,7 +133,7 @@ fn unplug_defaults_to_silence_without_forgetting_wired_mute() {
     a.tick_ms(at);
     a.apply(Action::MuteToggle);
     assert_eq!(a.output_volume(), 0);
-    assert_eq!(a.hud_icon(), Icon::HeadphonesMuted);
+    assert_eq!(a.hud_icon(), Icon::VolumeMuted);
 
     jack.store(false, Ordering::Relaxed);
     let at = a.now() + 1_000;

@@ -14,7 +14,7 @@ pub fn button_code_face(code: &[u8]) -> UndoFace {
                 x + (64 - face.w) / 2, (h - face.h) / 2);
         } else {
             // A visible empty slot makes progress clear before the first press.
-            for y in 45..48 {
+            for y in 26..30 {
                 for xx in x + 12..x + 52 {
                     let at = ((y * w + xx) * 4) as usize;
                     rgba[at..at + 4].copy_from_slice(&[120, 120, 130, 255]);

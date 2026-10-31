@@ -7,6 +7,7 @@ const ASSET_HZ: f32 = 48_000.0;
 pub enum Sfx {
     PowerSwitch,
     LowBattery,
+    Charging,
     Insert,
     Eject,
     Cartridge(u8),
@@ -15,7 +16,7 @@ pub enum Sfx {
 impl Sfx {
     pub fn lead(self) -> f32 {
         match self {
-            Sfx::PowerSwitch | Sfx::LowBattery => 0.0,
+            Sfx::PowerSwitch | Sfx::LowBattery | Sfx::Charging => 0.0,
             Sfx::Insert => 0.097,
             Sfx::Eject => 0.021,
             Sfx::Cartridge(_) => 0.0,
@@ -29,12 +30,14 @@ impl Sfx {
             Sfx::Eject => EJECT,
             Sfx::Cartridge(_) => return 0.028,
             Sfx::LowBattery => return 0.38,
+            Sfx::Charging => return 0.50,
         };
         pcm.len() as f32 / 2.0 / ASSET_HZ - self.lead()
     }
 
     pub fn render(self, sample_rate: u32) -> Vec<i16> {
         if self==Sfx::LowBattery {return low_battery(sample_rate);}
+        if self==Sfx::Charging {return charging(sample_rate);}
         if let Sfx::Cartridge(_) = self {
             return tactile(self, sample_rate);
         }
@@ -42,7 +45,7 @@ impl Sfx {
             Sfx::PowerSwitch => POWER_SWITCH,
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
-            Sfx::Cartridge(_) | Sfx::LowBattery => unreachable!(),
+            Sfx::Cartridge(_) | Sfx::LowBattery | Sfx::Charging => unreachable!(),
         };
         let mut out = Vec::with_capacity(pcm.len());
         for v in resampled(pcm, sample_rate) {
@@ -128,6 +131,29 @@ fn low_battery(rate:u32)->Vec<i16> {
         let (age,hz)=if t<0.18 {(t,660.0)}else{(t-0.22,440.0)};
         let envelope=if (0.0..0.16).contains(&age) {(age/0.012).min(1.0)*((0.16-age)/0.04).min(1.0)}else{0.0};
         let value=((TAU*hz*age).sin()*envelope*0.16*32767.0) as i16;
+        out.extend([value,value]);
+    }
+    out
+}
+
+// Two soft rising notes with a short downward pitch glide: a rounded "bloop
+// bloop", distinct from the descending low-battery warning. Both ends are silent.
+fn charging(rate:u32)->Vec<i16> {
+    use std::f32::consts::{PI,TAU};
+    let mut out=Vec::with_capacity((rate as f32*0.50)as usize*2);
+    for i in 0..(rate as f32*0.50)as usize {
+        let t=i as f32/rate as f32;
+        let mut sample=0.0;
+        for (start,hz) in [(0.0,440.0),(0.22,660.0)] {
+            let age=t-start;
+            if !(0.0..0.18).contains(&age) {continue;}
+            let attack=0.5-0.5*(PI*(age/0.010).min(1.0)).cos();
+            let release=((0.18-age)/0.030).clamp(0.0,1.0);
+            let envelope=attack*(-age/0.055).exp()*release;
+            let phase=TAU*(hz*age+170.0*0.018*(1.0-(-age/0.018).exp()));
+            sample+=(phase.sin()+0.12*(2.0*phase).sin())*envelope*0.17;
+        }
+        let value=(sample*32767.0).round()as i16;
         out.extend([value,value]);
     }
     out

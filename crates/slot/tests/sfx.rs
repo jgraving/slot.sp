@@ -6,6 +6,22 @@ use slot::audio::{ring_capacity, Ring, Sfx, OUTPUT_HZ};
 use slot::session::Session;
 
 #[test]
+fn charging_is_a_soft_stereo_pair_with_silent_edges_at_both_output_rates() {
+    for rate in [44_100,48_000] {
+        let sound=Sfx::Charging.render(rate);
+        assert_eq!(sound.len(),rate as usize,"half a second of stereo");
+        assert!(sound.chunks_exact(2).all(|p|p[0]==p[1]));
+        let peak=|from:f32,to:f32|sound[(from*rate as f32)as usize*2..(to*rate as f32)as usize*2].iter().map(|v|v.unsigned_abs()).max().unwrap();
+        assert!(peak(0.01,0.10)>2500 && peak(0.23,0.32)>2500,"both bloops must be audible");
+        assert!(peak(0.20,0.22)<200 && peak(0.46,0.50)==0,"notes need breathing room and a silent tail");
+        assert_eq!(sound[0],0);
+        assert!(sound.iter().all(|v|v.unsigned_abs()<6000));
+        assert!(sound.chunks_exact(2).map(|p|p[0]).collect::<Vec<_>>().windows(2).all(|p|p[0].abs_diff(p[1])<1200),"no clicks at either note boundary");
+    }
+    assert!(Sfx::Charging.render(0).is_empty());
+}
+
+#[test]
 fn the_contacts_in_the_clip_are_where_the_lead_says() {
     for s in [Sfx::Insert, Sfx::Eject] {
         let v = s.render(48_000);
@@ -314,7 +330,7 @@ fn low_battery_warning_is_once_per_discharge_and_rearms_after_charging() {
     for percent in [50,21] {app.on_battery(Battery{percent,charge:Charge::Discharging});assert_eq!(app.take_sfx(),None);}
     app.on_battery(Battery{percent:20,charge:Charge::Discharging});assert_eq!(app.take_sfx(),Some(Sfx::LowBattery));
     for percent in [19,20,21,19] {app.on_battery(Battery{percent,charge:Charge::Discharging});assert_eq!(app.take_sfx(),None);}
-    app.on_battery(Battery{percent:19,charge:Charge::Charging});assert_eq!(app.take_sfx(),None);
+    app.on_battery(Battery{percent:19,charge:Charge::Charging});assert_eq!(app.take_sfx(),Some(Sfx::Charging));
     app.on_battery(Battery{percent:19,charge:Charge::Discharging});assert_eq!(app.take_sfx(),Some(Sfx::LowBattery));
     for rate in [0,44100,48000] {
         let pcm=Sfx::LowBattery.render(rate);
