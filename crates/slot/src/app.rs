@@ -22,7 +22,7 @@ use slot_ui::{
     QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
     SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
     TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, 
-    draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
+    draw_sticker, ease, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at,
 };
 
@@ -2619,10 +2619,7 @@ impl App {
     }
 
     pub fn status_ink(&self) -> [u8; 3] {
-        match self.phase {
-            Phase::Playing { .. } | Phase::Polaroids { .. } => footer_ink(false),
-            _ => footer_ink(self.light()),
-        }
+        slot_ui::HUD_INK
     }
 
     pub fn powering_off(&self) -> bool {
@@ -5032,7 +5029,7 @@ impl App {
                     if key>=5000 {
                         let begin=out.len();slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
                         self.draw_special_body(key,self.menu_motion.frame_page(row,&[],Some(key)),out);
-                        shift_down(&mut out[begin..],self.menu_motion.displacement(self.canvas()));
+                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     } else if let Some((_,tex))=self.previous_custom_face {
                         let begin=out.len();
@@ -5049,7 +5046,7 @@ impl App {
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
-                        shift_down(&mut out[begin..],self.menu_motion.displacement(self.canvas()));
+                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     }
                 } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }|Phase::Ejecting{..}), out);}
@@ -5063,6 +5060,12 @@ impl App {
         }
         self.draw_menu_footer(out);
         self.draw_close_footer(out);
+        if matches!(self.phase,Phase::QuickMenu{..}) || (matches!(self.phase,Phase::Shelf) && self.menu_motion.closing_row().is_some()) {
+            if let Some((back,front))=self.slot_faces {
+                out.retain(|draw|!matches!(draw,Draw::Part{tex,..}|Draw::Tex{tex,..}if *tex==back||*tex==front));
+            }
+            draw_empty_slot(self.canvas(),self.slot_faces,out);
+        }
         if let Some(picker) = self.core_picker_shown() {
             self.draw_core_picker(&picker, out);
         }
@@ -5101,7 +5104,8 @@ impl App {
         if matches!(self.phase,Phase::Shelf) {
             if let Some(row)=self.menu_motion.closing_row() {
                 let begin=out.len();
-                self.draw_menu_legends(row,LINK_LEGEND_Y+self.menu_motion.displacement(self.canvas()),out);
+                self.draw_menu_legends(row,LINK_LEGEND_Y,out);
+                self.menu_motion.transform(self.canvas(),&mut out[begin..]);
                 slot_ui::expressive::clip_panel(out,begin,self.canvas());
             }
             return;
@@ -5142,7 +5146,8 @@ impl App {
         shift_down(&mut out[start..], dy);
         if let Some(row) = row {
             let begin=out.len();
-            self.draw_menu_legends(row, LINK_LEGEND_Y + self.menu_motion.displacement(self.canvas()), out);
+            self.draw_menu_legends(row, LINK_LEGEND_Y, out);
+            self.menu_motion.transform(self.canvas(),&mut out[begin..]);
             slot_ui::expressive::clip_panel(out,begin,self.canvas());
         }
     }
@@ -5207,7 +5212,7 @@ impl App {
         self.draw_outgoing_menu(false,out);
         let frame=self.menu_motion.frame_page(QuickRow::Kids,&[],Some(key));
         self.draw_special_body(key,frame,out);
-        shift_down(&mut out[begin..],self.menu_motion.displacement(self.canvas()));
+        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
@@ -5264,7 +5269,7 @@ impl App {
                 out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
             }
         }
-        shift_down(&mut out[begin..],self.menu_motion.displacement(self.canvas()));
+        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
@@ -5284,7 +5289,7 @@ impl App {
             self.draw_outgoing_menu(over_game, out);
         }
         self.draw_quick_page(row, over_game, false, out);
-        shift_down(&mut out[begin..],self.menu_motion.displacement(self.canvas()));
+        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
 

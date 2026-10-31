@@ -1540,3 +1540,14 @@ fn both_sound_sliders_repeat_on_hold_and_stop_on_release() {
     for _ in 0..20 {a.update(0.05);}
     assert_eq!(a.volume(),stopped);
 }
+
+#[test]
+fn closing_main_menu_is_occluded_by_the_physical_slot() {
+    let (_d,mut a,_)=on_carousel();let back=TexId::from_raw(8001);let front=TexId::from_raw(8002);
+    a.set_slot_faces(back,front);a.set_ground(TexId::from_raw(8003));
+    a.apply(Action::QuickMenu);a.update(1.0);press(&mut a,Btn::B);a.update(0.016);
+    let mut out=vec![];a.draw(&mut out);
+    let bay=out.iter().rposition(|d|matches!(d,Draw::Part{tex,..}if *tex==front)).unwrap();
+    let scene=out.iter().rposition(|d|matches!(d,Draw::Part{tex,..}|Draw::Tex{tex,..}if *tex==TexId::from_raw(8003))).unwrap();
+    assert!(bay>scene,"the menu was drawn on top of the cartridge bay");
+}

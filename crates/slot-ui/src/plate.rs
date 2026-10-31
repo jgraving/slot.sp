@@ -110,6 +110,16 @@ pub fn word_face(text: &str) -> UndoFace {
     word_ink(text, INK)
 }
 
+pub const STATUS_TEXT_H:u32=30;
+pub fn status_word_face(value:&str,ink:[u8;3])->UndoFace {
+    let Some(font)=text::font(text::Role::Value)else{return word_ink(value,ink)};
+    let layout=text::fit_preserving_case(font,value,240.0,1,22.0,22.0);
+    let w=layout.lines.iter().map(|s|text::line_width(font,s,layout.px,layout.tracking)).fold(0.0,f32::max).ceil()as u32+4;
+    let mut rgba=vec![0;(w*STATUS_TEXT_H*4)as usize];
+    text::draw_centred(&mut rgba,w,STATUS_TEXT_H,&layout,ink);
+    UndoFace{rgba,w,h:STATUS_TEXT_H}
+}
+
 pub fn word_ink(text: &str, ink: [u8; 3]) -> UndoFace {
     let w = word_width(text);
     let mut rgba = vec![0u8; (w * HINT_H * 4) as usize];

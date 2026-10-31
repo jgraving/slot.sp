@@ -8,7 +8,7 @@ use slot_input::{InputSource, Millis};
 use slot_power::{Platform, Power};
 use slot_store::{BezelPick, Platform as Console, ShellColour, format_stamp};
 use slot_ui::{
-    ALERT_PX, BOLT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
+    ALERT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
     PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
     UndoFace, badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face,
     core_button_legends, date_time_text, default_game_bezel_face, delete_legends, footer_ink,
@@ -17,7 +17,7 @@ use slot_ui::{
     quick_description_face, quick_label_face, quick_legend_faces, quick_pointer_face,
     quick_value_face, rebuild_count_face, rebuild_title_face,
     repair_legends, set_clock_hint_face, socket_face, sticker_face, title_face, toast_face,
-    wallpaper_face, word_ink,
+    wallpaper_face,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -378,8 +378,8 @@ impl Frontend {
                 |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
             ShellColour::FINISHES.map(|colour| slot_ui::shell_slot_faces(colour).map(&mut upload))
         };
-        let dark_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(false));
-        let light_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(true));
+        let dark_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
+        let light_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
         let bolt = [
             compositor.create_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
             compositor.create_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
@@ -659,14 +659,14 @@ impl Frontend {
         let light = self.session.app().light();
         if self.mute_icon_key != Some(light) {
             let face = |ink| {
-                let f = icon_face(Icon::VolumeMuted, 20.0, ink);
+                let f = slot_ui::status_icon_face(Icon::VolumeMuted, ink);
                 UndoFace {
                     rgba: f.rgba,
                     w: f.w,
                     h: f.h,
                 }
             };
-            upload(compositor, &mut self.mute_icon, face(footer_ink(light)));
+            upload(compositor, &mut self.mute_icon, face(HUD_INK));
             upload(compositor, &mut self.hud_mute_icon, face(HUD_INK));
             self.mute_icon_key = Some(light);
         }
@@ -688,7 +688,7 @@ impl Frontend {
                     if bluetooth && !usb {
                         crate::bluetooth::indicator_face_with_ink(ink)
                     } else {
-                        let f = slot_ui::icon_face(slot_ui::Icon::Headphones, 20.0, ink);
+                        let f = slot_ui::status_icon_face(slot_ui::Icon::Headphones, ink);
                         slot_ui::UndoFace {
                             rgba: f.rgba,
                             w: f.w,
@@ -699,7 +699,7 @@ impl Frontend {
                 upload(
                     compositor,
                     &mut self.audio_icon,
-                    face(slot_ui::footer_ink(light)),
+                    face(HUD_INK),
                 );
                 upload(compositor, &mut self.hud_audio_icon, face(slot_ui::HUD_INK));
                 self.audio_icon_key = Some((kind, light));
@@ -1435,7 +1435,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     }
     let shown = hhmm(app.wall_secs());
     if shown != clocks.shown {
-        let face = word_ink(&shown, clocks.ink);
+        let face = slot_ui::status_word_face(&shown, clocks.ink);
         clocks.shown = shown;
         let w = face.w;
         let id = upload(compositor, &mut clocks.shelf, face);
@@ -1472,7 +1472,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     if battery_shown != clocks.battery {
         clocks.battery = battery_shown.clone();
         if !battery_shown.is_empty() {
-            let face = word_ink(&battery_shown, clocks.ink);
+            let face = slot_ui::status_word_face(&battery_shown, clocks.ink);
             let w = face.w;
             let id = upload(compositor, &mut clocks.battery_tex, face);
             app.set_battery_percent_face(id, w);

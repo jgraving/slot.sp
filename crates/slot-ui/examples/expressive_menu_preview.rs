@@ -96,16 +96,16 @@ fn main() {
         ],
     };
     let ink = footer_ink(false);
-    let (ct, cw, _) = up(word_ink("12:34", ink));
-    let (pt, pw, _) = up(word_ink("82%", ink));
+    let (ct, cw, _) = up(status_word_face("12:34", ink));
+    let (pt, pw, _) = up(status_word_face("82%", ink));
     let as_undo = |f: CartFace| UndoFace {
         rgba: f.rgba,
         w: f.w,
         h: f.h,
     };
-    let (bt, _, _) = up(as_undo(icon_face(Icon::Bluetooth, 20.0, ink)));
-    let (mt, _, _) = up(as_undo(icon_face(Icon::VolumeMuted, 20.0, ink)));
-    let (bolt, _, _) = up(as_undo(icon_face(Icon::Charging, 18.0, ink)));
+    let (bt, _, _) = up(as_undo(status_icon_face(Icon::Bluetooth, ink)));
+    let (mt, _, _) = up(as_undo(status_icon_face(Icon::VolumeMuted, ink)));
+    let (bolt, _, _) = up(as_undo(status_icon_face(Icon::Charging, ink)));
     let ground = compositor.create_texture(720, 480, default_background().unwrap());
     let parts = shell_slot_faces(slot_store::ShellColour::FINISHES[0]);
     let slot = parts.map(|f| compositor.create_texture(SLOT_W, SLOT_H, &f));
@@ -196,8 +196,7 @@ fn main() {
                 }
                 .draw_animated(frame_state, &mut draws);
             }
-            let dy=motion.displacement(canvas);
-            for d in &mut draws[group..] {match d {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y+=dy,_=>{}}}
+            motion.transform(canvas,&mut draws[group..]);
             expressive::clip_panel(&mut draws,group,canvas);
             let legends=draws.len();
             for (right, (tex, w)) in [
@@ -210,7 +209,7 @@ fn main() {
                     } else {
                         16.0
                     },
-                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0 + if visible {dy}else{canvas.h+32.0},
+                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0 + if visible {0.0}else{canvas.h+32.0},
                     w: w as f32,
                     h: MENU_HINT_H as f32,
                     tex,
@@ -222,6 +221,7 @@ fn main() {
                 charge: slot_power::Charge::Charging,
             });
             let percent = Printed::new(pt, pw);
+            motion.transform(canvas,&mut draws[legends..]);
             expressive::clip_panel(&mut draws,legends,canvas);
             draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut draws);
             let clock = Printed::new(ct, cw);

@@ -278,3 +278,46 @@ mod tests {
         assert_eq!(square, before);
     }
 }
+
+/// Round only fully opaque rectangular output labels; authored alpha is preserved.
+pub(crate) fn round_sharp_corners(rgba:&mut[u8],w:u32,h:u32)->bool {
+    if w<16 || h<16 || rgba.len()!=(w*h*4)as usize {return false;}
+    let corners=[(0,0),(w-1,0),(0,h-1),(w-1,h-1)];
+    for &(cx,cy) in &corners {for dy in 0..2 {for dx in 0..2 {
+        let x=if cx==0 {dx}else{cx-dx};let y=if cy==0 {dy}else{cy-dy};
+        if rgba[((y*w+x)*4+3)as usize]<248 {return false;}
+    }}}
+    let radius=(w.min(h)as f32*0.055).clamp(1.5,12.0);
+    let edge=radius.ceil()as u32;
+    for y in 0..edge {for x in 0..edge {
+        let mut inside=0u32;
+        for sy in 0..4 {for sx in 0..4 {
+            let dx=radius-(x as f32+(sx as f32+0.5)/4.0);
+            let dy=radius-(y as f32+(sy as f32+0.5)/4.0);
+            if dx*dx+dy*dy<=radius*radius {inside+=1;}
+        }}
+        for (xx,yy) in [(x,y),(w-1-x,y),(x,h-1-y),(w-1-x,h-1-y)] {
+            let i=((yy*w+xx)*4+3)as usize;rgba[i]=(u32::from(rgba[i])*inside/16)as u8;
+        }
+    }}
+    true
+}
+#[cfg(test)]mod sharp_corner_tests {
+    use super::*;
+    #[test]fn rectangles_gain_small_antialiased_corners_without_changing_rgb_or_interior() {
+        let (w,h)=(240,120);let mut art=vec![255;(w*h*4)as usize];
+        for (i,p) in art.chunks_exact_mut(4).enumerate(){p[0]=(i%251)as u8;p[1]=70;p[2]=125;}
+        let before=art.clone();assert!(round_sharp_corners(&mut art,w,h));
+        assert_eq!(art[3],0);assert!(art.chunks_exact(4).any(|p|p[3]>0&&p[3]<255));
+        for (i,(a,b)) in art.chunks_exact(4).zip(before.chunks_exact(4)).enumerate(){
+            assert_eq!(&a[..3],&b[..3]);let(x,y)=(i as u32%w,i as u32/w);
+            if x>12 && x<w-12 || y>12 && y<h-12 {assert_eq!(a,b);}
+        }
+        let rounded=art.clone();assert!(!round_sharp_corners(&mut art,w,h));assert_eq!(art,rounded);
+    }
+    #[test]fn authored_transparency_and_tiny_images_are_unchanged() {
+        let mut alpha=vec![255;64*32*4];alpha[3]=128;let before=alpha.clone();
+        assert!(!round_sharp_corners(&mut alpha,64,32));assert_eq!(alpha,before);
+        let mut tiny=vec![255;8*8*4];assert!(!round_sharp_corners(&mut tiny,8,8));
+    }
+}

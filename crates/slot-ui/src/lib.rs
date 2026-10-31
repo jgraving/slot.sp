@@ -82,7 +82,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, kid_status_face, warm_fonts, Badge, Icon,
+    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, kid_status_face, status_icon_face, STATUS_ICON_SIZE, STATUS_ICON_PX, warm_fonts, Badge, Icon,
 };
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
@@ -92,7 +92,7 @@ pub use link_art::{
 pub use plate::{
     arrows_hint_coloured, arrows_hint_face, arrows_hint_width, cap_width, centred_hints,
     hint_coloured, hint_face, hint_quad, hint_row, hint_width, pad_hint_face, pad_hint_width,
-    tick_cap_face, title_face, title_line_face, word_face, word_ink, word_width, Hint, UndoFace,
+    tick_cap_face, title_face, title_line_face, word_face, word_ink, status_word_face, STATUS_TEXT_H, word_width, Hint, UndoFace,
     ARROW_GAP, CAP, CAP_GAP, HINT_EDGE, HINT_GAP, HINT_H, LEGEND_GAP, TITLE_H, TITLE_LINE_H,
     TITLE_W,
 };

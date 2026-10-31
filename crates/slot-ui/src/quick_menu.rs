@@ -1324,9 +1324,9 @@ pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,b
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = parent_footer_face_on(canvas,footer,rows.get(selected).is_some_and(|r|r.2));
-    let visible = rows.len().min(QUICK_VISIBLE);
+    let visible = rows.len().min(if reserve>0.0 {QUICK_VISIBLE-1}else{QUICK_VISIBLE});
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = 88.0 - reserve.max(0.0) / 2.0;
+    let top = 88.0;
     crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, switches.then_some(selected - start));
     let pad = MENU_PAD as f32;
     let right = width as f32 - QUICK_EDGE;
@@ -1983,15 +1983,16 @@ pub(crate) fn clip_quads(out: &mut Vec<Draw>, begin: usize, bounds: [f32; 4]) {
     while at < out.len() {
         let old = out[at];
         let (x,y,w,h) = match old {
-            Draw::Tex{x,y,w,h,..} | Draw::Part{x,y,w,h,..} | Draw::RoundRect{x,y,w,h,..} => (x,y,w,h),
+            Draw::Rect{x,y,w,h,..} | Draw::Tex{x,y,w,h,..} | Draw::Part{x,y,w,h,..} | Draw::RoundRect{x,y,w,h,..} => (x,y,w,h),
             _ => { at += 1; continue; }
         };
         // Full-screen ground textures stay anchored and uncropped.
-        if y < 40.0 && matches!(old, Draw::Part { .. }) { at += 1; continue; }
+        if bounds[1]>=40.0 && y < 40.0 && matches!(old, Draw::Part { .. }) { at += 1; continue; }
         let (left,top,right,bottom) = (x.max(bounds[0]),y.max(bounds[1]),(x+w).min(bounds[2]),(y+h).min(bounds[3]));
         if right <= left || bottom <= top { out.remove(at); continue; }
         if left != x || top != y || right != x+w || bottom != y+h {
             out[at] = match old {
+                Draw::Rect{colour,..}=>Draw::Rect{x:left,y:top,w:right-left,h:bottom-top,colour},
                 Draw::Tex{tex,alpha,..} => Draw::Part{x:left,y:top,w:right-left,h:bottom-top,tex,alpha,uv:[(left-x)/w,(top-y)/h,(right-left)/w,(bottom-top)/h]},
                 Draw::Part{tex,alpha,uv,..} => Draw::Part{x:left,y:top,w:right-left,h:bottom-top,tex,alpha,uv:[uv[0]+(left-x)/w*uv[2],uv[1]+(top-y)/h*uv[3],(right-left)/w*uv[2],(bottom-top)/h*uv[3]]},
                 Draw::RoundRect{radius,colour,..} => Draw::RoundRect{x:left,y:top,w:right-left,h:bottom-top,radius,colour},

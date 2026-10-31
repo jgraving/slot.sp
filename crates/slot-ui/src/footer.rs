@@ -9,6 +9,7 @@ use crate::slot_chrome::MOUTH_H;
 pub const FOOTER_Y: f32 = OUT_H as f32 - MOUTH_H + (MOUTH_H - HINT_H as f32) / 2.0;
 const FOOTER_MARGIN: f32 = 24.0;
 const CORNER_MARGIN: f32 = 16.0;
+const STATUS_STEP:f32=40.0;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Debug)]
 pub struct Printed {
@@ -61,16 +62,17 @@ pub fn draw_status(
     out: &mut Vec<Draw>,
 ) {
     let y = (PLATE_H - GAUGE_H) / 2.0;
-    draw_gauge(CORNER_MARGIN, y, battery, percent, bolt, ink, out);
+    crate::battery::draw_gauge_sized(CORNER_MARGIN,y,battery,percent,bolt,ink,crate::STATUS_TEXT_H,out);
     let x = canvas.w - CORNER_MARGIN - clock.w as f32;
-    draw_printed(x, (PLATE_H - HINT_H as f32) / 2.0, clock, out);
+    draw_printed_sized(x,(PLATE_H-crate::STATUS_TEXT_H as f32)/2.0,clock,crate::STATUS_TEXT_H,out);
 }
 
-pub(crate) fn draw_printed(x: f32, y: f32, p: Printed, out: &mut Vec<Draw>) {
+pub(crate) fn draw_printed(x:f32,y:f32,p:Printed,out:&mut Vec<Draw>) {draw_printed_sized(x,y,p,HINT_H,out);}
+fn draw_printed_sized(x:f32,y:f32,p:Printed,height:u32,out:&mut Vec<Draw>) {
     if p.w == 0 {
         return;
     }
-    let (w, h) = (p.w as f32, HINT_H as f32);
+    let (w, h) = (p.w as f32, height as f32);
     out.push(match p.face {
         Some(tex) => Draw::Tex {
             x,
@@ -106,7 +108,7 @@ pub fn draw_footer_connection(
         percent,
         icon,
         FOOTER_MARGIN,
-        FOOTER_Y + (HINT_H as f32 - 20.0) / 2.0,
+        FOOTER_Y + (HINT_H as f32 - crate::STATUS_ICON_SIZE as f32) / 2.0,
         out,
     );
 }
@@ -133,21 +135,21 @@ pub fn draw_corner_audio(
         percent,
         connection,
         CORNER_MARGIN,
-        (PLATE_H - 20.0) / 2.0,
+        (PLATE_H - crate::STATUS_ICON_SIZE as f32) / 2.0,
         out,
     );
     draw_connection(
         battery,
         percent,
         mute,
-        CORNER_MARGIN + if connection.is_some() { 30.0 } else { 0.0 },
-        (PLATE_H - 20.0) / 2.0,
+        CORNER_MARGIN + if connection.is_some() { STATUS_STEP } else { 0.0 },
+        (PLATE_H - crate::STATUS_ICON_SIZE as f32) / 2.0,
         out,
     );
 }
 
 pub fn draw_corner_kid(battery:Option<Battery>,percent:Printed,icon:TexId,preceding:usize,out:&mut Vec<Draw>) {
-    draw_connection(battery,percent,Some(icon),CORNER_MARGIN+30.0*preceding as f32,(PLATE_H-20.0)/2.0,out);
+    draw_connection(battery,percent,Some(icon),CORNER_MARGIN+STATUS_STEP*preceding as f32,(PLATE_H-crate::STATUS_ICON_SIZE as f32)/2.0,out);
 }
 
 fn draw_connection(
@@ -168,8 +170,8 @@ fn draw_connection(
         out.push(Draw::Tex {
             x,
             y,
-            w: 20.0,
-            h: 20.0,
+            w: crate::STATUS_ICON_SIZE as f32,
+            h: crate::STATUS_ICON_SIZE as f32,
             tex,
             alpha: 1.0,
         });
@@ -235,7 +237,7 @@ mod connection_tests {
         assert!(draws.is_empty());
         draw_footer_connection(battery, percent, Some(TexId::from_raw(2)), &mut draws);
         assert!(
-            matches!(draws[0], Draw::Tex { x, w: 20.0, h: 20.0, .. } if x > FOOTER_MARGIN + 40.0 + 40.0)
+            matches!(draws[0], Draw::Tex { x, w, h, .. } if w==crate::STATUS_ICON_SIZE as f32 && h==crate::STATUS_ICON_SIZE as f32 && x > FOOTER_MARGIN + 40.0 + 40.0)
         );
     }
 }

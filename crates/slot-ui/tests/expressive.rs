@@ -485,3 +485,29 @@ fn normal_pause_cards_center_all_visible_rows_with_equal_padding() {
         assert_eq!(first-*y,*y+*h-last);
     }
 }
+
+#[test]
+fn menu_entry_changes_scale_and_is_clipped_behind_the_bay() {
+    use slot_ui::*;
+    let canvas=Canvas{w:640.0,h:480.0};let mut motion=MenuMotion::default();
+    motion.update(Some(QuickRow::General),&[],None,0.08);
+    let mut scene=vec![Draw::Rect{x:0.0,y:0.0,w:640.0,h:480.0,colour:[0.1,0.1,0.1,1.0]}];
+    motion.transform(canvas,&mut scene);
+    assert!(matches!(scene[0],Draw::Rect{w,..}if w<640.0&&w>400.0));
+    expressive::clip_panel(&mut scene,0,canvas);
+    assert!(!scene.is_empty());
+    assert!(scene.iter().all(|d|matches!(d,Draw::Rect{y,h,..}if y+h<=480.0-MOUTH_H)));
+    for _ in 0..60 {motion.update(Some(QuickRow::General),&[],None,1.0/60.0);}
+    let mut settled=vec![Draw::Rect{x:0.0,y:0.0,w:640.0,h:480.0,colour:[0.1,0.1,0.1,1.0]}];
+    motion.transform(canvas,&mut settled);assert!(matches!(settled[0],Draw::Rect{x,y,w,..}if x.abs()<0.01&&y.abs()<0.01&&(w-640.0).abs()<0.01));
+}
+#[test]
+fn status_icons_have_one_flat_color_and_the_volume_hud_glyph_size() {
+    use slot_ui::*;
+    assert_eq!(STATUS_ICON_PX,HUD_ICON_PX);
+    for icon in [Icon::Bluetooth,Icon::VolumeMuted,Icon::Headphones,Icon::Charging] {
+        let face=status_icon_face(icon,HUD_INK);assert_eq!((face.w,face.h),(32,32));
+        assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
+        assert!(face.rgba.chunks_exact(4).filter(|p|p[3]>0).all(|p|p[..3]==HUD_INK));
+    }
+}
