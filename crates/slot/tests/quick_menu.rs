@@ -59,6 +59,7 @@ fn open_at(a: &mut App, row: QuickRow) {
         }
     }
     assert_eq!(a.quick_menu(), Some(row), "the bar never reached {row:?}");
+    a.update(1.0);
 }
 
 #[test]
@@ -708,9 +709,7 @@ fn frame(a: &App) -> Vec<Draw> {
 
 fn placed(out: &[Draw], id: usize) -> Option<[f32; 4]> {
     out.iter().find_map(|d| match *d {
-        Draw::Tex {
-            x, y, w, h, tex, ..
-        } if tex == TexId::from_raw(id) => Some([x, y, w, h]),
+        Draw::Tex {x,y,w,h,tex,..} | Draw::Part {x,y,w,h,tex,..} if tex == TexId::from_raw(id) => Some([x, y, w, h]),
         _ => None,
     })
 }
@@ -814,6 +813,7 @@ fn the_legend_says_change_on_a_value_row_and_open_on_a_row_that_opens() {
     fake_faces(&mut a);
     a.apply(Action::QuickMenu);
     for row in QuickRow::General.shown(&a.hidden_rows()) {
+        a.update(1.0);
         assert_eq!(a.quick_menu(), Some(row));
         let out = frame(&a);
         assert!(drawn(&out, 400), "no B BACK on {row:?}");
@@ -868,6 +868,7 @@ fn the_selection_container_tracks_the_lit_row_without_a_pixel_pointer() {
     fake_faces(&mut a);
     a.apply(Action::QuickMenu);
     for row in QuickRow::General.shown(&a.hidden_rows()) {
+        a.update(1.0);
         let out = frame(&a);
         assert!(!drawn(&out, 700), "the retired pointer is still present");
         let [lx, ly, _, lh] = placed(&out, label(row, true)).expect("the lit label");
@@ -936,6 +937,7 @@ fn only_the_clock_from_the_menu_offers_b_back() {
     fake_faces(&mut first);
     first.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
     first.set_clock_back_face((TexId::from_raw(602), 40));
+    first.update(1.0);
     let out = frame(&first);
     assert!(drawn(&out, 601), "the first boot clock lost its key");
     assert!(
@@ -1477,4 +1479,29 @@ fn control_pages_keep_the_selected_shell_and_compact_button_hints() {
     assert!(hints
         .iter()
         .all(|(y, h)| *h == slot_ui::MENU_HINT_H as f32 && y + h < OUT_H as f32 - MOUTH_H));
+}
+
+#[test]
+fn about_remains_present_and_opaque_while_back_reverses_its_travel() {
+    let (_d,mut a,_)=on_carousel();fake_faces(&mut a);
+    a.set_sticker_face(TexId::from_raw(9001));open_at(&mut a,QuickRow::About);
+    press(&mut a,Btn::A);a.update(0.06);
+    let incoming=frame(&a);assert!(drawn(&incoming,9001));
+    press(&mut a,Btn::B);a.update(0.0);
+    let outgoing=frame(&a);assert!(drawn(&outgoing,9001),"Back must retain the outgoing sheet");
+    assert!(outgoing.iter().filter_map(|d|match d {Draw::Tex{tex,alpha,..}|Draw::Part{tex,alpha,..} if *tex==TexId::from_raw(9001)=>Some(*alpha),_=>None}).all(|a|a==1.0));
+    a.update(1.0);assert!(!drawn(&frame(&a),9001));
+}
+
+#[test]
+fn full_menu_legends_slide_in_and_out_without_transparency() {
+    let (_d,mut a,_)=on_carousel();fake_faces(&mut a);a.apply(Action::QuickMenu);a.update(0.0);
+    assert!(!drawn(&frame(&a),400),"the bay occludes the arriving legends");
+    a.update(0.2);let middle=legend_box(&frame(&a),400).1;
+    a.update(1.0);let resting=legend_box(&frame(&a),400).1;
+    assert!(resting<middle);
+    a.apply(Action::QuickMenu);a.update(0.005);
+    let leaving=frame(&a);assert!(legend_box(&leaving,400).1>resting);
+    assert!(leaving.iter().filter_map(|d|match d {Draw::Tex{tex,alpha,..} if *tex==TexId::from_raw(400)=>Some(*alpha),_=>None}).all(|a|a==1.0));
+    a.update(1.0);assert!(!drawn(&frame(&a),400));
 }

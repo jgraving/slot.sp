@@ -303,7 +303,7 @@ impl Hud {
         if alpha > 0.0 && (toast == 0.0 || audio_notice) {
             self.draw_bar(
                 canvas,
-                alpha,
+                1.0,
                 0.0,
                 now,
                 out,
@@ -439,7 +439,9 @@ impl Hud {
         let Some((said, _)) = self.said else {
             return;
         };
-        let (x, y, w, h) = toast_rect(canvas, said);
+        let (x, base, w, h) = toast_rect(canvas, said);
+        let y=base+(1.0-alpha)*(canvas.h-base+h+32.0);
+        let alpha=1.0;
         crate::expressive::rounded(out, x - 16.0, y - 10.0, w + 32.0, h + 20.0,
             (h + 20.0) / 2.0, [0.10, 0.12, 0.14, 0.97 * alpha]);
         out.push(Draw::Tex {

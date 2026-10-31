@@ -22,18 +22,18 @@ pub fn rounded(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, h: f32, radius: f32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-struct Spring {
-    value: f32,
-    velocity: f32,
+pub(crate) struct Spring {
+    pub(crate) value: f32,
+    pub(crate) velocity: f32,
 }
 impl Spring {
-    fn at(value: f32) -> Self {
+    pub(crate) fn at(value: f32) -> Self {
         Self {
             value,
             velocity: 0.0,
         }
     }
-    fn step(&mut self, target: f32, dt: f32, stiffness: f32, damping: f32) {
+    pub(crate) fn step(&mut self, target: f32, dt: f32, stiffness: f32, damping: f32) {
         if !dt.is_finite() || dt <= 0.0 {
             return;
         }
@@ -73,10 +73,11 @@ impl Spring {
 
 /// The same critically damped spatial spring drives compact-to-expanded cards.
 #[derive(Default, Debug)]
-pub struct SurfaceMotion { compact: Spring }
+pub struct SurfaceMotion { compact: Spring, target:bool }
 impl SurfaceMotion {
-    pub fn snap(&mut self, compact: bool) { self.compact=Spring::at(if compact {1.0}else{0.0}); }
-    pub fn update(&mut self, compact: bool, dt: f32) { self.compact.step(if compact {1.0}else{0.0},dt,800.0,1.0); }
+    pub fn snap(&mut self, compact: bool) { self.target=compact;self.compact=Spring::at(if compact {1.0}else{0.0}); }
+    pub fn update(&mut self, compact: bool, dt: f32) {self.target=compact;self.advance(dt);}
+    pub fn advance(&mut self,dt:f32) {self.compact.step(if self.target {1.0}else{0.0},dt,800.0,1.0);}
     pub fn value(&self) -> f32 { self.compact.value.clamp(0.0,1.0) }
 }
 
@@ -129,8 +130,13 @@ pub struct MenuMotion {
     custom: Option<u64>,
     outgoing_custom: bool,
     pause_morph: bool,
-    pause_from_y: f32,
-    pause_from_compact: f32,
+    pause_focus: Spring,
+    compact: Spring,
+    outgoing_page: Option<u64>,
+    outgoing_focus_y: f32,
+    target_scroll:f32,
+    target_window:f32,
+    target_focus:f32,
     row: Option<QuickRow>,
     scroll: Spring,
     window: Spring,
@@ -138,7 +144,6 @@ pub struct MenuMotion {
     direction: f32,
     outgoing: Option<QuickRow>,
     entry: Spring,
-    opacity: Spring,
     switch: Spring,
 }
 impl MenuMotion {
@@ -172,10 +177,14 @@ impl MenuMotion {
     ) {
         let Some(row) = row else {
             self.active = false;
-            self.outgoing = None;
             self.entry.step(0.0, dt, 800.0, 1.0);
-            self.opacity.step(0.0, dt, 1600.0, 1.0);
-            if self.opacity.value < 0.004 {
+            self.slide.step(1.0,dt,380.0,0.85);
+            self.scroll.step(self.target_scroll,dt,800.0,0.76);
+            self.window.step(self.target_window,dt,800.0,0.76);
+            self.pause_focus.step(self.target_focus,dt,800.0,0.76);
+            self.compact.step(if self.row.is_some_and(|r|r.page()==QuickRow::PLAY) {1.0}else{0.0},dt,800.0,1.0);
+            if self.entry.value == 0.0 && self.entry.velocity == 0.0 {
+                self.outgoing = None;
                 self.page = None;
                 self.row = None;
             }
@@ -184,18 +193,23 @@ impl MenuMotion {
         self.active = true;
         let target = selection.map_or_else(|| row.position(hidden), |s| s.0) as f32;
         let window = selection.map_or_else(|| crate::quick_window(row, hidden).0, |s| s.1) as f32;
+        self.target_scroll=target;self.target_window=window;self.target_focus=quick_row_top_at(row,row,hidden);
         let page = custom.unwrap_or(row.page()[0].index() as u64);
         if self.page != Some(page) {
             let opening = self.page.is_none();
-            let previous_frame = self.row.map(|old| self.frame(old, hidden));
+            let previous_frame = self.row.map(|old| self.frame_page(old,hidden,self.custom));
+            let reversing=self.outgoing.is_some() && self.outgoing_page==Some(page);
+            let was_morph=self.pause_morph && self.outgoing.is_some();
+            let previous_direction=self.direction;
             self.pause_morph = self.custom.is_none()
                 && custom.is_none()
                 && self.row.is_some_and(|old| {
                     (old.page() == QuickRow::PLAY && row.page() == QuickRow::SETTINGS)
                         || (old.page() == QuickRow::SETTINGS && row.page() == QuickRow::PLAY)
                 });
-            self.pause_from_y = previous_frame.map_or(88.0, |f| f.focus_y);
-            self.pause_from_compact = previous_frame.map_or(0.0, |f| f.focus_compact);
+            if !was_morph {self.pause_focus=Spring::at(previous_frame.map_or(88.0,|f|f.focus_y));}
+            self.outgoing_focus_y=previous_frame.map_or(88.0,|f|f.focus_y);
+            self.outgoing_page=self.page;
             self.outgoing = self.row.filter(|_| !opening);
             self.outgoing_custom = self.custom.is_some();
             self.direction = if (self.custom.is_some() && custom.is_none())
@@ -207,18 +221,21 @@ impl MenuMotion {
             } else {
                 1.0
             };
+            if reversing {self.direction=-previous_direction;}
             self.page = Some(page);
             self.custom = custom;
             self.scroll = Spring::at(target);
             self.window = Spring::at(window);
             self.slide = if opening {
                 Spring::at(1.0)
+            } else if reversing {
+                Spring{value:1.0-self.slide.value,velocity:-self.slide.velocity}
             } else {
                 Spring::default()
             };
             if opening {
+                self.compact=Spring::at(if row.page()==QuickRow::PLAY {1.0}else{0.0});
                 self.entry = Spring::default();
-                self.opacity = Spring::default();
             }
         }
         if self.row != Some(row) {
@@ -233,16 +250,22 @@ impl MenuMotion {
         if self.slide.value == 1.0 && self.slide.velocity == 0.0 {
             self.outgoing = None;
         }
-        self.entry.step(1.0, dt, 380.0, 0.82);
-        self.opacity.step(1.0, dt, 1600.0, 1.0);
+        self.entry.step(1.0, dt, 800.0, 1.0);
+        self.compact.step(if row.page()==QuickRow::PLAY {1.0}else{0.0},dt,800.0,1.0);
+        self.pause_focus.step(quick_row_top_at(row,row,hidden),dt,800.0,0.76);
         if let Some(on) = on {
             self.switch
                 .step(if on { 1.0 } else { 0.0 }, dt, 800.0, 0.76);
         }
     }
+    pub fn displacement(&self, canvas: crate::Canvas) -> f32 {
+        (1.0-self.entry.value)*(canvas.h+32.0)
+    }
+
     pub fn current_custom_key(&self) -> Option<u64> {
         self.custom
     }
+    pub fn outgoing_custom_key(&self) -> Option<u64> { self.outgoing_page.filter(|_|self.outgoing_custom) }
     pub fn outgoing_is_custom(&self) -> bool {
         self.outgoing_custom
     }
@@ -251,23 +274,21 @@ impl MenuMotion {
     }
     pub fn outgoing_frame(&self, row: QuickRow, hidden: &[QuickRow]) -> MenuFrame {
         let mut frame = MenuFrame::settled(row, hidden);
-        frame.page_shift = if self.pause_morph {
-            0.0
-        } else {
-            -self.direction * self.slide.value
-        };
+        frame.page_shift = -self.direction * self.slide.value;
+        frame.focus_y=self.outgoing_focus_y;
         if self.pause_morph {
             frame.suppress_focus = true;
-            frame.content_opacity = 1.0 - self.slide.value.clamp(0.0, 1.0);
+
         }
         frame.background = false;
         frame.outgoing = true;
-        frame.opacity = self.opacity.value.clamp(0.0, 1.0);
+        frame.opacity = 1.0;
+        frame.entry = self.entry.value;
         frame
     }
     pub fn closing_row(&self) -> Option<QuickRow> {
         self.row
-            .filter(|_| !self.active && self.opacity.value > 0.004)
+            .filter(|_| !self.active)
     }
     pub fn frame(&self, row: QuickRow, hidden: &[QuickRow]) -> MenuFrame {
         self.frame_page(row, hidden, None)
@@ -291,29 +312,16 @@ impl MenuMotion {
             background: self.outgoing.is_none(),
             outgoing: false,
             entry: self.entry.value,
-            opacity: self.opacity.value.clamp(0.0, 1.0),
+            opacity: 1.0,
             sliders: [None; 2],
-            focus_compact: if row.page() == QuickRow::PLAY {
-                1.0
-            } else {
-                0.0
-            },
+            focus_compact: self.compact.value.clamp(0.0,1.0),
             suppress_focus: false,
             content_opacity: 1.0,
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
             closing: !self.active,
         };
         if self.pause_morph && self.outgoing.is_some() {
-            let p = self.slide.value;
-            frame.page_shift = 0.0;
-            frame.focus_y = self.pause_from_y + (frame.focus_y - self.pause_from_y) * p;
-            let target = if row.page() == QuickRow::PLAY {
-                1.0
-            } else {
-                0.0
-            };
-            frame.focus_compact = self.pause_from_compact + (target - self.pause_from_compact) * p;
-            frame.content_opacity = p.clamp(0.0, 1.0);
+            frame.focus_y=self.pause_focus.value;
         }
         frame
     }
@@ -548,4 +556,9 @@ pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[Qui
             24.0 * compact + spread, [0.0, 0.0, 0.0, 0.07 * compact * frame.opacity]);
     }
     rounded(out, x, y, w, h, 24.0 * compact, [0.065, 0.075, 0.085, frame.opacity]);
+}
+
+/// The hardware bay occludes moving sheets; menu ink cannot pass over it.
+pub fn clip_panel(out:&mut Vec<Draw>,begin:usize,canvas:crate::Canvas) {
+    crate::quick_menu::clip_quads(out,begin,[0.0,0.0,canvas.w,canvas.h-crate::MOUTH_H]);
 }

@@ -6,17 +6,18 @@ fn unchanged_status_expires_and_another_attempt_rearms_it() {
     let message = Some((1, "Set date & time first".into()));
     notice.observe(message.clone(), 100);
     assert_eq!(notice.alpha(100), 0.0);
-    assert!((notice.alpha(170) - 0.5).abs() < 0.001);
-    assert_eq!(notice.alpha(300), 1.0);
+    assert!(notice.alpha(170)>0.5 && notice.alpha(170)<1.0);
+    assert!(notice.alpha(300)>0.95);
     notice.observe(message, 2500);
     assert_eq!(notice.alpha(2900), 0.0);
     notice.observe(Some((2, "Set date & time first".into())), 3000);
-    assert_eq!(notice.alpha(3200), 1.0);
+    assert!(notice.alpha(3200)>0.95);
     notice.observe(Some((3, "Could not save settings".into())), 3300);
     assert_eq!(notice.text(), Some("Could not save settings"));
-    assert_eq!(notice.alpha(3300), 0.0);
+    assert_eq!(notice.alpha(3300), 1.0,"rearming a visible pill preserves its position");
     notice.observe(None, 3400);
-    assert_eq!(notice.alpha(3500), 0.0);
+    assert!(notice.alpha(3500)>0.0 && notice.alpha(3500)<1.0);
+    assert_eq!(notice.alpha(3900),0.0);
 }
 
 #[test]
@@ -39,7 +40,7 @@ fn notices_fit_both_native_canvases_at_the_bottom_without_a_scrim() {
             notice.draw(
                 canvas,
                 Some((TexId::from_raw(1), face.w, face.h)),
-                200,
+                500,
                 &mut out,
             );
             assert_eq!(out.len(), 2);
@@ -48,4 +49,22 @@ fn notices_fit_both_native_canvases_at_the_bottom_without_a_scrim() {
             );
         }
     }
+}
+
+#[test]
+fn feedback_moves_as_an_opaque_surface_and_retargets_without_a_jump() {
+    let canvas=Canvas::FRAMED;
+    let face=settings_notice_face("Saved",canvas);
+    let texture=Some((TexId::from_raw(1),face.w,face.h));
+    let mut n=SettingsNotice::default();n.observe(Some((1,"Saved".into())),0);
+    let mut before=vec![];n.draw(canvas,texture,120,&mut before);
+    assert!(before.iter().all(|d|match d {Draw::Tex{alpha,..}=>*alpha==1.0,Draw::RoundRect{colour,..}=>colour[3]==0.97,_=>true}));
+    n.observe(Some((2,"Updated".into())),120);
+    let mut after=vec![];n.draw(canvas,texture,120,&mut after);
+    assert_eq!(before,after);
+    n.observe(None,120);
+    let mut closing=vec![];n.draw(canvas,texture,160,&mut closing);
+    assert!(closing.iter().all(|d|match d {Draw::Tex{alpha,..}=>*alpha==1.0,_=>true}));
+    assert!(n.alpha(160)>0.0);
+    assert_eq!(n.alpha(1000),0.0);
 }

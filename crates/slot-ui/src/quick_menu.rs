@@ -1602,16 +1602,16 @@ impl QuickMenu<'_> {
         self.draw_content(frame, out);
         // The scene is a few existing sprites. Transform them in place: no
         // framebuffer copies, live blur, text rasterisation or texture uploads.
-        let dy = (1.0 - frame.entry) * 18.0;
+        let dy = (1.0 - frame.entry) * (self.canvas.h+32.0);
         let dx = frame.page_shift * (self.canvas.w - 2.0 * crate::expressive::MENU_INSET);
         for draw in &mut out[begin..] {
             match draw {
                 Draw::RoundRect { x, y, colour, .. } => { *x += dx; *y += dy; colour[3] *= frame.opacity; }
                 Draw::Tex { x, y, alpha, .. } => { *x += dx; *y += dy; *alpha *= frame.opacity*frame.content_opacity; }
                 // Keep full-screen grounds anchored.
-                Draw::Rect { colour, .. } => colour[3] *= frame.opacity,
+                Draw::Rect { y, colour, .. } => { *y += dy; colour[3] *= frame.opacity; },
                 Draw::Part { x, y, alpha, .. } if *y >= 40.0 => { *x += dx; *y += dy; *alpha *= frame.opacity*frame.content_opacity; }
-                Draw::Part { alpha, .. } => *alpha *= frame.opacity,
+                Draw::Part { y, alpha, .. } => { *y += dy; *alpha *= frame.opacity; },
                 _ => {}
             }
         }
@@ -1623,9 +1623,6 @@ impl QuickMenu<'_> {
         if frame.background {
             if self.over_game {
                 crate::expressive::draw_pause_surface(self.canvas, frame, self.hidden, out);
-            } else if frame.closing {
-                out.push(Draw::Rect { x: 0.0, y: 0.0, w: self.canvas.w,
-                    h: OUT_H as f32 - MOUTH_H, colour: [0.0, 0.0, 0.0, GROUND_SCRIM] });
             } else {
                 draw_menu_ground(self.canvas, self.ground, out);
             }
