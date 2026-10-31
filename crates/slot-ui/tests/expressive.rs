@@ -536,11 +536,27 @@ fn card_transform_starts_at_its_tile_and_finishes_at_full_size() {
     f.tile_origin=Some([2.0,1.0]);
     for t in [0.0,0.5,1.0] {
         f.tile_reveal=t;
-        let mut draws=[Draw::RoundRect{x:56.0,y:40.0,w:528.0,h:320.0,radius:28.0,colour:[1.0;4]}];
-        slot_ui::expressive::tile_transform(canvas,f,&mut draws);
+        let mut draws=vec![Draw::RoundRect{x:56.0,y:80.0,w:528.0,h:280.0,radius:28.0,colour:[1.0;4]}];
+        slot_ui::expressive::tile_transform(canvas,f,&mut draws,0);
         let Draw::RoundRect{x,y,w,h,colour,..}=draws[0] else{panic!()};
         assert_eq!(colour[3],1.0);
         if t==0.0 {let tile=slot_ui::menu_grid::rect(canvas,6);assert!([x,y,w,h].into_iter().zip(tile).all(|(a,b)|(a-b).abs()<0.001));}
-        if t==1.0 {assert_eq!([x,y,w,h],[56.0,40.0,528.0,320.0]);}
+        if t==1.0 {assert_eq!([x,y,w,h],[56.0,80.0,528.0,280.0]);}
     }
+}
+
+#[test]
+fn expanding_tile_reveals_ink_without_stretching_it() {
+    use slot_ui::{Canvas,MenuFrame,Draw,TexId};
+    let canvas=Canvas{w:640.0,h:480.0};
+    let mut frame=MenuFrame::settled(QuickRow::Brightness,&[]);
+    frame.tile_origin=Some([1.0,0.0]);frame.tile_reveal=0.5;
+    let mut out=vec![Draw::Tex{x:80.0,y:110.0,w:200.0,h:40.0,tex:TexId::from_raw(1),alpha:1.0}];
+    slot_ui::expressive::tile_transform(canvas,frame,&mut out,0);
+    assert!(!out.is_empty());
+    for d in out {match d {
+        Draw::Tex{w,h,..}=>assert!((w/h-5.0).abs()<0.001),
+        Draw::Part{w,h,uv,..}=>{assert!((w/uv[2]-200.0).abs()<0.001);assert!((h/uv[3]-40.0).abs()<0.001);},
+        _=>panic!("unexpected ink primitive"),
+    }}
 }
