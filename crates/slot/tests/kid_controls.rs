@@ -958,3 +958,12 @@ fn an_expired_bedtime_edit_shows_feedback_and_stops_repeating() {
     assert_eq!(menu.draft.bedtime, 12 * 60 + 2);
     assert!(!menu.lines().iter().any(|line| line == "Choose a later time today"));
 }
+
+#[test]
+fn parent_focus_keeps_the_five_row_page_aligned_at_its_last_entry() {
+    let d=common::tmp_root_with_carts(&["Approved"]);
+    let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());
+    menu.input(Action::GbaDown(Btn::Up),0);
+    assert_eq!(menu.focus_info(),Some((4,0)));
+    assert!(menu.lines().iter().any(|line|line.contains("SELECTED Set parent code")));
+}

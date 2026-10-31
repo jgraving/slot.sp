@@ -124,7 +124,7 @@ impl Menu {
     }
     pub fn in_game_card(&self) -> bool { self.child_in_game && self.page == Page::Child }
     pub fn focus_info(&self) -> Option<(usize,usize)> {
-        let count=match self.page {Page::Child|Page::ChildSettings=>self.child_rows().len(),Page::Home=>6,Page::Time=>2,_=>return None};
+        let count=match self.page {Page::Child|Page::ChildSettings=>self.child_rows().len(),Page::Home=>5,Page::Time=>2,_=>return None};
         let visible=count.min(slot_ui::QUICK_VISIBLE);
         let selected=if self.page==Page::Time {self.time_selected}else{self.selected};
         Some((selected,selected.saturating_sub(visible/2).min(count.saturating_sub(visible))))
