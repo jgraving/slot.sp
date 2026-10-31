@@ -226,7 +226,7 @@ impl ClockPicker {
         let mut put = |f: UndoFace, x: u32, y: u32| blit(&mut rgba, w, &f.rgba, f.w, f.h, x, y);
         let heading = crate::quick_heading_face("Date & time");
         let x=canvas.centred(heading.w as f32)as u32;
-        put(heading,x,40);
+        put(heading,x,0);
         let cell_w = (canvas.w - 216.0) / 3.0;
         for (i, (label, value)) in [
             ("Year", format!("{:04}", self.year)),
@@ -300,7 +300,7 @@ impl ClockPicker {
         focus: [f32; 4],
         out: &mut Vec<Draw>,
     ) {
-        crate::expressive::rounded(out,72.0,88.0,canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);
+        crate::expressive::draw_card(canvas,out);
         crate::expressive::rounded(
             out,
             focus[0],
@@ -311,14 +311,8 @@ impl ClockPicker {
             if self.editing { [0.24, 0.42, 0.43, 1.0] } else { crate::expressive::SELECTED },
         );
         if let Some(tex) = line {
-            out.push(Draw::Tex {
-                x: 0.0,
-                y: 0.0,
-                w: canvas.w,
-                h: OUT_H as f32,
-                tex,
-                alpha: 1.0,
-            });
+            let frame=crate::MenuFrame::settled(crate::QuickRow::DateTime,&[]);
+            crate::expressive::draw_cached_menu(canvas,tex,frame,out);
         }
         if let Some((tex, w)) = back {
             out.push(Draw::Tex {

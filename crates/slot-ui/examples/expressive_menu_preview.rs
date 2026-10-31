@@ -127,7 +127,7 @@ fn main() {
         ("gameplay", QuickRow::FastForwardSound),
         ("back", QuickRow::Game),
         ("pause", QuickRow::Settings),
-        ("expanded", QuickRow::PlayScreen),
+        ("expanded", QuickRow::General),
         ("collapsed", QuickRow::Settings),
         ("dismiss", QuickRow::Settings),
         ("screen", QuickRow::Shader),
@@ -163,13 +163,13 @@ fn main() {
             let start = std::time::Instant::now();
             draw_ground(canvas,Some((ground,720)),&mut draws);
             let group=draws.len();
-            let over_game = row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS;
+            let over_game=matches!(name,"pause"|"expanded"|"collapsed"|"dismiss"|"screen");
             if over_game && visible {
                 expressive::draw_pause_surface(canvas, motion.frame(row, &hidden), &hidden, &mut draws);
             } else if visible {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
-            expressive::draw_shared_card(canvas,motion.frame(row,&hidden),row.page()==QuickRow::MAIN,&mut draws);
+            if !over_game {expressive::draw_card(canvas,&mut draws);}
             for outgoing in if row.page()==QuickRow::MAIN {[false,true]}else{[true,false]} {
                 if !visible {continue;}
                 let current = row;
@@ -198,7 +198,7 @@ fn main() {
                     bezel: None,
                     bound: None,
                     description: None,
-                    over_game: row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS,
+                    over_game,
                     footer_legends: true,
                     footer_top: 480.,
                     canvas,

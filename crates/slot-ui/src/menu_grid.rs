@@ -2,9 +2,9 @@
 use crate::{Canvas,Draw,QuickRow,UndoFace,text};
 use crate::expressive::{MENU_INSET,rounded};
 pub const COLUMNS:usize=4;
-pub const TOP:f32=100.0;
-pub const PITCH:f32=124.0;
-pub const TILE_H:f32=112.0;
+pub const TOP:f32=80.0;
+pub const PITCH:f32=142.0;
+pub const TILE_H:f32=120.0;
 
 pub fn is_page(page:&[QuickRow])->bool {page==QuickRow::MAIN || page==QuickRow::SETTINGS || page==QuickRow::PLAY}
 pub fn columns(row:QuickRow,hidden:&[QuickRow])->usize {if row.page()==QuickRow::MAIN {4}else{row.shown(hidden).len().min(3).max(1)}}
@@ -17,7 +17,7 @@ pub fn cell(canvas:Canvas,index:usize,count:usize,cols:usize,pause:bool)->[f32;4
     let x=(canvas.w-in_row as f32*pitch)/2.0+(index%cols)as f32*pitch+4.0;
     let settings=!pause && cols==3;
     let top=if pause {(canvas.h-(rows as f32*124.0-12.0))/2.0}else if settings {104.0}else{TOP};
-    [x,top+(index/cols)as f32*if settings{112.0}else{PITCH},pitch-8.0,if settings{100.0}else{TILE_H}]
+    [x,top+(index/cols)as f32*if pause{124.0}else if settings{112.0}else{PITCH},pitch-8.0,if pause{112.0}else if settings{100.0}else{TILE_H}]
 }
 pub fn pause_rect(canvas:Canvas,count:usize)->[f32;4] {
     let cols=count.min(3).max(1);let rows=count.div_ceil(cols);
@@ -77,14 +77,14 @@ pub(crate) fn draw(menu:&crate::quick_menu::QuickMenu<'_>,frame:crate::MenuFrame
     let Some(faces)=menu.faces else{return;};
     let canvas=menu.canvas;let rows=menu.row.shown(menu.hidden);let cols=columns(menu.row,menu.hidden);
     let pause=menu.row.page()==QuickRow::PLAY;
-    if !menu.over_game && frame.tile_origin.is_none(){rounded(out,MENU_INSET,88.0,canvas.w-2.0*MENU_INSET,260.0,28.0,[0.095,0.12,0.14,1.0]);}
-    if !pause {if let Some((_,(tex,w,h)))=faces.headings.iter().find(|(r,_)|*r==menu.row.page()[0]) {
-        out.push(Draw::Tex{x:canvas.centred(*w as f32),y:40.0,w:*w as f32,h:*h as f32,tex:*tex,alpha:1.0});
+    if frame.background && !menu.over_game {crate::expressive::draw_card(canvas,out);}
+    if !frame.outgoing {if let Some((_,(tex,w,h)))=faces.headings.iter().find(|(r,_)|*r==menu.row.page()[0]) {
+        out.push(Draw::Tex{x:canvas.centred(*w as f32),y:0.0,w:*w as f32,h:*h as f32,tex:*tex,alpha:1.0});
     }}
     let selected=menu.row.position(menu.hidden);
     let [x,y,w,h]=cell(canvas,selected,rows.len(),cols,pause);
     let target=position(menu.row,menu.hidden);
     let pitch=if pause {120.0}else{(canvas.w-2.0*MENU_INSET-24.0)/cols as f32};
-    rounded(out,x+(frame.grid_focus[0]-target[0])*pitch,y+(frame.grid_focus[1]-target[1])*if menu.row.page()==QuickRow::SETTINGS{112.0}else{PITCH},w,h,22.0,crate::expressive::SELECTED);
+    rounded(out,x+(frame.grid_focus[0]-target[0])*pitch,y+(frame.grid_focus[1]-target[1])*if pause{124.0}else if menu.row.page()==QuickRow::SETTINGS{112.0}else{PITCH},w,h,22.0,crate::expressive::SELECTED);
     for (i,row) in rows.into_iter().enumerate(){let [x,y,w,h]=cell(canvas,i,menu.row.shown(menu.hidden).len(),cols,pause);let (tex,tw,th)=faces.labels[row.index()][usize::from(i==selected)];out.push(Draw::Tex{x:x+(w-tw as f32)/2.0,y:y+(h-th as f32)/2.0,w:tw as f32,h:th as f32,tex,alpha:1.0});}
 }

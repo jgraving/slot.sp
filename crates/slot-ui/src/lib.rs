@@ -144,3 +144,6 @@ pub use button_code::button_code_face;
 
 mod loading;
 pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};
+
+/// Shared clipping boundary for moving settings content, excluding anchored chrome.
+pub fn clip_menu_body(out:&mut Vec<Draw>,begin:usize,canvas:Canvas){quick_menu::clip_quads(out,begin,[expressive::MENU_INSET,expressive::CARD_TOP,canvas.w-expressive::MENU_INSET,expressive::CARD_BOTTOM]);}

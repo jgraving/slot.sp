@@ -15,11 +15,10 @@ pub fn status_battery_face(b:Battery)->UndoFace {
     let (track,fill,dark)=if charging {([0.20,0.36,0.28,1.0],[0.67,0.94,0.78,1.0],[18,47,32])}
         else if b.percent<=20 {([0.38,0.14,0.15,1.0],[1.0,0.70,0.68,1.0],[65,6,9])}
         else {([0.36,0.39,0.42,1.0],[0.94,0.96,0.98,1.0],[17,24,29])};
-    crate::expressive::raster_round(&mut face,0.0,0.0,BODY,GAUGE_H,6.0,track);
+    crate::expressive::raster_round(&mut face,0.0,0.0,BODY,GAUGE_H,GAUGE_H/2.0,track);
     let edge=BODY*b.percent.min(100)as f32/100.0;
     // Intersect the level with the capsule's existing mask; no square fill corners.
     for y in 0..h {for x in 0..edge.ceil()as u32 {let i=((y*w+x)*4)as usize;for c in 0..3 {face.rgba[i+c]=(fill[c]*255.0)as u8;}}}
-    crate::expressive::raster_round(&mut face,BODY,9.0,2.0,8.0,1.0,fill);
     let label=b.percent.min(100).to_string();
     let layout=text::Layout{lines:vec![label],px:18.0,tracking:0.0,role:text::Role::Focus};
     let mut ink=vec![0;(BODY as u32*h*4)as usize];

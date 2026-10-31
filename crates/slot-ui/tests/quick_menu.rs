@@ -379,16 +379,16 @@ fn the_in_game_pages_hold_their_rows_in_order() {
 
 #[test]
 fn in_game_pages_climb_back_through_settings() {
-    assert_eq!(QuickRow::Settings.child(), Some(QuickRow::PlayScreen));
+    assert_eq!(QuickRow::Settings.child(), Some(QuickRow::General));
     assert_eq!(QuickRow::PlayScreen.child(), Some(QuickRow::PlayBrightness));
     assert_eq!(
         QuickRow::PlayBrightness.parent_in_game(),
-        Some(QuickRow::PlayScreen)
+        Some(QuickRow::Screen)
     );
     assert_eq!(QuickRow::PlayGameplay.child(), Some(QuickRow::FastForward));
     assert_eq!(
         QuickRow::Shader.parent_in_game(),
-        Some(QuickRow::PlayScreen)
+        Some(QuickRow::Screen)
     );
     assert_eq!(
         QuickRow::PlayGameplay.parent_in_game(),
@@ -396,7 +396,7 @@ fn in_game_pages_climb_back_through_settings() {
     );
     assert_eq!(
         QuickRow::Rumble.parent_in_game(),
-        Some(QuickRow::PlayGameplay)
+        Some(QuickRow::Game)
     );
     assert_eq!(QuickRow::Rumble.parent(), Some(QuickRow::Game));
 }
@@ -435,23 +435,23 @@ fn a_hidden_palette_and_bezel_leave_four_screen_rows(){let hidden=[QuickRow::Pal
 
 #[test]
 fn the_in_game_screen_page_shows_five_rows_and_scrolls_the_rest() {
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBrightness,&[]),(0,4));assert_eq!(slot_ui::quick_window(QuickRow::ColourCorrection,&[]),(2,4));assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBrightness,&[]),(0,5));assert_eq!(slot_ui::quick_window(QuickRow::ColourCorrection,&[]),(1,5));assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*4.0/6.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
+    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*5.0/6.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
 }
 
 #[test]
-fn the_thumb_reaches_the_bottom_only_on_the_last_row() {
+fn the_thumb_tracks_the_visible_window_and_reaches_the_last_window() {
     let rows = QuickRow::CONTROLS;
     let mut last_y = f32::MIN;
     for (i, row) in rows.iter().enumerate() {
         let bar = slot_ui::quick_scroll(*row, &[]).expect("the controls page scrolls");
         let at_bottom = (bar.thumb_y + bar.thumb_h - (bar.y + bar.h)).abs() < 0.5;
-        assert_eq!(at_bottom, i == rows.len() - 1, "{row:?} at {i}");
-        assert!(bar.thumb_y > last_y, "{row:?}: the thumb did not move down");
+        assert_eq!(at_bottom, slot_ui::quick_window(*row,&[]).0 + slot_ui::quick_window(*row,&[]).1 == rows.len(), "{row:?} at {i}");
+        assert!(bar.thumb_y >= last_y, "{row:?}: the thumb did not move down");
         last_y = bar.thumb_y;
     }
 }
@@ -481,7 +481,7 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
 
 #[test]
 fn screen_rows_in_game_fill_the_normal_menu_from_the_top() {
-    let first=slot_ui::quick_row_top(QuickRow::PlayBrightness,&[]);assert_eq!(first,112.0);assert_eq!(slot_ui::quick_row_top(QuickRow::PlayBlueLight,&[])-first,slot_ui::QUICK_PITCH);assert_eq!(first,slot_ui::quick_row_top(QuickRow::FastForward,&[]));
+    let first=slot_ui::quick_row_top(QuickRow::PlayBrightness,&[]);assert_eq!(first,slot_ui::expressive::ROW_TOP);assert_eq!(slot_ui::quick_row_top(QuickRow::PlayBlueLight,&[])-first,slot_ui::QUICK_PITCH);assert_eq!(first,slot_ui::quick_row_top(QuickRow::FastForward,&[]));
 }
 
 #[test]
@@ -579,7 +579,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
                         _ => None,
                     })
                     .collect();
-                assert_eq!(labels.len(), shown.len().min(QUICK_VISIBLE_ROWS));
+                assert_eq!(labels.len(), slot_ui::quick_window(selected,&hidden).1);
                 assert!(labels.iter().all(
                     |(_, y, h)| *y >= 40. && y + h <= 480. - MOUTH_H - MENU_HINT_H as f32 - 12.
                 ));
