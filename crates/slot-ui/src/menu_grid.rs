@@ -26,18 +26,19 @@ pub fn navigate(row:QuickRow,hidden:&[QuickRow],dx:i32,dy:i32)->QuickRow {
 }
 
 pub(crate) fn tile_face(row:QuickRow,lit:bool)->UndoFace {
+    // Filled silhouettes with transparent inset details stay legible on the handheld.
     let (label,paths)=match row {
-        QuickRow::General=>("General",r#"<path d="m20 4 1-3h6l1 3 4 2 3-1 3 5-2 3v5l2 3-3 5-3-1-4 2-1 3h-6l-1-3-4-2-3 1-3-5 2-3v-5l-2-3 3-5 3 1z" transform="translate(0 7)"/><circle cx="24" cy="24" r="6"/>"#),
-        QuickRow::Screen=>("Screen",r#"<rect x="5" y="8" width="38" height="26" rx="4"/><path d="M17 41h14M24 34v7"/>"#),
-        QuickRow::Bluetooth=>("Sound",r#"<path d="m7 19 8 0 10-9v28l-10-9H7zM31 17q7 7 0 14M36 10q14 14 0 28"/>"#),
-        QuickRow::Game=>("Gameplay",r#"<path d="M15 14h18q6 0 8 8l3 13q1 8-6 5l-8-7H18l-8 7q-7 3-6-5l3-13q2-8 8-8zM11 23h10M16 18v10"/><circle cx="32" cy="22" r="1.5"/><circle cx="37" cy="27" r="1.5"/>"#),
-        QuickRow::Power=>("Power & lid",r#"<path d="M24 4v18M14 10a17 17 0 1 0 20 0"/>"#),
-        QuickRow::Controls=>("Device\ncontrols",r#"<path d="M18 5h12v13h13v12H30v13H18V30H5V18h13z"/><path d="M22 13h4M12 22v4M35 22v4M22 35h4"/>"#),
-        QuickRow::Kids=>("Parental\ncontrols",r#"<circle cx="24" cy="24" r="18"/><path d="M14 27q10 13 20 0"/><circle cx="17" cy="18" r="1.2"/><circle cx="31" cy="18" r="1.2"/>"#),
-        _=>("About",r#"<circle cx="24" cy="24" r="18"/><path d="M24 22v12M24 14v1"/>"#),
+        QuickRow::General=>("General",r#"<path fill-rule="evenodd" d="M40.34 19.31 L44.46 19.28 L44.46 28.72 L40.34 28.69 L38.87 32.24 L41.81 35.13 L35.13 41.81 L32.24 38.87 L28.69 40.34 L28.72 44.46 L19.28 44.46 L19.31 40.34 L15.76 38.87 L12.87 41.81 L6.19 35.13 L9.13 32.24 L7.66 28.69 L3.54 28.72 L3.54 19.28 L7.66 19.31 L9.13 15.76 L6.19 12.87 L12.87 6.19 L15.76 9.13 L19.31 7.66 L19.28 3.54 L28.72 3.54 L28.69 7.66 L32.24 9.13 L35.13 6.19 L41.81 12.87 L38.87 15.76z M31 24a7 7 0 1 0-14 0 7 7 0 0 0 14 0"/>"#),
+        QuickRow::Screen=>("Screen",r#"<path fill-rule="evenodd" d="M10 3h28a4 4 0 0 1 4 4v18H6V7a4 4 0 0 1 4-4z M12 8v12h24V8z M6 28h36v13a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z M14 31v4h-4v3h4v4h3v-4h4v-3h-4v-4z M34 33a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M39 38a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>"#),
+        QuickRow::Bluetooth=>("Sound",r#"<path d="M5 18h9l12-10v32L14 30H5zM31 16v16a11 11 0 0 0 0-16M36 8v4a15 15 0 0 1 0 24v4a19 19 0 0 0 0-32"/>"#),
+        QuickRow::Game=>("Gameplay",r#"<path fill-rule="evenodd" d="M8 5h32a3 3 0 0 1 3 3v32a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3z M12 11v18h24V11z M14 35v4h3v-4z M22 35v4h3v-4z M30 35v4h3v-4z"/>"#),
+        QuickRow::Power=>("Power & lid",r#"<path d="M22 3h4v20h-4zM16 9v5a14 14 0 1 0 16 0V9a19 19 0 1 1-16 0"/>"#),
+        QuickRow::Controls=>("Device\ncontrols",r#"<path fill-rule="evenodd" d="M17 4h14v13h13v14H31v13H17V31H4V17h13z M21 21v6h6v-6z"/>"#),
+        QuickRow::Kids=>("Parental\ncontrols",r#"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M17 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M31 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M13 26a11 11 0 0 0 22 0h-4a7 7 0 0 1-14 0z"/>"#),
+        _=>("About",r#"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M22 21v14h4V21z M24 12a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>"#),
     };
-    let ink=if lit {"#b7f3e8"}else{"#dce4e7"};
-    let svg=format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="none" stroke="{ink}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">{paths}</g></svg>"#);
+    let ink=if lit {"#effbf8"}else{"#dce4e7"};
+    let svg=format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="{ink}">{paths}</g></svg>"#);
     let icon=crate::art::render_svg(&svg,44,44).expect("menu tile SVG");
     let (w,h)=(112,100);
     let mut rgba=vec![0;(w*h*4) as usize];
@@ -62,8 +63,6 @@ pub(crate) fn draw(menu:&crate::quick_menu::QuickMenu<'_>,frame:crate::MenuFrame
     let x=MENU_INSET+12.0+frame.grid_focus[0]*pitch;
     let y=TOP+frame.grid_focus[1]*PITCH;
     rounded(out,x,y,w,h,22.0,crate::expressive::SELECTED);
-    // A tonal icon well keeps focus readable without dimming other options.
-    rounded(out,x+w/2.0-28.0,y+3.0,56.0,56.0,20.0,[0.22,0.40,0.40,1.0]);
     for (i,row) in menu.row.shown(menu.hidden).into_iter().enumerate() {
         let [x,y,w,h]=rect(canvas,i);
         let (tex,tw,th)=faces.labels[row.index()][usize::from(i==selected)];
