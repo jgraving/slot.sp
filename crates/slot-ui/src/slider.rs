@@ -28,6 +28,7 @@ pub fn draw_slider(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, value: f32, alph
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MenuSlider {
     pub span:f32,
+    pub width:f32,
     pub id: u64,
     pub fraction: f32,
     pub y: f32,
@@ -46,7 +47,7 @@ pub fn draw_menu_sliders(
             out,
             canvas.w - crate::QUICK_EDGE - s.span + dx,
             s.y,
-            MENU_SLIDER_W,
+            s.width,
             motion.value(s.id, s.fraction),
             frame.opacity,
         );
@@ -78,15 +79,16 @@ pub fn setting_slider(label: &str, value: &str) -> Option<f32> {
     })
     .flatten()
 }
-pub fn slider_face(value: f32) -> UndoFace {
-    let (w, h) = (MENU_SLIDER_W as u32 + 2 * MENU_PAD, 40);
+pub fn slider_face(value: f32) -> UndoFace {slider_face_with_width(value,MENU_SLIDER_W)}
+pub fn slider_face_with_width(value:f32,width:f32)->UndoFace {
+    let (w, h) = (width as u32 + 2 * MENU_PAD, 40);
     let mut face = UndoFace {
         rgba: vec![0; (w * h * 4) as usize],
         w,
         h,
     };
     let mut out = vec![];
-    draw_slider(&mut out, MENU_PAD as f32, 5.0, MENU_SLIDER_W, value, 1.0);
+    draw_slider(&mut out, MENU_PAD as f32, 5.0, width, value, 1.0);
     for d in out {
         if let Draw::RoundRect {
             x,

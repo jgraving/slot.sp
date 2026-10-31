@@ -46,7 +46,7 @@ pub mod text;
 mod toast;
 mod toggle;
 mod slider;
-pub use slider::{draw_slider,draw_menu_sliders,MenuSlider,setting_slider,slider_face,MENU_SLIDER_W,MENU_SLIDER_SPAN};
+pub use slider::{draw_slider,draw_menu_sliders,MenuSlider,setting_slider,slider_face, slider_face_with_width,MENU_SLIDER_W,MENU_SLIDER_SPAN};
 pub use toggle::{toggle_face, draw_switch, draw_menu_switches, MenuSwitch, SWITCH_W, SWITCH_H};
 
 pub use art::decode as decode_png;

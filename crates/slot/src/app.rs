@@ -4083,7 +4083,7 @@ impl App {
         self.switch_motion.update(&self.visible_custom_switches(),dt);
         let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
         let sliders=self.visible_custom_sliders();
-        let global=[slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
+        let global=[slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
         self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
         let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
@@ -5032,7 +5032,7 @@ impl App {
                             surface.focus_compact=if (2000..3000).contains(&key) {self.kid_surface.value()}else{0.0};
                             if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
                         } else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
-                        if matches!(key,2000..=2002|2009|3000..=3001) {
+                        if matches!(key,2000..=2002|2009|2010|3000..=3001) {
                             let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
                             slot_ui::expressive::rounded(out,self.canvas().centred(width),frame.focus_y,width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,slot_ui::expressive::SELECTED);
                         }
@@ -5208,7 +5208,7 @@ impl App {
             } else if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
-                    if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,2000..=2002|2009|3000..=3001)) {
+                    if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,2000..=2002|2009|2010|3000..=3001)) {
                         let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
                         let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
                         slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,slot_ui::expressive::SELECTED);
