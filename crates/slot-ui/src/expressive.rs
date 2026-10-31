@@ -187,7 +187,7 @@ impl MenuMotion {
         let Some(row) = row else {
             self.active = false;
             self.entry.step(0.0, dt, 800.0, 1.0);
-            self.slide.step(1.0,dt,380.0,0.85);
+            self.slide.step(1.0,dt,600.0,1.0);
             self.scroll.step(self.target_scroll,dt,800.0,0.76);
             self.window.step(self.target_window,dt,800.0,0.76);
             self.pause_focus.step(self.target_focus,dt,800.0,0.76);
@@ -270,7 +270,7 @@ impl MenuMotion {
         // page arrival. Critically damp opacity: it must never bounce.
         self.scroll.step(target, dt, 800.0, 0.76);
         self.window.step(window, dt, 800.0, 0.76);
-        self.slide.step(1.0, dt, 380.0, 0.85);
+        self.slide.step(1.0, dt, 600.0, 1.0);
         if self.slide.value == 1.0 && self.slide.velocity == 0.0 {
             self.outgoing = None;
         }
@@ -621,24 +621,27 @@ pub fn clip_panel(out:&mut Vec<Draw>,begin:usize,canvas:crate::Canvas) {
     crate::quick_menu::clip_quads(out,begin,[0.0,0.0,canvas.w,canvas.h-crate::MOUTH_H]);
 }
 
-/// A settings tile becomes the full card; reversing shrinks it to its origin.
-pub fn tile_transform(canvas:crate::Canvas,frame:MenuFrame,draws:&mut[Draw]) {
+/// Only the container changes shape. Ink keeps its native proportions and is
+/// revealed by the expanding surface, so small tile text never stretches.
+pub fn tile_transform(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>,begin:usize) {
     let Some([col,row])=frame.tile_origin else{return;};
     let t=frame.tile_reveal.clamp(0.0,1.0);
-    let [x,y,w,h]=crate::menu_grid::rect(canvas,row as usize*4+col as usize);
-    let full_w=canvas.w-2.0*MENU_INSET;
-    let sx=w/full_w+(1.0-w/full_w)*t;
-    let sy=h/320.0+(1.0-h/320.0)*t;
-    let cx=(x+w/2.0)+(canvas.w/2.0-x-w/2.0)*t;
-    let cy=(y+h/2.0)+(200.0-y-h/2.0)*t;
-    for draw in draws {
+    let [ox,oy,ow,oh]=crate::menu_grid::rect(canvas,row as usize*4+col as usize);
+    let full=[MENU_INSET,80.0,canvas.w-2.0*MENU_INSET,280.0];
+    let x=ox+(full[0]-ox)*t;
+    let y=oy+(full[1]-oy)*t;
+    let w=ow+(full[2]-ow)*t;
+    let h=oh+(full[3]-oh)*t;
+    let dx=(ox+ow/2.0-canvas.w/2.0)*(1.0-t);
+    let dy=(oy+oh/2.0-220.0)*(1.0-t);
+    for draw in &mut out[begin..] {
         match draw {
-            Draw::Rect{x,y,w,h,..}|Draw::RoundRect{x,y,w,h,..}|Draw::Tex{x,y,w,h,..}|Draw::Part{x,y,w,h,..}|Draw::Turned{x,y,w,h,..}=>{
-                *x=cx+(*x-canvas.w/2.0)*sx;*y=cy+(*y-200.0)*sy;*w*=sx;*h*=sy;
-            },_=>{}
-        }
-        if let Draw::RoundRect{radius,..}=draw {
-            *radius=if (*radius-28.0).abs()<0.01 {22.0+6.0*t}else{*radius*sx.min(sy)};
+            Draw::RoundRect{x:rx,y:ry,w:rw,h:rh,radius,colour} if (*rw-full[2]).abs()<0.1 && (*rh-full[3]).abs()<0.1 => {
+                *rx=x;*ry=y;*rw=w;*rh=h;*radius=22.0+6.0*t;
+                for c in 0..3 {colour[c]=SELECTED[c]+(colour[c]-SELECTED[c])*t;}
+            },
+            Draw::Rect{x,y,..}|Draw::RoundRect{x,y,..}|Draw::Tex{x,y,..}|Draw::Part{x,y,..}|Draw::Turned{x,y,..}=>{*x+=dx;*y+=dy;},_=>{}
         }
     }
+    crate::quick_menu::clip_quads(out,begin,[x,y-48.0*t,x+w,y+h]);
 }
