@@ -8,7 +8,9 @@ fn each_finish_and_auto_survive_a_restart() {
         let state = SlotState { shell_colour: colour, ..SlotState::default() };
         write_slot_state(d.path(), &state).unwrap();
         assert_eq!(read_slot_state(d.path()).shell_colour, colour);
-        assert_eq!(colour.step(true).step(false), colour);
+        if colour!=ShellColour::Theme {assert_eq!(colour.step(true).step(false), colour);}
+        assert_ne!(colour.step(true),ShellColour::Theme);
+        assert_ne!(colour.step(false),ShellColour::Theme);
     }
 }
 

@@ -45,7 +45,7 @@ fn main() {
         }
         for (frame, seat) in seats.iter().copied().enumerate() {
         let mut draws = Vec::new();
-        slot_ui::draw_ground(Canvas::FRAMED, Some(TexId::from_raw(5)), &mut draws);
+        slot_ui::draw_ground(Canvas::FRAMED, Some((TexId::from_raw(5),720)), &mut draws);
         if let Some(seat) = seat {
             let (rest, scale) = shelf.selected_at(Canvas::FRAMED);
             slot_ui::SlotChrome { cart: &shelf.carts[1], face: Some(TexId::from_raw(1)), rest, scale, seat,

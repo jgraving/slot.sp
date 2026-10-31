@@ -313,7 +313,7 @@ impl Menu {
             ];
             let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
             let mut face = settings_face(canvas, &rows, self.selected, 0, status, 0.0);
-            let heading=slot_ui::quick_heading_face("Kid mode");
+            let heading=slot_ui::quick_heading_face("Parental controls");
             blit(&mut face,&heading,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
             if status.is_empty() { self.add_time_meter(&mut face); }
             return face;
@@ -478,7 +478,7 @@ impl Menu {
         self.face = None;
         match action {
             Action::GbaDown(button @ (Btn::Left | Btn::Right))
-                if self.page == Page::Time || (self.page == Page::Home && self.selected == 2) => {
+                if self.page == Page::Time || (self.page == Page::Home && matches!(self.selected,2|3)) || (matches!(self.page,Page::Child|Page::ChildSettings) && !self.in_game_card() && matches!(self.selected,1|2)) => {
                 if self.repeat.is_none_or(|(held, _)| held != button) { self.repeat = Some((button, 0.4)); }
             }
             Action::GbaUp(button) if self.repeat.is_some_and(|(held, _)| held == button) => self.stop_repeat(),

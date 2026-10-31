@@ -64,7 +64,7 @@ pub fn draw_menu_sliders(
 pub fn setting_slider(label: &str, value: &str) -> Option<f32> {
     matches!(
         label,
-        "Volume" | "Volume limit" | "Brightness" | "Warmth" | "Night warmth" | "Color temp"
+        "Volume" | "Volume on disconnect" | "Volume limit" | "Brightness" | "Warmth" | "Night warmth" | "Color temp"
     )
     .then(|| {
         value

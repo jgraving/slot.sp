@@ -309,6 +309,7 @@ impl Manager {
     fn pair_row(&self) -> usize { self.device_start() + self.device_indices().len() + self.usb_devices.len() }
     fn disconnect_row(&self) -> usize { self.pair_row() + usize::from(self.bluetooth_available) }
     fn pause_row(&self) -> usize { self.disconnect_row() + 1 }
+    pub fn slider_selected(&self)->bool {self.volume_selected() || (self.page==Page::Home && self.selected==self.disconnect_row())}
     pub fn volume_selected(&self)->bool {self.page==Page::Home && self.selected==self.pause_row()+1}
 
     fn device_indices(&self) -> Vec<usize> {
@@ -519,9 +520,11 @@ impl Manager {
     }
 
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
-        let(_,_,first,visible)=self.scroll_info();let row=self.pause_row()+1;
-        if self.page==Page::Home && (first..first+visible).contains(&row){vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.current_volume as f32/100.0,y:94.0+(row-first) as f32*slot_ui::QUICK_PITCH}]}else{vec![]}
+        let(_,_,first,visible)=self.scroll_info();
+        if self.page!=Page::Home {return vec![];}
+        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
+
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
         let (_,_,first,visible)=self.scroll_info();
         self.rows().iter().enumerate().skip(first).take(visible).filter_map(|(i,row)| {
@@ -958,7 +961,13 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
             .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
-            let name = slot_ui::quick_value_face(name, highlight);
+            let name = if label.starts_with("DISCONNECT ") {
+                let width=screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::QUICK_LABEL_X as u32-12;
+                let layout=slot_ui::text::fit_preserving_case(font,name,width as f32,2,20.0,20.0);
+                let mut rgba=vec![0;(width*40*4)as usize];
+                slot_ui::text::draw_centred(&mut rgba,width,40,&layout,ink);
+                slot_ui::UndoFace{rgba,w:width,h:40}
+            } else {slot_ui::quick_value_face(name, highlight)};
             blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
             if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
                 if !switches {continue;}
@@ -967,7 +976,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
                 blit(&mut rgba, &switch, x, top);
                 continue;
             }
-            if label.starts_with("VOLUME ") {
+            if label.starts_with("VOLUME ") || label.starts_with("DISCONNECT ") {
                 if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::MENU_PAD,top);}
                 let value=slot_ui::quick_value_face(value,highlight);blit(&mut rgba,&value,screen_w-slot_ui::QUICK_EDGE as u32+slot_ui::MENU_PAD-value.w,top);continue;
             }
@@ -1578,6 +1587,9 @@ mod menu_tests {
         );
         assert!(m.pending.is_none());
         m.selected = 1;
+        assert!(m.slider_selected());
+        assert_eq!(m.visible_sliders().len(),2);
+        assert!(m.visible_sliders().iter().any(|s|s.fraction==0.0));
         for _ in 0..25 {
             m.input(Action::GbaDown(Btn::Right));
         }

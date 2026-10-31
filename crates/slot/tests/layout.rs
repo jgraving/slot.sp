@@ -128,36 +128,21 @@ fn the_overlay_rises_while_the_screen_powers_on() {
 }
 
 #[test]
-fn the_exit_powers_off_then_drops_the_overlay_then_leaves_the_game() {
-    let mut a = playing(PANEL_4_3);
+fn the_hold_exit_shrinks_the_picture_before_ejecting_the_cart() {
+    let mut a=playing(PANEL_4_3);
     a.apply(Action::Eject);
-    while a.screen_power() > 0.0 {
-        assert_eq!(
-            a.overlay_slide(),
-            1.0,
-            "the overlay moved before the screen was off"
-        );
-        assert!(a.shows_game());
-        assert_eq!(
-            a.screen_footer(),
-            0.0,
-            "the framed close scaled around a footer that is not on this canvas"
-        );
-        tick(&mut a);
+    let mut frames=0;
+    let mut last=a.screen_power();
+    while a.screen_power()>0.0 {
+        assert_eq!(a.overlay_slide(),0.0);
+        assert!(a.screen_power()<=last);
+        assert!(matches!(a.phase(),Phase::Ejecting{t,..} if *t<0.0));
+        last=a.screen_power();
+        tick(&mut a);frames+=1;
+        assert!(frames<30);
     }
-    let mut frames = 0;
-    while a.overlay_slide() > 0.0 {
-        assert!(a.shows_game(), "the shelf showed under a sliding overlay");
-        tick(&mut a);
-        frames += 1;
-        assert!(frames <= 16, "the overlay took longer than it took to rise");
-    }
-    assert!(frames >= 12, "the overlay dropped in {frames} frames");
-    assert!(!a.shows_game());
-    assert!(
-        matches!(a.phase(), Phase::Ejecting { .. }),
-        "the cart left before the shelf showed"
-    );
+    assert!(frames>=12);
+    assert!(matches!(a.phase(),Phase::Ejecting{..}));
 }
 
 #[test]

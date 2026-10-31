@@ -69,7 +69,7 @@ Follow the on-screen hints for a confirmation or a screen with different control
 
 ## On-device reference
 
-Open **Menu → Controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
+Open **Menu → Device controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
 
 ![The on-device reference showing the saved shortcut bindings](previews/guide/buttons-shortcuts.png)
 
@@ -77,13 +77,13 @@ Kid mode has its own **Buttons & shortcuts** row in the kid menu. Its guide cove
 
 ## Change a button
 
-Open **Menu → Controls**, then choose a page:
+Open **Menu → Device controls**, then choose a page:
 
 | Page | What it changes |
 | :--- | :--- |
 | **Shelf** | Carousel switching and the Favorite button. |
 | **Shortcuts** | Save/load, screenshots, display shortcuts, day/night, fast-forward and rewind. |
-| **In-Game** | Game buttons and turbo buttons. Also available through in-game **Settings → Controls**. |
+| **In-Game** | Game buttons and turbo buttons. Also available through in-game **Settings → Device controls**. |
 
 **Fast Forward Toggle** is an optional shortcut: press once to start and again to stop. It has no default binding. Assigning it to the current **Fast Forward** button replaces the hold binding.
 

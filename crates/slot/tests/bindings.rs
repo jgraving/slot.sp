@@ -214,7 +214,6 @@ fn the_in_game_settings_have_no_save_changes_page() {
             QuickRow::PlayGameplay,
             QuickRow::PlayControls,
             QuickRow::PlayReference,
-            QuickRow::PlayDetails
         ]
     );
 }

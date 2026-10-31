@@ -146,6 +146,10 @@ pub fn draw_corner_audio(
     );
 }
 
+pub fn draw_corner_kid(battery:Option<Battery>,percent:Printed,icon:TexId,preceding:usize,out:&mut Vec<Draw>) {
+    draw_connection(battery,percent,Some(icon),CORNER_MARGIN+30.0*preceding as f32,(PLATE_H-20.0)/2.0,out);
+}
+
 fn draw_connection(
     battery: Option<Battery>,
     percent: Printed,

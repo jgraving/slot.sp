@@ -73,7 +73,7 @@ fn main() {
         values: QuickValue::ALL
             .into_iter()
             .map(|v| {
-                [false, true].map(|lit| up(quick_value_face(&menu_sentence_case(v.text()), lit)))
+                [false, true].map(|lit| up(quick_value_face(&menu_sentence_case(v.settings_text()), lit)))
             })
             .collect(),
         toggles: [false, true].map(|on| [false, true].map(|lit| up(toggle_face(on, lit)))),
@@ -123,6 +123,7 @@ fn main() {
         ("expanded", QuickRow::PlayScreen),
         ("collapsed", QuickRow::Settings),
         ("dismiss", QuickRow::Settings),
+        ("screen", QuickRow::Shader),
     ];
     for (scene, (name, row)) in scenarios.into_iter().enumerate() {
         for frame in 0..60 {
@@ -147,6 +148,9 @@ fn main() {
             values[QuickRow::ShowTitles.index()] = Some(QuickValue::Clean);
             values[QuickRow::FavoriteSort.index()] = Some(QuickValue::Alphabetical);
             values[QuickRow::ShellColour.index()] = Some(QuickValue::Graphite);
+            values[QuickRow::PlayBrightness.index()]=Some(QuickValue::level(5));
+            values[QuickRow::PlayBlueLight.index()]=Some(QuickValue::temperature(5));
+            values[QuickRow::Shader.index()]=Some(QuickValue::Lcd3x);
             values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();

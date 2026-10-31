@@ -73,7 +73,7 @@ pub use cart::{
 pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    draw_corner_audio, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
+    draw_corner_audio, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
     draw_status,
     Printed, FOOTER_Y,
 };
@@ -107,7 +107,7 @@ pub use quick_menu::{
     core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
-    reference_face, menu_sentence_case, quick_value_face, quick_heading_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
+    reference_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
     kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
@@ -142,4 +142,4 @@ mod button_code;
 pub use button_code::button_code_face;
 
 mod loading;
-pub use loading::{loading_face,LOADING_FRAMES,LOADING_FRAME_MS};
+pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};
