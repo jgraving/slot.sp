@@ -96,6 +96,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Sort Favorites",
             "Boot Animation",
             "Carousel Sounds",
+            "Carousel motion",
+            "Clock format",
             "Date & Time"
         ]
     );
@@ -270,6 +272,7 @@ fn the_values_read_as_the_menu_prints_them() {
             "Recently used",
             "Neutral", "Warm 11%", "Warm 22%", "Warm 33%", "Warm 44%",
             "Warm 55%", "Warm 66%", "Warm 77%", "Warm 88%", "Warm 100%",
+            "12-hour", "24-hour", "Classic", "Wheel",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -628,7 +631,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
                 let surfaces:Vec<_> = out.iter().filter_map(|d| match d {
                     Draw::RoundRect{x,w,h,radius,..}if *h==slot_ui::expressive::ROW_H=>Some((*x,*w,*radius)),_=>None,
                 }).collect();
-                assert_eq!(surfaces,vec![(56.0,width-112.0,12.0)],"only selection gets a surface");
+                assert_eq!(surfaces,vec![(64.0,width-128.0,12.0)],"only selection gets a surface");
                 let labels: Vec<_> = out
                     .iter()
                     .filter_map(|d| match d {
