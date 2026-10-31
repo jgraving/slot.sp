@@ -1016,3 +1016,18 @@ fn a_press_seen_during_a_capture_leaves_nothing_behind() {
         "a stale L1 completed the pair"
     );
 }
+
+#[test]
+fn select_tap_opens_quick_controls_only_on_the_shelf_and_chords_win() {
+    let mut g=on_shelf(vec![entry(Some(Mod::Select),X,Favorite,slot_input::Contexts::SHELF)]);
+    assert!(g.feed(Down(Select),0).is_empty());
+    assert_eq!(g.feed(Up(Select),60),vec![QuickControls]);
+    assert!(g.feed(Down(Select),100).is_empty());
+    assert!(g.feed(Down(X),120).contains(&Favorite));
+    assert!(!g.feed(Up(Select),150).contains(&QuickControls));
+    g.feed(Up(X),160);
+    g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),200);
+    assert_eq!(g.feed(Up(Select),230),vec![GbaDown(Select)]);
+    assert_eq!(g.tick(280),vec![GbaUp(Select)]);
+}

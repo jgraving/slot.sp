@@ -352,6 +352,9 @@ impl Frontend {
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
         let smiley=slot_ui::kid_status_face();
         self.session.app_mut().kid_status_icon=Some(compositor.create_texture(smiley.w,smiley.h,&smiley.rgba));
+        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::icon_face(icon,32.0,[246,244,239]);(compositor.create_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+        let hints=slot_ui::quick_controls_legends().into_iter().map(|f|(compositor.create_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
+        self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);
@@ -713,7 +716,7 @@ impl Frontend {
             .app()
             .bluetooth
             .as_ref()
-            .is_some_and(|m| m.busy());
+            .is_some_and(|m| m.busy()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.busy());
         if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
             self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
             self.spinner_frames=None;
@@ -725,6 +728,7 @@ impl Frontend {
         } else {
             None
         };
+        self.session.app_mut().set_quick_control_progress(progress);
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         if let Some(menu) = &mut self.session.app_mut().bluetooth {

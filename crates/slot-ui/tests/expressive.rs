@@ -370,10 +370,13 @@ fn pause_settings_is_centered_and_the_card_expands_to_the_whole_canvas() {
     for w in [640.0,720.0] {
         let canvas=Canvas {w,h:480.0};
         let frame=MenuFrame::settled(QuickRow::Settings,&hidden);
-        assert_eq!(frame.focus_y + expressive::ROW_H / 2.0,240.0);
+        let top=quick_row_top_at(QuickRow::Resume,QuickRow::Settings,&hidden);
+        let (_,count)=quick_window(QuickRow::Settings,&hidden);
+        assert_eq!(top+((count-1)as f32*QUICK_PITCH+expressive::ROW_H)/2.0,240.0);
         let mut out=vec![];
         expressive::draw_pause_surface(canvas,frame,&hidden,&mut out);
         assert!(matches!(out.last(),Some(Draw::RoundRect {w,h,..}) if *w==384.0 && *h<480.0));
+        assert!(matches!(out.last(),Some(Draw::RoundRect{y,h,..})if *y+*h/2.0==240.0));
         assert!(out.iter().all(|d| matches!(d,Draw::RoundRect {y,..} if *y >= 40.0)), "pause card and shadow must clear the status bar");
         let mut full=vec![];
         expressive::draw_pause_surface(canvas,MenuFrame::settled(QuickRow::PlayScreen,&hidden),&hidden,&mut full);
@@ -465,5 +468,20 @@ fn full_kid_menu_focus_uses_its_own_row_origin() {
         motion.update_page_at(Some(QuickRow::Kids),&[],None,Some(2010),Some((selected,0)),1.0);
         let frame=motion.frame_page(QuickRow::Kids,&[],Some(2010));
         assert_eq!(frame.focus_y,88.0+selected as f32*QUICK_PITCH);
+    }
+}
+
+#[test]
+fn normal_pause_cards_center_all_visible_rows_with_equal_padding() {
+    use slot_ui::*;
+    for hidden in [vec![QuickRow::UndoSave,QuickRow::UndoLoad],vec![QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots]] {
+        let canvas=Canvas{w:640.0,h:480.0};
+        let first=quick_row_top_at(QuickRow::Resume,QuickRow::Settings,&hidden);
+        let (_,n)=quick_window(QuickRow::Settings,&hidden);
+        let last=first+(n-1)as f32*QUICK_PITCH+expressive::ROW_H;
+        let mut out=vec![];expressive::draw_pause_surface(canvas,MenuFrame::settled(QuickRow::Settings,&hidden),&hidden,&mut out);
+        let Some(Draw::RoundRect{y,h,..})=out.last()else{panic!("missing card")};
+        assert_eq!(*y+*h/2.0,240.0);
+        assert_eq!(first-*y,*y+*h-last);
     }
 }

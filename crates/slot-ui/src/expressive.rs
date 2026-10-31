@@ -542,9 +542,8 @@ impl RectMotion {
 /// A single opaque surface grows from the pause card into full Settings.
 pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[QuickRow], out: &mut Vec<Draw>) {
     let (_, count) = crate::quick_window(QuickRow::Settings, hidden);
-    let top = quick_row_top_at(QuickRow::Resume, QuickRow::Settings, hidden) - 54.0;
-    let ch = (count as f32 * crate::QUICK_PITCH + 76.0).min(400.0);
-    draw_pause_surface_at(canvas,frame,top.max(48.0),ch,out);
+    let ch=(count.saturating_sub(1)as f32*crate::QUICK_PITCH+ROW_H+60.0).min(400.0);
+    draw_pause_surface_at(canvas,frame,(canvas.h-ch)/2.0,ch,out);
 }
 
 pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>) {

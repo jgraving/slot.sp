@@ -32,6 +32,7 @@ impl App {
                 | Action::MuteToggle
                 | Action::BrightnessUp
                 | Action::BrightnessDown
+                | Action::QuickControls
                 | Action::QuickMenu
                 | Action::GameMenu
                 | Action::PreviousShelf

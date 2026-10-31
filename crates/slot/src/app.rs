@@ -1,5 +1,7 @@
 #[path = "kid_controls.rs"]
 mod kid_controls;
+#[path="quick_controls.rs"]
+mod quick_controls;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -347,6 +349,8 @@ pub struct App {
     kid_error: bool,
     catalog: Vec<Cart>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
+    pub(crate) quick_bluetooth:Option<crate::bluetooth::Manager>,
+    quick_card:quick_controls::QuickCard,
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
     pub audio_indicator: Option<TexId>,
@@ -598,6 +602,8 @@ impl App {
             kid_error: false,
             catalog,
             bluetooth: None,
+            quick_bluetooth:None,
+            quick_card:Default::default(),
             bluetooth_supported: false,
             kid_status_icon: None,
             audio_indicator: None,
@@ -2164,7 +2170,7 @@ impl App {
             || self.in_game_menu().is_some()
             || self.repair_prompt()
             || self.shutting_down();
-        let shelf = self.kid_menu.is_none()
+        let shelf = !self.quick_card.shown && self.kid_menu.is_none()
             && matches!(self.phase, Phase::Shelf)
             && self.core_picker.is_none()
             && !self.repair_prompt
@@ -2884,6 +2890,7 @@ impl App {
         if !self.kid_action_allowed(action) {
             return;
         }
+        if self.quick_control_input(action) {return;}
         if self
             .wake_guard
             .is_some_and(|until| std::time::Instant::now() < until)
@@ -3972,6 +3979,7 @@ impl App {
     }
 
     pub fn update(&mut self, dt: f32) {
+        self.quick_card.motion.update(self.quick_card.shown,dt);
         self.clock += dt as f64 * 1000.0;
         let repeated = self.kid_menu.as_mut().and_then(|menu| menu.update(dt));
         if let Some(action) = repeated { self.kid_input(action); }
@@ -4313,6 +4321,7 @@ impl App {
     }
 
     fn timers(&mut self) {
+        self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
         self.tick_kid_policy();
@@ -4750,6 +4759,7 @@ impl App {
     }
 
     pub fn draw(&self, out: &mut Vec<Draw>) {
+        if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) && self.draw_quick_controls(out) {return;}
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
@@ -7081,6 +7091,9 @@ impl App {
             let message=menu.lines().get(1)?.clone();
             if message.is_empty() || message=="CONFIRM_FORGET" { return None; }
             (menu.page_key(),message)
+        } else if let Some(menu)=&self.quick_bluetooth {
+            if !menu.status.starts_with("Error:"){return None;}
+            (6000,menu.status.clone())
         } else { return None; };
         Some((page ^ self.settings_notice_revision.wrapping_mul(65536),message))
     }

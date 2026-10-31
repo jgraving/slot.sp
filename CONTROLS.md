@@ -6,6 +6,11 @@
 
 These are the default controls. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
 
+Tap **SELECT** on the carousel for an icon-only quick-controls card. Use the
+D-pad to choose a control, tap **A** to toggle it, or hold **A** to open its
+settings. **B** closes the card. Existing SELECT combinations still work.
+Kid mode offers safe sound controls and opens restricted kid settings.
+
 ## On the carousel
 
 | Button | Action |

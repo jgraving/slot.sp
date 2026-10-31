@@ -129,6 +129,14 @@ fn main() {
     for b in [slot_input::Btn::A,slot_input::Btn::B,slot_input::Btn::X] {parent.input(slot_input::Action::GbaDown(b),0);}
     save("parent-code",parent.screen_face_on(canvas),vec![],None);
     drop(save);
+    let mut quick=slot::app::App::new(vec![]);quick.set_panel((width,480));quick.set_ground(ground);quick.set_slot_faces(slot[0],slot[1]);
+    let quick_icons=[Icon::Volume,Icon::VolumeMuted,Icon::Bluetooth,Icon::BlueLight].into_iter().map(|icon|{let f=icon_face(icon,32.0,[246,244,239]);(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+    let quick_hints=quick_controls_legends().into_iter().map(|f|(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
+    quick.set_quick_control_faces(quick_icons,quick_hints);quick.apply(slot_input::Action::QuickControls);
+    for frame in 0..24 {
+        quick.update(1.0/60.0);let mut out=vec![];quick.draw(&mut out);gpu.begin_frame();gpu.draw_list(&out);
+        if [3,7,23].contains(&frame){write(&path.join(format!("quick-controls-{frame}.png")),width,&gpu.read_frame());}
+    }
     let icons = Icon::ALL
         .into_iter()
         .map(|icon| {

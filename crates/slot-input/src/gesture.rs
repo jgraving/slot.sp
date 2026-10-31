@@ -37,6 +37,7 @@ pub enum Action {
     VolumeUp,
     VolumeDown,
     QuickMenu,
+    QuickControls,
     GameMenu,
     MuteToggle,
     ColourCorrectionToggle,
@@ -441,6 +442,7 @@ impl Gestures {
             }
             return self.fire(b, Some(first), action, now);
         }
+        if self.context==Context::Shelf && b!=Btn::Select {self.mark_chorded();}
         let system = matches!(
             b,
             Btn::Select | Btn::Menu | Btn::Power | Btn::Lid | Btn::VolUp | Btn::VolDown
@@ -603,6 +605,7 @@ impl Gestures {
         let Select::Held { chorded, sent, .. } = std::mem::take(&mut self.select) else {
             return Vec::new();
         };
+        if self.context==Context::Shelf && !chorded {return vec![Action::QuickControls];}
         match (sent, chorded) {
             (Some(at), _) if now.saturating_sub(at) >= SELECT_TAP_MS => {
                 vec![Action::GbaUp(Btn::Select)]

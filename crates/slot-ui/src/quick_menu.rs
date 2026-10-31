@@ -1136,6 +1136,10 @@ pub fn reference_binding_face(value:&str,max_w:f32)->UndoFace {
     unreachable!()
 }
 
+pub fn quick_controls_legends()->Vec<UndoFace> {
+    vec![with_hint(button_face(ButtonLegend::B),"Close",Some(MENU_INK),true),with_hint(button_face(ButtonLegend::A),"Tap toggle · Hold settings",Some(MENU_INK),false)]
+}
+
 pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
     let h=if jump {48}else{36};
     let px=if jump {36.0}else{26.0};
@@ -1940,10 +1944,8 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
 
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let rows=QUICK_PITCH * len as f32;
     let top=if row.page()==QuickRow::PLAY {
-        let settings=QuickRow::Settings.position(hidden)as f32-start as f32;
-        (OUT_H as f32/2.0-crate::expressive::ROW_H/2.0-settings*QUICK_PITCH).clamp(56.0,(LEGEND_Y-rows).max(56.0))
+        (OUT_H as f32-((len.saturating_sub(1))as f32*QUICK_PITCH+crate::expressive::ROW_H))/2.0
     } else if row.binds(){80.0}else{88.0};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
