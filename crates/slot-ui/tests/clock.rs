@@ -44,3 +44,14 @@ fn navigation_does_not_change_time_until_a_field_is_opened() {
     assert_eq!(picker.cursor(),Field::Hour);
     assert_eq!(picker.secs(),before+60);
 }
+
+#[test]
+fn twelve_hour_clock_handles_midnight_noon_and_local_day_wrap() {
+    use slot_ui::clock_text;
+    assert_eq!(clock_text(0,true),"12:00 AM");
+    assert_eq!(clock_text(12*3600,true),"12:00 PM");
+    assert_eq!(clock_text(13*3600+5*60,true),"1:05 PM");
+    assert_eq!(clock_text(-60,true),"11:59 PM");
+    assert_eq!(clock_text(24*3600,true),"12:00 AM");
+    assert_eq!(clock_text(13*3600+5*60,false),"13:05");
+}
