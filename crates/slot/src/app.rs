@@ -4077,7 +4077,7 @@ impl App {
         self.switch_motion.update(&self.visible_custom_switches(),dt);
         let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
         let sliders=self.visible_custom_sliders();
-        let global=[slot_ui::MenuSlider{id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
+        let global=[slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
         self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
         let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
@@ -4817,7 +4817,6 @@ impl App {
             }
             if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
             if let Some(tex) = menu.progress_face {
-                out.push(Draw::RoundRect{x:self.canvas().centred(144.),y:168.,w:144.,h:144.,radius:32.,colour:[0.08,0.10,0.12,1.]});
                 out.push(Draw::Tex {x:self.canvas().centred(96.),y:192.,w:96.,h:96.,tex,alpha:1.});
             }
             self.draw_status_bar(out);

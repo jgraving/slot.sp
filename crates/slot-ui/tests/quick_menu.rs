@@ -678,3 +678,17 @@ fn display_settings_use_the_same_percentage_scale() {
     assert!(warning.w>chord.w);
     assert_eq!(chord.h,40);
 }
+
+#[test]
+fn control_names_are_text_but_device_chords_are_keycaps() {
+    let label=slot_ui::quick_label_face(QuickRow::GameA,true);
+    let name=slot_ui::quick_value_face("A button",true);
+    assert_eq!(label.rgba,name.rgba);
+    assert_eq!(slot_ui::quick_binding_face("SEL+X",true,false).rgba,slot_ui::quick_binding_face("SELECT + X",true,false).rgba);
+    assert_ne!(label.rgba,slot_ui::quick_binding_face("A",true,false).rgba);
+    for value in ["SEL+X","MENU+L1","Up / Down, then A","Tap MENU","Hold MENU","Double-tap MENU","SELECT+MENU","Volume buttons"] {
+        let face=slot_ui::reference_binding_face(value,256.0);
+        assert!(face.w<=256+2*slot_ui::MENU_PAD,"{value} exceeds its column");
+        assert!(face.rgba.chunks_exact(4).any(|p|p[0]==224 && p[1]==227 && p[2]==232 && p[3]==255),"{value} has no native keycap");
+    }
+}

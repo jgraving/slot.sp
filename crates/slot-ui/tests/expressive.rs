@@ -298,7 +298,7 @@ fn independent_cached_switches_and_sliders_animate_continuously() {
     switches.update(&controls, 1.0);
     assert_eq!(switches.value(100, false), 0.0);
     sliders.update(
-        &[MenuSlider {
+        &[MenuSlider { span:slot_ui::MENU_SLIDER_SPAN,
             id: 1,
             fraction: 0.0,
             y: 0.0,
@@ -306,7 +306,7 @@ fn independent_cached_switches_and_sliders_animate_continuously() {
         0.0,
     );
     sliders.update(
-        &[MenuSlider {
+        &[MenuSlider { span:slot_ui::MENU_SLIDER_SPAN,
             id: 1,
             fraction: 1.0,
             y: 0.0,
@@ -316,7 +316,7 @@ fn independent_cached_switches_and_sliders_animate_continuously() {
     let before = sliders.value(1, 1.0);
     assert!(before > 0.0 && before < 1.0);
     sliders.update(
-        &[MenuSlider {
+        &[MenuSlider { span:slot_ui::MENU_SLIDER_SPAN,
             id: 1,
             fraction: 0.0,
             y: 0.0,

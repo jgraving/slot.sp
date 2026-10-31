@@ -83,6 +83,9 @@ fn main() {
     );
     let sound_lines=vec!["Sound".into(),"".into(),"COMPACT".into(),"ROW ACTIVE SPEAKER_DEVICE Internal speaker".into(),"SELECTED DISCONNECT 25%".into(),"ROW PAUSE_DISCONNECT Off".into(),"ROW VOLUME 50%".into(),"B Back · Change".into()];
     save("sound-sliders",slot::bluetooth::screen_face_on(&sound_lines,footer_ink(false),canvas),vec![],None);
+    for (i,(title,rows)) in slot::reference::pages(false,true,slot_store::Platform::Gba,Default::default(),Default::default(),Default::default()).into_iter().enumerate() {
+        save(&format!("reference-{i}"),reference_face(canvas,&title,&rows,i,10),vec![],None);
+    }
     let mut schedule = slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings {
         schedule: true,
         bedtime: (2, 9),

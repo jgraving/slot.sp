@@ -522,7 +522,7 @@ impl Manager {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         let(_,_,first,visible)=self.scroll_info();
         if self.page!=Page::Home {return vec![];}
-        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
 
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
@@ -961,13 +961,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
             .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
-            let name = if label.starts_with("DISCONNECT ") {
-                let width=screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::QUICK_LABEL_X as u32-12;
-                let layout=slot_ui::text::fit_preserving_case(font,name,width as f32,2,20.0,20.0);
-                let mut rgba=vec![0;(width*40*4)as usize];
-                slot_ui::text::draw_centred(&mut rgba,width,40,&layout,ink);
-                slot_ui::UndoFace{rgba,w:width,h:40}
-            } else {slot_ui::quick_value_face(name, highlight)};
+            let name = slot_ui::quick_value_face(name, highlight);
             blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
             if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
                 if !switches {continue;}
@@ -977,7 +971,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
                 continue;
             }
             if label.starts_with("VOLUME ") || label.starts_with("DISCONNECT ") {
-                if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::MENU_PAD,top);}
+                if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-200-slot_ui::MENU_PAD,top);}
                 let value=slot_ui::quick_value_face(value,highlight);blit(&mut rgba,&value,screen_w-slot_ui::QUICK_EDGE as u32+slot_ui::MENU_PAD-value.w,top);continue;
             }
             let value = slot_ui::quick_value_face(value, highlight);

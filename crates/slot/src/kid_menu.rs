@@ -252,13 +252,13 @@ impl Menu {
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         match self.page {
-            Page::Home=>vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
+            Page::Home=>vec![slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
             Page::Child|Page::ChildSettings if !self.in_game_card()=>{
                 let count=self.child_rows().len();
                 let visible=count.min(slot_ui::QUICK_VISIBLE);
                 let start=self.selected.saturating_sub(visible/2).min(count-visible);
                 let top=94.0;
-                [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
+                [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
             },_=>vec![]
         }
     }
