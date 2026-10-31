@@ -55,7 +55,8 @@ pub(crate) fn draw(menu:&crate::quick_menu::QuickMenu<'_>,frame:crate::MenuFrame
     let canvas=menu.canvas;
     rounded(out,MENU_INSET,88.0,canvas.w-2.0*MENU_INSET,260.0,28.0,[0.095,0.12,0.14,1.0]);
     if let Some((_,(tex,w,h)))=faces.headings.iter().find(|(r,_)|*r==QuickRow::MAIN[0]) {
-        out.push(Draw::Tex{x:canvas.centred(*w as f32),y:40.0,w:*w as f32,h:*h as f32,tex:*tex,alpha:1.0});
+        let title_y=if frame.tile_origin.is_some() {40.0-120.0*(1.0-frame.tile_reveal)}else{40.0};
+        out.push(Draw::Tex{x:canvas.centred(*w as f32),y:title_y,w:*w as f32,h:*h as f32,tex:*tex,alpha:1.0});
     }
     let selected=menu.row.position(menu.hidden);
     let [_,_,w,h]=rect(canvas,0);
