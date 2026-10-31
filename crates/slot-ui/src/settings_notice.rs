@@ -51,10 +51,11 @@ impl SettingsNotice {
         };
         let (w, h) = (w as f32, h as f32);
         let x = canvas.centred(w);
+        let charging=self.text().is_some_and(|s|s.starts_with("Charging: "));
         let base = canvas.h - MOUTH_H - 8.0 - h;
         let y=base+(1.0-alpha)*(canvas.h-base+h+16.0);
         let begin=out.len();
-        crate::expressive::rounded(out, x, y, w, h, h / 2.0, [0.10, 0.12, 0.14, 0.97]);
+        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {[0.69,0.94,0.80,1.0]}else{[0.10, 0.12, 0.14, 1.0]});
         out.push(Draw::Tex {
             x,
             y,
@@ -68,6 +69,7 @@ impl SettingsNotice {
 }
 
 pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {
+    if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent);}
     let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
             rgba: vec![],
@@ -90,5 +92,22 @@ pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {
         h,
     };
     text::draw_centred(&mut face.rgba, w, h, &layout, [246, 244, 239]);
+    face
+}
+
+/// Filled charging chip with a native vector bolt, never a font substitute.
+fn charging_notice_face(percent:&str)->UndoFace {
+    let label=format!("{percent} · Charging");
+    let font=text::font(text::Role::Value).expect("value font");
+    let layout=text::fit_preserving_case(font,&label,300.0,1,22.0,22.0);
+    let tw=text::line_width(font,&label,layout.px,layout.tracking).ceil() as u32;
+    let (w,h)=(tw+76,52);
+    let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
+    let mut words=vec![0;(tw*h*4) as usize];
+    text::draw_centred(&mut words,tw,h,&layout,[16,48,35]);
+    crate::plate::blit(&mut face.rgba,w,&words,tw,h,52,0);
+    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#103023" d="M13 1 4 14h7l-1 9 10-14h-7z"/></svg>"##;
+    let bolt=crate::art::render_svg(svg,26,30).expect("charging bolt");
+    crate::plate::blit(&mut face.rgba,w,&bolt,26,30,18,11);
     face
 }
