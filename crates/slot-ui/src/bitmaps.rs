@@ -266,4 +266,5 @@ pub(crate) enum ButtonLegend {
     Down,
     Start,
     Menu,
+    L, R, L1, R1, L2, R2,
 }

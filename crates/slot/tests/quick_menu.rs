@@ -233,7 +233,6 @@ fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
         QuickRow::Power,
         QuickRow::Controls,
         QuickRow::Kids,
-        QuickRow::GameDetails,
         QuickRow::About,
         QuickRow::General,
     ] {
@@ -1352,10 +1351,9 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
     open_at(&mut a, QuickRow::ShellColour);
     assert_eq!(
         a.quick_value(QuickRow::ShellColour),
-        Some(QuickValue::MatchTheme)
+        Some(QuickValue::Graphite)
     );
     for (colour, value) in [
-        (ShellColour::Graphite, QuickValue::Graphite),
         (ShellColour::Platinum, QuickValue::Platinum),
         (ShellColour::PearlBlue, QuickValue::PearlBlue),
         (ShellColour::PearlPink, QuickValue::PearlPink),
@@ -1365,6 +1363,9 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
         assert_eq!(a.shell_colour(), colour);
         assert_eq!(read_slot_state(d.path()).shell_colour, colour);
     }
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::ShellColour),Some(QuickValue::Graphite));
+    press(&mut a,Btn::Left);
     assert!(a.hidden_rows().contains(&QuickRow::Theme));
     assert_eq!(a.shell_colour(), ShellColour::PearlPink);
     let (b, _) = app_booting_at(d.path(), CLOCK_IS_SET);
@@ -1504,4 +1505,43 @@ fn full_menu_legends_slide_in_and_out_without_transparency() {
     let leaving=frame(&a);assert!(legend_box(&leaving,400).1>resting);
     assert!(leaving.iter().filter_map(|d|match d {Draw::Tex{tex,alpha,..} if *tex==TexId::from_raw(400)=>Some(*alpha),_=>None}).all(|a|a==1.0));
     a.update(1.0);assert!(!drawn(&frame(&a),400));
+}
+
+#[test]
+fn display_sliders_repeat_when_held_and_stop_on_release() {
+    for row in [QuickRow::Brightness,QuickRow::BlueLight] {
+        let (_,mut a,_)=on_carousel_with(SlotState{brightness:0,blue_light:0,..Default::default()});
+        open_at(&mut a,row);
+        a.apply(Action::GbaDown(Btn::Right));
+        for _ in 0..20 {a.update(0.05);}
+        let value=a.quick_value(row);
+        assert_ne!(value,Some(if row==QuickRow::Brightness{QuickValue::level(1)}else{QuickValue::temperature(1)}));
+        a.apply(Action::GbaUp(Btn::Right));
+        for _ in 0..20 {a.update(0.05);}
+        assert_eq!(a.quick_value(row),value);
+    }
+}
+
+#[test]
+fn both_sound_sliders_repeat_on_hold_and_stop_on_release() {
+    let (d,mut a,_)=on_carousel();
+    a.bluetooth=Some(slot::bluetooth::Manager::new(d.path().into(),false));
+    press(&mut a,Btn::Down);
+    a.apply(Action::GbaDown(Btn::Right));
+    for _ in 0..20 {a.update(0.05);}
+    let disconnect=a.bluetooth.as_ref().unwrap().disconnect_volume;
+    assert!(disconnect>5);
+    a.apply(Action::GbaUp(Btn::Right));
+    for _ in 0..20 {a.update(0.05);}
+    assert_eq!(a.bluetooth.as_ref().unwrap().disconnect_volume,disconnect);
+    press(&mut a,Btn::Down);press(&mut a,Btn::Down);
+    assert!(a.bluetooth.as_ref().unwrap().volume_selected());
+    a.apply(Action::GbaDown(Btn::Left));
+    let tapped=a.volume();
+    for _ in 0..20 {a.update(0.05);}
+    assert!(a.volume()<tapped);
+    a.apply(Action::GbaUp(Btn::Left));
+    let stopped=a.volume();
+    for _ in 0..20 {a.update(0.05);}
+    assert_eq!(a.volume(),stopped);
 }

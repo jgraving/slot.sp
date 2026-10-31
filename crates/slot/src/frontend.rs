@@ -15,7 +15,7 @@ use slot_ui::{
     game_bezel_face, gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends,
     menu_detail_face, menu_face, photo_face, prompt_legends, quick_caret_face,
     quick_description_face, quick_label_face, quick_legend_faces, quick_pointer_face,
-    quick_value_face, quick_warning_value_face, rebuild_count_face, rebuild_title_face,
+    quick_value_face, rebuild_count_face, rebuild_title_face,
     repair_legends, set_clock_hint_face, socket_face, sticker_face, title_face, toast_face,
     wallpaper_face, word_ink,
 };
@@ -39,6 +39,7 @@ pub struct Frontend {
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
+    spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
     audio_icon_key: Option<(u8, bool)>,
@@ -201,6 +202,11 @@ impl Frontend {
             bluetooth_old_tex: None,
             bluetooth_page: None,
             bluetooth_spinner: Vec::new(),
+            spinner_frames: Some({
+                let (tx,rx)=std::sync::mpsc::channel();
+                std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
+                rx
+            }),
             audio_icon: None,
             hud_audio_icon: None,
             audio_icon_key: None,
@@ -706,14 +712,9 @@ impl Frontend {
             .bluetooth
             .as_ref()
             .is_some_and(|m| m.busy());
-        if sound_busy && self.bluetooth_spinner.is_empty() {
-            for frame in 0..slot_ui::LOADING_FRAMES {
-                self.bluetooth_spinner.push(upload(
-                    compositor,
-                    &mut None,
-                    crate::bluetooth::progress_face(frame),
-                ));
-            }
+        if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
+            self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
+            self.spinner_frames=None;
         }
         let progress = if sound_busy {
             self.bluetooth_spinner
@@ -1125,7 +1126,7 @@ impl UiFaces {
             quick_pointer: quick_pointer_face(),
             quick_values: QuickValue::ALL
                 .iter()
-                .map(|v| [false, true].map(|lit| quick_value_face(&slot_ui::menu_sentence_case(v.text()), lit)))
+                .map(|v| [false, true].map(|lit| quick_value_face(&slot_ui::menu_sentence_case(v.settings_text()), lit)))
                 .collect(),
             quick_toggles: [false, true].map(|on| [false, true].map(|lit| slot_ui::toggle_face(on, lit))),
             quick_carets: [false, true].map(quick_caret_face),
@@ -1402,8 +1403,8 @@ fn sync_binding_faces(app: &mut App, compositor: &mut Compositor) {
         }
         let faces = [false, true].map(|lit| {
             let f = match text.strip_prefix(crate::app::CLASH_MARK) {
-                Some(bare) => quick_warning_value_face(bare, lit),
-                None => quick_value_face(&text, lit),
+                Some(bare) => slot_ui::quick_binding_face(bare, lit,true),
+                None => slot_ui::quick_binding_face(&text, lit,false),
             };
             (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
         });

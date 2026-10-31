@@ -60,22 +60,11 @@ fn sorting_setting_persists_and_never_trims_favorites_or_changes_recents() {
     let saved=read_slot_state(d.path());assert_eq!(saved.favorites,favorites);assert!(saved.recents.is_empty());
 }
 #[test]
-fn details_are_read_only_and_return_to_the_original_menu() {
-    let d=common::tmp_root_with_carts(&["Alpha","Beta"]);common::clocked(d.path());
-    let mut h=PlayHistory::default();h.add_time(Platform::Gba,"Alpha",5_400_000);h.started(Platform::Gba,"Alpha",Some(1_800_000_000));h.save(d.path()).unwrap();
-    let mut a=App::boot(d.path());let page=a.game_details().unwrap();
-    assert!(page.1.iter().any(|r|r.0=="Playtime"&&r.1=="1 h 30 min"));
-    open_at(&mut a,QuickRow::GameDetails);let before=read_slot_state(d.path());press(&mut a,Btn::A);
-    assert!(a.parent_controls_open());press(&mut a,Btn::B);assert!(!a.parent_controls_open());
-    assert_eq!(a.quick_menu(),Some(QuickRow::GameDetails));assert_eq!(before,read_slot_state(d.path()));
-    if let Ok(path)=std::env::var("SLOT_QOL_PREVIEW") {
-        let menu=slot::kid_menu::Menu::reference(d.path().into(),Default::default(),vec![page]);
-        let f=menu.screen_face();std::fs::create_dir_all(&path).unwrap();
-        let mut encoder=png::Encoder::new(std::fs::File::create(format!("{path}/game-details.png")).unwrap(),f.w,f.h);
-        encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);
-        encoder.write_header().unwrap().write_image_data(&f.rgba).unwrap();
-    }
+fn details_entries_are_absent_from_both_settings_menus() {
+    assert!(!QuickRow::MAIN.contains(&QuickRow::GameDetails));
+    assert!(!QuickRow::SETTINGS.contains(&QuickRow::PlayDetails));
 }
+
 #[test]
 fn unreadable_history_is_never_overwritten_by_playing() {
     let d=common::tmp_root_with_carts(&["Alpha","Beta"]);let path=d.path().join("Config/play-history.txt");

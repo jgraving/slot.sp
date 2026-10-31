@@ -4,7 +4,10 @@ use crate::UndoFace;
 pub const LOADING_FRAMES: usize = 72;
 pub const LOADING_FRAME_MS: u128 = 20;
 pub fn loading_face(frame: usize) -> UndoFace {
-    let (w,h)=(32,32);
+    loading_face_at(frame,32)
+}
+pub fn loading_face_at(frame:usize,size:u32)->UndoFace {
+    let (w,h)=(size,size);
     let t=(frame%LOADING_FRAMES) as f32/LOADING_FRAMES as f32;
     let turn=std::f32::consts::TAU;
     let phase=t*4.0;
@@ -21,8 +24,8 @@ pub fn loading_face(frame: usize) -> UndoFace {
     for y in 0..h {for x in 0..w {
         let mut coverage=0u32;
         for sy in 0..4 {for sx in 0..4 {
-            let dx=x as f32+(sx as f32+0.5)/4.0-16.0;
-            let dy=y as f32+(sy as f32+0.5)/4.0-16.0;
+            let dx=(x as f32+(sx as f32+0.5)/4.0)*32.0/size as f32-16.0;
+            let dy=(y as f32+(sy as f32+0.5)/4.0)*32.0/size as f32-16.0;
             let angle=dy.atan2(dx)-t*turn;
             let r=radii(angle,shape)*(1.0-mix)+radii(angle,shape+1)*mix;
             if dx*dx+dy*dy<=r*r {coverage+=1;}

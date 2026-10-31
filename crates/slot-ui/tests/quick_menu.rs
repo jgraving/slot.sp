@@ -82,7 +82,7 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power", "Controls", "Kid Mode", "Game Details", "About"]
+        ["General", "Screen", "Sound", "Gameplay", "Power", "Device controls", "Parental controls", "About"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -384,7 +384,6 @@ fn the_in_game_pages_hold_their_rows_in_order() {
             QuickRow::PlayGameplay,
             QuickRow::PlayControls,
             QuickRow::PlayReference,
-            QuickRow::PlayDetails
         ]
     );
     assert_eq!(
@@ -472,19 +471,10 @@ fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
 }
 
 #[test]
-fn the_in_game_screen_panel_shows_three_rows_and_scrolls_the_rest() {
-    assert_eq!(slot_ui::quick_window(QuickRow::Shader, &[]), (0, 3));
-    assert_eq!(slot_ui::quick_window(QuickRow::Palette, &[]), (1, 3));
-    assert_eq!(
-        slot_ui::quick_window(QuickRow::ColourCorrection, &[]),
-        (2, 3)
-    );
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight, &[]), (3, 3));
-    let hidden = [QuickRow::Palette, QuickRow::Bezel];
-    assert_eq!(
-        slot_ui::quick_window(QuickRow::PlayBlueLight, &hidden),
-        (1, 3)
-    );
+fn the_in_game_screen_page_shows_five_rows_and_scrolls_the_rest() {
+    assert_eq!(slot_ui::quick_window(QuickRow::Shader,&[]),(0,5));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[]),(1,5));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
 }
 
 #[test]
@@ -495,8 +485,8 @@ fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
         "the thumb is not at the top"
     );
     assert!(
-        (top.thumb_h - top.h * 3.0 / 6.0).abs() < 0.5,
-        "the thumb does not represent the three visible rows of six"
+        (top.thumb_h - top.h * 5.0 / 6.0).abs() < 0.5,
+        "the thumb does not represent the five visible rows of six"
     );
     let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
     assert!(
@@ -504,8 +494,8 @@ fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
         "the thumb is not at the bottom"
     );
     assert!(
-        slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_some(),
-        "four rows in three still scroll"
+        slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_none(),
+        "four rows fit without scrolling"
     );
     assert!(slot_ui::quick_scroll(QuickRow::Rumble, &[]).is_some(), "eight gameplay rows scroll within the fork’s six-row limit");
     assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());
@@ -549,22 +539,14 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
 }
 
 #[test]
-fn screen_rows_in_game_sit_in_a_panel_at_the_bottom() {
+fn screen_rows_in_game_fill_the_normal_menu_from_the_top() {
     let hidden = [QuickRow::Palette];
     let shader = slot_ui::quick_row_top(QuickRow::Shader, &hidden);
     let bezel = slot_ui::quick_row_top(QuickRow::Bezel, &hidden);
+    assert_eq!(shader, 88.0);
     assert_eq!(bezel - shader, slot_ui::QUICK_PITCH);
-    assert!(
-        shader > slot_ui::OUT_H as f32 / 2.0 - slot_ui::MENU_HINT_H as f32,
-        "the panel starts at {shader}, not leaving room for the fork’s larger hint row"
-    );
-
-    assert!(slot_ui::quick_row_top(QuickRow::FastForward, &[]) < shader);
-    let last = slot_ui::quick_row_top(QuickRow::Bezel, &hidden) + 44.0;
-    assert!(
-        last < slot_ui::OUT_H as f32 - slot_ui::MOUTH_H - slot_ui::MENU_HINT_H as f32 - 12.0,
-        "screen controls overlap the hint row"
-    );
+    assert_eq!(shader, slot_ui::quick_row_top(QuickRow::FastForward, &[]));
+    assert!(bezel + 44.0 < 378.0);
 }
 
 #[test]
@@ -683,4 +665,16 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
             }
         }
     }
+}
+
+#[test]
+fn display_settings_use_the_same_percentage_scale() {
+    for n in 0..10 {
+        assert_eq!(QuickValue::level(n).settings_text(),QuickValue::temperature(n).settings_text());
+        assert!(QuickValue::level(n).settings_text().ends_with('%'));
+    }
+    let chord=slot_ui::quick_binding_face("MENU+L1",true,false);
+    let warning=slot_ui::quick_binding_face("MENU+L1",true,true);
+    assert!(warning.w>chord.w);
+    assert_eq!(chord.h,40);
 }

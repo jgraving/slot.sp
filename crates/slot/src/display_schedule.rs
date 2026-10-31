@@ -84,7 +84,7 @@ impl Menu {
                 ("Automatic".into(), if self.settings.schedule { "On" } else { "Off" }.into(), true),
                 ("Day begins".into(), time(self.settings.day_start), true),
                 ("Night begins".into(), time(self.settings.night_start), true),
-                ("Color temp".into(),slot_ui::QuickValue::temperature(self.settings.bedtime.1).text().to_string(),true),
+                ("Color temp".into(),slot_ui::QuickValue::temperature(self.settings.bedtime.1).settings_text().to_string(),true),
             ], self.selected)
         };
         let status = if animated { "" } else if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };

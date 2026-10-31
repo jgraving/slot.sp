@@ -28,8 +28,8 @@ impl ShellColour {
     }
 
     pub fn step(self, right: bool) -> Self {
-        let at = Self::ALL.iter().position(|c| *c == self).unwrap_or(0);
-        Self::ALL[(at + if right { 1 } else { Self::ALL.len() - 1 }) % Self::ALL.len()]
+        let at = Self::FINISHES.iter().position(|c| *c == self).unwrap_or(0);
+        Self::FINISHES[(at + if right { 1 } else { Self::FINISHES.len() - 1 }) % Self::FINISHES.len()]
     }
 
     pub fn resolved(self, light: bool) -> Self {

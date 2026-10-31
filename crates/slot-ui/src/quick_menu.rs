@@ -227,7 +227,7 @@ impl QuickRow {
         QuickRow::DisplaySchedule,
     ];
 
-    pub const MAIN: [QuickRow; 9] = [
+    pub const MAIN: [QuickRow; 8] = [
         QuickRow::General,
         QuickRow::Screen,
         QuickRow::Bluetooth,
@@ -235,7 +235,6 @@ impl QuickRow {
         QuickRow::Power,
         QuickRow::Controls,
         QuickRow::Kids,
-        QuickRow::GameDetails,
         QuickRow::About,
     ];
 
@@ -355,13 +354,12 @@ impl QuickRow {
         QuickRow::ExitGame,
     ];
 
-    pub const SETTINGS: [QuickRow; 6] = [
+    pub const SETTINGS: [QuickRow; 5] = [
         QuickRow::PlayScreen,
         QuickRow::PlaySound,
         QuickRow::PlayGameplay,
         QuickRow::PlayControls,
         QuickRow::PlayReference,
-        QuickRow::PlayDetails,
     ];
 
     pub const PLAY_SCREEN: [QuickRow; 6] = [
@@ -537,7 +535,7 @@ impl QuickRow {
     pub fn label(self) -> &'static str {
         match self {
             QuickRow::Power => "Power",
-            QuickRow::Kids => "Kid Mode",
+            QuickRow::Kids => "Parental controls",
             QuickRow::LidClose => "Lid Close",
             QuickRow::SleepTimeout => "Shut Down After",
             QuickRow::SleepNow => "Sleep Now",
@@ -585,10 +583,10 @@ impl QuickRow {
             QuickRow::Settings => "Settings",
             QuickRow::ExitGame => "Exit Game",
             QuickRow::General => "General",
-            QuickRow::Controls => "Controls",
+            QuickRow::Controls => "Device controls",
             QuickRow::ControlsShelf => "Shelf",
             QuickRow::ControlsInGame => "In-Game",
-            QuickRow::PlayControls => "Controls",
+            QuickRow::PlayControls => "Device controls",
             QuickRow::Shortcuts => "Shortcuts",
             QuickRow::GameUp
             | QuickRow::GameDown
@@ -959,6 +957,12 @@ impl QuickValue {
         }
     }
 
+    pub fn settings_text(self)-> &'static str {
+        if let Some(n)=(0..10).find(|&n|Self::level(n)==self || Self::temperature(n)==self) {
+            ["0%","11%","22%","33%","44%","56%","67%","78%","89%","100%"][n as usize]
+        } else {self.text()}
+    }
+
     pub fn temperature(n: u8) -> QuickValue {
         [Self::Warm0,Self::Warm1,Self::Warm2,Self::Warm3,Self::Warm4,Self::Warm5,Self::Warm6,Self::Warm7,Self::Warm8,Self::Warm9][n.min(9) as usize]
     }
@@ -1002,11 +1006,14 @@ const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
 const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
 const DESCRIPTION_GAP: f32 = 8.0;
-const PANEL_GAP: f32 = 12.0;
 const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
+    if let Some(button)=row.game_button() {
+        let label=button.label();
+        if !matches!(button,GameButton::TurboA|GameButton::TurboB) {return quick_binding_face(label,lit,false);}
+    }
     quick_text_face(&menu_sentence_case(row.label()), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
@@ -1057,6 +1064,32 @@ pub fn quick_value_face(text: &str, lit: bool) -> UndoFace {
     let role = if text.chars().next().is_some_and(|c| c.is_ascii_digit()) || text.contains(':') { text::Role::Value }
         else if lit { text::Role::Focus } else { text::Role::Menu };
     quick_text_face(text, if lit { MENU_INK } else { DIM_INK }, role)
+}
+
+/// Native keycaps for physical mappings; prose remains readable while recording.
+pub fn quick_binding_face(value:&str,lit:bool,warning:bool)->UndoFace {
+    let mut parts=Vec::new();
+    if warning {
+        let icon=crate::icon_face(Icon::Alert,22.0,[255,190,105]);
+        parts.push(UndoFace{rgba:icon.rgba,w:icon.w,h:icon.h});
+    }
+    for (i,key) in value.split('+').enumerate() {
+        let which=match key.to_ascii_uppercase().as_str() {
+            "A"=>ButtonLegend::A,"B"=>ButtonLegend::B,"X"=>ButtonLegend::X,"Y"=>ButtonLegend::Y,
+            "UP"=>ButtonLegend::Up,"DOWN"=>ButtonLegend::Down,"LEFT"=>ButtonLegend::Left,"RIGHT"=>ButtonLegend::Right,
+            "START"=>ButtonLegend::Start,"SELECT"=>ButtonLegend::Select,"MENU"=>ButtonLegend::Menu,
+            "L"=>ButtonLegend::L,"R"=>ButtonLegend::R,"L1"=>ButtonLegend::L1,"R1"=>ButtonLegend::R1,"L2"=>ButtonLegend::L2,"R2"=>ButtonLegend::R2,
+            _=>return if warning{quick_warning_value_face(value,lit)}else{quick_value_face(value,lit)},
+        };
+        if i>0 {parts.push(quick_value_face("+",lit));}
+        parts.push(controller_button_face(which,32));
+    }
+    let w=parts.iter().map(|p|p.w+6).sum::<u32>()+2*MENU_PAD;
+    let h=MENU_H;
+    let mut face=UndoFace{rgba:vec![0;(w*h*4)as usize],w,h};
+    let mut x=MENU_PAD;
+    for p in parts {parent_blit(&mut face,&p,x as f32,(h.saturating_sub(p.h)/2)as f32);x+=p.w+6;}
+    face
 }
 
 pub fn quick_heading_face(label: &str) -> UndoFace {
@@ -1246,7 +1279,8 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
         if value.is_empty() { continue; }
         if let Some(fraction)=crate::setting_slider(label,value) {
             if switches {let slider=crate::slider_face(fraction);parent_blit(&mut face,&slider,right-crate::MENU_SLIDER_SPAN-pad,y);}
-            let value=quick_value_face(value,lit);parent_blit(&mut face,&value,right+pad-value.w as f32,y);continue;
+            let percentage=format!("{}%",(fraction*100.0).round()as u32);
+            let value=quick_value_face(&percentage,lit);parent_blit(&mut face,&value,right+pad-value.w as f32,y);continue;
         }
         let toggle = matches!(value.as_str(), "On" | "Off");
         if toggle && !switches {continue;}
@@ -1320,14 +1354,18 @@ pub fn kid_time_text(seconds: u64) -> String {
 }
 
 /// One quiet line of remaining time and a bar, above the native menu footer.
-pub fn kid_time_meter(seconds: u64, _budget: u64) -> UndoFace {
+pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
     let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
     let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,18.0,18.0);
     let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
     let (w,h)=(width.ceil() as u32+32,32);
     let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
     crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
-    text::draw_centred(&mut face.rgba,w,h,&layout,[246,244,239]);
+    text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
+    let span=(w-32) as f32;
+    crate::expressive::raster_round(&mut face,16.0,25.0,span,3.0,1.5,[0.35,0.39,0.42,1.0]);
+    let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
+    if fraction>0.0 {crate::expressive::raster_round(&mut face,16.0,25.0,span*fraction,3.0,1.5,crate::expressive::ACCENT);}
     face
 }
 
@@ -1508,6 +1546,9 @@ pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
         ButtonLegend::Left => ("",1.0), ButtonLegend::Right => ("",1.0),
         ButtonLegend::Start => ("START",2.0), ButtonLegend::Select => ("SELECT",2.2),
         ButtonLegend::Menu => ("MENU",1.9),
+        ButtonLegend::L => ("L",1.0), ButtonLegend::R => ("R",1.0),
+        ButtonLegend::L1 => ("L1",1.2), ButtonLegend::R1 => ("R1",1.2),
+        ButtonLegend::L2 => ("L2",1.2), ButtonLegend::R2 => ("R2",1.2),
     };
     let w = (h as f32 * aspect).round() as u32;
     let mut rgba = vec![0; (w*h*4) as usize];
@@ -1796,7 +1837,6 @@ pub fn draw_menu_ground(canvas: Canvas, ground: Option<(TexId, u32)>, out: &mut 
 
 pub const QUICK_VISIBLE: usize = 5;
 
-const PANEL_VISIBLE: usize = 3;
 
 const SCROLL_INSET: f32 = 40.0;
 
@@ -1810,12 +1850,7 @@ pub struct QuickScroll {
     pub thumb_h: f32,
 }
 
-fn visible(page: &[QuickRow]) -> usize {
-    match page == QuickRow::PLAY_SCREEN {
-        true => PANEL_VISIBLE,
-        false => QUICK_VISIBLE,
-    }
-}
+fn visible(_page: &[QuickRow]) -> usize { QUICK_VISIBLE }
 
 pub fn quick_window(selected: QuickRow, hidden: &[QuickRow]) -> (usize, usize) {
     let count = selected.shown(hidden).len();
@@ -1848,17 +1883,11 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
 
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let rows = QUICK_PITCH * len as f32;
-    let top = match row.page() == QuickRow::PLAY_SCREEN {
-        true => LEGEND_Y - PANEL_GAP - rows,
-        false if row.page() == QuickRow::PLAY => {
-            let settings = QuickRow::Settings.position(hidden) as f32 - start as f32;
-            (OUT_H as f32 / 2.0 - crate::expressive::ROW_H / 2.0 - settings * QUICK_PITCH)
-                .clamp(56.0, (LEGEND_Y - rows).max(56.0))
-        }
-        false if row.binds() => 80.0,
-        false => 88.0,
-    };
+    let rows=QUICK_PITCH * len as f32;
+    let top=if row.page()==QuickRow::PLAY {
+        let settings=QuickRow::Settings.position(hidden)as f32-start as f32;
+        (OUT_H as f32/2.0-crate::expressive::ROW_H/2.0-settings*QUICK_PITCH).clamp(56.0,(LEGEND_Y-rows).max(56.0))
+    } else if row.binds(){80.0}else{88.0};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
 

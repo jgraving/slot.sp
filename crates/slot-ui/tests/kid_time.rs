@@ -19,3 +19,11 @@ fn remaining_time_is_a_compact_antialiased_pill() {
         assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
     }
 }
+
+#[test]
+fn remaining_time_meter_tracks_fraction_even_when_the_text_is_identical() {
+    let a=kid_time_meter(30,60);
+    let b=kid_time_meter(30,600);
+    assert_eq!((a.w,a.h),(b.w,b.h));
+    assert_ne!(a.rgba,b.rgba);
+}

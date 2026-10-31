@@ -348,6 +348,7 @@ pub struct App {
     catalog: Vec<Cart>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
     bluetooth_supported: bool,
+    pub(crate) kid_status_icon: Option<TexId>,
     pub audio_indicator: Option<TexId>,
     pub hud_audio_indicator: Option<TexId>,
     pub mute_indicator: Option<TexId>,
@@ -493,6 +494,8 @@ pub struct App {
     lift: f32,
     sp_strip: Option<TexId>,
     eject_overlay: f32,
+    eject_close_s: f32,
+    eject_strip: bool,
     panel: (u32, u32),
     game_ready: bool,
     clock: f64,
@@ -595,6 +598,7 @@ impl App {
             catalog,
             bluetooth: None,
             bluetooth_supported: false,
+            kid_status_icon: None,
             audio_indicator: None,
             hud_audio_indicator: None,
             mute_indicator: None,
@@ -751,6 +755,8 @@ impl App {
             lift: 1.0,
             sp_strip: None,
             eject_overlay: 0.0,
+            eject_close_s: POWER_OFF_S,
+            eject_strip: false,
             panel: (0, 0),
             game_ready: false,
             clock: 0.0,
@@ -797,6 +803,7 @@ impl App {
         app.loading = loading;
 
         app.state = read_slot_state(root);
+        app.state.shell_colour=app.state.shell_colour.resolved(app.state.appearance.light());
         match PlayHistory::read(root) {
             Ok(history) => app.play_history = history,
             Err(e) => { app.history_readable = false; eprintln!("slot: play history: {e}"); }
@@ -990,6 +997,9 @@ impl App {
     fn repeats(&self, btn: Btn) -> bool {
         if self.display_schedule.is_some() { return true; }
         let vertical = matches!(btn, Btn::Up | Btn::Down);
+        if let Some(menu)=&self.bluetooth {return !menu.busy() && (vertical || menu.slider_selected());}
+        if !vertical && matches!(btn,Btn::Left|Btn::Right) && self.quick_menu().or(self.in_game_menu()).is_some_and(|row|matches!(row,QuickRow::Brightness|QuickRow::BlueLight|QuickRow::PlayBrightness|QuickRow::PlayBlueLight)) {return true;}
+
         if self.game_menu.is_some() {
             return false;
         }
@@ -1344,7 +1354,7 @@ impl App {
                 WallpaperTint::Medium => QuickValue::Medium,
                 WallpaperTint::High => QuickValue::High,
             }),
-            QuickRow::ShellColour => Some(match self.state.shell_colour {
+            QuickRow::ShellColour => Some(match self.shell_colour() {
                 slot_store::ShellColour::Theme => QuickValue::MatchTheme,
                 slot_store::ShellColour::Graphite => QuickValue::Graphite,
                 slot_store::ShellColour::Platinum => QuickValue::Platinum,
@@ -3523,7 +3533,7 @@ impl App {
             QuickRow::Turbo => s.turbo = !s.turbo,
             QuickRow::Rewind => s.rewind = !s.rewind,
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
-            QuickRow::ShellColour => s.shell_colour = s.shell_colour.step(right),
+            QuickRow::ShellColour => s.shell_colour = s.shell_colour.resolved(s.appearance.light()).step(right),
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
             QuickRow::ScreenGeneral
             | QuickRow::Brightness
@@ -4071,7 +4081,8 @@ impl App {
         self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
         let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
-            | (u8::from(self.muted() || self.volume() == 0) << 1);
+            | (u8::from(self.muted() || self.volume() == 0) << 1)
+            | (u8::from(self.kids.active)<<2);
         self.status_motion.update(status_key, dt);
     }
 
@@ -4085,7 +4096,7 @@ impl App {
         let step = if lit {
             dt / POWER_ON_S
         } else {
-            -dt / POWER_OFF_S
+            -dt / if matches!(self.phase,Phase::Ejecting{..}) {self.eject_close_s}else{POWER_OFF_S}
         };
         self.screen = (self.screen + step).clamp(0.0, 1.0);
         let docked = matches!(
@@ -4201,8 +4212,9 @@ impl App {
     }
 
     fn draw_sp_strip(&self, out: &mut Vec<Draw>) {
-        let slide = self.overlay_slide();
-        let shown = self.shows_game() && self.sp_frame() && self.framed_panel() && slide > 0.0;
+        let exiting=matches!(self.phase,Phase::Ejecting{..}) && self.eject_strip;
+        let slide=if exiting {ease(self.screen)}else{self.overlay_slide()};
+        let shown=(self.shows_game() || exiting) && self.sp_frame() && self.framed_panel() && slide>0.0;
         let Some(tex) = self.sp_strip.filter(|_| shown) else {
             return;
         };
@@ -4805,14 +4817,8 @@ impl App {
             }
             if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
             if let Some(tex) = menu.progress_face {
-                out.push(Draw::Tex {
-                    x: self.canvas().centred(32.),
-                    y: 24.,
-                    w: 32.,
-                    h: 32.,
-                    tex,
-                    alpha: 1.,
-                });
+                out.push(Draw::RoundRect{x:self.canvas().centred(144.),y:168.,w:144.,h:144.,radius:32.,colour:[0.08,0.10,0.12,1.]});
+                out.push(Draw::Tex {x:self.canvas().centred(96.),y:192.,w:96.,h:96.,tex,alpha:1.});
             }
             self.draw_status_bar(out);
             self.hud.draw(self.canvas(), self.now(), out);
@@ -5317,6 +5323,12 @@ impl App {
             },
             out,
         );
+        if self.kids.active {
+            if let Some(tex)=self.kid_status_icon {
+                let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+                slot_ui::draw_corner_kid(self.battery,self.battery_percent,tex,preceding,out);
+            }
+        }
         self.status_motion.apply(&mut out[audio_start..]);
     }
 
@@ -5945,7 +5957,9 @@ impl App {
         }
         let depth = self.seat();
         self.shot_wanted = false;
-        self.eject_overlay = match self.shows_game() {
+        self.eject_strip=self.shows_game();
+        self.eject_close_s=if self.in_game_menu.is_none() {0.28}else{POWER_OFF_S};
+        self.eject_overlay = match self.shows_game() && !self.framed_panel() {
             true => self.overlay_slide(),
             false => 0.0,
         };
