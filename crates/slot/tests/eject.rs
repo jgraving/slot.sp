@@ -218,9 +218,13 @@ fn the_row_closes_back_up_as_the_cart_comes_out() {
             .count()
     };
     let early = carts(&a);
-    for _ in 0..50 {
+    // Observe the completed ejection rather than the old fixed 50-frame timing:
+    // the picture now closes smoothly before the cartridge begins moving.
+    for _ in 0..180 {
+        if matches!(a.phase(),Phase::Shelf) {break;}
         a.update(1.0 / 60.0);
     }
+    assert!(matches!(a.phase(),Phase::Shelf),"ejection never finished");
     let late = carts(&a);
     assert!(
         late > early,
