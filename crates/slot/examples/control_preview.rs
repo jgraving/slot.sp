@@ -26,7 +26,7 @@ fn main() {
         |name: &str, face: UndoFace, mut overlays: Vec<Draw>, focus: Option<[f32; 4]>| {
             let tex = gpu.create_texture(face.w, face.h, &face.rgba);
             let mut draws = vec![];
-            draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
+            draw_ground(canvas, Some((ground, 720)), &mut draws);
             if name=="kid-pause" || name=="kid-settings" {
                 let mut frame=MenuFrame::settled(QuickRow::Settings,&[]);
                 frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
@@ -177,7 +177,8 @@ fn main() {
         gpu.begin_frame();gpu.draw_list(&out);
         write(&path.join(format!("settings-notice-{ms}.png")),width,&gpu.read_frame());
     }
-    let picker = ClockPicker::local(slot_store::parse_stamp("2026-10-30_12-00-00").unwrap(), 60);
+    let mut picker = ClockPicker::local(slot_store::parse_stamp("2026-10-30_12-00-00").unwrap(), 60);
+    picker.set_twelve(true);
     let f = picker.face_on(canvas);
     let line = gpu.create_texture(f.w, f.h, &f.rgba);
     let f = set_clock_hint_face();
@@ -188,6 +189,7 @@ fn main() {
         .unwrap();
     let back = (gpu.create_texture(f.w, f.h, &f.rgba), f.w);
     let mut out = vec![];
+    draw_ground(canvas, Some((ground,720)), &mut out);
     picker.draw(canvas, Some(line), Some(hint), Some(back), &mut out);
     draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut out);
     gpu.begin_frame();

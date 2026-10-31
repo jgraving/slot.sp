@@ -543,7 +543,7 @@ fn the_gauge_is_white_in_dark_mode_and_black_in_light_mode() {
         );
         out.into_iter()
             .find_map(|d| match d {
-                Draw::RoundRect { colour, .. } => Some(colour),
+                Draw::Rect { colour, .. } => Some(colour),
                 _ => None,
             })
             .expect("the gauge did not draw")

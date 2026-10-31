@@ -12,7 +12,6 @@ const YEAR_MIN: i64 = 2000;
 const YEAR_MAX: i64 = 2099;
 
 const INK: [u8; 3] = [0xf6, 0xf4, 0xef];
-const BACKDROP: [f32; 4] = [0.06, 0.06, 0.07, 1.0];
 
 const OFFSET_STEP: i64 = 30;
 
@@ -23,6 +22,18 @@ pub fn clock_label(stamp: &str) -> String {
 pub fn hhmm(secs: i64) -> String {
     let rem = secs.rem_euclid(DAY);
     format!("{:02}:{:02}", rem / 3600, rem / 60 % 60)
+}
+
+/// Display preference only; RTC, offsets and save timestamps remain unchanged.
+pub fn clock_text(secs:i64,twelve:bool)->String {
+    if !twelve {return hhmm(secs);}
+    let rem=secs.rem_euclid(DAY);
+    let hour=rem/3600;
+    format!("{}:{:02} {}",if hour%12==0 {12}else{hour%12},rem/60%60,if hour<12 {"AM"}else{"PM"})
+}
+pub fn date_time_format(secs:i64,twelve:bool)->String {
+    let (_,month,day)=civil_from_days(secs.div_euclid(DAY));
+    format!("{} {day} {}",MONTHS[(month-1) as usize],clock_text(secs,twelve))
 }
 
 const MONTHS: [&str; 12] = [
@@ -69,6 +80,7 @@ pub struct ClockPicker {
     offset_min: i64,
     cursor: usize,
     editing: bool,
+    twelve: bool,
 }
 
 impl ClockPicker {
@@ -84,6 +96,7 @@ impl ClockPicker {
             offset_min: 0,
             cursor: 0,
             editing: false,
+            twelve: false,
         }
     }
 
@@ -105,6 +118,7 @@ impl ClockPicker {
             offset_min: 0,
             cursor: 0,
             editing: false,
+            twelve: false,
         }
     }
 
@@ -118,6 +132,8 @@ impl ClockPicker {
     pub fn offset_min(&self) -> i64 {
         self.offset_min
     }
+
+    pub fn set_twelve(&mut self,twelve:bool) {self.twelve=twelve;}
 
     pub fn month(&self) -> i64 {
         self.month
@@ -188,7 +204,7 @@ impl ClockPicker {
             self.day,
             self.hour,
             self.minute,
-            self.offset_text()
+            format!("{}{}",self.offset_text(),if self.twelve {" · 12h"}else{""})
         )
     }
 
@@ -215,7 +231,7 @@ impl ClockPicker {
             ("Year", format!("{:04}", self.year)),
             ("Month", ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][(self.month - 1) as usize].to_string()),
             ("Day", format!("{:02}", self.day)),
-            ("Hour", format!("{:02}", self.hour)),
+            ("Hour", if self.twelve {format!("{} {}",if self.hour%12==0 {12}else{self.hour%12},if self.hour<12 {"AM"}else{"PM"})}else{format!("{:02}",self.hour)}),
             ("Minute", format!("{:02}", self.minute)),
             ("UTC offset", self.offset_text()),
         ]
@@ -283,13 +299,7 @@ impl ClockPicker {
         focus: [f32; 4],
         out: &mut Vec<Draw>,
     ) {
-        out.push(Draw::Rect {
-            x: 0.0,
-            y: 0.0,
-            w: canvas.w,
-            h: OUT_H as f32,
-            colour: BACKDROP,
-        });
+        crate::expressive::rounded(out,56.0,80.0,canvas.w-112.0,280.0,28.0,[0.095,0.12,0.14,1.0]);
         crate::expressive::rounded(
             out,
             focus[0],

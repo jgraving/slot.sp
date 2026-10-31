@@ -58,7 +58,7 @@ fn feedback_moves_as_an_opaque_surface_and_retargets_without_a_jump() {
     let texture=Some((TexId::from_raw(1),face.w,face.h));
     let mut n=SettingsNotice::default();n.observe(Some((1,"Saved".into())),0);
     let mut before=vec![];n.draw(canvas,texture,120,&mut before);
-    assert!(before.iter().all(|d|match d {Draw::Tex{alpha,..}=>*alpha==1.0,Draw::RoundRect{colour,..}=>colour[3]==0.97,_=>true}));
+    assert!(before.iter().all(|d|match d {Draw::Tex{alpha,..}=>*alpha==1.0,Draw::RoundRect{colour,..}=>colour[3]==1.0,_=>true}));
     n.observe(Some((2,"Updated".into())),120);
     let mut after=vec![];n.draw(canvas,texture,120,&mut after);
     assert_eq!(before,after);
@@ -67,4 +67,18 @@ fn feedback_moves_as_an_opaque_surface_and_retargets_without_a_jump() {
     assert!(closing.iter().all(|d|match d {Draw::Tex{alpha,..}=>*alpha==1.0,_=>true}));
     assert!(n.alpha(160)>0.0);
     assert_eq!(n.alpha(1000),0.0);
+}
+
+#[test]
+fn charging_chip_uses_one_filled_surface_and_readable_native_ink() {
+    use slot_ui::{Canvas,Draw,SettingsNotice,TexId,settings_notice_face};
+    let canvas=Canvas{w:640.0,h:480.0};
+    let face=settings_notice_face("Charging: 100%",canvas);
+    assert_eq!(face.h,52);assert!(face.w<400);
+    assert!(face.rgba.chunks_exact(4).any(|p|p[3]>200));
+    let mut notice=SettingsNotice::default();
+    notice.observe(Some((1,"Charging: 100%".into())),0);
+    let mut out=vec![];notice.draw(canvas,Some((TexId::from_raw(1),face.w,face.h)),500,&mut out);
+    assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{..})).count(),1);
+    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{colour,..}if colour[1]>colour[0]&&colour[3]==1.0)));
 }

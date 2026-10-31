@@ -11,8 +11,8 @@ use slot_ui::{
     ALERT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
     PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
     UndoFace, badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face,
-    core_button_legends, date_time_text, default_game_bezel_face, delete_legends, footer_ink,
-    game_bezel_face, gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends,
+    core_button_legends, default_game_bezel_face, delete_legends, footer_ink,
+    game_bezel_face, gb_cart_shadow, hint_face, icon_face, link_button_legends,
     menu_detail_face, menu_face, photo_face, prompt_legends, quick_caret_face,
     quick_description_face, quick_label_face, quick_legend_faces, quick_pointer_face,
     quick_value_face, rebuild_count_face, rebuild_title_face,
@@ -872,7 +872,8 @@ impl Frontend {
                 self.settings_notice_text=message.to_string();
             }
         }
-        self.settings_notice.draw(canvas,self.settings_notice_face,now,&mut self.draws);
+        let notice_canvas=if app.kid_mode() && self.settings_notice.text().is_some_and(|s|s.starts_with("Charging: ")) {slot_ui::Canvas{h:canvas.h-80.0,..canvas}}else{canvas};
+        self.settings_notice.draw(notice_canvas,self.settings_notice_face,now,&mut self.draws);
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);
@@ -1433,7 +1434,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
             app.set_clock_faces(line, hint);
         }
     }
-    let shown = hhmm(app.wall_secs());
+    let shown = slot_ui::clock_text(app.wall_secs(),app.clock_12h());
     if shown != clocks.shown {
         let face = slot_ui::status_word_face(&shown, clocks.ink);
         clocks.shown = shown;
@@ -1587,7 +1588,7 @@ fn sync_quick_clock(app: &mut App, compositor: &mut Compositor, state: &mut Quic
     if app.quick_menu().is_none() {
         return;
     }
-    let text = date_time_text(app.wall_secs());
+    let text = slot_ui::date_time_format(app.wall_secs(),app.clock_12h());
     if text == state.shown {
         return;
     }

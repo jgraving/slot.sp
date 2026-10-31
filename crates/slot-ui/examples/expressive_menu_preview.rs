@@ -110,6 +110,11 @@ fn main() {
     let parts = shell_slot_faces(slot_store::ShellColour::FINISHES[0]);
     let slot = parts.map(|f| compositor.create_texture(SLOT_W, SLOT_H, &f));
     let mut motion = MenuMotion::default();
+    let charge_face=settings_notice_face("Charging: 82%",canvas);
+    let charge_size=(charge_face.w,charge_face.h);
+    let charge_tex=compositor.create_texture(charge_face.w,charge_face.h,&charge_face.rgba);
+    let mut charge_notice=SettingsNotice::default();
+    charge_notice.observe(Some((1,"Charging: 82%".into())),0);
     let mut draws = Vec::with_capacity(96);
     let mut peak = 0;
     let mut cpu = std::time::Duration::ZERO;
@@ -230,6 +235,7 @@ fn main() {
             let clock = Printed::new(ct, cw);
             draw_status(canvas, battery, percent, Some(bolt), clock, ink, &mut draws);
             draw_corner_audio(battery, percent, Some(bt), Some(mt), &mut draws);
+            if name=="settings" {charge_notice.draw(canvas,Some((charge_tex,charge_size.0,charge_size.1)),500,&mut draws);}
             cpu += start.elapsed();
             peak = peak.max(draws.len());
             compositor.begin_frame();

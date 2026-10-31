@@ -216,6 +216,8 @@ pub struct SlotState {
     pub muted: bool,
     pub muted_hp: bool,
     pub clock_set: bool,
+    pub clock_12h: bool,
+    pub carousel_wheel: bool,
     pub utc_offset_min: i16,
     pub rumble: bool,
     pub ff_speed: u8,
@@ -367,6 +369,8 @@ impl Default for SlotState {
             muted: false,
             muted_hp: false,
             clock_set: false,
+            clock_12h: false,
+            carousel_wheel: true,
             utc_offset_min: 0,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
@@ -484,6 +488,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.appearance.name(),
         s.wallpaper.key()
     );
+    text.push_str(&format!("clock_12h={}\ncarousel_wheel={}\n",s.clock_12h as u8,s.carousel_wheel as u8));
     text.push_str(&format!(
         "colour_correction_gbc={}\n",
         s.colour_correction_gbc as u8
@@ -535,6 +540,8 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut muted = None;
     let mut muted_hp = None;
     let mut clock_set = None;
+    let mut clock_12h = false;
+    let mut carousel_wheel = true;
     let mut utc_offset_min = None;
     let mut rumble = None;
     let mut ff_speed = None;
@@ -593,6 +600,8 @@ fn parse(text: &str) -> Option<SlotState> {
             "volume_hp" => volume_hp = Some(level(value, VOLUME_MAX)?),
             "muted" => muted = Some(level(value, 1)? == 1),
             "muted_hp" => muted_hp = Some(level(value, 1)? == 1),
+            "clock_12h" => clock_12h = flag(value).unwrap_or(false),
+            "carousel_wheel" => carousel_wheel = flag(value).unwrap_or(true),
             "clock_set" => clock_set = Some(level(value, 1)? == 1),
             "utc_offset_min" => utc_offset_min = Some(offset(value)?),
             "rumble" => rumble = flag(value),
@@ -648,6 +657,8 @@ fn parse(text: &str) -> Option<SlotState> {
         muted: muted?,
         muted_hp: muted_hp.or(muted)?,
         clock_set: clock_set?,
+        clock_12h,
+        carousel_wheel,
         utc_offset_min: utc_offset_min?,
         rumble: rumble.unwrap_or(fallback.rumble),
         ff_speed: ff_speed.unwrap_or(fallback.ff_speed),
