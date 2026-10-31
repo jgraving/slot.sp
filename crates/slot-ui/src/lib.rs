@@ -71,7 +71,7 @@ pub use cart::{
     GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H,
     GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y,
 };
-pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
+pub use clock::{clock_text, date_time_format, clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
     draw_corner_audio, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
