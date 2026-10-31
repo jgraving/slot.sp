@@ -974,7 +974,9 @@ fn closing_kid_pause_retains_its_cached_surface_until_it_is_offscreen() {
     app.apply(Action::QuickMenu);
     app.kid_menu.as_mut().unwrap().face=Some(slot_ui::TexId::from_raw(9002));
     app.note_custom_menu_face();app.update(1.0);
+    app.set_game_ready(true);
     let mut initial=vec![];app.draw(&mut initial);
+    assert!(initial.iter().any(|d|matches!(d,slot_ui::Draw::Game)),"kid pause lost the game behind its card");
     assert!(initial.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
     press(&mut app,Btn::B);app.note_custom_menu_face();app.update(0.05);
     let mut closing=vec![];app.draw(&mut closing);

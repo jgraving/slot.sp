@@ -305,8 +305,10 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 4] = [
-        QuickRow::ScreenGeneral,
+    pub const SCREEN: [QuickRow; 6] = [
+        QuickRow::Brightness,
+        QuickRow::BlueLight,
+        QuickRow::DisplaySchedule,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -385,7 +387,7 @@ impl QuickRow {
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
-            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN_GENERAL,
+            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN,
             QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
@@ -447,7 +449,7 @@ impl QuickRow {
         match self.page()[0] {
             QuickRow::LidClose => Some(QuickRow::Power),
             QuickRow::ScreenGeneral => Some(QuickRow::Screen),
-            QuickRow::Brightness => Some(QuickRow::ScreenGeneral),
+            QuickRow::Brightness => Some(QuickRow::Screen),
             QuickRow::ScreenGba => Some(QuickRow::Screen),
 
             QuickRow::GbaShader => Some(QuickRow::ScreenGba),
@@ -534,7 +536,7 @@ impl QuickRow {
 
     pub fn label(self) -> &'static str {
         match self {
-            QuickRow::Power => "Power",
+            QuickRow::Power => "Power & lid",
             QuickRow::Kids => "Parental controls",
             QuickRow::LidClose => "Lid Close",
             QuickRow::SleepTimeout => "Shut Down After",
@@ -1398,16 +1400,17 @@ pub fn kid_time_text(seconds: u64) -> String {
 /// One quiet line of remaining time and a bar, above the native menu footer.
 pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
     let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
-    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,18.0,18.0);
+    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,20.0,20.0);
     let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
-    let (w,h)=(width.ceil() as u32+32,32);
+    let (w,h)=((width.ceil() as u32+40).max(300),36);
     let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
     crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
     text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
-    let span=(w-32) as f32;
-    crate::expressive::raster_round(&mut face,16.0,25.0,span,3.0,1.5,[0.35,0.39,0.42,1.0]);
+    let span=(w-40) as f32;
+    crate::expressive::raster_round(&mut face,20.0,27.0,span,5.0,2.5,[0.35,0.39,0.42,1.0]);
     let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
-    if fraction>0.0 {crate::expressive::raster_round(&mut face,16.0,25.0,span*fraction,3.0,1.5,crate::expressive::ACCENT);}
+    if fraction>0.0 {crate::expressive::raster_round(&mut face,20.0,27.0,span*fraction,5.0,2.5,crate::expressive::ACCENT);}
+    crate::expressive::raster_round(&mut face,18.5+span*fraction,24.0,3.0,11.0,1.0,[0.96,0.96,0.94,1.0]);
     face
 }
 

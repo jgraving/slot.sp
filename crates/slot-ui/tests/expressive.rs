@@ -442,3 +442,17 @@ fn back_during_page_travel_reuses_both_pages_at_their_current_positions() {
     assert!((motion.outgoing_frame(QuickRow::Wallpaper,&[]).page_shift-incoming).abs()<0.001);
     assert_eq!(motion.frame(QuickRow::General,&[]).opacity,1.0);
 }
+
+#[test]
+fn kid_pause_card_and_settings_row_share_the_screen_centre() {
+    use slot_ui::*;
+    for w in [640.0,720.0] {
+        let canvas=Canvas{w,h:480.0};
+        let mut motion=MenuMotion::default();
+        motion.update_page_at(Some(QuickRow::Kids),&[],None,Some(2001),Some((1,0)),1.0);
+        let mut frame=motion.frame_page(QuickRow::Kids,&[],Some(2001));frame.focus_compact=1.0;
+        assert_eq!(frame.focus_y+expressive::ROW_H/2.0,240.0);
+        let mut out=vec![];expressive::draw_kid_pause_surface(canvas,frame,&mut out);
+        assert!(matches!(out.last(),Some(Draw::RoundRect{x,y,w:ww,h,..}) if *x+*ww/2.0==w/2.0 && *y+*h/2.0==240.0));
+    }
+}

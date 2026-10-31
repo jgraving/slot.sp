@@ -127,3 +127,11 @@ fn approval_face_has_readable_dark_eyes_and_smile_at_native_size() {
     assert!(dark_pixels(16..22, 9..15) >= 4, "right eye disappears into the foil");
     assert!(dark_pixels(8..23, 17..24) >= 12, "smile is too fine at native size");
 }
+
+#[test]
+fn status_smiley_is_white_and_distinct_from_the_foil_sticker() {
+    let face=slot_ui::kid_status_face();
+    assert_eq!((face.w,face.h),(20,20));
+    assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
+    assert!(face.rgba.chunks_exact(4).filter(|p|p[3]>0).all(|p|p[0].abs_diff(p[1])<4 && p[1].abs_diff(p[2])<8));
+}

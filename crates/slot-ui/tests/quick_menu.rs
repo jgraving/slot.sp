@@ -82,7 +82,7 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power", "Device controls", "Parental controls", "About"]
+        ["General", "Screen", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "About"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -109,7 +109,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
-        ["General", "Game Boy Advance", "Game Boy Color", "Game Boy"]
+        ["Brightness", "Color temp", "Night mode", "Game Boy Advance", "Game Boy Color", "Game Boy"]
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
@@ -183,7 +183,6 @@ fn the_rows_run_in_the_order_the_user_chose() {
     for page in [
         &QuickRow::MAIN[..],
         &QuickRow::SCREEN[..],
-        &QuickRow::SCREEN_GENERAL[..],
         &QuickRow::GAME[..],
         &QuickRow::GENERAL[..],
         &QuickRow::PLAY[..],
@@ -516,14 +515,13 @@ fn the_thumb_reaches_the_bottom_only_on_the_last_row() {
 
 #[test]
 fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
-    assert_eq!(QuickRow::Screen.child(), Some(QuickRow::ScreenGeneral));
+    assert_eq!(QuickRow::Screen.child(), Some(QuickRow::Brightness));
     assert_eq!(QuickRow::ScreenGeneral.child(), Some(QuickRow::Brightness));
     assert!(QuickRow::ScreenGeneral.opens());
     assert!(QuickRow::ScreenGeneral.centred());
-    assert!(!QuickRow::Brightness.centred());
+    assert!(QuickRow::Brightness.centred());
     assert!(!QuickRow::Brightness.opens());
     for (console, page) in [
-        (QuickRow::ScreenGeneral, &QuickRow::SCREEN_GENERAL[..]),
         (QuickRow::ScreenGba, &QuickRow::SCREEN_GBA[..]),
         (QuickRow::ScreenGbc, &QuickRow::SCREEN_GBC[..]),
         (QuickRow::ScreenGb, &QuickRow::SCREEN_GB[..]),

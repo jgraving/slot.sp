@@ -350,6 +350,8 @@ impl Frontend {
         let smiley = slot_ui::kid_smiley_face();
         let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
+        let smiley=slot_ui::kid_status_face();
+        self.session.app_mut().kid_status_icon=Some(compositor.create_texture(smiley.w,smiley.h,&smiley.rgba));
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);

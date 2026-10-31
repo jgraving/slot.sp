@@ -13,7 +13,7 @@ slot.sp remembers the active preset when you restart.
 ## Set up each preset
 
 1. Switch to the preset you want to change.
-2. Adjust brightness and warmth using the shortcuts below, or **Menu → Screen → General**.
+2. Adjust brightness and warmth using the shortcuts below, or **Menu → Screen**.
 3. Switch to the other preset and set it up the same way.
 
 Each adjustment saves to the preset you are using.

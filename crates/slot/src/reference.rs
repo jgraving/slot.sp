@@ -41,7 +41,7 @@ pub fn pages(
                 ("Volume / brightness", "Left / Right"),
                 ("Return to game", "B"),
                 ("Leave a game", "Exit game in menu"),
-                ("Parent settings", "Parent controls"),
+                ("Parent settings", "Parental controls"),
             ]),
         ));
     } else {

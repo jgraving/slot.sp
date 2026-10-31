@@ -320,6 +320,7 @@ impl MenuMotion {
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
             closing: !self.active,
         };
+        if custom==Some(2001) {frame.focus_y+=78.0;}
         if self.pause_morph && self.outgoing.is_some() {
             frame.focus_y=self.pause_focus.value;
         }
@@ -540,11 +541,19 @@ impl RectMotion {
 
 /// A single opaque surface grows from the pause card into full Settings.
 pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[QuickRow], out: &mut Vec<Draw>) {
-    let compact = frame.focus_compact.clamp(0.0, 1.0);
     let (_, count) = crate::quick_window(QuickRow::Settings, hidden);
     let top = quick_row_top_at(QuickRow::Resume, QuickRow::Settings, hidden) - 54.0;
-    let cw = 384.0;
     let ch = (count as f32 * crate::QUICK_PITCH + 76.0).min(400.0);
+    draw_pause_surface_at(canvas,frame,top.max(48.0),ch,out);
+}
+
+pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>) {
+    draw_pause_surface_at(canvas,frame,136.0,208.0,out);
+}
+
+fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,top:f32,ch:f32,out:&mut Vec<Draw>) {
+    let compact=frame.focus_compact.clamp(0.0,1.0);
+    let cw=384.0;
     let x = canvas.centred(cw) * compact;
     // Leave the status band clear, including the widest shadow (12 px, offset 4).
     let y = top.max(48.0) * compact;

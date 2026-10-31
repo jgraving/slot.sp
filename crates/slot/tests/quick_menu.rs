@@ -370,15 +370,10 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::Screen);
     press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::ScreenGeneral));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Brightness));
     for want in [
-        QuickRow::ScreenGba,
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
-        QuickRow::ScreenGeneral,
-        QuickRow::ScreenGba,
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
+        QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
+        QuickRow::Brightness,QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
     ] {
         press(&mut a, Btn::Down);
         assert_eq!(

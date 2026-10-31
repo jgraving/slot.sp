@@ -4748,6 +4748,8 @@ impl App {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
+                    self.push_game(out);
+                    if let Phase::Playing{cart}=&self.phase {self.draw_seated_mouth(cart,out);}
                     self.draw_cached_overlay(tex,out);
                     self.draw_status_bar(out);
                     return;
@@ -5021,7 +5023,7 @@ impl App {
                         if matches!(self.phase,Phase::Playing{..}|Phase::Ejecting{..}) {
                             let mut surface=frame;
                             surface.focus_compact=if (2000..3000).contains(&key) {self.kid_surface.value()}else{0.0};
-                            slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);
+                            if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
                         } else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
                         if matches!(key,2000..=2002|2009|3000..=3001) {
                             let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
@@ -5221,7 +5223,7 @@ impl App {
         if over_game {
             let mut surface=frame;
             surface.focus_compact=if self.kid_menu.is_some() {self.kid_surface.value()}else{0.0};
-            slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);
+            if self.kid_menu.is_some() {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
         }
         self.draw_outgoing_menu(over_game,out);
         if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {

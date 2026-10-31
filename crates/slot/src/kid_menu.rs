@@ -139,7 +139,7 @@ impl Menu {
         ];
         if self.child_in_game && self.page != Page::ChildSettings { rows.push(("Exit game".into(), String::new(), false)); }
         rows.push(("Buttons & shortcuts".into(), String::new(), false));
-        rows.push(("Parent controls".into(), String::new(), false));
+        rows.push(("Parental controls".into(), String::new(), false));
         rows
     }
     pub fn entered_buttons(&self) -> &[u8] {
@@ -287,7 +287,8 @@ impl Menu {
             for (i,(label,_,_)) in self.child_rows().iter().enumerate() {
                 let text=slot_ui::quick_heading_face(label);
                 let x=face.w.saturating_sub(text.w)/2;
-                blit(&mut face,&text,x,94+i as u32*slot_ui::QUICK_PITCH as u32);
+                blit(&mut face,&text,x,172+i as u32*slot_ui::QUICK_PITCH as u32);
+                if i==1 {let caret=slot_ui::quick_caret_face(true);blit(&mut face,&caret,(canvas.w/2.0+152.0)as u32,172+i as u32*slot_ui::QUICK_PITCH as u32);}
             }
             self.add_time_meter(&mut face);
             return face;

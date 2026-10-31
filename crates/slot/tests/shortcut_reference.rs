@@ -42,7 +42,7 @@ fn reference_uses_saved_bindings_and_child_pages_never_advertise_blocked_shortcu
     ] {
         assert!(!text.contains(forbidden), "{forbidden}");
     }
-    assert!(text.contains("Parent controls"));
+    assert!(text.contains("Parental controls"));
     let d = common::tmp_root_with_carts(&["Alpha"]);
     let mut menu = Menu::child(d.path().into(), Policy::default(), true, 50, 50);
     menu.set_reference(kid);

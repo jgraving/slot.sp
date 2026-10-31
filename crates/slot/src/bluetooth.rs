@@ -1928,28 +1928,19 @@ pub fn indicator_face() -> UndoFace {
 }
 
 pub fn indicator_face_with_ink(ink: [u8; 3]) -> UndoFace {
-    let mut face = UndoFace {
-        rgba: vec![0; 20 * 20 * 4],
-        w: 20,
-        h: 20,
-    };
-    for ((x0, y0), (x1, y1)) in [
-        ((9, 1), (9, 18)),
-        ((9, 1), (16, 6)),
-        ((16, 6), (3, 15)),
-        ((9, 18), (16, 13)),
-        ((16, 13), (3, 4)),
-    ] {
-        let steps = i32::abs(x1 - x0).max(i32::abs(y1 - y0));
-        for step in 0..=steps {
-            let x = x0 + (x1 - x0) * step / steps;
-            let y = y0 + (y1 - y0) * step / steps;
-            for dx in 0..2 {
-                let offset = ((y * 20 + x + dx) * 4) as usize;
-                face.rgba[offset..offset + 4].copy_from_slice(&[ink[0], ink[1], ink[2], 255]);
-            }
-        }
-    }
+    let source=slot_ui::icon_face(slot_ui::Icon::Bluetooth,18.0,ink);
+    let mut face=UndoFace{rgba:vec![0;20*20*4],w:20,h:20};
+    let points:Vec<_>=source.rgba.chunks_exact(4).enumerate().filter(|(_,p)|p[3]>0).map(|(i,_)|(i as u32%source.w,i as u32/source.w)).collect();
+    let left=points.iter().map(|p|p.0).min().unwrap_or(0);
+    let top=points.iter().map(|p|p.1).min().unwrap_or(0);
+    let w=(points.iter().map(|p|p.0).max().unwrap_or(0)-left+1).min(20);
+    let h=(points.iter().map(|p|p.1).max().unwrap_or(0)-top+1).min(20);
+    let (x,y)=((20-w)/2,(20-h)/2);
+    for yy in 0..h {for xx in 0..w {
+        let src=(((yy+top)*source.w+xx+left)*4)as usize;
+        let dst=(((yy+y)*20+xx+x)*4)as usize;
+        face.rgba[dst..dst+4].copy_from_slice(&source.rgba[src..src+4]);
+    }}
     face
 }
 

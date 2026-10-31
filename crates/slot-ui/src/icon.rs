@@ -628,3 +628,12 @@ pub fn kid_smiley_face() -> CartFace {
         h: w,
     }
 }
+
+/// Flat status symbol, separate from the foil approval sticker.
+pub fn kid_status_face()->CartFace {
+    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#f6f4ef" stroke-width="1.6"/><circle cx="7" cy="7.5" r="1" fill="#f6f4ef"/><circle cx="13" cy="7.5" r="1" fill="#f6f4ef"/><path d="M6 11.5 Q10 16 14 11.5" fill="none" stroke="#f6f4ef" stroke-width="1.6" stroke-linecap="round"/></svg>"##;
+    let hi=crate::art::render_svg(svg,80,80).expect("status smiley SVG");
+    let mut rgba=prefilter_star(&hi,20);
+    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&[255,255,255]);}
+    CartFace{rgba,w:20,h:20}
+}
