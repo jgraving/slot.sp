@@ -1012,6 +1012,7 @@ const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
+    if row.page()==QuickRow::MAIN {return crate::menu_grid::tile_face(row,lit);}
     quick_text_face(&menu_sentence_case(row.label()), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
@@ -1717,6 +1718,12 @@ impl QuickMenu<'_> {
                 _ => {}
             }
         }
+        if frame.tile_origin.is_some() {
+            // Clip in card space first, so off-card scroll rails cannot enter
+            // the viewport as the shared container shrinks.
+            clip_quads(out,begin,[crate::expressive::MENU_INSET,40.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
+        }
+        crate::expressive::tile_transform(self.canvas,frame,&mut out[begin..]);
         clip_quads(out, begin, [crate::expressive::MENU_INSET, 40.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
     }
 
@@ -1732,6 +1739,8 @@ impl QuickMenu<'_> {
         let Some(faces) = self.faces else {
             return;
         };
+        if self.row.page()==QuickRow::MAIN {crate::menu_grid::draw(self,frame,out);return;}
+        if !self.over_game {rounded(out,MENU_INSET,40.0,self.canvas.w-2.0*MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
         let pause=self.row.page()==QuickRow::PLAY;
         let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);

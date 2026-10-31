@@ -35,9 +35,11 @@ fn in_game_at(a: &mut App, row: QuickRow) {
             press(a, Btn::A);
         }
         let hidden = a.in_game_hidden();
-        for _ in 0..step.position(&hidden) {
-            press(a, Btn::Down);
-        }
+        let i=step.position(&hidden);
+        if step.page()==QuickRow::MAIN {
+            for _ in 0..i%4 {press(a,Btn::Right);}
+            for _ in 0..i/4 {press(a,Btn::Down);}
+        }else{for _ in 0..i {press(a,Btn::Down);}}
     }
     assert_eq!(a.in_game_menu(), Some(row));
 }
@@ -152,7 +154,10 @@ fn reset_all_on_the_shortcut_and_shelf_pages_resets_only_that_page() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -268,7 +273,10 @@ fn the_controls_shelf_page_rebinds_shelf_switching_and_saves_at_once() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -341,7 +349,10 @@ fn shortcuts_are_set_from_the_main_menu_and_saved_for_every_game_at_once() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -387,7 +398,10 @@ fn in_game_buttons_are_set_from_the_main_menu_and_reach_a_game() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -464,7 +478,10 @@ fn turbo_b_moves_off_y_from_the_in_game_page() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -486,7 +503,10 @@ fn turbo_b_moves_off_y_from_the_in_game_page() {
 
 fn to_shortcuts(s: &mut Session, now: &mut Millis) {
     tap(s, now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(s, now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(s, now, Btn::Down);
     }
     tap(s, now, Btn::A);
@@ -692,7 +712,10 @@ fn a_shelf_key_is_only_checked_against_shelf_keys() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -887,7 +910,10 @@ fn opening_a_binding_recorder_stops_a_display_hold_without_waiting_for_key_up() 
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);

@@ -9,7 +9,7 @@ use crate::slot_chrome::MOUTH_H;
 pub const FOOTER_Y: f32 = OUT_H as f32 - MOUTH_H + (MOUTH_H - HINT_H as f32) / 2.0;
 const FOOTER_MARGIN: f32 = 24.0;
 const CORNER_MARGIN: f32 = 16.0;
-const STATUS_STEP:f32=40.0;
+const STATUS_STEP:f32=34.0;
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Debug)]
 pub struct Printed {

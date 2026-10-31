@@ -42,7 +42,10 @@ fn the_stick_is_turned_off_from_gameplay_and_saved() {
     let mut a = boot(d.path(), true);
     assert!(a.left_stick_dpad());
     a.apply(Action::QuickMenu);
-    for _ in 0..QuickRow::Game.position(&[]) {
+    for _ in 0..QuickRow::Game.position(&[])%4 {
+        press(&mut a, Btn::Right);
+    }
+    for _ in 0..QuickRow::Game.position(&[])/4 {
         press(&mut a, Btn::Down);
     }
     press(&mut a, Btn::A);

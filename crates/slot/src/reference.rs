@@ -77,7 +77,6 @@ pub fn pages(
             pages.push((format!("Shortcuts {}", i + 1), chunk.to_vec()));
         }
     }
-    pages.push(("Quick controls".into(),rows(&[("Open on carousel","SELECT"),("Toggle control","A"),("Open its settings","Hold A"),("Close","B")])));
     if in_game {
         let mapped: Vec<_> = GameButton::of(platform)
             .iter()

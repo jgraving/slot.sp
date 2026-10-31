@@ -11,7 +11,11 @@ fn open_at(a: &mut App, row: QuickRow) {
     while let Some(parent) = path.last().and_then(|r| r.parent()) { path.push(parent); }
     for (depth, step) in path.iter().rev().enumerate() {
         if depth > 0 { press(a, Btn::A); }
-        for _ in 0..step.position(&a.hidden_rows()) { press(a, Btn::Down); }
+        let i=step.position(&a.hidden_rows());
+        if step.page()==QuickRow::MAIN {
+            for _ in 0..i%4 {press(a,Btn::Right);}
+            for _ in 0..i/4 {press(a,Btn::Down);}
+        }else{for _ in 0..i {press(a,Btn::Down);}}
     }
     assert_eq!(a.quick_menu(), Some(row));
 }

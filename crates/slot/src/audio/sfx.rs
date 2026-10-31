@@ -6,6 +6,7 @@ const ASSET_HZ: f32 = 48_000.0;
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Sfx {
     PowerSwitch,
+    LowBattery,
     Insert,
     Eject,
     Cartridge(u8),
@@ -14,7 +15,7 @@ pub enum Sfx {
 impl Sfx {
     pub fn lead(self) -> f32 {
         match self {
-            Sfx::PowerSwitch => 0.0,
+            Sfx::PowerSwitch | Sfx::LowBattery => 0.0,
             Sfx::Insert => 0.097,
             Sfx::Eject => 0.021,
             Sfx::Cartridge(_) => 0.0,
@@ -27,11 +28,13 @@ impl Sfx {
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
             Sfx::Cartridge(_) => return 0.028,
+            Sfx::LowBattery => return 0.38,
         };
         pcm.len() as f32 / 2.0 / ASSET_HZ - self.lead()
     }
 
     pub fn render(self, sample_rate: u32) -> Vec<i16> {
+        if self==Sfx::LowBattery {return low_battery(sample_rate);}
         if let Sfx::Cartridge(_) = self {
             return tactile(self, sample_rate);
         }
@@ -39,7 +42,7 @@ impl Sfx {
             Sfx::PowerSwitch => POWER_SWITCH,
             Sfx::Insert => INSERT,
             Sfx::Eject => EJECT,
-            Sfx::Cartridge(_) => unreachable!(),
+            Sfx::Cartridge(_) | Sfx::LowBattery => unreachable!(),
         };
         let mut out = Vec::with_capacity(pcm.len());
         for v in resampled(pcm, sample_rate) {
@@ -112,6 +115,20 @@ fn tactile(sound: Sfx, rate: u32) -> Vec<i16> {
         let fade = ((duration - t) / 0.004).clamp(0.0, 1.0);
         let value = (sample * fade * gain * 32767.0).clamp(-32767.0, 32767.0) as i16;
         out.extend([value, value]);
+    }
+    out
+}
+
+// A short descending pair, softened at both ends to avoid clicks.
+fn low_battery(rate:u32)->Vec<i16> {
+    use std::f32::consts::TAU;
+    let mut out=Vec::new();
+    for i in 0..(rate as f32*0.38) as usize {
+        let t=i as f32/rate as f32;
+        let (age,hz)=if t<0.18 {(t,660.0)}else{(t-0.22,440.0)};
+        let envelope=if (0.0..0.16).contains(&age) {(age/0.012).min(1.0)*((0.16-age)/0.04).min(1.0)}else{0.0};
+        let value=((TAU*hz*age).sin()*envelope*0.16*32767.0) as i16;
+        out.extend([value,value]);
     }
     out
 }

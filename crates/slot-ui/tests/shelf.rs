@@ -543,7 +543,7 @@ fn the_gauge_is_white_in_dark_mode_and_black_in_light_mode() {
         );
         out.into_iter()
             .find_map(|d| match d {
-                Draw::Rect { colour, .. } => Some(colour),
+                Draw::RoundRect { colour, .. } => Some(colour),
                 _ => None,
             })
             .expect("the gauge did not draw")
@@ -570,7 +570,7 @@ fn the_gauge_starts_at_the_case_margin() {
     let leftmost = out
         .iter()
         .map(|d| match *d {
-            Draw::Rect { x, .. } | Draw::Tex { x, .. } => x,
+            Draw::Rect { x, .. } | Draw::RoundRect { x, .. } | Draw::Tex { x, .. } => x,
             _ => f32::MAX,
         })
         .fold(f32::MAX, f32::min);
@@ -595,7 +595,7 @@ fn the_band_prints_the_charge_at_one_margin_and_the_clock_at_the_other() {
     let xs: Vec<(f32, f32)> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, w, .. } | Draw::Tex { x, w, .. } => Some((x, x + w)),
+            Draw::Rect { x, w, .. } | Draw::RoundRect { x, w, .. } | Draw::Tex { x, w, .. } => Some((x, x + w)),
             _ => None,
         })
         .collect();
@@ -654,12 +654,10 @@ fn the_footer_does_not_move_the_gauge_when_the_charge_state_changes() {
         [255, 255, 255],
         &mut charging,
     );
-    for d in &idle {
-        assert!(
-            charging.contains(d),
-            "{d:?} moved or vanished when charging started"
-        );
-    }
+    let body=|draws:&[Draw]|draws.iter().filter_map(|d|match d {
+        Draw::RoundRect{x,y,w,h,..}=>Some((*x,*y,*w,*h)),_=>None
+    }).collect::<Vec<_>>();
+    assert_eq!(body(&idle),body(&charging));
 }
 
 #[test]
@@ -677,7 +675,7 @@ fn the_clock_stays_at_the_right_margin() {
     let rightmost = out
         .iter()
         .map(|d| match *d {
-            Draw::Rect { x, w, .. } | Draw::Tex { x, w, .. } => x + w,
+            Draw::Rect { x, w, .. } | Draw::RoundRect { x, w, .. } | Draw::Tex { x, w, .. } => x + w,
             _ => 0.0,
         })
         .fold(0.0, f32::max);
@@ -1333,4 +1331,26 @@ fn only_a_starred_cart_wears_the_star_in_its_label_top_right_corner() {
         top >= ly && top < ly + 16.0,
         "star top {top}, label top {ly}"
     );
+}
+
+#[test]
+fn carousel_cartridge_centres_follow_an_invisible_wheel_arc() {
+    let mut shelf=shelf_with(8);
+    shelf.select(3);
+    settle(&mut shelf);
+    let canvas=Canvas{w:640.0,h:480.0};
+    let mut out=vec![];
+    shelf.draw_row(canvas,None,0.0,0.0,1.0,&mut out);
+    let mut centres=out.iter().filter_map(|d|match d {
+        Draw::Rect{x,y,w,h,..}=>Some((x+w/2.0,y+h/2.0)),_=>None
+    }).collect::<Vec<_>>();
+    centres.sort_by(|a,b|a.0.total_cmp(&b.0));
+    let crown=*centres.iter().min_by(|a,b|(a.0-320.0).abs().total_cmp(&(b.0-320.0).abs())).unwrap();
+    assert!((crown.0-320.0).abs()<0.01);
+    assert!(centres.len()>=3);
+    for (x,y) in centres {
+        let dx=x-320.0;
+        let dy=y-crown.1;
+        assert!((dx*dx+(900.0-dy).powi(2)-900.0f32.powi(2)).abs()<1.0);
+    }
 }

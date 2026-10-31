@@ -30,6 +30,13 @@ fn height_scale(h: f32) -> f32 {
     }
 }
 
+// Invisible wheel: the selected cartridge rests at its crown. Map travel to
+// angle so the same spring drives both axes, including reversals and overshoot.
+const WHEEL_RADIUS: f32 = 900.0;
+fn wheel_drop(x: f32) -> f32 {
+    WHEEL_RADIUS-(WHEEL_RADIUS*WHEEL_RADIUS-x*x).max(0.0).sqrt()
+}
+
 const SIDE_SCALE: f32 = 0.78;
 const SIDE_ALPHA: f32 = 1.0;
 
@@ -616,7 +623,8 @@ impl Shelf {
                 continue;
             }
             let x = x + shake;
-            let y0 = foot_y(ch as f32) - h0;
+            let full_h=ch as f32*shelf_scale(cart.platform);
+            let y0=rest_y(ch as f32)+(full_h-h0)/2.0+wheel_drop(centre-canvas.w/2.0);
             let y = y0 + (-h - 12.0 - y0) * depart;
             if alpha < 1.0 {
                 let backing = match self.shell(i) {

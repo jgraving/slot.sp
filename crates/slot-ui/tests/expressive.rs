@@ -125,22 +125,20 @@ fn status_reveal_preserves_icon_centres_and_bounds_opacity() {
 }
 
 #[test]
-fn child_pages_slide_forward_and_back_without_fading() {
-    let mut m = MenuMotion::default();
-    m.update(Some(QuickRow::General), &[], None, 1.0);
-    m.update(Some(QuickRow::Wallpaper), &[], None, 0.0);
-    assert_eq!(m.outgoing_row(), Some(QuickRow::General));
-    assert_eq!(m.frame(QuickRow::Wallpaper, &[]).page_shift, 1.0);
-    assert_eq!(m.frame(QuickRow::Wallpaper, &[]).opacity, 1.0);
-    m.update(Some(QuickRow::Wallpaper), &[], None, 0.08);
-    let entering = m.frame(QuickRow::Wallpaper, &[]);
-    let leaving = m.outgoing_frame(QuickRow::General, &[]);
-    assert!(entering.page_shift > 0.0 && entering.page_shift < 1.0 && leaving.page_shift < 0.0);
-    assert!((entering.page_shift - leaving.page_shift - 1.0).abs() < 0.001);
-    m.update(Some(QuickRow::General), &[], None, 0.0);
-    assert!((m.frame(QuickRow::General, &[]).page_shift-leaving.page_shift).abs()<0.001);
-    m.update(Some(QuickRow::General), &[], None, 1.0);
-    assert_eq!(m.outgoing_row(), None);
+fn selected_tile_expands_to_a_card_and_reverses_without_fading() {
+    let mut m=MenuMotion::default();
+    m.update(Some(QuickRow::General),&[],None,1.0);
+    m.update(Some(QuickRow::Wallpaper),&[],None,0.0);
+    let first=m.frame(QuickRow::Wallpaper,&[]);
+    assert_eq!(first.tile_origin,Some([0.0,0.0]));assert_eq!(first.tile_reveal,0.0);
+    assert_eq!(first.page_shift,0.0);assert_eq!(first.opacity,1.0);
+    m.update(Some(QuickRow::Wallpaper),&[],None,0.08);
+    let reveal=m.frame(QuickRow::Wallpaper,&[]).tile_reveal;
+    assert!(reveal>0.0&&reveal<1.0);
+    m.update(Some(QuickRow::General),&[],None,0.0);
+    assert!((m.outgoing_frame(QuickRow::Wallpaper,&[]).tile_reveal-reveal).abs()<0.001);
+    assert_eq!(m.frame(QuickRow::General,&[]).page_shift,0.0);
+    m.update(Some(QuickRow::General),&[],None,1.0);assert_eq!(m.outgoing_row(),None);
 }
 #[test]
 fn cached_submenus_reverse_and_retarget_the_same_page_motion() {
@@ -148,18 +146,15 @@ fn cached_submenus_reverse_and_retarget_the_same_page_motion() {
     m.update(Some(QuickRow::Bluetooth), &[], None, 1.0);
     m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1000), 0.0);
     assert!(!m.outgoing_is_custom());
-    assert_eq!(
-        m.frame_page(QuickRow::Bluetooth, &[], Some(1000))
-            .page_shift,
-        1.0
-    );
+    assert_eq!(m.frame_page(QuickRow::Bluetooth,&[],Some(1000)).tile_origin,Some([2.0,0.0]));
+    assert_eq!(m.frame_page(QuickRow::Bluetooth,&[],Some(1000)).tile_reveal,0.0);
     m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1001), 0.05);
     assert!(m.outgoing_is_custom());
     let old=m.outgoing_frame(QuickRow::Bluetooth,&[]).page_shift;
     m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1000), 0.0);
     assert!((m.frame_page(QuickRow::Bluetooth,&[],Some(1000)).page_shift-old).abs()<0.001);
     m.update_page(Some(QuickRow::Bluetooth), &[], None, None, 0.0);
-    assert_eq!(m.frame(QuickRow::Bluetooth, &[]).page_shift, -1.0);
+    assert_eq!(m.frame(QuickRow::Bluetooth, &[]).page_shift, 0.0);
 }
 #[test]
 fn selection_scrollbar_and_window_share_continuous_spring_positions() {
@@ -509,5 +504,43 @@ fn status_icons_have_one_flat_color_and_the_volume_hud_glyph_size() {
         let face=status_icon_face(icon,HUD_INK);assert_eq!((face.w,face.h),(32,32));
         assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
         assert!(face.rgba.chunks_exact(4).filter(|p|p[3]>0).all(|p|p[..3]==HUD_INK));
+    }
+}
+
+#[test]
+fn grid_tiles_have_matching_native_assets_and_directional_navigation() {
+    use slot_ui::menu_grid::{navigate,rect};
+    use slot_ui::{Canvas,quick_label_face};
+    for canvas in [Canvas{w:640.0,h:480.0},Canvas{w:720.0,h:480.0}] {
+        for (i,row) in QuickRow::MAIN.into_iter().enumerate() {
+            let [x,y,w,h]=rect(canvas,i);
+            assert!(x>=56.0 && x+w<=canvas.w-56.0 && y>=88.0 && y+h<=348.0);
+            for lit in [false,true] {
+                let f=quick_label_face(row,lit);
+                assert!(f.w as f32<=w && f.h as f32<=h);
+                assert!(f.rgba[..(f.w*52*4) as usize].chunks_exact(4).any(|p|p[3]>0),"missing icon {row:?}");
+                assert!(f.rgba[(f.w*52*4) as usize..].chunks_exact(4).any(|p|p[3]>0),"missing label {row:?}");
+            }
+            assert_eq!(navigate(navigate(row,&[],1,0),&[],-1,0),row);
+            assert_eq!(navigate(navigate(row,&[],0,1),&[],0,-1),row);
+        }
+    }
+    assert_eq!(navigate(QuickRow::General,&[],1,0),QuickRow::Screen);
+    assert_eq!(navigate(QuickRow::General,&[],0,1),QuickRow::Power);
+}
+#[test]
+fn card_transform_starts_at_its_tile_and_finishes_at_full_size() {
+    use slot_ui::{Canvas,MenuFrame,Draw};
+    let canvas=Canvas{w:640.0,h:480.0};
+    let mut f=MenuFrame::settled(QuickRow::Wallpaper,&[]);
+    f.tile_origin=Some([2.0,1.0]);
+    for t in [0.0,0.5,1.0] {
+        f.tile_reveal=t;
+        let mut draws=[Draw::RoundRect{x:56.0,y:40.0,w:528.0,h:320.0,radius:28.0,colour:[1.0;4]}];
+        slot_ui::expressive::tile_transform(canvas,f,&mut draws);
+        let Draw::RoundRect{x,y,w,h,colour,..}=draws[0] else{panic!()};
+        assert_eq!(colour[3],1.0);
+        if t==0.0 {let tile=slot_ui::menu_grid::rect(canvas,6);assert!([x,y,w,h].into_iter().zip(tile).all(|(a,b)|(a-b).abs()<0.001));}
+        if t==1.0 {assert_eq!([x,y,w,h],[56.0,40.0,528.0,320.0]);}
     }
 }

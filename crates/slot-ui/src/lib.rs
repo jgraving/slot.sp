@@ -35,6 +35,7 @@ mod power_menu;
 mod shot_viewer;
 pub use material::{shell_link_port, shell_rgb, shell_slot_faces};
 mod quick_menu;
+pub mod menu_grid;
 mod rebuild;
 mod refusal;
 mod shelf;

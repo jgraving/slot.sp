@@ -305,3 +305,20 @@ fn a_cart_sound_is_silent_when_muted() {
     let muted = sfx_peak(|s| s.app_mut().apply(slot_input::Action::MuteToggle));
     assert_eq!(muted, 0, "the cart was heard through a mute");
 }
+
+#[test]
+fn low_battery_warning_is_once_per_discharge_and_rearms_after_charging() {
+    use slot_power::{Battery,Charge};
+    let root=tmp_root_with_carts(&["Alpha"]);
+    let mut app=slot::app::App::boot(root.path());
+    for percent in [50,21] {app.on_battery(Battery{percent,charge:Charge::Discharging});assert_eq!(app.take_sfx(),None);}
+    app.on_battery(Battery{percent:20,charge:Charge::Discharging});assert_eq!(app.take_sfx(),Some(Sfx::LowBattery));
+    for percent in [19,20,21,19] {app.on_battery(Battery{percent,charge:Charge::Discharging});assert_eq!(app.take_sfx(),None);}
+    app.on_battery(Battery{percent:19,charge:Charge::Charging});assert_eq!(app.take_sfx(),None);
+    app.on_battery(Battery{percent:19,charge:Charge::Discharging});assert_eq!(app.take_sfx(),Some(Sfx::LowBattery));
+    for rate in [0,44100,48000] {
+        let pcm=Sfx::LowBattery.render(rate);
+        assert_eq!(pcm.len()%2,0);
+        if rate>0 {assert!(pcm.iter().any(|v|*v!=0));assert_eq!(pcm[0],0);assert!(pcm.last().unwrap().abs()<50);}
+    }
+}

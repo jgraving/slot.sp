@@ -592,7 +592,6 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
         for selected in QuickRow::GENERAL
             .into_iter()
             .chain(QuickRow::GAME)
-            .chain(QuickRow::MAIN)
             .chain(QuickRow::CONTROLS)
             .chain(QuickRow::SHORTCUTS)
         {
@@ -627,7 +626,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
                 }
                 .draw(&mut out);
                 let surfaces:Vec<_> = out.iter().filter_map(|d| match d {
-                    Draw::RoundRect{x,w,radius,..}=>Some((*x,*w,*radius)),_=>None,
+                    Draw::RoundRect{x,w,h,radius,..}if *h==slot_ui::expressive::ROW_H=>Some((*x,*w,*radius)),_=>None,
                 }).collect();
                 assert_eq!(surfaces,vec![(56.0,width-112.0,12.0)],"only selection gets a surface");
                 let labels: Vec<_> = out
