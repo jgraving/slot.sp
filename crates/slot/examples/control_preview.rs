@@ -30,7 +30,7 @@ fn main() {
             if name=="kid-pause" || name=="kid-settings" {
                 let mut frame=MenuFrame::settled(QuickRow::Settings,&[]);
                 frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
-                expressive::draw_pause_surface(canvas,frame,&[],&mut draws);
+                expressive::draw_kid_pause_surface(canvas,frame,&mut draws);
             }
             if let Some(r) = focus {
                 expressive::rounded(
@@ -83,6 +83,9 @@ fn main() {
     );
     let sound_lines=vec!["Sound".into(),"".into(),"COMPACT".into(),"ROW ACTIVE SPEAKER_DEVICE Internal speaker".into(),"SELECTED DISCONNECT 25%".into(),"ROW PAUSE_DISCONNECT Off".into(),"ROW VOLUME 50%".into(),"B Back · Change".into()];
     save("sound-sliders",slot::bluetooth::screen_face_on(&sound_lines,footer_ink(false),canvas),vec![],None);
+    for (i,(title,rows)) in slot::reference::pages(false,true,slot_store::Platform::Gba,Default::default(),Default::default(),Default::default()).into_iter().enumerate() {
+        save(&format!("reference-{i}"),reference_face(canvas,&title,&rows,i,10),vec![],None);
+    }
     let mut schedule = slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings {
         schedule: true,
         bedtime: (2, 9),
@@ -118,7 +121,7 @@ fn main() {
     let mut policy=slot::kid_policy::Policy::default(); policy.active=true;
     let mut child=slot::kid_menu::Menu::child(path.clone(),policy.clone(),true,35,55);
     child.set_remaining(Some((900,1800)));
-    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some([canvas.centred(352.0),88.0,352.0,44.0]));
+    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some([canvas.centred(352.0),166.0,352.0,44.0]));
     child.input(slot_input::Action::GbaDown(slot_input::Btn::Down),0);
     child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
     save("kid-settings",child.screen_face_on(canvas),vec![],None);

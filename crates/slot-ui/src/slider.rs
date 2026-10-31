@@ -27,6 +27,7 @@ pub fn draw_slider(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, value: f32, alph
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MenuSlider {
+    pub span:f32,
     pub id: u64,
     pub fraction: f32,
     pub y: f32,
@@ -43,7 +44,7 @@ pub fn draw_menu_sliders(
     for s in sliders {
         draw_slider(
             out,
-            canvas.w - crate::QUICK_EDGE - MENU_SLIDER_SPAN + dx,
+            canvas.w - crate::QUICK_EDGE - s.span + dx,
             s.y,
             MENU_SLIDER_W,
             motion.value(s.id, s.fraction),

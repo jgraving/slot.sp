@@ -305,8 +305,10 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 4] = [
-        QuickRow::ScreenGeneral,
+    pub const SCREEN: [QuickRow; 6] = [
+        QuickRow::Brightness,
+        QuickRow::BlueLight,
+        QuickRow::DisplaySchedule,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -385,7 +387,7 @@ impl QuickRow {
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
-            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN_GENERAL,
+            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN,
             QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
@@ -447,7 +449,7 @@ impl QuickRow {
         match self.page()[0] {
             QuickRow::LidClose => Some(QuickRow::Power),
             QuickRow::ScreenGeneral => Some(QuickRow::Screen),
-            QuickRow::Brightness => Some(QuickRow::ScreenGeneral),
+            QuickRow::Brightness => Some(QuickRow::Screen),
             QuickRow::ScreenGba => Some(QuickRow::Screen),
 
             QuickRow::GbaShader => Some(QuickRow::ScreenGba),
@@ -534,7 +536,7 @@ impl QuickRow {
 
     pub fn label(self) -> &'static str {
         match self {
-            QuickRow::Power => "Power",
+            QuickRow::Power => "Power & lid",
             QuickRow::Kids => "Parental controls",
             QuickRow::LidClose => "Lid Close",
             QuickRow::SleepTimeout => "Shut Down After",
@@ -1010,10 +1012,6 @@ const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
-    if let Some(button)=row.game_button() {
-        let label=button.label();
-        if !matches!(button,GameButton::TurboA|GameButton::TurboB) {return quick_binding_face(label,lit,false);}
-    }
     quick_text_face(&menu_sentence_case(row.label()), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
@@ -1066,6 +1064,17 @@ pub fn quick_value_face(text: &str, lit: bool) -> UndoFace {
     quick_text_face(text, if lit { MENU_INK } else { DIM_INK }, role)
 }
 
+fn binding_button(key:&str)->Option<ButtonLegend> {
+    Some(match key.trim().to_ascii_uppercase().as_str() {
+            "A"=>ButtonLegend::A,"B"=>ButtonLegend::B,"X"=>ButtonLegend::X,"Y"=>ButtonLegend::Y,
+            "UP"=>ButtonLegend::Up,"DOWN"=>ButtonLegend::Down,"LEFT"=>ButtonLegend::Left,"RIGHT"=>ButtonLegend::Right,
+            "VOLDOWN"=>ButtonLegend::VolumeDown,"VOLUP"=>ButtonLegend::VolumeUp,
+            "START"=>ButtonLegend::Start,"SEL"|"SELECT"=>ButtonLegend::Select,"MENU"=>ButtonLegend::Menu,
+            "L"=>ButtonLegend::L,"R"=>ButtonLegend::R,"L1"=>ButtonLegend::L1,"R1"=>ButtonLegend::R1,"L2"=>ButtonLegend::L2,"R2"=>ButtonLegend::R2,
+            _=>return None,
+        })
+}
+
 /// Native keycaps for physical mappings; prose remains readable while recording.
 pub fn quick_binding_face(value:&str,lit:bool,warning:bool)->UndoFace {
     let mut parts=Vec::new();
@@ -1074,14 +1083,10 @@ pub fn quick_binding_face(value:&str,lit:bool,warning:bool)->UndoFace {
         parts.push(UndoFace{rgba:icon.rgba,w:icon.w,h:icon.h});
     }
     for (i,key) in value.split('+').enumerate() {
-        let which=match key.to_ascii_uppercase().as_str() {
-            "A"=>ButtonLegend::A,"B"=>ButtonLegend::B,"X"=>ButtonLegend::X,"Y"=>ButtonLegend::Y,
-            "UP"=>ButtonLegend::Up,"DOWN"=>ButtonLegend::Down,"LEFT"=>ButtonLegend::Left,"RIGHT"=>ButtonLegend::Right,
-            "START"=>ButtonLegend::Start,"SELECT"=>ButtonLegend::Select,"MENU"=>ButtonLegend::Menu,
-            "L"=>ButtonLegend::L,"R"=>ButtonLegend::R,"L1"=>ButtonLegend::L1,"R1"=>ButtonLegend::R1,"L2"=>ButtonLegend::L2,"R2"=>ButtonLegend::R2,
-            _=>return if warning{quick_warning_value_face(value,lit)}else{quick_value_face(value,lit)},
+        let Some(which)=binding_button(key) else {
+            return if warning{quick_warning_value_face(value,lit)}else{quick_value_face(value,lit)};
         };
-        if i>0 {parts.push(quick_value_face("+",lit));}
+        if i>0 {parts.push(inline_text("+",lit,24.0));}
         parts.push(controller_button_face(which,32));
     }
     let w=parts.iter().map(|p|p.w+6).sum::<u32>()+2*MENU_PAD;
@@ -1090,6 +1095,56 @@ pub fn quick_binding_face(value:&str,lit:bool,warning:bool)->UndoFace {
     let mut x=MENU_PAD;
     for p in parts {parent_blit(&mut face,&p,x as f32,(h.saturating_sub(p.h)/2)as f32);x+=p.w+6;}
     face
+}
+
+// Text stays text; only physical device tokens become native keycaps.
+fn inline_text(value:&str,lit:bool,px:f32)->UndoFace {
+    let face=bounded_menu_face(value,text::Role::Menu,if lit{MENU_INK}else{DIM_INK},600.0,px);
+    let w=face.w.saturating_sub(2*MENU_PAD);
+    let mut rgba=vec![0;(w*face.h*4)as usize];
+    for y in 0..face.h {let a=((y*face.w+MENU_PAD)*4)as usize;let b=(y*w*4)as usize;rgba[b..b+(w*4)as usize].copy_from_slice(&face.rgba[a..a+(w*4)as usize]);}
+    UndoFace{rgba,w,h:face.h}
+}
+
+pub fn reference_binding_face(value:&str,max_w:f32)->UndoFace {
+    if value=="Volume buttons" {return reference_binding_face("VOLDOWN / VOLUP",max_w);}
+    let mut tokens=Vec::<String>::new();
+    let mut word=String::new();
+    for c in value.chars().chain(std::iter::once(' ')) {
+        if c.is_alphanumeric() || c=='-' {word.push(c);} else {
+            if !word.is_empty(){tokens.push(std::mem::take(&mut word));}
+            if !c.is_whitespace(){tokens.push(c.to_string());}
+        }
+    }
+    if !tokens.iter().any(|t|binding_button(t).is_some()) {return bounded_menu_face(value,text::Role::Value,MENU_INK,max_w,26.0);}
+    for size in (20..=32).rev() {
+        let parts:Vec<_>=tokens.iter().map(|token|match binding_button(token) {
+            Some(button)=>controller_button_face(button,size),
+            None=>inline_text(token,true,size as f32*0.75),
+        }).collect();
+        let width=parts.iter().map(|p|p.w).sum::<u32>()+4*parts.len().saturating_sub(1)as u32;
+        if width as f32>max_w {
+            if size>20 {continue;}
+            return bounded_menu_face(value,text::Role::Value,MENU_INK,max_w,26.0);
+        }
+        let w=width+2*MENU_PAD;
+        let mut face=UndoFace{rgba:vec![0;(w*MENU_H*4)as usize],w,h:MENU_H};
+        let mut x=MENU_PAD;
+        for part in parts {parent_blit(&mut face,&part,x as f32,(MENU_H.saturating_sub(part.h)/2)as f32);x+=part.w+4;}
+        return face;
+    }
+    unreachable!()
+}
+
+pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
+    let h=if jump {48}else{36};
+    let px=if jump {36.0}else{26.0};
+    let Some(font)=text::font(text::Role::Focus)else{return quick_value_face(label,true)};
+    let layout=text::fit_preserving_case(font,label,480.0,1,px,px);
+    let w=layout.lines.iter().map(|s|text::line_width(font,s,layout.px,layout.tracking)).fold(0.0,f32::max).ceil()as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*h*4)as usize];
+    text::draw_centred(&mut rgba,w,h,&layout,[255,255,255]);
+    UndoFace{rgba,w,h}
 }
 
 pub fn quick_heading_face(label: &str) -> UndoFace {
@@ -1356,16 +1411,17 @@ pub fn kid_time_text(seconds: u64) -> String {
 /// One quiet line of remaining time and a bar, above the native menu footer.
 pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
     let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
-    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,18.0,18.0);
+    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,20.0,20.0);
     let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
-    let (w,h)=(width.ceil() as u32+32,32);
+    let (w,h)=((width.ceil() as u32+40).max(300),36);
     let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
     crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
     text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
-    let span=(w-32) as f32;
-    crate::expressive::raster_round(&mut face,16.0,25.0,span,3.0,1.5,[0.35,0.39,0.42,1.0]);
+    let span=(w-40) as f32;
+    crate::expressive::raster_round(&mut face,20.0,27.0,span,5.0,2.5,[0.35,0.39,0.42,1.0]);
     let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
-    if fraction>0.0 {crate::expressive::raster_round(&mut face,16.0,25.0,span*fraction,3.0,1.5,crate::expressive::ACCENT);}
+    if fraction>0.0 {crate::expressive::raster_round(&mut face,20.0,27.0,span*fraction,5.0,2.5,crate::expressive::ACCENT);}
+    crate::expressive::raster_round(&mut face,18.5+span*fraction,24.0,3.0,11.0,1.0,[0.96,0.96,0.94,1.0]);
     face
 }
 
@@ -1546,6 +1602,7 @@ pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
         ButtonLegend::Left => ("",1.0), ButtonLegend::Right => ("",1.0),
         ButtonLegend::Start => ("START",2.0), ButtonLegend::Select => ("SELECT",2.2),
         ButtonLegend::Menu => ("MENU",1.9),
+        ButtonLegend::VolumeDown => ("−",1.0), ButtonLegend::VolumeUp => ("+",1.0),
         ButtonLegend::L => ("L",1.0), ButtonLegend::R => ("R",1.0),
         ButtonLegend::L1 => ("L1",1.2), ButtonLegend::R1 => ("R1",1.2),
         ButtonLegend::L2 => ("L2",1.2), ButtonLegend::R2 => ("R2",1.2),
@@ -1953,7 +2010,7 @@ pub fn reference_face(canvas: Canvas, title: &str, rows: &[(String,String,bool)]
     parent_blit(&mut face,&heading,QUICK_LABEL_X-MENU_PAD as f32,40.0);
     for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
         let label=bounded_menu_face(&menu_sentence_case(label),text::Role::Menu,DIM_INK,label_w,26.0);
-        let value=bounded_menu_face(value,text::Role::Value,MENU_INK,value_w,26.0);
+        let value=reference_binding_face(value,value_w);
         let y=96.0+i as f32*42.0;
         parent_blit(&mut face,&label,QUICK_LABEL_X-MENU_PAD as f32,y);
         parent_blit(&mut face,&value,canvas.w-QUICK_EDGE+MENU_PAD as f32-value.w as f32,y);

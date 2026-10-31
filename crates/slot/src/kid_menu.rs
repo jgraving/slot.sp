@@ -139,7 +139,7 @@ impl Menu {
         ];
         if self.child_in_game && self.page != Page::ChildSettings { rows.push(("Exit game".into(), String::new(), false)); }
         rows.push(("Buttons & shortcuts".into(), String::new(), false));
-        rows.push(("Parent controls".into(), String::new(), false));
+        rows.push(("Parental controls".into(), String::new(), false));
         rows
     }
     pub fn entered_buttons(&self) -> &[u8] {
@@ -252,13 +252,13 @@ impl Menu {
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         match self.page {
-            Page::Home=>vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
+            Page::Home=>vec![slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
             Page::Child|Page::ChildSettings if !self.in_game_card()=>{
                 let count=self.child_rows().len();
                 let visible=count.min(slot_ui::QUICK_VISIBLE);
                 let start=self.selected.saturating_sub(visible/2).min(count-visible);
                 let top=94.0;
-                [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
+                [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
             },_=>vec![]
         }
     }
@@ -287,7 +287,8 @@ impl Menu {
             for (i,(label,_,_)) in self.child_rows().iter().enumerate() {
                 let text=slot_ui::quick_heading_face(label);
                 let x=face.w.saturating_sub(text.w)/2;
-                blit(&mut face,&text,x,94+i as u32*slot_ui::QUICK_PITCH as u32);
+                blit(&mut face,&text,x,172+i as u32*slot_ui::QUICK_PITCH as u32);
+                if i==1 {let caret=slot_ui::quick_caret_face(true);blit(&mut face,&caret,(canvas.w/2.0+152.0)as u32,172+i as u32*slot_ui::QUICK_PITCH as u32);}
             }
             self.add_time_meter(&mut face);
             return face;

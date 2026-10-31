@@ -522,7 +522,7 @@ impl Manager {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         let(_,_,first,visible)=self.scroll_info();
         if self.page!=Page::Home {return vec![];}
-        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
 
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
@@ -961,13 +961,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
             .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
-            let name = if label.starts_with("DISCONNECT ") {
-                let width=screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::QUICK_LABEL_X as u32-12;
-                let layout=slot_ui::text::fit_preserving_case(font,name,width as f32,2,20.0,20.0);
-                let mut rgba=vec![0;(width*40*4)as usize];
-                slot_ui::text::draw_centred(&mut rgba,width,40,&layout,ink);
-                slot_ui::UndoFace{rgba,w:width,h:40}
-            } else {slot_ui::quick_value_face(name, highlight)};
+            let name = slot_ui::quick_value_face(name, highlight);
             blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
             if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
                 if !switches {continue;}
@@ -977,7 +971,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
                 continue;
             }
             if label.starts_with("VOLUME ") || label.starts_with("DISCONNECT ") {
-                if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-slot_ui::MENU_SLIDER_SPAN as u32-slot_ui::MENU_PAD,top);}
+                if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-200-slot_ui::MENU_PAD,top);}
                 let value=slot_ui::quick_value_face(value,highlight);blit(&mut rgba,&value,screen_w-slot_ui::QUICK_EDGE as u32+slot_ui::MENU_PAD-value.w,top);continue;
             }
             let value = slot_ui::quick_value_face(value, highlight);
@@ -1934,28 +1928,19 @@ pub fn indicator_face() -> UndoFace {
 }
 
 pub fn indicator_face_with_ink(ink: [u8; 3]) -> UndoFace {
-    let mut face = UndoFace {
-        rgba: vec![0; 20 * 20 * 4],
-        w: 20,
-        h: 20,
-    };
-    for ((x0, y0), (x1, y1)) in [
-        ((9, 1), (9, 18)),
-        ((9, 1), (16, 6)),
-        ((16, 6), (3, 15)),
-        ((9, 18), (16, 13)),
-        ((16, 13), (3, 4)),
-    ] {
-        let steps = i32::abs(x1 - x0).max(i32::abs(y1 - y0));
-        for step in 0..=steps {
-            let x = x0 + (x1 - x0) * step / steps;
-            let y = y0 + (y1 - y0) * step / steps;
-            for dx in 0..2 {
-                let offset = ((y * 20 + x + dx) * 4) as usize;
-                face.rgba[offset..offset + 4].copy_from_slice(&[ink[0], ink[1], ink[2], 255]);
-            }
-        }
-    }
+    let source=slot_ui::icon_face(slot_ui::Icon::Bluetooth,18.0,ink);
+    let mut face=UndoFace{rgba:vec![0;20*20*4],w:20,h:20};
+    let points:Vec<_>=source.rgba.chunks_exact(4).enumerate().filter(|(_,p)|p[3]>0).map(|(i,_)|(i as u32%source.w,i as u32/source.w)).collect();
+    let left=points.iter().map(|p|p.0).min().unwrap_or(0);
+    let top=points.iter().map(|p|p.1).min().unwrap_or(0);
+    let w=(points.iter().map(|p|p.0).max().unwrap_or(0)-left+1).min(20);
+    let h=(points.iter().map(|p|p.1).max().unwrap_or(0)-top+1).min(20);
+    let (x,y)=((20-w)/2,(20-h)/2);
+    for yy in 0..h {for xx in 0..w {
+        let src=(((yy+top)*source.w+xx+left)*4)as usize;
+        let dst=(((yy+y)*20+xx+x)*4)as usize;
+        face.rgba[dst..dst+4].copy_from_slice(&source.rgba[src..src+4]);
+    }}
     face
 }
 

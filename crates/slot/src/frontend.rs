@@ -350,6 +350,8 @@ impl Frontend {
         let smiley = slot_ui::kid_smiley_face();
         let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
+        let smiley=slot_ui::kid_status_face();
+        self.session.app_mut().kid_status_icon=Some(compositor.create_texture(smiley.w,smiley.h,&smiley.rgba));
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);
@@ -1441,10 +1443,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         if platform_shown.is_empty() {
             app.clear_shelf_platform();
         } else {
-            let face = word_ink(&platform_shown, [0xff, 0xff, 0xff]);
-            let w = face.w;
+            let face = slot_ui::carousel_name_face(&platform_shown,platform_shown.chars().count()==1);
+            let (w,h) = (face.w,face.h);
             let id = upload(compositor, &mut clocks.platform_tex, face);
-            app.set_shelf_platform_face(id, w);
+            app.set_shelf_name_face(id, w,h);
         }
     }
     let title_shown = app.title_text().unwrap_or_default();

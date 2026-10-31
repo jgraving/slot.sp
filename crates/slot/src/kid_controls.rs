@@ -347,7 +347,6 @@ impl App {
     }
 
     pub fn set_kid_face(&mut self, face: TexId, w: u32, h: u32) {
-        self.kid_status_icon=Some(face);
         for (_, shelf) in &mut self.shelves {
             shelf.set_kid_face(face, w, h);
         }

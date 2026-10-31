@@ -19,7 +19,7 @@ use slot_ui::{
     HOP_LIFT, Hud, HudKind, Icon, LinkBadge, MOUTH_H, Millis, Placed, Polaroids, PowerChoice,
     QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
     SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
-    TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, draw_slot_name,
+    TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, 
     draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at,
 };
@@ -483,6 +483,7 @@ pub struct App {
     hud_bolt: Option<TexId>,
     slot_faces: Option<(TexId, TexId)>,
     shelf_platform: slot_ui::Printed,
+    shelf_platform_h:u32,
     shelf_title: slot_ui::Printed,
     name_pending: bool,
     slot_letter: Option<char>,
@@ -744,6 +745,7 @@ impl App {
             hud_bolt: None,
             slot_faces: None,
             shelf_platform: slot_ui::Printed::default(),
+            shelf_platform_h:slot_ui::HINT_H,
             shelf_title: slot_ui::Printed::default(),
             name_pending: false,
             slot_letter: None,
@@ -1865,6 +1867,10 @@ impl App {
 
     pub fn set_shelf_platform_face(&mut self, face: TexId, w: u32) {
         self.shelf_platform = slot_ui::Printed::new(face, w);
+    }
+
+    pub fn set_shelf_name_face(&mut self,face:TexId,w:u32,h:u32) {
+        self.set_shelf_platform_face(face,w);self.shelf_platform_h=h;
     }
 
     pub fn clear_shelf_platform(&mut self) {
@@ -4077,7 +4083,7 @@ impl App {
         self.switch_motion.update(&self.visible_custom_switches(),dt);
         let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
         let sliders=self.visible_custom_sliders();
-        let global=[slot_ui::MenuSlider{id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
+        let global=[slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:1,fraction:self.state.brightness as f32/9.0,y:0.0},slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:2,fraction:self.state.blue_light as f32/9.0,y:0.0}];
         self.slider_motion.update(sliders.iter().chain(global.iter()),dt);
         let rect=self.picker().map(|p|p.field_rect(self.canvas()));self.clock_motion.update(rect,dt);
         let status_key = u8::from(self.bluetooth_active() || self.wired_audio_active() || self.usb_active)
@@ -4748,6 +4754,8 @@ impl App {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
+                    self.push_game(out);
+                    if let Phase::Playing{cart}=&self.phase {self.draw_seated_mouth(cart,out);}
                     self.draw_cached_overlay(tex,out);
                     self.draw_status_bar(out);
                     return;
@@ -4817,7 +4825,6 @@ impl App {
             }
             if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
             if let Some(tex) = menu.progress_face {
-                out.push(Draw::RoundRect{x:self.canvas().centred(144.),y:168.,w:144.,h:144.,radius:32.,colour:[0.08,0.10,0.12,1.]});
                 out.push(Draw::Tex {x:self.canvas().centred(96.),y:192.,w:96.,h:96.,tex,alpha:1.});
             }
             self.draw_status_bar(out);
@@ -4898,9 +4905,10 @@ impl App {
                                 out,
                             );
                         }
-                        draw_slot_name(
+                        slot_ui::draw_slot_name_sized(
                             self.canvas(),
                             self.shelf_platform,
+                            self.shelf_platform_h,
                             self.slot_name_alpha(),
                             out,
                         );
@@ -5022,7 +5030,7 @@ impl App {
                         if matches!(self.phase,Phase::Playing{..}|Phase::Ejecting{..}) {
                             let mut surface=frame;
                             surface.focus_compact=if (2000..3000).contains(&key) {self.kid_surface.value()}else{0.0};
-                            slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);
+                            if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
                         } else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
                         if matches!(key,2000..=2002|2009|3000..=3001) {
                             let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
@@ -5222,7 +5230,7 @@ impl App {
         if over_game {
             let mut surface=frame;
             surface.focus_compact=if self.kid_menu.is_some() {self.kid_surface.value()}else{0.0};
-            slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);
+            if self.kid_menu.is_some() {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
         }
         self.draw_outgoing_menu(over_game,out);
         if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {

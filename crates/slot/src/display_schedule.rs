@@ -64,7 +64,7 @@ impl Menu {
     pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
-        if self.time_field.is_none(){vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.settings.bedtime.1 as f32/9.0,y:94.0+3.0*slot_ui::QUICK_PITCH}]}else{vec![]}
+        if self.time_field.is_none(){vec![slot_ui::MenuSlider{span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.settings.bedtime.1 as f32/9.0,y:94.0+3.0*slot_ui::QUICK_PITCH}]}else{vec![]}
     }
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
         if self.time_field.is_none() {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.settings.schedule,y:94.0}]} else {vec![]}

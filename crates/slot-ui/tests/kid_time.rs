@@ -13,7 +13,7 @@ fn time_labels_are_readable_at_each_warning_size() {
 fn remaining_time_is_a_compact_antialiased_pill() {
     for seconds in [600,300,30,0] {
         let face=kid_time_meter(seconds,600);
-        assert_eq!(face.h,32);
+        assert_eq!(face.h,36);
         assert!(face.w<520);
         assert_eq!(face.rgba[3],0,"rounded corner stays transparent");
         assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
