@@ -967,3 +967,18 @@ fn parent_focus_keeps_the_five_row_page_aligned_at_its_last_entry() {
     assert_eq!(menu.focus_info(),Some((4,0)));
     assert!(menu.lines().iter().any(|line|line.contains("SELECTED Set parent code")));
 }
+
+#[test]
+fn closing_kid_pause_retains_its_cached_surface_until_it_is_offscreen() {
+    let (_d,mut app,_)=warning_game(slot::kid_policy::Rule::Daily,5);
+    app.apply(Action::QuickMenu);
+    app.kid_menu.as_mut().unwrap().face=Some(slot_ui::TexId::from_raw(9002));
+    app.note_custom_menu_face();app.update(1.0);
+    let mut initial=vec![];app.draw(&mut initial);
+    assert!(initial.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
+    press(&mut app,Btn::B);app.note_custom_menu_face();app.update(0.05);
+    let mut closing=vec![];app.draw(&mut closing);
+    assert!(closing.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,y,alpha,..} if *tex==slot_ui::TexId::from_raw(9002)&&*y>40.0&&*alpha==1.0)));
+    app.update(1.0);let mut gone=vec![];app.draw(&mut gone);
+    assert!(!gone.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
+}

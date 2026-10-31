@@ -122,6 +122,7 @@ fn main() {
         ("pause", QuickRow::Settings),
         ("expanded", QuickRow::PlayScreen),
         ("collapsed", QuickRow::Settings),
+        ("dismiss", QuickRow::Settings),
     ];
     for (scene, (name, row)) in scenarios.into_iter().enumerate() {
         for frame in 0..60 {
@@ -130,7 +131,9 @@ fn main() {
             } else {
                 row
             };
-            motion.update(Some(row), &hidden, Some(frame < 32), 1.0 / 60.0);
+            let requested=if name=="dismiss" && frame>=12 {None}else{Some(row)};
+            motion.update(requested, &hidden, Some(frame < 32), 1.0 / 60.0);
+            let visible=requested.is_some()||motion.closing_row().is_some();
             let mut values = [None; QuickRow::ALL.len()];
             for r in QuickRow::ALL {
                 if r.toggle() {
@@ -147,13 +150,15 @@ fn main() {
             values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();
+            let group=draws.len();
             let over_game = row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS;
-            if over_game {
+            if over_game && visible {
                 expressive::draw_pause_surface(canvas, motion.frame(row, &hidden), &hidden, &mut draws);
-            } else if motion.outgoing_row().is_some() {
+            } else if visible {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
             for outgoing in [true, false] {
+                if !visible {continue;}
                 let current = row;
                 let Some(row) = (if outgoing {
                     motion.outgoing_row()
@@ -163,7 +168,8 @@ fn main() {
                     continue;
                 };
                 let mut frame_state = if outgoing { motion.outgoing_frame(row, &hidden) } else { motion.frame(current, &hidden) };
-                if over_game { frame_state.background = false; }
+                frame_state.background=false;
+                frame_state.entry=1.0;
                 QuickMenu {
                     row,
                     hidden: &hidden,
@@ -186,7 +192,10 @@ fn main() {
                 }
                 .draw_animated(frame_state, &mut draws);
             }
-            draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
+            let dy=motion.displacement(canvas);
+            for d in &mut draws[group..] {match d {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y+=dy,_=>{}}}
+            expressive::clip_panel(&mut draws,group,canvas);
+            let legends=draws.len();
             for (right, (tex, w)) in [
                 (false, faces.legend[0]),
                 (true, faces.legend[if row.opens() { 2 } else { 1 }]),
@@ -197,7 +206,7 @@ fn main() {
                     } else {
                         16.0
                     },
-                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0,
+                    y: 480.0 - MOUTH_H - MENU_HINT_H as f32 - 12.0 + if visible {dy}else{canvas.h+32.0},
                     w: w as f32,
                     h: MENU_HINT_H as f32,
                     tex,
@@ -209,6 +218,8 @@ fn main() {
                 charge: slot_power::Charge::Charging,
             });
             let percent = Printed::new(pt, pw);
+            expressive::clip_panel(&mut draws,legends,canvas);
+            draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut draws);
             let clock = Printed::new(ct, cw);
             draw_status(canvas, battery, percent, Some(bolt), clock, ink, &mut draws);
             draw_corner_audio(battery, percent, Some(bt), Some(mt), &mut draws);
@@ -236,8 +247,8 @@ fn main() {
         }
     }
     println!(
-        "Menu/status draw construction: {:.1} us average over 420 frames; peak {peak} quads",
-        cpu.as_secs_f64() * 1e6 / 420.0
+        "Menu/status draw construction: {:.1} us average over 480 frames; peak {peak} quads",
+        cpu.as_secs_f64() * 1e6 / 480.0
     );
 }
 #[cfg(not(target_os = "linux"))]

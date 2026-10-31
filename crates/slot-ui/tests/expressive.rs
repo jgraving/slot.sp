@@ -44,15 +44,15 @@ fn reversals_keep_momentum_while_selection_is_immediately_actionable() {
     );
 }
 #[test]
-fn pages_arrive_with_bounded_opacity_and_closing_finishes_without_blocking_input() {
+fn opaque_pages_travel_offscreen_before_retiring_without_blocking_input() {
     let mut m = MenuMotion::default();
     m.update(Some(QuickRow::General), &[], None, 0.0);
-    let mut last = 0.0;
     for _ in 0..60 {
         m.update(Some(QuickRow::General), &[], None, 1.0 / 60.0);
         let f = m.frame(QuickRow::General, &[]);
-        assert!(f.opacity >= last && f.opacity <= 1.0);
-        last = f.opacity;
+        assert_eq!(f.opacity,1.0);
+        assert_eq!(f.content_opacity,1.0);
+        assert!(m.displacement(slot_ui::Canvas::FRAMED)>=0.0);
     }
     m.update(None, &[], None, 1.0 / 60.0);
     assert_eq!(m.closing_row(), Some(QuickRow::General));
@@ -138,7 +138,7 @@ fn child_pages_slide_forward_and_back_without_fading() {
     assert!(entering.page_shift > 0.0 && entering.page_shift < 1.0 && leaving.page_shift < 0.0);
     assert!((entering.page_shift - leaving.page_shift - 1.0).abs() < 0.001);
     m.update(Some(QuickRow::General), &[], None, 0.0);
-    assert_eq!(m.frame(QuickRow::General, &[]).page_shift, -1.0);
+    assert!((m.frame(QuickRow::General, &[]).page_shift-leaving.page_shift).abs()<0.001);
     m.update(Some(QuickRow::General), &[], None, 1.0);
     assert_eq!(m.outgoing_row(), None);
 }
@@ -155,12 +155,9 @@ fn cached_submenus_reverse_and_retarget_the_same_page_motion() {
     );
     m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1001), 0.05);
     assert!(m.outgoing_is_custom());
+    let old=m.outgoing_frame(QuickRow::Bluetooth,&[]).page_shift;
     m.update_page(Some(QuickRow::Bluetooth), &[], None, Some(1000), 0.0);
-    assert_eq!(
-        m.frame_page(QuickRow::Bluetooth, &[], Some(1000))
-            .page_shift,
-        -1.0
-    );
+    assert!((m.frame_page(QuickRow::Bluetooth,&[],Some(1000)).page_shift-old).abs()<0.001);
     m.update_page(Some(QuickRow::Bluetooth), &[], None, None, 0.0);
     assert_eq!(m.frame(QuickRow::Bluetooth, &[]).page_shift, -1.0);
 }
@@ -246,7 +243,8 @@ fn pause_selector_expands_and_reverses_without_jumping() {
     motion.update(Some(QuickRow::PlayScreen), &[], None, 0.05);
     let middle = motion.frame(QuickRow::PlayScreen, &[]);
     assert!(middle.focus_compact > 0.0 && middle.focus_compact < 1.0);
-    assert_eq!(middle.page_shift, 0.0);
+    assert!(middle.page_shift>0.0 && middle.page_shift<1.0);
+    assert_eq!(middle.content_opacity,1.0);
     assert!(
         motion
             .outgoing_frame(QuickRow::Settings, &[])
@@ -407,4 +405,40 @@ fn color_temperature_has_one_neutral_to_warm_vocabulary() {
         let fraction=setting_slider("Color temp",text).unwrap();
         assert!((fraction-n as f32/9.0).abs()<0.01);
     }
+}
+
+#[test]
+fn opening_and_closing_reverse_at_the_same_position_without_losing_velocity() {
+    let canvas=slot_ui::Canvas::FRAMED;
+    let mut m=MenuMotion::default();
+    m.update(Some(QuickRow::General),&[],None,0.0);
+    assert!(m.displacement(canvas)>canvas.h);
+    m.update(Some(QuickRow::General),&[],None,0.07);
+    let y=m.displacement(canvas);
+    m.update(None,&[],None,0.0);
+    assert_eq!(m.displacement(canvas),y);
+    m.update(None,&[],None,0.04);
+    let closing=m.displacement(canvas);
+    m.update(Some(QuickRow::General),&[],None,0.0);
+    assert_eq!(m.displacement(canvas),closing);
+    m.update(Some(QuickRow::General),&[],None,1.0);
+    assert_eq!(m.displacement(canvas),0.0);
+    m.update(None,&[],None,0.1);
+    assert!(m.closing_row().is_some());
+    m.update(None,&[],None,1.0);
+    assert!(m.displacement(canvas)>canvas.h);
+    assert!(m.closing_row().is_none());
+}
+
+#[test]
+fn back_during_page_travel_reuses_both_pages_at_their_current_positions() {
+    let mut motion=MenuMotion::default();
+    motion.update(Some(QuickRow::General),&[],None,1.0);
+    motion.update(Some(QuickRow::Wallpaper),&[],None,0.06);
+    let incoming=motion.frame(QuickRow::Wallpaper,&[]).page_shift;
+    let outgoing=motion.outgoing_frame(QuickRow::General,&[]).page_shift;
+    motion.update(Some(QuickRow::General),&[],None,0.0);
+    assert!((motion.frame(QuickRow::General,&[]).page_shift-outgoing).abs()<0.001);
+    assert!((motion.outgoing_frame(QuickRow::Wallpaper,&[]).page_shift-incoming).abs()<0.001);
+    assert_eq!(motion.frame(QuickRow::General,&[]).opacity,1.0);
 }
