@@ -526,6 +526,8 @@ pub struct App {
     headphones_at: Millis,
     battery: Option<Battery>,
     battery_warned: bool,
+    last_charge: Option<Charge>,
+    charging_notice_at: Option<Millis>,
     last_led: Option<LedState>,
     powering_off: bool,
     radio: Box<dyn RadioJobs>,
@@ -791,6 +793,8 @@ impl App {
             headphones_at: 0,
             battery: None,
             battery_warned: false,
+            last_charge: None,
+            charging_notice_at: None,
             last_led: None,
             powering_off: false,
         }
@@ -1317,6 +1321,8 @@ impl App {
             | QuickRow::ColourCorrection
             | QuickRow::PlayBrightness
             | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
+            QuickRow::ClockFormat => Some(if self.state.clock_12h {QuickValue::Hour12}else{QuickValue::Hour24}),
+            QuickRow::CarouselMotion => Some(if self.state.carousel_wheel {QuickValue::Wheel}else{QuickValue::Classic}),
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
             QuickRow::BlueLight => Some(QuickValue::temperature(self.state.blue_light)),
             QuickRow::ScreenGeneral => None,
@@ -2865,6 +2871,8 @@ impl App {
             .map(|c| c.stem.as_str())
     }
 
+    pub fn clock_12h(&self)->bool {self.state.clock_12h}
+
     pub fn battery(&self) -> Option<Battery> {
         self.battery
     }
@@ -3292,7 +3300,7 @@ impl App {
             }
             QuickRow::ShutDown => self.hold_power(),
             QuickRow::LidClose | QuickRow::SleepTimeout => {}
-            QuickRow::ShowTitles | QuickRow::FavoriteSort => self.change_setting(row, true),
+            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::ShowTitles | QuickRow::FavoriteSort => self.change_setting(row, true),
             QuickRow::Bluetooth => {
                 if let Some(root) = &self.root {
                     let mut menu =
@@ -3481,6 +3489,10 @@ impl App {
             self.persist();
             return;
         }
+        if row == QuickRow::ClockFormat || row == QuickRow::CarouselMotion {
+            if row == QuickRow::ClockFormat {self.state.clock_12h=!self.state.clock_12h;}else{self.state.carousel_wheel=!self.state.carousel_wheel;}
+            self.persist();return;
+        }
         if row == QuickRow::CarouselSounds {
             self.state.carousel_sounds = !self.state.carousel_sounds;
             self.persist();
@@ -3557,7 +3569,7 @@ impl App {
             QuickRow::Theme => s.appearance = s.appearance.toggle(),
             QuickRow::ShellColour => s.shell_colour = s.shell_colour.resolved(s.appearance.light()).step(right),
             QuickRow::WallpaperTint => s.wallpaper_tint = s.wallpaper_tint.step(right),
-            QuickRow::ScreenGeneral
+            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::ScreenGeneral
             | QuickRow::Brightness
             | QuickRow::BlueLight
             | QuickRow::PlayBrightness
@@ -3988,6 +4000,8 @@ impl App {
     }
 
     pub fn update(&mut self, dt: f32) {
+        if let Phase::SetClock{picker,..}=&mut self.phase {picker.set_twelve(self.state.clock_12h);}
+        for (_,shelf) in &mut self.shelves {shelf.wheel=self.state.carousel_wheel;}
         self.quick_card.motion.update(self.quick_card.shown,dt);
         self.clock += dt as f64 * 1000.0;
         let repeated = self.kid_menu.as_mut().and_then(|menu| menu.update(dt));
@@ -4440,6 +4454,7 @@ impl App {
             if let (Some(power), Some(b)) = (self.power.as_ref(), self.battery.as_mut()) {
                 b.charge = power.charge();
             }
+            if let Some(b)=self.battery {self.on_battery(b);}
             let state = self.led_state();
             self.set_led(state);
         }
@@ -5052,7 +5067,7 @@ impl App {
                             if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
                         } else {
                             slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
-                            slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);
+                            slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);
                         }
                         if matches!(key,2000..=2002|2009|2010|3000..=3001) {
                             let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
@@ -5217,7 +5232,7 @@ impl App {
         if let Some((_,body))=self.special_menu_cache.borrow().iter().find(|(k,_)|*k==key) {out.extend_from_slice(body);}
         let dx=frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
         for d in &mut out[begin..] {match d {Draw::Rect{x,..}|Draw::RoundRect{x,..}|Draw::Tex{x,..}|Draw::Part{x,..}|Draw::Turned{x,..}=>*x+=dx,_=>{}}}
-        slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[begin..]);
+        slot_ui::expressive::tile_transform(self.canvas(),frame,out,begin);
     }
     fn draw_special_sheet(&self,key:u64,body:Vec<Draw>,out:&mut Vec<Draw>) {
         {let mut cache=self.special_menu_cache.borrow_mut();
@@ -5240,7 +5255,7 @@ impl App {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
                     let page_begin=out.len();
-                    if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
+                    if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
                     if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,2000..=2002|2009|2010|3000..=3001)) {
                         let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
                         let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
@@ -5249,7 +5264,7 @@ impl App {
                     slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                     slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
-                    slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[page_begin..]);
+                    slot_ui::expressive::tile_transform(self.canvas(),frame,out,page_begin);
                 }
             } else { self.draw_quick_page(previous,over_game,true,out); }
         }
@@ -5268,7 +5283,7 @@ impl App {
         }
         self.draw_outgoing_menu(over_game,out);
         let page_begin=out.len();
-        if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
+        if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
         if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {
             let compact=self.kid_menu.as_ref().is_some_and(|m|m.in_game_card());
             let width=if compact {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
@@ -5290,7 +5305,7 @@ impl App {
                 out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
             }
         }
-        slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[page_begin..]);
+        slot_ui::expressive::tile_transform(self.canvas(),frame,out,page_begin);
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
@@ -6567,7 +6582,12 @@ impl App {
     }
 
     pub fn on_battery(&mut self, b: Battery) {
+        self.battery=Some(b);
         let charging=matches!(b.charge,Charge::Charging|Charge::Full);
+        let was_charging=self.last_charge.is_some_and(|c|matches!(c,Charge::Charging|Charge::Full));
+        if charging && !was_charging {self.charging_notice_at=Some(self.now());}
+        if !charging {self.charging_notice_at=None;}
+        self.last_charge=Some(b.charge);
         if charging || b.percent>BATTERY_LOW+5 {self.battery_warned=false;}
         if !charging && b.percent<=BATTERY_LOW && !self.battery_warned && !self.powering_off {
             self.battery_warned=true;
@@ -7116,6 +7136,9 @@ impl App {
 
     pub fn settings_notice(&self) -> Option<(u64,String)> {
         if self.shutting_down() || matches!(self.phase,Phase::Doze{..}) { return None; }
+        if let Some(at)=self.charging_notice_at.filter(|at|self.now().saturating_sub(*at)<2400) {
+            if let Some(b)=self.battery {return Some((0xC0000000 ^ at,format!("Charging: {}%",b.percent)));}
+        }
         let (page,message)=if let Some(menu)=&self.display_schedule {
             (menu.page_key(),menu.notice_text()?.to_string())
         } else if let Some(menu)=&self.kid_menu {
