@@ -10,13 +10,12 @@ fn time_labels_are_readable_at_each_warning_size() {
 }
 
 #[test]
-fn meter_fill_tracks_the_remaining_budget_and_has_a_transparent_background() {
-    for (seconds, fill) in [(600, 160), (300, 80), (0, 0)] {
-        let face = kid_time_meter(seconds, 600);
-        let filled = (face.w - 160..face.w).filter(|&x| {
-            face.rgba[((face.h / 2 * face.w + x) * 4 + 3) as usize] == 255
-        }).count();
-        assert_eq!(filled, fill);
-        assert_eq!(face.rgba[((face.w - 1) * 4 + 3) as usize], 0);
+fn remaining_time_is_a_compact_antialiased_pill() {
+    for seconds in [600,300,30,0] {
+        let face=kid_time_meter(seconds,600);
+        assert_eq!(face.h,32);
+        assert!(face.w<520);
+        assert_eq!(face.rgba[3],0,"rounded corner stays transparent");
+        assert!(face.rgba.chunks_exact(4).any(|p|p[3]>0));
     }
 }

@@ -71,6 +71,15 @@ impl Spring {
     }
 }
 
+/// The same critically damped spatial spring drives compact-to-expanded cards.
+#[derive(Default, Debug)]
+pub struct SurfaceMotion { compact: Spring }
+impl SurfaceMotion {
+    pub fn snap(&mut self, compact: bool) { self.compact=Spring::at(if compact {1.0}else{0.0}); }
+    pub fn update(&mut self, compact: bool, dt: f32) { self.compact.step(if compact {1.0}else{0.0},dt,800.0,1.0); }
+    pub fn value(&self) -> f32 { self.compact.value.clamp(0.0,1.0) }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct MenuFrame {
     pub focus_y: f32,

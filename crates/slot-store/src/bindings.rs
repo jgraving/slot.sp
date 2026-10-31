@@ -353,8 +353,8 @@ impl Shortcut {
             Shortcut::Screenshot => "Screenshot",
             Shortcut::BrightnessUp => "Brightness Up",
             Shortcut::BrightnessDown => "Brightness Down",
-            Shortcut::BlueLightDown => "Blue Light Down",
-            Shortcut::BlueLightUp => "Blue Light Up",
+            Shortcut::BlueLightDown => "Color temp cooler",
+            Shortcut::BlueLightUp => "Color temp warmer",
             Shortcut::ColorCorrection => "Color Correction",
             Shortcut::PaletteBack => "Palette Back",
             Shortcut::PaletteNext => "Palette Next",
@@ -363,7 +363,7 @@ impl Shortcut {
             Shortcut::FastForward => "Fast Forward",
             Shortcut::FastForwardToggle => "Fast Forward Toggle",
             Shortcut::Rewind => "Rewind",
-            Shortcut::NightToggle => "Day / Night",
+            Shortcut::NightToggle => "Night mode",
         }
     }
 

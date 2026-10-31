@@ -131,6 +131,7 @@ impl App {
                         (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
                     menu.set_reference(self.reference_pages(matches!(self.phase, Phase::Playing { .. })));
                     menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
+                    self.kid_surface.snap(matches!(self.phase,Phase::Playing{..}));
                     self.kid_menu = Some(menu);
                 }
                 return true;

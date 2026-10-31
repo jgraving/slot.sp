@@ -1,6 +1,6 @@
 use crate::{Canvas, Draw, MenuFrame, UndoFace, MENU_PAD};
-pub const MENU_SLIDER_W: f32 = 160.0;
-pub const MENU_SLIDER_SPAN: f32 = 260.0;
+pub const MENU_SLIDER_W: f32 = 140.0;
+pub const MENU_SLIDER_SPAN: f32 = 300.0;
 pub const SLIDER_TRACK_H: f32 = 6.0;
 pub const SLIDER_THUMB: f32 = 14.0;
 
@@ -64,11 +64,13 @@ pub fn draw_menu_sliders(
 pub fn setting_slider(label: &str, value: &str) -> Option<f32> {
     matches!(
         label,
-        "Volume" | "Volume limit" | "Brightness" | "Warmth" | "Night warmth"
+        "Volume" | "Volume limit" | "Brightness" | "Warmth" | "Night warmth" | "Color temp"
     )
     .then(|| {
         value
+            .trim_start_matches("Warm ")
             .trim_end_matches('%')
+            .replace("Neutral", "0")
             .parse::<f32>()
             .ok()
             .map(|v| (v / 100.0).clamp(0.0, 1.0))

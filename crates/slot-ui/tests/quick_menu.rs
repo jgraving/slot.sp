@@ -113,7 +113,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
-        ["Brightness", "Blue Light", "Day / Night"]
+        ["Brightness", "Color temp", "Night mode"]
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
@@ -269,6 +269,8 @@ fn the_values_read_as_the_menu_prints_them() {
             "Alphabetically",
             "Most used",
             "Recently used",
+            "Neutral", "Warm 11%", "Warm 22%", "Warm 33%", "Warm 44%",
+            "Warm 55%", "Warm 66%", "Warm 77%", "Warm 88%", "Warm 100%",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -438,7 +440,7 @@ fn in_game_rows_read_as_the_menu_shows_them() {
         (QuickRow::ColourCorrection, "Color Correction"),
         (QuickRow::Palette, "Palette"),
         (QuickRow::PlayBrightness, "Brightness"),
-        (QuickRow::PlayBlueLight, "Blue Light"),
+        (QuickRow::PlayBlueLight, "Color temp"),
     ];
     for (row, label) in labels {
         assert_eq!(row.label(), label);

@@ -267,33 +267,3 @@ pub(crate) enum ButtonLegend {
     Start,
     Menu,
 }
-
-const BUTTON_LEGEND_PNG: [&[u8]; 11] = [
-    include_bytes!("../../../assets/buttonlegend_round_a.png"),
-    include_bytes!("../../../assets/buttonlegend_round_b.png"),
-    include_bytes!("../../../assets/buttonlegend_dpad_left.png"),
-    include_bytes!("../../../assets/buttonlegend_dpad_right.png"),
-    include_bytes!("../../../assets/buttonlegend_long_select.png"),
-    include_bytes!("../../../assets/buttonlegend_round_x.png"),
-    include_bytes!("../../../assets/buttonlegend_round_y.png"),
-    include_bytes!("../../../assets/buttonlegend_dpad_up.png"),
-    include_bytes!("../../../assets/buttonlegend_dpad_down.png"),
-    include_bytes!("../../../assets/buttonlegend_long_start.png"),
-    include_bytes!("../../../assets/buttonlegend_round_menu.png"),
-];
-
-pub(crate) fn button_legend(which: ButtonLegend) -> (&'static [u8], u32, u32) {
-    static ALL: OnceLock<Vec<(Vec<u8>, u32, u32)>> = OnceLock::new();
-    let all = ALL.get_or_init(|| {
-        BUTTON_LEGEND_PNG
-            .iter()
-            .map(|bytes| {
-                let (mut rgba, w, h) = decode_png_bytes(bytes).expect("a button legend decodes");
-                bleed(&mut rgba, w, h);
-                (rgba, w, h)
-            })
-            .collect()
-    });
-    let (rgba, w, h) = &all[which as usize];
-    (rgba, *w, *h)
-}

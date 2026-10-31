@@ -17,6 +17,7 @@ enum Page {
     Notice,
     Warning,
     Reference,
+    ChildSettings,
 }
 pub struct Menu {
     root: PathBuf,
@@ -117,18 +118,26 @@ impl Menu {
             let meter = slot_ui::kid_time_meter(seconds, budget);
             let x = face.w.saturating_sub(meter.w) / 2;
             let y = (slot_ui::OUT_H as f32 - slot_ui::MOUTH_H
-                - slot_ui::MENU_HINT_H as f32 - 24.0 - meter.h as f32).max(0.0) as u32;
+                - slot_ui::MENU_HINT_H as f32 - 16.0 - meter.h as f32).max(0.0) as u32;
             blit(face, &meter, x, y);
         }
     }
-    pub fn child_menu(&self) -> bool { self.page == Page::Child }
+    pub fn in_game_card(&self) -> bool { self.child_in_game && self.page == Page::Child }
+    pub fn focus_info(&self) -> Option<(usize,usize)> {
+        let count=match self.page {Page::Child|Page::ChildSettings=>self.child_rows().len(),Page::Home=>6,Page::Time=>2,_=>return None};
+        let visible=count.min(slot_ui::QUICK_VISIBLE);
+        let selected=if self.page==Page::Time {self.time_selected}else{self.selected};
+        Some((selected,selected.saturating_sub(visible/2).min(count.saturating_sub(visible))))
+    }
+    pub fn child_menu(&self) -> bool { matches!(self.page,Page::Child|Page::ChildSettings) }
     fn child_rows(&self) -> Vec<(String, String, bool)> {
+        if self.in_game_card() {return ["Resume","Settings","Exit game"].map(|s|(s.into(),String::new(),false)).to_vec();}
         let mut rows = vec![
             (if self.child_in_game { "Resume" } else { "Games" }.into(), String::new(), false),
             ("Volume".into(), format!("{}%", self.child_volume), true),
             ("Brightness".into(), format!("{}%", self.child_brightness), true),
         ];
-        if self.child_in_game { rows.push(("Exit game".into(), String::new(), false)); }
+        if self.child_in_game && self.page != Page::ChildSettings { rows.push(("Exit game".into(), String::new(), false)); }
         rows.push(("Buttons & shortcuts".into(), String::new(), false));
         rows.push(("Parent controls".into(), String::new(), false));
         rows
@@ -160,9 +169,9 @@ impl Menu {
             Page::Confirm => "Repeat your code",
             Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Time | Page::Child | Page::Warning | Page::Reference => "",
+            Page::Home | Page::Time | Page::Child | Page::ChildSettings | Page::Warning | Page::Reference => "",
         };
-        if self.page == Page::Child {
+        if matches!(self.page,Page::Child|Page::ChildSettings) {
             return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
                 format!("{} {label} {value}", if i == self.selected { "SELECTED" } else { "ROW" })).collect();
         }
@@ -244,11 +253,11 @@ impl Menu {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         match self.page {
             Page::Home=>vec![slot_ui::MenuSlider{id:self.page_key()*16+3,fraction:self.draft.volume_limit as f32/100.0,y:94.0+3.0*slot_ui::QUICK_PITCH}],
-            Page::Child=>{
+            Page::Child|Page::ChildSettings if !self.in_game_card()=>{
                 let count=self.child_rows().len();
                 let visible=count.min(slot_ui::QUICK_VISIBLE);
                 let start=self.selected.saturating_sub(visible/2).min(count-visible);
-                let top=94.0-if self.child_in_game {16.0}else{0.0};
+                let top=94.0;
                 [(1,self.child_volume),(2,self.child_brightness)].into_iter().filter(|(i,_)|*i>=start && *i<start+visible).map(|(i,value)|slot_ui::MenuSlider{id:self.page_key()*16+i as u64,fraction:value as f32/100.0,y:top+(i-start) as f32*slot_ui::QUICK_PITCH}).collect()
             },_=>vec![]
         }
@@ -273,8 +282,20 @@ impl Menu {
             blit(&mut face, &title, x, 190);
             return face;
         }
-        if self.page == Page::Child {
-            let mut face = settings_face(canvas, &self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
+        if self.in_game_card() {
+            let mut face=slot_ui::parent_footer_face_on(canvas,0,false);
+            for (i,(label,_,_)) in self.child_rows().iter().enumerate() {
+                let text=slot_ui::quick_heading_face(label);
+                let x=face.w.saturating_sub(text.w)/2;
+                blit(&mut face,&text,x,94+i as u32*slot_ui::QUICK_PITCH as u32);
+            }
+            self.add_time_meter(&mut face);
+            return face;
+        }
+        if matches!(self.page,Page::Child|Page::ChildSettings) {
+            let mut face = settings_face(canvas, &self.child_rows(), self.selected, 0, "", 0.0);
+            let title=slot_ui::quick_heading_face("Kid settings");
+            blit(&mut face,&title,slot_ui::QUICK_LABEL_X as u32-slot_ui::MENU_PAD,40);
             self.add_time_meter(&mut face);
             return face;
         }
@@ -470,7 +491,7 @@ impl Menu {
         }
         if self.page == Page::Reference {
             match action {
-                Action::GbaDown(Btn::B) => if self.reference_child { self.page=Page::Child; } else { self.visible=false; },
+                Action::GbaDown(Btn::B) => if self.reference_child { self.page=if self.child_in_game {Page::ChildSettings}else{Page::Child}; self.selected=0; } else { self.visible=false; },
                 Action::GbaDown(Btn::Left | Btn::Right) if !self.reference.is_empty() => {
                     let n=self.reference.len();
                     self.reference_at=(self.reference_at+if action==Action::GbaDown(Btn::Right) {1} else {n-1})%n;
@@ -487,10 +508,23 @@ impl Menu {
             }
             return;
         }
-        if self.page == Page::Child {
+        if self.in_game_card() {
+            match action {
+                Action::GbaDown(Btn::B)=>self.visible=false,
+                Action::GbaDown(Btn::Up)=>self.selected=(self.selected+2)%3,
+                Action::GbaDown(Btn::Down)=>self.selected=(self.selected+1)%3,
+                Action::GbaDown(Btn::A)=>match self.selected {
+                    0=>self.visible=false,
+                    1=>{self.page=Page::ChildSettings;self.selected=0;},
+                    _=>{self.child_action=Some(Action::Eject);self.visible=false;}
+                },_=>{}
+            }
+            return;
+        }
+        if matches!(self.page,Page::Child|Page::ChildSettings) {
             let count = self.child_rows().len();
             match action {
-                Action::GbaDown(Btn::B) => self.visible = false,
+                Action::GbaDown(Btn::B) => if self.page==Page::ChildSettings {self.page=Page::Child;self.selected=1;}else{self.visible=false;},
                 Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
                 Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
                 Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {

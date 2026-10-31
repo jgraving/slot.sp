@@ -977,10 +977,10 @@ fn blue_light_steps_off_to_nine() {
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::BlueLight);
     assert_eq!(a.blue_light(), 0);
-    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Off));
+    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Warm0));
     press(&mut a, Btn::Right);
     assert_eq!(a.blue_light(), 1);
-    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Level1));
+    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Warm1));
     press(&mut a, Btn::Left);
     press(&mut a, Btn::Left);
     assert_eq!(a.blue_light(), 0);

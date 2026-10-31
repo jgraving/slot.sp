@@ -60,6 +60,7 @@ impl Menu {
         Some(next)
     }
     pub fn notice_text(&self) -> Option<&str> { (!self.status.is_empty()).then_some(self.status.as_str()) }
+    pub fn focus_info(&self) -> (usize,usize) { (self.time_field.unwrap_or(self.selected),0) }
     pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
@@ -79,11 +80,11 @@ impl Menu {
                 ("Minutes".into(), format!("{:02}", minute % 60), true),
             ], field)
         } else {
-            ("Day / Night", vec![
+            ("Night mode", vec![
                 ("Automatic".into(), if self.settings.schedule { "On" } else { "Off" }.into(), true),
                 ("Day begins".into(), time(self.settings.day_start), true),
                 ("Night begins".into(), time(self.settings.night_start), true),
-                ("Night warmth".into(),format!("{}%",u16::from(self.settings.bedtime.1)*100/9),true),
+                ("Color temp".into(),slot_ui::QuickValue::temperature(self.settings.bedtime.1).text().to_string(),true),
             ], self.selected)
         };
         let status = if animated { "" } else if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };

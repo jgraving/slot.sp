@@ -27,6 +27,11 @@ fn main() {
             let tex = gpu.create_texture(face.w, face.h, &face.rgba);
             let mut draws = vec![];
             draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
+            if name=="kid-pause" || name=="kid-settings" {
+                let mut frame=MenuFrame::settled(QuickRow::Settings,&[]);
+                frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
+                expressive::draw_pause_surface(canvas,frame,&[],&mut draws);
+            }
             if let Some(r) = focus {
                 expressive::rounded(
                     &mut draws,
@@ -106,9 +111,18 @@ fn main() {
         "schedule",
         schedule.screen_face_animated_on(canvas),
         controls,
-        None,
+        Some([56.0,244.0,canvas.w-112.0,44.0]),
     );
-    save("parent-code", slot_ui::button_code_face(&[0,1,2,3]), vec![], None);
+    let mut policy=slot::kid_policy::Policy::default(); policy.active=true;
+    let mut child=slot::kid_menu::Menu::child(path.clone(),policy.clone(),true,35,55);
+    child.set_remaining(Some((900,1800)));
+    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some([canvas.centred(352.0),88.0,352.0,44.0]));
+    child.input(slot_input::Action::GbaDown(slot_input::Btn::Down),0);
+    child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
+    save("kid-settings",child.screen_face_on(canvas),vec![],None);
+    let mut parent=slot::kid_menu::Menu::new(path.clone(),policy);
+    for b in [slot_input::Btn::A,slot_input::Btn::B,slot_input::Btn::X] {parent.input(slot_input::Action::GbaDown(b),0);}
+    save("parent-code",parent.screen_face_on(canvas),vec![],None);
     drop(save);
     let icons = Icon::ALL
         .into_iter()

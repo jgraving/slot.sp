@@ -20,10 +20,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.0
       - name: Test favorites, history, and settings
         run: |
+          python3 card/test-bluetooth.py
           cargo check --locked -p slot --no-default-features --features device
           cargo test --locked -p slot-store --lib --tests
-          cargo test --locked -p slot --no-default-features --test headphones --test sound_menu_style --test night_display --test bindings --test play_history --test favorites --test recents --test state_writer --test sleep --test show_titles --test quick_menu --test in_game_menu --test settings_notices --test kid_controls --test clock --test levels -- --test-threads=1
-          cargo test --locked -p slot-ui --test settings_notice --lib --test quick_menu --test expressive --test typography --test toggle --test native_menus --test shelf --test native_shelf --test hud --test clock
+          cargo test --locked -p slot --no-default-features --lib --test parent_code --test button_code --test headphones --test sound_menu_style --test night_display --test bindings --test play_history --test favorites --test recents --test state_writer --test sleep --test show_titles --test quick_menu --test in_game_menu --test settings_notices --test kid_controls --test clock --test levels -- --test-threads=1
+          cargo test --locked -p slot-ui --test settings_notice --lib --test legend --test kid_time --test quick_menu --test expressive --test typography --test toggle --test native_menus --test shelf --test native_shelf --test hud --test clock
       - name: Render expressive menus through GLES and desktop GL
         run: |
           cargo run --locked -p slot-ui --example expressive_menu_preview -- "$SLOT_QOL_PREVIEW/expressive-gles" gles 640

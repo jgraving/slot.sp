@@ -707,7 +707,7 @@ impl Frontend {
             .as_ref()
             .is_some_and(|m| m.busy());
         if sound_busy && self.bluetooth_spinner.is_empty() {
-            for frame in 0..12 {
+            for frame in 0..slot_ui::LOADING_FRAMES {
                 self.bluetooth_spinner.push(upload(
                     compositor,
                     &mut None,
@@ -717,7 +717,7 @@ impl Frontend {
         }
         let progress = if sound_busy {
             self.bluetooth_spinner
-                .get((self.start.elapsed().as_millis() / 80 % 12) as usize)
+                .get((self.start.elapsed().as_millis() / slot_ui::LOADING_FRAME_MS % slot_ui::LOADING_FRAMES as u128) as usize)
                 .copied()
         } else {
             None

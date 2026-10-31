@@ -448,6 +448,7 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    kid_surface: slot_ui::expressive::SurfaceMotion,
     settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
     switch_motion: slot_ui::expressive::SwitchMotion,
@@ -706,6 +707,7 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            kid_surface: Default::default(),
             settings_notice_revision: 0,
             current_custom_face: None,
             switch_motion: Default::default(),
@@ -1293,10 +1295,7 @@ impl App {
             | QuickRow::PlayBrightness
             | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
-            QuickRow::BlueLight => Some(match self.state.blue_light {
-                0 => QuickValue::Off,
-                n => QuickValue::level(n),
-            }),
+            QuickRow::BlueLight => Some(QuickValue::temperature(self.state.blue_light)),
             QuickRow::ScreenGeneral => None,
 
             QuickRow::FastForward => QuickValue::speed(self.state.ff_speed),
@@ -4059,8 +4058,9 @@ impl App {
         let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
-        let selection=self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)});
+        let selection=self.kid_menu.as_ref().and_then(|m|m.focus_info()).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
         self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
+        self.kid_surface.update(self.kid_menu.as_ref().is_some_and(|m|m.in_game_card()),dt);
         self.switch_motion.update(&self.visible_custom_switches(),dt);
         let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
         let sliders=self.visible_custom_sliders();
@@ -4735,6 +4735,11 @@ impl App {
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
             if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
+                if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
+                    self.draw_cached_overlay(tex,out);
+                    self.draw_status_bar(out);
+                    return;
+                }
                 slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
                 draw_empty_slot(self.canvas(), self.slot_faces, out);
                 self.draw_cached_overlay(tex, out);
@@ -5153,6 +5158,18 @@ impl App {
         self.draw_outgoing_menu(over_game,out);
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
+        if over_game && self.kid_menu.is_some() {
+            let mut surface=frame;
+            surface.focus_compact=self.kid_surface.value();
+            slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);
+        }
+        if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {
+            let compact=self.kid_menu.as_ref().is_some_and(|m|m.in_game_card());
+            let width=if compact {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
+            slot_ui::expressive::rounded(out,self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),frame.focus_y,
+                width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,
+                [slot_ui::expressive::SELECTED[0],slot_ui::expressive::SELECTED[1],slot_ui::expressive::SELECTED[2],frame.opacity]);
+        }
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
