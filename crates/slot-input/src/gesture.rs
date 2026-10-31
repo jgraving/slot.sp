@@ -145,6 +145,7 @@ enum Select {
 #[derive(Default)]
 pub struct Gestures {
     select: Select,
+    select_on_shelf:bool,
     entries: Vec<Entry>,
     context: Context,
     pressed: Vec<Btn>,
@@ -578,6 +579,7 @@ impl Gestures {
             out.push(Action::GbaUp(Btn::Select));
         }
         if !matches!(self.select, Select::Held { .. }) {
+            self.select_on_shelf=self.context==Context::Shelf;
             self.select = Select::Held {
                 since: now,
                 chorded: false,
@@ -602,10 +604,11 @@ impl Gestures {
     }
 
     fn select_up(&mut self, now: Millis) -> Vec<Action> {
+        let shelf_press=std::mem::take(&mut self.select_on_shelf);
         let Select::Held { chorded, sent, .. } = std::mem::take(&mut self.select) else {
             return Vec::new();
         };
-        if self.context==Context::Shelf && !chorded {return vec![Action::QuickControls];}
+        if self.context==Context::Shelf && shelf_press && !chorded {return vec![Action::QuickControls];}
         match (sent, chorded) {
             (Some(at), _) if now.saturating_sub(at) >= SELECT_TAP_MS => {
                 vec![Action::GbaUp(Btn::Select)]

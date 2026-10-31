@@ -1031,3 +1031,11 @@ fn select_tap_opens_quick_controls_only_on_the_shelf_and_chords_win() {
     assert_eq!(g.feed(Up(Select),230),vec![GbaDown(Select)]);
     assert_eq!(g.tick(280),vec![GbaUp(Select)]);
 }
+
+#[test]
+fn select_pressed_in_a_game_does_not_open_controls_after_returning_to_the_shelf() {
+    let mut g=Gestures::new();g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),0);assert_eq!(g.tick(SELECT_CHORD_MS),vec![GbaDown(Select)]);
+    g.set_context(slot_input::Context::Shelf);
+    assert_eq!(g.feed(Up(Select),SELECT_CHORD_MS+100),vec![GbaUp(Select)]);
+}
