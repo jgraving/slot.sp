@@ -72,6 +72,7 @@ pub struct Shelf {
     pub carts: Vec<Cart>,
     pub index: usize,
     pub scroll: f32,
+    pub wheel: bool,
     faces: Vec<Option<TexId>>,
     interiors: Vec<Option<TexId>>,
     shadow: Option<TexId>,
@@ -105,6 +106,7 @@ impl Shelf {
             carts,
             index: 0,
             scroll: 0.0,
+            wheel: true,
             shadow: None,
             gb_shadow: None,
             gbc_shadow: None,
@@ -624,7 +626,7 @@ impl Shelf {
             }
             let x = x + shake;
             let full_h=ch as f32*shelf_scale(cart.platform);
-            let y0=rest_y(ch as f32)+(full_h-h0)/2.0+wheel_drop(centre-canvas.w/2.0);
+            let y0=rest_y(ch as f32)+(full_h-h0)/2.0+if self.wheel {wheel_drop(centre-canvas.w/2.0)}else{0.0};
             let y = y0 + (-h - 12.0 - y0) * depart;
             if alpha < 1.0 {
                 let backing = match self.shell(i) {
