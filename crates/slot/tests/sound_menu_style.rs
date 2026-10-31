@@ -134,3 +134,22 @@ fn sound_and_schedule_leave_switches_to_the_live_animation_layer() {
         assert_eq!(sound.rgba[((y*width+x)*4+3) as usize],0);
     }
 }
+
+#[test]
+fn sound_starts_with_volume_and_both_tracks_clear_one_hundred_percent() {
+    let root=tempfile::tempdir().unwrap();
+    let mut menu=slot::bluetooth::Manager::new(root.path().into(),false);
+    menu.current_volume=100;menu.disconnect_volume=100;
+    assert_eq!(menu.rows()[0],"VOLUME 100%");
+    assert!(menu.volume_selected());
+    let value=slot_ui::quick_value_face("100%",true);
+    let ink_left=value.rgba.chunks_exact(4).enumerate().filter(|(_,p)|p[3]>0).map(|(i,_)|i as u32%value.w).min().unwrap()as f32;
+    let sliders=menu.visible_sliders();assert_eq!(sliders.len(),2);
+    for width in [640.0,720.0] {
+        let value_left=width-slot_ui::QUICK_EDGE+slot_ui::MENU_PAD as f32-value.w as f32+ink_left;
+        for slider in &sliders {
+            let track_right=width-slot_ui::QUICK_EDGE-slider.span+slider.width;
+            assert!(value_left-track_right>=16.0,"100% needs a clear text gutter");
+        }
+    }
+}

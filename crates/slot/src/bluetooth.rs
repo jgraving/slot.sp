@@ -304,13 +304,13 @@ impl Manager {
         self.status.clear();
     }
 
-    fn local_row(&self) -> usize { usize::from(self.bluetooth_available) }
+    fn local_row(&self) -> usize { 1 + usize::from(self.bluetooth_available) }
     fn device_start(&self) -> usize { self.local_row() + 1 }
     fn pair_row(&self) -> usize { self.device_start() + self.device_indices().len() + self.usb_devices.len() }
     fn disconnect_row(&self) -> usize { self.pair_row() + usize::from(self.bluetooth_available) }
     fn pause_row(&self) -> usize { self.disconnect_row() + 1 }
     pub fn slider_selected(&self)->bool {self.volume_selected() || (self.page==Page::Home && self.selected==self.disconnect_row())}
-    pub fn volume_selected(&self)->bool {self.page==Page::Home && self.selected==self.pause_row()+1}
+    pub fn volume_selected(&self)->bool {self.page==Page::Home && self.selected==0}
 
     fn device_indices(&self) -> Vec<usize> {
         self.devices
@@ -335,7 +335,7 @@ impl Manager {
                 } else {
                     "SPEAKER_DEVICE Internal speaker"
                 };
-                let mut rows = Vec::new();
+                let mut rows = vec![format!("VOLUME {}%",self.current_volume)];
                 if self.bluetooth_available {
                     rows.push(format!("BLUETOOTH {}", if bluetooth_enabled(&self.root) { "On" } else { "Off" }));
                 }
@@ -375,7 +375,6 @@ impl Manager {
                 }
                 rows.push(format!("DISCONNECT {}%", self.disconnect_volume));
                 rows.push(format!("PAUSE_DISCONNECT {}", if self.pause_on_disconnect {"On"} else {"Off"}));
-                rows.push(format!("VOLUME {}%",self.current_volume));
                 rows
             }
             Page::Pair => {
@@ -431,7 +430,7 @@ impl Manager {
             Action::GbaDown(Btn::Left | Btn::Right)
                 if self.page == Page::Home
                     && self.bluetooth_available
-                    && self.selected == 0 =>
+                    && self.selected == 1 =>
             {
                 self.toggle_bluetooth();
             }
@@ -453,7 +452,7 @@ impl Manager {
             }
             Action::GbaDown(Btn::A) => match self.page.clone() {
                 Page::Home => {
-                    if self.bluetooth_available && self.selected == 0 {
+                    if self.bluetooth_available && self.selected == 1 {
                         self.toggle_bluetooth();
                     } else if self.selected == self.local_row() {
                         self.ask(if self.bluetooth_available { "speaker" } else { "local" }, None);
@@ -522,7 +521,7 @@ impl Manager {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         let(_,_,first,visible)=self.scroll_info();
         if self.page!=Page::Home {return vec![];}
-        [(self.disconnect_row(),self.disconnect_volume,4),(self.pause_row()+1,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
 
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
@@ -582,7 +581,7 @@ impl Manager {
         lines.push(
             if self.page == Page::Home
                 && (self.selected == self.disconnect_row() || self.selected == self.pause_row() || self.volume_selected()
-                    || (self.bluetooth_available && self.selected == 0))
+                    || (self.bluetooth_available && self.selected == 1))
             {
                 "B Back · Change"
             } else if self.disconnect_notice && self.page == Page::Home {
@@ -971,7 +970,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
                 continue;
             }
             if label.starts_with("VOLUME ") || label.starts_with("DISCONNECT ") {
-                if switches {let slider=slot_ui::slider_face(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-200-slot_ui::MENU_PAD,top);}
+                if switches {let slider=slot_ui::slider_face_with_width(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0,112.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-200-slot_ui::MENU_PAD,top);}
                 let value=slot_ui::quick_value_face(value,highlight);blit(&mut rgba,&value,screen_w-slot_ui::QUICK_EDGE as u32+slot_ui::MENU_PAD-value.w,top);continue;
             }
             let value = slot_ui::quick_value_face(value, highlight);
@@ -1318,16 +1317,17 @@ mod menu_tests {
         assert_eq!(
             m.rows(),
             vec![
+                "VOLUME 50%",
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "USB_DEVICE AB13X Audio",
                 "DISCONNECT 0%",
-                "PAUSE_DISCONNECT Off", "VOLUME 50%"
+                "PAUSE_DISCONNECT Off"
             ]
         );
         m.observe_output(Some("plughw:CARD=Audio,DEV=0"), true);
-        assert_eq!(m.rows()[0], "SPEAKER_DEVICE Internal speaker");
-        assert!(m.rows()[1].starts_with("ACTIVE USB"));
-        assert_eq!(m.disconnect_row(), 2);
+        assert_eq!(m.rows()[1], "SPEAKER_DEVICE Internal speaker");
+        assert!(m.rows()[2].starts_with("ACTIVE USB"));
+        assert_eq!(m.disconnect_row(), 3);
     }
 
     #[test]
@@ -1353,7 +1353,7 @@ mod menu_tests {
         let root = tempfile::tempdir().unwrap();
         let mut m = menu();
         m.root = root.path().to_owned();
-        m.selected = 0;
+        m.selected = 1;
         assert!(m.lines().last().unwrap().contains("Change"));
         m.selected = m.disconnect_row() - 1;
         m.input(Action::GbaDown(Btn::A));
@@ -1367,10 +1367,10 @@ mod menu_tests {
         let root = tempfile::tempdir().unwrap();
         let mut m = menu();
         m.root = root.path().to_owned();
-        assert_eq!(m.rows().first().unwrap(), "BLUETOOTH Off");
+        assert_eq!(m.rows().get(1).unwrap(), "BLUETOOTH Off");
         std::fs::create_dir(root.path().join("Config")).unwrap();
         std::fs::write(root.path().join("Config/bluetooth-off"), "").unwrap();
-        assert_eq!(m.rows().first().unwrap(), "BLUETOOTH Off");
+        assert_eq!(m.rows().get(1).unwrap(), "BLUETOOTH Off");
         m.bluetooth_available = false;
         assert!(!m.rows().iter().any(|r| r.starts_with("BLUETOOTH ")));
     }
@@ -1420,12 +1420,13 @@ mod menu_tests {
         assert_eq!(
             m.rows(),
             vec![
+                "VOLUME 50%",
                 "BLUETOOTH Off",
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "DEVICE WF-C510",
                 "Pair audio device",
                 "DISCONNECT 0%",
-                "PAUSE_DISCONNECT Off", "VOLUME 50%"
+                "PAUSE_DISCONNECT Off"
             ]
         );
         assert!(m.lines()[0].is_empty());
@@ -1577,10 +1578,10 @@ mod menu_tests {
         let mut m = Manager::new(root.path().into(), false);
         assert_eq!(
             m.rows(),
-            vec!["ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off", "VOLUME 50%"]
+            vec!["VOLUME 50%","ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off"]
         );
         assert!(m.pending.is_none());
-        m.selected = 1;
+        m.selected = m.disconnect_row();
         assert!(m.slider_selected());
         assert_eq!(m.visible_sliders().len(),2);
         assert!(m.visible_sliders().iter().any(|s|s.fraction==0.0));

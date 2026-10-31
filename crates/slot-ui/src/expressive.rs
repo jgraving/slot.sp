@@ -213,7 +213,7 @@ impl MenuMotion {
             self.outgoing = self.row.filter(|_| !opening);
             self.outgoing_custom = self.custom.is_some();
             self.direction = if (self.custom.is_some() && custom.is_none())
-                || (self.custom.zip(custom).is_some_and(|(old, new)| new < old))
+                || (self.custom.zip(custom).is_some_and(|(old, new)| {let order=|k|if k==2010 {2001}else{k};order(new)<order(old)}))
                 || self.row.is_some_and(|old| {
                     old.parent() == Some(row) || old.parent_in_game() == Some(row)
                 }) {

@@ -984,3 +984,12 @@ fn closing_kid_pause_retains_its_cached_surface_until_it_is_offscreen() {
     app.update(1.0);let mut gone=vec![];app.draw(&mut gone);
     assert!(!gone.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
 }
+
+#[test]
+fn shelf_and_in_game_kid_menus_have_distinct_layout_keys() {
+    let root=tempfile::tempdir().unwrap();
+    let shelf=slot::kid_menu::Menu::child(root.path().into(),Default::default(),false,50,50);
+    let pause=slot::kid_menu::Menu::child(root.path().into(),Default::default(),true,50,50);
+    assert_eq!(shelf.page_key(),2010);
+    assert_eq!(pause.page_key(),2001);
+}

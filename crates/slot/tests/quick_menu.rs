@@ -1521,7 +1521,7 @@ fn display_sliders_repeat_when_held_and_stop_on_release() {
 fn both_sound_sliders_repeat_on_hold_and_stop_on_release() {
     let (d,mut a,_)=on_carousel();
     a.bluetooth=Some(slot::bluetooth::Manager::new(d.path().into(),false));
-    press(&mut a,Btn::Down);
+    press(&mut a,Btn::Down);press(&mut a,Btn::Down);
     a.apply(Action::GbaDown(Btn::Right));
     for _ in 0..20 {a.update(0.05);}
     let disconnect=a.bluetooth.as_ref().unwrap().disconnect_volume;
@@ -1529,7 +1529,7 @@ fn both_sound_sliders_repeat_on_hold_and_stop_on_release() {
     a.apply(Action::GbaUp(Btn::Right));
     for _ in 0..20 {a.update(0.05);}
     assert_eq!(a.bluetooth.as_ref().unwrap().disconnect_volume,disconnect);
-    press(&mut a,Btn::Down);press(&mut a,Btn::Down);
+    press(&mut a,Btn::Up);press(&mut a,Btn::Up);
     assert!(a.bluetooth.as_ref().unwrap().volume_selected());
     a.apply(Action::GbaDown(Btn::Left));
     let tapped=a.volume();
