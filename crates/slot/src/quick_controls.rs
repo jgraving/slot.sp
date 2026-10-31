@@ -19,6 +19,10 @@ impl App {
     pub(crate) fn set_quick_control_progress(&mut self,tex:Option<TexId>){self.quick_card.progress=tex;}
     pub fn quick_controls_open(&self)->bool {self.quick_card.shown}
     pub(super) fn quick_control_input(&mut self,action:Action)->bool {
+        if matches!(action,Action::LidClose|Action::PowerPress|Action::PowerTap|Action::PowerHold|Action::PowerOff) {
+            if let Some(menu)=&mut self.quick_bluetooth {menu.cancel_pending();}
+            self.quick_card.shown=false;self.quick_card.held=None;self.quick_card.pending_settings=None;return false;
+        }
         if action==Action::QuickControls {
             self.quick_card.pending_settings=None;
             if self.quick_card.shown {self.quick_card.shown=false;self.quick_card.held=None;}
@@ -30,6 +34,10 @@ impl App {
             return true;
         }
         if self.kid_menu.is_some() {self.quick_card.shown=false;self.quick_card.held=None;self.quick_card.pending_settings=None;return false;}
+        if !self.quick_card.shown && self.quick_card.pending_settings.is_some() {
+            if action==Action::GbaDown(Btn::B){self.quick_card.pending_settings=None;}
+            return true;
+        }
         if !self.quick_card.shown {return false;}
         match action {
             Action::LidClose|Action::PowerPress|Action::PowerTap|Action::PowerHold|Action::PowerOff=>{
@@ -46,6 +54,7 @@ impl App {
             Action::GbaUp(Btn::A)=>{
                 if let Some((_,false))=self.quick_card.held.take() {
                     match self.quick_card.items[self.quick_card.selected] {
+                        1|2 if self.kids.active=>{},
                         0=>self.mute_toggle(),
                         1=>if !self.quick_bluetooth.as_ref().is_some_and(|m|m.busy()) {
                             if let Some(root)=self.root.clone(){self.quick_bluetooth=Some(crate::bluetooth::Manager::quick_toggle(root));}

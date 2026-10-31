@@ -55,3 +55,17 @@ fn sleeping_cancels_a_pending_settings_hold() {
     app.apply(Action::LidClose);settle(&mut app);app.apply(Action::LidOpen);settle(&mut app);
     assert!(app.bluetooth.is_none());assert!(!app.quick_controls_open());
 }
+
+#[test]
+fn back_cancels_a_settings_hold_during_the_cards_exit() {
+    let (_root,mut app)=app();app.apply(Action::QuickControls);settle(&mut app);
+    app.apply(Action::GbaDown(Btn::A));app.update(0.51);
+    press(&mut app,Btn::B);settle(&mut app);
+    assert!(app.bluetooth.is_none());assert!(matches!(app.phase(),Phase::Shelf));
+}
+#[test]
+fn enabling_kid_mode_while_the_card_is_open_blocks_night_toggles() {
+    let (_root,mut app)=app();app.apply(Action::QuickControls);settle(&mut app);
+    press(&mut app,Btn::Right);let night=app.night_mode();app.kids.active=true;
+    press(&mut app,Btn::A);assert_eq!(app.night_mode(),night);
+}
