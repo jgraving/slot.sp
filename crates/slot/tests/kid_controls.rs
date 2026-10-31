@@ -429,10 +429,9 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     let mut s = Session::boot(d.path().to_owned());
     let mut time = 0;
     s.app_mut().apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if s.app().quick_menu() == Some(slot_ui::QuickRow::Kids) { break; }
-        raw_tap(&mut s, &mut time, Btn::Down);
-    }
+    raw_tap(&mut s,&mut time,Btn::Right);
+    raw_tap(&mut s,&mut time,Btn::Right);
+    raw_tap(&mut s,&mut time,Btn::Down);
     assert_eq!(s.app().quick_menu(), Some(slot_ui::QuickRow::Kids));
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());

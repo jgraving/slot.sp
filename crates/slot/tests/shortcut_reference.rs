@@ -97,12 +97,8 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
     common::clocked(d.path());
     let mut a = App::boot(d.path());
     a.apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if a.quick_menu() == Some(QuickRow::Controls) {
-            break;
-        }
-        press(&mut a, Btn::Down);
-    }
+    press(&mut a,Btn::Right);
+    press(&mut a,Btn::Down);
     press(&mut a, Btn::A);
     press(&mut a, Btn::Up);
     press(&mut a, Btn::Up);

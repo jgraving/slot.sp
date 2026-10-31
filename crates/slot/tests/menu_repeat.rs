@@ -42,18 +42,18 @@ fn a_held_down_walks_the_menu_rows_after_a_pause_and_stops_on_release() {
     a.apply_at(Action::QuickMenu, T - 500);
     assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[0]));
     a.apply_at(Action::GbaDown(Btn::Down), T);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[1]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]));
     at(&mut a, T + 399);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[1]), "it repeated early");
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]), "it repeated early");
     at(&mut a, T + 400);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[2]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[0]));
     at(&mut a, T + 510);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[3]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]));
     a.apply_at(Action::GbaUp(Btn::Down), T + 520);
     at(&mut a, T + 5_000);
     assert_eq!(
         a.quick_menu(),
-        Some(QuickRow::MAIN[3]),
+        Some(QuickRow::MAIN[4]),
         "it kept going after the release"
     );
 }
@@ -167,4 +167,15 @@ fn a_direction_held_through_play_does_not_scroll_a_menu_opened_over_it() {
             "the held Down scrolled it at {ms}"
         );
     }
+}
+
+#[test]
+fn holding_right_walks_the_grid_and_releasing_stops_it() {
+    let (_d,mut a)=on_shelf(&["Emerald","Fusion"]);
+    a.apply_at(Action::QuickMenu,T-500);
+    a.apply_at(Action::GbaDown(Btn::Right),T);
+    assert_eq!(a.quick_menu(),Some(QuickRow::Screen));
+    at(&mut a,T+400);assert_eq!(a.quick_menu(),Some(QuickRow::Bluetooth));
+    a.apply_at(Action::GbaUp(Btn::Right),T+410);
+    at(&mut a,T+5000);assert_eq!(a.quick_menu(),Some(QuickRow::Bluetooth));
 }

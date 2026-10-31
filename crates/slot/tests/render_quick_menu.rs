@@ -230,7 +230,10 @@ fn every_fast_forward_speed_sits_on_the_rows_right_edge_and_clears_the_label() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Game.position(&[]) {
+    for _ in 0..QuickRow::Game.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Game.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -278,7 +281,10 @@ fn the_game_boy_page_shows_the_palette_by_name() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Screen.position(&[]) {
+    for _ in 0..QuickRow::Screen.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Screen.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -330,7 +336,10 @@ fn the_about_label_is_on_the_tinted_wallpaper() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::About.position(&[]) {
+    for _ in 0..QuickRow::About.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::About.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     let menu = composed(&mut f, &mut c, "about-row");
@@ -387,7 +396,10 @@ fn the_general_screen_page_renders() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Screen.position(&[]) {
+    for _ in 0..QuickRow::Screen.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Screen.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -431,7 +443,10 @@ fn the_controls_pages_render() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -478,7 +493,10 @@ fn the_shortcuts_page_renders() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -518,7 +536,10 @@ fn the_left_stick_row_keeps_its_label_clear_of_its_value() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Game.position(&[]) {
+    for _ in 0..QuickRow::Game.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Game.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);
@@ -552,7 +573,10 @@ fn a_duplicate_binding_shows_a_warning_naming_the_other_row() {
     f.upload_faces(&mut c);
     let mut input = Script(VecDeque::new());
     tap(&mut f, &mut input, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut f, &mut input, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut f, &mut input, Btn::Down);
     }
     tap(&mut f, &mut input, Btn::A);

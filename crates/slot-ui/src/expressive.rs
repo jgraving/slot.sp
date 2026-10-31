@@ -84,6 +84,9 @@ impl SurfaceMotion {
 #[derive(Clone, Copy, Debug)]
 pub struct MenuFrame {
     pub focus_y: f32,
+    pub grid_focus: [f32;2],
+    pub tile_origin: Option<[f32;2]>,
+    pub tile_reveal: f32,
     pub scroll_position: f32,
     pub window_start: f32,
     pub page_shift: f32,
@@ -102,6 +105,9 @@ impl MenuFrame {
     pub fn settled(row: QuickRow, hidden: &[QuickRow]) -> Self {
         Self {
             focus_y: quick_row_top_at(row, row, hidden),
+            grid_focus:[(row.position(hidden)%4) as f32,(row.position(hidden)/4) as f32],
+            tile_origin:None,
+            tile_reveal:1.0,
             scroll_position: row.position(hidden) as f32,
             window_start: crate::quick_window(row, hidden).0 as f32,
             page_shift: 0.0,
@@ -126,6 +132,9 @@ impl MenuFrame {
 #[derive(Default, Debug)]
 pub struct MenuMotion {
     active: bool,
+    grid_x: Spring,
+    grid_y: Spring,
+    tile_origin: Option<[f32;2]>,
     page: Option<u64>,
     custom: Option<u64>,
     outgoing_custom: bool,
@@ -197,6 +206,17 @@ impl MenuMotion {
         let page = custom.unwrap_or(row.page()[0].index() as u64);
         if self.page != Some(page) {
             let opening = self.page.is_none();
+            let old_root=self.row.is_some_and(|r|r.page()==QuickRow::MAIN)&&self.custom.is_none();
+            let new_root=row.page()==QuickRow::MAIN&&custom.is_none();
+            if old_root!=new_root && !opening {
+                let root=if old_root {self.row.unwrap()}else{row};
+                let i=root.position(hidden);
+                self.tile_origin=Some([(i%4) as f32,(i/4) as f32]);
+            }else{self.tile_origin=None;}
+            if new_root {
+                self.grid_x=Spring::at((row.position(hidden)%4) as f32);
+                self.grid_y=Spring::at((row.position(hidden)/4) as f32);
+            }
             let previous_frame = self.row.map(|old| self.frame_page(old,hidden,self.custom));
             let reversing=self.outgoing.is_some() && self.outgoing_page==Some(page);
             let was_morph=self.pause_morph && self.outgoing.is_some();
@@ -242,6 +262,10 @@ impl MenuMotion {
             self.switch = Spring::at(if on == Some(true) { 1.0 } else { 0.0 });
         }
         self.row = Some(row);
+        if row.page()==QuickRow::MAIN && custom.is_none() {
+            self.grid_x.step((row.position(hidden)%4) as f32,dt,800.0,0.76);
+            self.grid_y.step((row.position(hidden)/4) as f32,dt,800.0,0.76);
+        }
         // Expressive fast spatial for focus and switches, default spatial for
         // page arrival. Critically damp opacity: it must never bounce.
         self.scroll.step(target, dt, 800.0, 0.76);
@@ -293,6 +317,11 @@ impl MenuMotion {
         let mut frame = MenuFrame::settled(row, hidden);
         frame.page_shift = -self.direction * self.slide.value;
         frame.focus_y=self.outgoing_focus_y;
+        if let Some(origin)=self.tile_origin {
+            frame.page_shift=0.0;
+            frame.tile_origin=Some(origin);
+            frame.tile_reveal=1.0-self.slide.value.clamp(0.0,1.0);
+        }
         if self.pause_morph {
             frame.suppress_focus = true;
 
@@ -315,6 +344,9 @@ impl MenuMotion {
             return MenuFrame::settled(row, hidden);
         }
         let mut frame = MenuFrame {
+            grid_focus:[self.grid_x.value,self.grid_y.value],
+            tile_origin:self.tile_origin.filter(|_| self.outgoing.is_some()),
+            tile_reveal:self.slide.value.clamp(0.0,1.0),
             focus_y: quick_row_top_at(row, row, hidden)
                 + ((self.scroll.value - target_position(row, hidden))
                     - (self.window.value - crate::quick_window(row, hidden).0 as f32))
@@ -337,6 +369,7 @@ impl MenuMotion {
             switch: (self.row == Some(row)).then_some(self.switch.value.clamp(0.0, 1.0)),
             closing: !self.active,
         };
+        if self.tile_origin.is_some() && self.outgoing.is_some() {frame.page_shift=0.0;}
         if custom==Some(2001) {frame.focus_y+=78.0;}
         if self.pause_morph && self.outgoing.is_some() {
             frame.focus_y=self.pause_focus.value;
@@ -586,4 +619,26 @@ fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,top:f32,ch:f32,out
 /// The hardware bay occludes moving sheets; menu ink cannot pass over it.
 pub fn clip_panel(out:&mut Vec<Draw>,begin:usize,canvas:crate::Canvas) {
     crate::quick_menu::clip_quads(out,begin,[0.0,0.0,canvas.w,canvas.h-crate::MOUTH_H]);
+}
+
+/// A settings tile becomes the full card; reversing shrinks it to its origin.
+pub fn tile_transform(canvas:crate::Canvas,frame:MenuFrame,draws:&mut[Draw]) {
+    let Some([col,row])=frame.tile_origin else{return;};
+    let t=frame.tile_reveal.clamp(0.0,1.0);
+    let [x,y,w,h]=crate::menu_grid::rect(canvas,row as usize*4+col as usize);
+    let full_w=canvas.w-2.0*MENU_INSET;
+    let sx=w/full_w+(1.0-w/full_w)*t;
+    let sy=h/320.0+(1.0-h/320.0)*t;
+    let cx=(x+w/2.0)+(canvas.w/2.0-x-w/2.0)*t;
+    let cy=(y+h/2.0)+(200.0-y-h/2.0)*t;
+    for draw in draws {
+        match draw {
+            Draw::Rect{x,y,w,h,..}|Draw::RoundRect{x,y,w,h,..}|Draw::Tex{x,y,w,h,..}|Draw::Part{x,y,w,h,..}|Draw::Turned{x,y,w,h,..}=>{
+                *x=cx+(*x-canvas.w/2.0)*sx;*y=cy+(*y-200.0)*sy;*w*=sx;*h*=sy;
+            },_=>{}
+        }
+        if let Draw::RoundRect{radius,..}=draw {
+            *radius=if (*radius-28.0).abs()<0.01 {22.0+6.0*t}else{*radius*sx.min(sy)};
+        }
+    }
 }

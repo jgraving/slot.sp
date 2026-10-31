@@ -1,148 +1,52 @@
 use slot_power::{Battery, Charge};
 use slot_ui::{draw_gauge, Draw, Printed, TexId, GAUGE_H, GAUGE_W, HUD_INK, WALL};
 
-fn percent_face() -> Printed {
-    Printed { face: None, w: 30 }
+fn percent_face()->Printed {Printed::new(TexId::from_raw(10),60)}
+fn at(percent:u8,charge:Charge)->Option<Battery> {Some(Battery{percent,charge})}
+fn gauge(percent:u8,charge:Charge)->Vec<Draw> {
+    let mut out=vec![];
+    draw_gauge(24.0,100.0,at(percent,charge),percent_face(),Some(TexId::from_raw(7)),HUD_INK,&mut out);
+    out
 }
-
-fn quads(out: &[Draw]) -> Vec<(f32, f32, f32, f32)> {
-    out.iter()
-        .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, h, .. } | Draw::Tex { x, y, w, h, .. } => Some((x, y, w, h)),
-            _ => None,
-        })
-        .collect()
-}
-
-fn at(percent: u8, charge: Charge) -> Option<Battery> {
-    Some(Battery { percent, charge })
-}
-
 #[test]
-fn nothing_moves_when_the_charge_state_changes() {
-    let mut idle = Vec::new();
-    let mut charging = Vec::new();
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Discharging),
-        percent_face(),
-        None,
-        HUD_INK,
-        &mut idle,
-    );
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Charging),
-        percent_face(),
-        Some(TexId::from_raw(7)),
-        HUD_INK,
-        &mut charging,
-    );
-    let idle = quads(&idle);
-    for q in idle.iter() {
-        assert!(
-            quads(&charging).contains(q),
-            "{q:?} moved or vanished when charging started"
-        );
-    }
-}
-
-#[test]
-fn the_bolt_never_reaches_the_capsule() {
-    let mut out = Vec::new();
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Charging),
-        percent_face(),
-        Some(TexId::from_raw(7)),
-        HUD_INK,
-        &mut out,
-    );
-    let bolt_right = out
-        .iter()
-        .find_map(|d| match *d {
-            Draw::Tex { x, w, tex, .. } if tex == TexId::from_raw(7) => Some(x + w),
-            _ => None,
-        })
-        .expect("the bolt did not draw while charging");
-    let capsule_left = out
-        .iter()
-        .filter_map(|d| match *d {
-            Draw::Rect { x, .. } => Some(x),
-            _ => None,
-        })
-        .fold(f32::MAX, f32::min);
-    assert!(
-        bolt_right <= capsule_left,
-        "the bolt's right edge ({bolt_right}) reaches past the capsule's left wall ({capsule_left})"
-    );
-}
-
-#[test]
-fn the_bolt_is_only_drawn_while_charging() {
-    let bolt = |charge| {
-        let mut out = Vec::new();
-        draw_gauge(
-            24.0,
-            400.0,
-            at(68, charge),
-            percent_face(),
-            Some(TexId::from_raw(7)),
-            HUD_INK,
-            &mut out,
-        );
-        out.iter()
-            .any(|d| matches!(d, Draw::Tex { tex: t, .. } if *t == TexId::from_raw(7)))
-    };
-    assert!(bolt(Charge::Charging));
-    assert!(!bolt(Charge::Discharging));
-    assert!(!bolt(Charge::Full));
-    assert!(!bolt(Charge::Unknown));
-}
-
-#[test]
-fn the_fill_tracks_the_percent_and_never_leaves_the_capsule() {
-    let mut widths = Vec::new();
-    for percent in [0u8, 1, 50, 99, 100] {
-        let mut out = Vec::new();
-        draw_gauge(
-            24.0,
-            400.0,
-            at(percent, Charge::Discharging),
-            percent_face(),
-            None,
-            HUD_INK,
-            &mut out,
-        );
-        let capsule_left = out
-            .iter()
-            .filter_map(|d| match *d {
-                Draw::Rect { x, .. } => Some(x),
-                _ => None,
-            })
-            .fold(f32::MAX, f32::min);
-        let inner_right = capsule_left + GAUGE_W - 2.0 * WALL;
-        let fill = out.iter().find_map(|d| match *d {
-            Draw::Rect { x, w, .. } if (x - (capsule_left + 2.0 * WALL)).abs() < 0.01 => Some(w),
-            _ => None,
-        });
-        if let Some(w) = fill {
-            assert!(
-                capsule_left + 2.0 * WALL + w <= inner_right + 0.01,
-                "a {percent}% fill burst through the capsule's own wall"
-            );
+fn percentage_and_charging_bolt_stay_inside_the_battery() {
+    for charge in [Charge::Charging,Charge::Discharging,Charge::Full,Charge::Unknown] {
+        let out=gauge(100,charge);
+        for draw in &out {
+            if let Draw::Tex{x,y,w,h,..}=draw {
+                assert!(*x>=24.0+WALL && x+w<=24.0+GAUGE_W-WALL);
+                assert!(*y>=100.0+WALL && y+h<=100.0+GAUGE_H-WALL);
+            }
         }
-        widths.push(fill.unwrap_or(0.0));
+        assert_eq!(out.iter().any(|d|matches!(d,Draw::Tex{tex,..}if *tex==TexId::from_raw(7))),charge==Charge::Charging);
+        assert!(out.iter().any(|d|matches!(d,Draw::Tex{tex,..}if *tex==TexId::from_raw(10))));
     }
-    for pair in widths.windows(2) {
-        assert!(
-            pair[1] > pair[0],
-            "the fill must grow strictly with the percent, got {widths:?}"
-        );
+}
+#[test]
+fn charge_states_keep_the_same_body_and_use_state_colours() {
+    let body=|charge,percent|match gauge(percent,charge)[0] {
+        Draw::RoundRect{x,y,w,h,colour,..}=>(x,y,w,h,colour),_=>panic!()
+    };
+    let normal=body(Charge::Discharging,50);
+    let low=body(Charge::Discharging,20);
+    let charging=body(Charge::Charging,20);
+    assert_eq!((normal.0,normal.1,normal.2,normal.3),(charging.0,charging.1,charging.2,charging.3));
+    assert!(low.4[0]>low.4[1]*2.0);
+    assert!(charging.4[1]>charging.4[0]);
+    assert_ne!(normal.4,low.4);
+}
+#[test]
+fn fill_grows_with_reading_and_stays_inside_the_body() {
+    let mut widths=vec![];
+    for percent in [0,1,50,99,100] {
+        let out=gauge(percent,Charge::Discharging);
+        let width=out.iter().find_map(|d|match d {
+            Draw::RoundRect{x,w,..}if (*x-(24.0+2.0*WALL)).abs()<0.01=>Some(*w),_=>None
+        }).unwrap_or(0.0);
+        assert!(width<=GAUGE_W-4.0*WALL);
+        widths.push(width);
     }
+    assert!(widths.windows(2).all(|p|p[1]>p[0]));
 }
 
 #[test]
@@ -152,7 +56,7 @@ fn enlarged_status_glyphs_and_text_stay_inside_the_status_band() {
     slot_ui::draw_status(canvas,at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),Some(TexId::from_raw(2)),Printed::new(TexId::from_raw(3),70),HUD_INK,&mut out);
     slot_ui::draw_corner_audio(at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),Some(TexId::from_raw(4)),Some(TexId::from_raw(5)),&mut out);
     slot_ui::draw_corner_kid(at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),TexId::from_raw(6),2,&mut out);
-    assert!(out.iter().all(|d|matches!(d,Draw::Rect{y,h,..}|Draw::Tex{y,h,..}if *y>=0.0&&y+h<=slot_ui::PLATE_H)));
+    assert!(out.iter().all(|d|matches!(d,Draw::Rect{y,h,..}|Draw::RoundRect{y,h,..}|Draw::Tex{y,h,..}if *y>=0.0&&y+h<=slot_ui::PLATE_H)));
     assert!(out.iter().any(|d|matches!(d,Draw::Tex{w,h,..}if *w==32.0&&*h==32.0)));
 }
 

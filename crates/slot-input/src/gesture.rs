@@ -608,7 +608,8 @@ impl Gestures {
         let Select::Held { chorded, sent, .. } = std::mem::take(&mut self.select) else {
             return Vec::new();
         };
-        if self.context==Context::Shelf && shelf_press && !chorded {return vec![Action::QuickControls];}
+        // Quick controls are parked; retain the card/action for future use.
+        if self.context==Context::Shelf && shelf_press && !chorded {return Vec::new();}
         match (sent, chorded) {
             (Some(at), _) if now.saturating_sub(at) >= SELECT_TAP_MS => {
                 vec![Action::GbaUp(Btn::Select)]

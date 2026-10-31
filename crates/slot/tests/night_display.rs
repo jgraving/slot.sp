@@ -126,7 +126,7 @@ fn schedule_editor_is_a_persisted_setting_and_returns_to_screen_menu() {
     let d=common::tmp_root_with_carts(&["Alpha","Beta"]);common::clocked(d.path());
     let (mut a,_)=common::app_booting_at(d.path(),1_800_000_000);
     let press=|a:&mut App,b| {a.apply(Action::GbaDown(b));a.apply(Action::GbaUp(b));};
-    a.apply(Action::QuickMenu);press(&mut a,Btn::Down);press(&mut a,Btn::A);press(&mut a,Btn::A);
+    a.apply(Action::QuickMenu);press(&mut a,Btn::Right);press(&mut a,Btn::A);press(&mut a,Btn::A);
     press(&mut a,Btn::Down);press(&mut a,Btn::Down);
     assert_eq!(a.quick_menu(),Some(QuickRow::DisplaySchedule));press(&mut a,Btn::A);
     assert!(a.display_schedule.is_some());press(&mut a,Btn::Right);

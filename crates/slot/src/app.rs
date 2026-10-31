@@ -525,6 +525,7 @@ pub struct App {
     headphones: bool,
     headphones_at: Millis,
     battery: Option<Battery>,
+    battery_warned: bool,
     last_led: Option<LedState>,
     powering_off: bool,
     radio: Box<dyn RadioJobs>,
@@ -789,6 +790,7 @@ impl App {
             headphones: false,
             headphones_at: 0,
             battery: None,
+            battery_warned: false,
             last_led: None,
             powering_off: false,
         }
@@ -1013,7 +1015,7 @@ impl App {
         }
         match self.phase {
             Phase::SetClock { .. } => true,
-            Phase::QuickMenu { .. } => vertical,
+            Phase::QuickMenu { row } => vertical || row.page()==QuickRow::MAIN,
             Phase::Shelf => vertical && self.core_picker.is_none(),
             Phase::Polaroids { .. } => match self.shot_viewer.as_ref().map(ShotViewer::mode) {
                 Some(ShotMode::Grid) => true,
@@ -3153,6 +3155,16 @@ impl App {
     }
 
     fn quick_menu_input(&mut self, row: QuickRow, action: Action) {
+        if row.page()==QuickRow::MAIN {
+            let direction=match action {
+                Action::GbaDown(Btn::Left)=>Some((-1,0)),Action::GbaDown(Btn::Right)=>Some((1,0)),
+                Action::GbaDown(Btn::Up)=>Some((0,-1)),Action::GbaDown(Btn::Down)=>Some((0,1)),_=>None
+            };
+            if let Some((dx,dy))=direction {
+                self.phase=Phase::QuickMenu{row:slot_ui::menu_grid::navigate(row,&self.hidden_rows(),dx,dy)};
+                return;
+            }
+        }
         if row.binds() {
             match action {
                 Action::GbaDown(Btn::A) => return self.start_capture(row),
@@ -5038,7 +5050,10 @@ impl App {
                             let mut surface=frame;
                             surface.focus_compact=if (2000..3000).contains(&key) {self.kid_surface.value()}else{0.0};
                             if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
-                        } else {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
+                        } else {
+                            slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
+                            slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);
+                        }
                         if matches!(key,2000..=2002|2009|2010|3000..=3001) {
                             let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
                             slot_ui::expressive::rounded(out,self.canvas().centred(width),frame.focus_y,width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,slot_ui::expressive::SELECTED);
@@ -5202,11 +5217,12 @@ impl App {
         if let Some((_,body))=self.special_menu_cache.borrow().iter().find(|(k,_)|*k==key) {out.extend_from_slice(body);}
         let dx=frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
         for d in &mut out[begin..] {match d {Draw::Rect{x,..}|Draw::RoundRect{x,..}|Draw::Tex{x,..}|Draw::Part{x,..}|Draw::Turned{x,..}=>*x+=dx,_=>{}}}
+        slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[begin..]);
     }
     fn draw_special_sheet(&self,key:u64,body:Vec<Draw>,out:&mut Vec<Draw>) {
         {let mut cache=self.special_menu_cache.borrow_mut();
         if let Some((_,old))=cache.iter_mut().find(|(k,_)|*k==key) {*old=body;}else{cache.push((key,body));}}
-        if self.menu_motion.displacement(self.canvas())>0.01 {self.draw_background(out);self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);}
+        self.draw_background(out);self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);
         let begin=out.len();
         slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
         self.draw_outgoing_menu(false,out);
@@ -5223,6 +5239,8 @@ impl App {
             } else if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
+                    let page_begin=out.len();
+                    if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
                     if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,2000..=2002|2009|2010|3000..=3001)) {
                         let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
                         let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
@@ -5231,6 +5249,7 @@ impl App {
                     slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                     slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
+                    slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[page_begin..]);
                 }
             } else { self.draw_quick_page(previous,over_game,true,out); }
         }
@@ -5248,6 +5267,8 @@ impl App {
             if self.kid_menu.is_some() {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
         }
         self.draw_outgoing_menu(over_game,out);
+        let page_begin=out.len();
+        if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,40.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
         if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {
             let compact=self.kid_menu.as_ref().is_some_and(|m|m.in_game_card());
             let width=if compact {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
@@ -5269,13 +5290,14 @@ impl App {
                 out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
             }
         }
+        slot_ui::expressive::tile_transform(self.canvas(),frame,&mut out[page_begin..]);
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
-        if !over_game && self.menu_motion.displacement(self.canvas())>0.01 {
+        if !over_game {
             self.draw_background(out);
-            self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);
+            if self.menu_motion.displacement(self.canvas())>0.01 {self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);}
         }
         let begin=out.len();
         if over_game {
@@ -5285,10 +5307,10 @@ impl App {
         } else {
             slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
         }
-        if self.menu_motion.outgoing_row().is_some() {
-            self.draw_outgoing_menu(over_game, out);
-        }
-        self.draw_quick_page(row, over_game, false, out);
+        let root=row.page()==QuickRow::MAIN && !over_game;
+        if root {self.draw_quick_page(row,over_game,false,out);}
+        if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
+        if !root {self.draw_quick_page(row,over_game,false,out);}
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
@@ -6545,6 +6567,12 @@ impl App {
     }
 
     pub fn on_battery(&mut self, b: Battery) {
+        let charging=matches!(b.charge,Charge::Charging|Charge::Full);
+        if charging || b.percent>BATTERY_LOW+5 {self.battery_warned=false;}
+        if !charging && b.percent<=BATTERY_LOW && !self.battery_warned && !self.powering_off {
+            self.battery_warned=true;
+            self.sfx=Some(Sfx::LowBattery);
+        }
         if b.percent > BATTERY_CRITICAL || self.powering_off {
             return;
         }
@@ -7515,7 +7543,7 @@ mod bluetooth_tests {
         app.phase = Phase::QuickMenu {
             row: QuickRow::Screen,
         };
-        app.apply(Action::GbaDown(Btn::Down));
+        app.apply(Action::GbaDown(Btn::Right));
         assert_eq!(app.quick_menu(), Some(QuickRow::Bluetooth));
         app.open_quick_row(QuickRow::Bluetooth);
         assert!(app.bluetooth.is_none());

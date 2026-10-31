@@ -116,6 +116,8 @@ fn main() {
     let hidden = [QuickRow::Theme, QuickRow::UndoSave, QuickRow::UndoLoad];
     let scenarios = [
         ("settings", QuickRow::Screen),
+        ("screen-card", QuickRow::Brightness),
+        ("grid-return", QuickRow::Screen),
         ("general", QuickRow::BootAnimation),
         ("gameplay", QuickRow::FastForwardSound),
         ("back", QuickRow::Game),
@@ -154,6 +156,7 @@ fn main() {
             values[QuickRow::Theme.index()] = Some(QuickValue::Dark);
             draws.clear();
             let start = std::time::Instant::now();
+            draw_ground(canvas,Some((ground,720)),&mut draws);
             let group=draws.len();
             let over_game = row.page() == QuickRow::PLAY || row.page() == QuickRow::SETTINGS;
             if over_game && visible {
@@ -161,7 +164,7 @@ fn main() {
             } else if visible {
                 draw_menu_ground(canvas, Some((ground, 720)), &mut draws);
             }
-            for outgoing in [true, false] {
+            for outgoing in if row.page()==QuickRow::MAIN {[false,true]}else{[true,false]} {
                 if !visible {continue;}
                 let current = row;
                 let Some(row) = (if outgoing {

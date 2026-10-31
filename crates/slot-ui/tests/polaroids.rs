@@ -129,7 +129,7 @@ fn the_gauge_stays_clear_of_the_title_on_the_left() {
     let gauge: Vec<_> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, .. } | Draw::Tex { x, y, w, .. }
+            Draw::Rect { x, y, w, .. } | Draw::RoundRect { x, y, w, .. } | Draw::Tex { x, y, w, .. }
                 if y < PLATE_H && w < OUT_W as f32 =>
             {
                 Some((x, w))
@@ -161,7 +161,7 @@ fn the_clock_stays_clear_of_the_title_on_the_right() {
     let clock: Vec<_> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, .. } | Draw::Tex { x, y, w, .. } if y < PLATE_H && x > 540.0 => {
+            Draw::Rect { x, y, w, .. } | Draw::RoundRect { x, y, w, .. } | Draw::Tex { x, y, w, .. } if y < PLATE_H && x > 540.0 => {
                 Some((x, w))
             }
             _ => None,
@@ -222,12 +222,11 @@ fn nothing_on_the_plate_moves_when_the_charge_state_changes() {
         clock,
         &mut charging,
     );
-    for q in &idle {
-        assert!(
-            charging.contains(q),
-            "{q:?} moved or vanished when charging started"
-        );
+    // Charging recolours the body, while its geometry and neighbouring UI stay fixed.
+    for draws in [&mut idle,&mut charging] {
+        for d in draws {if let Draw::RoundRect{colour,..}=d {*colour=[1.0;4];}}
     }
+    for q in &idle {assert!(charging.contains(q),"{q:?} moved when charging started");}
 }
 
 #[test]
