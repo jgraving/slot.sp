@@ -54,3 +54,25 @@ fn dynamic_notices_are_not_baked_into_the_cached_sound_page() {
         );
     }
 }
+
+#[test]
+fn charger_notice_appears_once_per_connection_and_clears_on_unplug() {
+    use slot_power::{Battery,Charge};
+    let mut app=App::new(vec![]);
+    app.on_battery(Battery{percent:57,charge:Charge::Discharging});
+    assert!(app.settings_notice().is_none());
+    app.on_battery(Battery{percent:57,charge:Charge::Charging});
+    let first=app.settings_notice().unwrap();
+    assert_eq!(first.1,"Charging: 57%");
+    app.on_battery(Battery{percent:57,charge:Charge::Charging});
+    assert_eq!(app.settings_notice(),Some(first));
+    app.update(3.0);
+    assert!(app.settings_notice().is_none());
+    app.on_battery(Battery{percent:57,charge:Charge::Charging});
+    assert!(app.settings_notice().is_none());
+    app.on_battery(Battery{percent:57,charge:Charge::Discharging});
+    app.on_battery(Battery{percent:58,charge:Charge::Charging});
+    assert_eq!(app.settings_notice().unwrap().1,"Charging: 58%");
+    app.on_battery(Battery{percent:58,charge:Charge::Discharging});
+    assert!(app.settings_notice().is_none());
+}
