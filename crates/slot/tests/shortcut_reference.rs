@@ -46,7 +46,9 @@ fn reference_uses_saved_bindings_and_child_pages_never_advertise_blocked_shortcu
     let d = common::tmp_root_with_carts(&["Alpha"]);
     let mut menu = Menu::child(d.path().into(), Policy::default(), true, 50, 50);
     menu.set_reference(kid);
-    // Up wraps to Parent controls; one more Up reaches the reference without unlocking anything.
+    // Expand restricted Settings, then reach the reference without unlocking.
+    menu.input(Action::GbaDown(Btn::Down), 0);
+    menu.input(Action::GbaDown(Btn::A), 0);
     menu.input(Action::GbaDown(Btn::Up), 0);
     menu.input(Action::GbaDown(Btn::Up), 0);
     menu.input(Action::GbaDown(Btn::A), 0);

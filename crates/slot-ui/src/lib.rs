@@ -140,3 +140,6 @@ pub use toast::{toast_box, toast_face, toast_rect, Toast};
 
 mod button_code;
 pub use button_code::button_code_face;
+
+mod loading;
+pub use loading::{loading_face,LOADING_FRAMES,LOADING_FRAME_MS};

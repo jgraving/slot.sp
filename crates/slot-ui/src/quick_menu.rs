@@ -1,4 +1,4 @@
-use crate::bitmaps::{ButtonLegend, button_legend};
+use crate::bitmaps::ButtonLegend;
 use crate::draw::{Canvas, Draw, OUT_H, OUT_W, TexId};
 use crate::icon::{Icon, WARNING_INK};
 use crate::plate::{
@@ -549,10 +549,10 @@ impl QuickRow {
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
-            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
+            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp",
             QuickRow::DateTime => "Date & Time",
             QuickRow::About => "About",
-            QuickRow::DisplaySchedule => "Day / Night",
+            QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
@@ -794,10 +794,20 @@ pub enum QuickValue {
     Alphabetical,
     MostUsed,
     RecentlyUsed,
+    Warm0,
+    Warm1,
+    Warm2,
+    Warm3,
+    Warm4,
+    Warm5,
+    Warm6,
+    Warm7,
+    Warm8,
+    Warm9,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 48] = [
+    pub const ALL: [QuickValue; 58] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -846,6 +856,16 @@ impl QuickValue {
         QuickValue::Alphabetical,
         QuickValue::MostUsed,
         QuickValue::RecentlyUsed,
+        QuickValue::Warm0,
+        QuickValue::Warm1,
+        QuickValue::Warm2,
+        QuickValue::Warm3,
+        QuickValue::Warm4,
+        QuickValue::Warm5,
+        QuickValue::Warm6,
+        QuickValue::Warm7,
+        QuickValue::Warm8,
+        QuickValue::Warm9,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -876,6 +896,16 @@ impl QuickValue {
 
     pub fn text(self) -> &'static str {
         match self {
+            QuickValue::Warm0 => "Neutral",
+            QuickValue::Warm1 => "Warm 11%",
+            QuickValue::Warm2 => "Warm 22%",
+            QuickValue::Warm3 => "Warm 33%",
+            QuickValue::Warm4 => "Warm 44%",
+            QuickValue::Warm5 => "Warm 55%",
+            QuickValue::Warm6 => "Warm 66%",
+            QuickValue::Warm7 => "Warm 77%",
+            QuickValue::Warm8 => "Warm 88%",
+            QuickValue::Warm9 => "Warm 100%",
             QuickValue::Speed1_5 => "1.5×",
             QuickValue::Speed2 => "2×",
             QuickValue::Speed3 => "3×",
@@ -929,6 +959,10 @@ impl QuickValue {
         }
     }
 
+    pub fn temperature(n: u8) -> QuickValue {
+        [Self::Warm0,Self::Warm1,Self::Warm2,Self::Warm3,Self::Warm4,Self::Warm5,Self::Warm6,Self::Warm7,Self::Warm8,Self::Warm9][n.min(9) as usize]
+    }
+
     pub fn level(n: u8) -> QuickValue {
         QuickValue::LEVELS[usize::from(n).min(QuickValue::LEVELS.len() - 1)]
     }
@@ -951,7 +985,7 @@ impl QuickValue {
 }
 
 pub const QUICK_PITCH: f32 = 52.0;
-pub const MENU_HINT_H: u32 = 40;
+pub const MENU_HINT_H: u32 = 32;
 pub const QUICK_VISIBLE_ROWS: usize = 5;
 pub const QUICK_EDGE: f32 = 80.0;
 pub const QUICK_LABEL_X: f32 = 80.0;
@@ -1201,7 +1235,7 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
     let top = 88.0 - reserve.max(0.0) / 2.0;
-    crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, Some(selected - start));
+    crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, switches.then_some(selected - start));
     let pad = MENU_PAD as f32;
     let right = width as f32 - QUICK_EDGE;
     for (i, (label, value, adjustable)) in rows.iter().enumerate().skip(start).take(visible) {
@@ -1286,20 +1320,14 @@ pub fn kid_time_text(seconds: u64) -> String {
 }
 
 /// One quiet line of remaining time and a bar, above the native menu footer.
-pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
-    let label = quick_description_face(&[&kid_time_text(seconds)]);
-    let (bar_w, h) = (160, label.h.max(24));
-    let w = label.w + 16 + bar_w;
-    let mut face = UndoFace { rgba: vec![0; (w * h * 4) as usize], w, h };
-    parent_blit(&mut face, &label, 0.0, ((h - label.h) / 2) as f32);
-    let filled = ((bar_w as u64 * seconds.min(budget)) / budget.max(1)) as u32;
-    for y in h / 2 - 3..h / 2 + 3 {
-        for x in 0..bar_w {
-            let at = ((y * w + label.w + 16 + x) * 4) as usize;
-            let alpha = if x < filled { 255 } else { 64 };
-            face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, alpha]);
-        }
-    }
+pub fn kid_time_meter(seconds: u64, _budget: u64) -> UndoFace {
+    let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
+    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,18.0,18.0);
+    let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
+    let (w,h)=(width.ceil() as u32+32,32);
+    let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
+    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
+    text::draw_centred(&mut face.rgba,w,h,&layout,[246,244,239]);
     face
 }
 
@@ -1452,7 +1480,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
         true => (0, button.w + CAP_GAP),
         false => (word.w + CAP_GAP, 0),
     };
-    blit(&mut rgba, w, &button.rgba, button.w, button.h, button_x, 0);
+    blit(&mut rgba, w, &button.rgba, button.w, button.h, button_x, h.saturating_sub(button.h)/2);
     blit(&mut rgba, w, &word.rgba, word.w, word.h, text_x, text_y);
     UndoFace { rgba, w, h }
 }
@@ -1468,14 +1496,52 @@ pub(crate) fn clock_legend() -> UndoFace {
 }
 
 pub(crate) fn button_face(which: ButtonLegend) -> UndoFace {
-    let (rgba, w, h) = button_legend(which);
-    let target_h = MENU_HINT_H;
-    let target_w = (w as f32 * target_h as f32 / h as f32).round() as u32;
-    UndoFace {
-        rgba: crate::art::cover_rgba(rgba, w, h, target_w, target_h).expect("button dimensions"),
-        w: target_w,
-        h: target_h,
+    controller_button_face(which, MENU_HINT_H)
+}
+
+/// Rasterise native vector keycaps at their final size; never enlarge a tiny PNG.
+pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
+    let (label, aspect) = match which {
+        ButtonLegend::A => ("A",1.0), ButtonLegend::B => ("B",1.0),
+        ButtonLegend::X => ("X",1.0), ButtonLegend::Y => ("Y",1.0),
+        ButtonLegend::Up => ("",1.0), ButtonLegend::Down => ("",1.0),
+        ButtonLegend::Left => ("",1.0), ButtonLegend::Right => ("",1.0),
+        ButtonLegend::Start => ("START",2.0), ButtonLegend::Select => ("SELECT",2.2),
+        ButtonLegend::Menu => ("MENU",1.9),
+    };
+    let w = (h as f32 * aspect).round() as u32;
+    let mut rgba = vec![0; (w*h*4) as usize];
+    let radius = (h as f32-4.0)/2.0;
+    for y in 0..h { for x in 0..w {
+        let mut coverage = 0u32;
+        for sy in 0..4 { for sx in 0..4 {
+            let px=x as f32+(sx as f32+0.5)/4.0;
+            let py=y as f32+(sy as f32+0.5)/4.0;
+            let cx=px.clamp(2.0+radius,w as f32-2.0-radius);
+            let cy=h as f32/2.0;
+            if (px-cx).powi(2)+(py-cy).powi(2)<=radius*radius {coverage+=1;}
+        }}
+        let at=((y*w+x)*4) as usize;
+        rgba[at..at+4].copy_from_slice(&[224,227,232,(coverage*255/16) as u8]);
+    }}
+    if matches!(which,ButtonLegend::Up|ButtonLegend::Down|ButtonLegend::Left|ButtonLegend::Right) {
+        for y in 0..h {for x in 0..w {
+            let mut coverage=0u32;
+            for sy in 0..4 {for sx in 0..4 {
+                let dx=(x as f32+(sx as f32+0.5)/4.0-w as f32/2.0)/h as f32;
+                let dy=(y as f32+(sy as f32+0.5)/4.0-h as f32/2.0)/h as f32;
+                let (u,v)=match which {ButtonLegend::Down=>(-dx,-dy),ButtonLegend::Left=>(-dy,dx),ButtonLegend::Right=>(dy,-dx),_=>(dx,dy)};
+                if ((-0.23..=0.02).contains(&v)&&u.abs()<=(v+0.23)*0.85) || ((0.0..=0.23).contains(&v)&&u.abs()<=0.055) {coverage+=1;}
+            }}
+            let at=((y*w+x)*4) as usize;
+            for (i,ink) in [34u32,37,42].iter().enumerate() {rgba[at+i]=((u32::from(rgba[at+i])*(16-coverage)+ink*coverage)/16) as u8;}
+        }}
+    } else if let Some(font)=text::font(text::Role::Value) {
+        let px=if aspect>1.0 {h as f32*0.32}else{h as f32*0.62};
+        let layout=text::fit_preserving_case(font,label,w as f32-8.0,1,px,px);
+        text::draw_centred(&mut rgba,w,h,&layout,[34,37,42]);
     }
+    UndoFace{rgba,w,h}
 }
 
 fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
@@ -1637,7 +1703,7 @@ impl QuickMenu<'_> {
             if matches!(row,QuickRow::Brightness|QuickRow::PlayBrightness|QuickRow::BlueLight|QuickRow::PlayBlueLight) {
                 let index=usize::from(matches!(row,QuickRow::BlueLight|QuickRow::PlayBlueLight));
                 let value=self.values[row.index()];
-                let t=value.and_then(|v|QuickValue::LEVELS.iter().position(|n|*n==v)).unwrap_or(0) as f32/9.0;
+                let t=value.and_then(|v|(0..10).find(|&n|if index==1 {QuickValue::temperature(n)==v}else{QuickValue::level(n)==v})).unwrap_or(0) as f32/9.0;
                 crate::draw_slider(out,right-crate::MENU_SLIDER_SPAN,y+5.0,crate::MENU_SLIDER_W,frame.sliders[index].unwrap_or(t),1.0);
                 push(out,tex,right+pad-w as f32,y,w,h);
                 clip_quads(out,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;

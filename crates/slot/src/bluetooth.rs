@@ -100,6 +100,7 @@ pub struct Manager {
     output: String,
     pending: Option<Receiver<ResultMessage>>,
     recovering: Arc<AtomicBool>,
+    cancel_path: Option<PathBuf>,
     pub face: Option<TexId>,
     pub progress_face: Option<TexId>,
     pub wired: bool,
@@ -132,6 +133,7 @@ impl Manager {
             output: "speaker".into(),
             pending: None,
             recovering: Arc::default(),
+            cancel_path: None,
             face: None,
             progress_face: None,
             wired: false,
@@ -164,11 +166,24 @@ impl Manager {
     // An automatic switch can start with the menu closed. Hand its worker to
     // the visible menu when it opens, so user actions cannot race that switch.
     pub fn adopt_usb_switch(&mut self, other: &mut Self) {
+        self.cancel_pending();
         self.pending = other.pending.take();
+        self.cancel_path = other.cancel_path.take();
         self.recovering = other.recovering.clone();
         self.choosing_route = other.choosing_route;
         self.status = std::mem::take(&mut other.status);
         self.route_choice = other.route_choice.take();
+    }
+
+    pub fn cancel_pending(&mut self) {
+        if self.pending.take().is_some() {
+            if let Some(path) = self.cancel_path.take() { let _ = std::fs::write(path, b"cancel"); }
+            self.recovering.store(false, Ordering::Relaxed);
+            self.choosing_route = false;
+            self.progress_face = None;
+            self.status = "Connection cancelled".into();
+            self.face = None;
+        }
     }
 
     fn ask(&mut self, verb: &'static str, address: Option<String>) {
@@ -199,6 +214,10 @@ impl Manager {
             _ => "",
         }
         .into();
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let cancel = std::env::temp_dir().join(format!("slot-bt-{}-{}.cancel", std::process::id(), NEXT.fetch_add(1,Ordering::Relaxed)));
+        let _ = std::fs::remove_file(&cancel);
+        self.cancel_path = Some(cancel.clone());
         let bluetooth_available = self.bluetooth_available;
         self.recovering.store(false, Ordering::Relaxed);
         let recovering = self.recovering.clone();
@@ -208,8 +227,9 @@ impl Manager {
             } else {
                 run_with_recovery(verb, address,
                     || recovering.store(true, Ordering::Relaxed),
-                    |verb, address| run(root.clone(), verb, address))
+                    |verb, address| run_cancel(root.clone(), verb, address, Some(&cancel)))
             };
+            let _ = std::fs::remove_file(cancel);
             let _ = tx.send(result);
         });
     }
@@ -256,10 +276,12 @@ impl Manager {
                 };
                 self.selected = self.selected.min(self.rows().len().saturating_sub(1));
                 self.pending = None;
+                self.cancel_path = None;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
                 self.status = "Error: Bluetooth worker stopped".into();
                 self.pending = None;
+                self.cancel_path = None;
             }
             Err(mpsc::TryRecvError::Empty) => {}
         }
@@ -377,9 +399,11 @@ impl Manager {
             self.forget_confirmation = None;
         }
         if action == Action::QuickMenu {
+            self.cancel_pending();
             return true;
         }
         if action == Action::GbaDown(Btn::B) {
+            self.cancel_pending();
             if let Some(page) = self.stack.pop() {
                 self.page = page;
                 self.selected = 0;
@@ -576,12 +600,16 @@ impl Manager {
     }
 }
 
-// A failed interactive operation gets one stack restart and one retry.
+impl Drop for Manager {
+    fn drop(&mut self) { self.cancel_pending(); }
+}
+
+// Radio power failures get one restart and retry; a missing/offline device does not.
 // Background reconnect keeps its existing backoff instead of cycling the radio.
 fn run_with_recovery(verb: &str, address: Option<String>, on_recover: impl FnOnce(),
     mut run: impl FnMut(&str, Option<String>) -> ResultMessage) -> ResultMessage {
     let first = run(verb, address.clone());
-    if !first.status.starts_with("Error:") || verb == "diagnose" { return first; }
+    if !first.status.starts_with("Error:") || matches!(verb, "diagnose" | "connect") { return first; }
     on_recover();
     let restarted = run("restart", None);
     if restarted.status.starts_with("Error:") { return restarted; }
@@ -708,15 +736,21 @@ fn save_disconnect_volume(root: &std::path::Path, value: u8) -> std::io::Result<
     save_sound_value(root, "disconnect_volume", &value.min(100).to_string())
 }
 
-#[cfg(feature = "device")]
 fn run(root: PathBuf, verb: &str, address: Option<String>) -> ResultMessage {
+    run_cancel(root, verb, address, None)
+}
+
+#[cfg(feature = "device")]
+fn run_cancel(root: PathBuf, verb: &str, address: Option<String>, cancel: Option<&std::path::Path>) -> ResultMessage {
     let mut command = std::process::Command::new("timeout");
     command
-        .arg("180")
+        .args(["-k", "5", if verb == "connect" {"60"} else {"90"}])
         .arg("/bin/sh")
         .arg(root.join("System/bluetooth.sh"))
         .arg(verb)
-        .env("SLOT_ROOT", &root);
+        .env("SLOT_ROOT", &root)
+        .env("SLOT_BT_LOCK_TRIES", "12");
+    if let Some(cancel) = cancel { command.env("SLOT_BT_CANCEL_FILE", cancel); }
     if let Some(address) = address {
         command.arg(address);
     }
@@ -797,7 +831,7 @@ fn run(root: PathBuf, verb: &str, address: Option<String>) -> ResultMessage {
 }
 
 #[cfg(not(feature = "device"))]
-fn run(_root: PathBuf, _verb: &str, _address: Option<String>) -> ResultMessage {
+fn run_cancel(_root: PathBuf, _verb: &str, _address: Option<String>, _cancel: Option<&std::path::Path>) -> ResultMessage {
     ResultMessage {
         devices: None,
         output: None,
@@ -1111,6 +1145,7 @@ mod menu_tests {
             output: "speaker".into(),
             pending: None,
             recovering: Arc::default(),
+            cancel_path: None,
             face: None,
             progress_face: None,
             wired: false,
@@ -1121,7 +1156,22 @@ mod menu_tests {
         }
     }
     #[test]
-    fn an_error_restarts_bluetooth_and_retries_the_same_operation_once() {
+    fn backing_out_cancels_work_and_keeps_the_sound_menu_responsive() {
+        let dir=tempfile::tempdir().unwrap();
+        let path=dir.path().join("cancel");
+        let mut m=menu();
+        let (_tx,rx)=mpsc::channel();
+        m.pending=Some(rx); m.cancel_path=Some(path.clone());
+        m.page=Page::Pair; m.stack.push(Page::Home);
+        m.input(Action::GbaDown(Btn::B));
+        assert!(!m.busy()); assert!(path.exists()); assert_eq!(m.page,Page::Home);
+        let selected=m.selected;
+        m.input(Action::GbaDown(Btn::Down));
+        assert_ne!(m.selected,selected);
+    }
+
+    #[test]
+    fn offline_connect_does_not_restart_the_stack_but_radio_errors_can_recover() {
         let mut calls = Vec::new();
         let mut announced = false;
         let result = run_with_recovery("connect", Some("AA:BB:CC:DD:EE:FF".into()),
@@ -1130,10 +1180,9 @@ mod menu_tests {
                 ResultMessage { devices: None, output: None,
                     status: if calls.len() == 1 { "Error: failed" } else { "Connected" }.into() }
             });
-        assert!(announced);
-        assert_eq!(calls, vec![("connect".into(), Some("AA:BB:CC:DD:EE:FF".into())),
-            ("restart".into(), None), ("connect".into(), Some("AA:BB:CC:DD:EE:FF".into()))]);
-        assert!(!result.status.starts_with("Error:"));
+        assert!(!announced);
+        assert_eq!(calls, vec![("connect".into(), Some("AA:BB:CC:DD:EE:FF".into()))]);
+        assert!(result.status.starts_with("Error:"));
         let mut calls = Vec::new();
         let result = run_with_recovery("on", None, || {}, |verb, _| {
             calls.push(verb.to_owned());
@@ -1147,7 +1196,7 @@ mod menu_tests {
             ResultMessage { devices: None, output: None,
                 status: if verb == "restart" { "Ready" } else { "Error: unavailable" }.into() }
         });
-        assert_eq!(calls, ["connect", "restart", "connect"]);
+        assert_eq!(calls, ["connect"]);
     }
 
     #[test]
@@ -1999,28 +2048,4 @@ pub fn probe(root: &std::path::Path) -> Option<Receiver<bool>> {
 
 /// Small antialiased progress ring. Frames are cached once by the frontend;
 /// animation never rerasterizes the full menu or delays its worker.
-pub fn progress_face(frame: usize) -> UndoFace {
-    let (w, h) = (32, 32);
-    let mut rgba = vec![0; (w * h * 4) as usize];
-    let turn = std::f32::consts::TAU;
-    let angle = (frame % 12) as f32 * turn / 12.;
-    for y in 0..h {
-        for x in 0..w {
-            let mut alpha = 0.;
-            for sy in 0..4 {
-                for sx in 0..4 {
-                    let dx = x as f32 + (sx as f32 + 0.5) / 4. - 16.;
-                    let dy = y as f32 + (sy as f32 + 0.5) / 4. - 16.;
-                    let r = (dx * dx + dy * dy).sqrt();
-                    if (10.5..13.).contains(&r) {
-                        let trail = (angle - dy.atan2(dx)).rem_euclid(turn) / turn;
-                        alpha += 0.16 + 0.84 * (1. - trail).powi(3);
-                    }
-                }
-            }
-            let at = ((y * w + x) * 4) as usize;
-            rgba[at..at + 4].copy_from_slice(&[246, 244, 239, (alpha * 255. / 16.).round() as u8]);
-        }
-    }
-    UndoFace { rgba, w, h }
-}
+pub fn progress_face(frame: usize) -> UndoFace { slot_ui::loading_face(frame) }

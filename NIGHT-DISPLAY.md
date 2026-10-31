@@ -27,11 +27,11 @@ Each adjustment saves to the preset you are using.
 
 Keep both buttons held to adjust continuously after a short pause. Release either button to stop; a quick tap still changes one step.
 
-The warmth setting is named **Blue Light** in the menu. A higher value gives the picture a warmer tint. The night preset starts at brightness **2** and Blue Light **9**; the day preset starts with your existing display settings.
+The setting is named **Color temp** in both Screen and Night mode. Neutral preserves the original picture; increasing it adds a warmer tint, up to Warm 100%. In Screen it adjusts the active day or night preset. Inside Night mode it adjusts the saved night preset, applying immediately when night mode is active. The night preset starts at brightness **2** and Warm 100%; the day preset starts with your existing display settings.
 
 ## Change the shortcut
 
-Open **Menu → Controls → Shortcuts → Day / Night**, press <kbd>A</kbd> and record your preferred combination. Restoring the page's defaults brings back <kbd>SELECT</kbd> + <kbd>X</kbd>.
+Open **Menu → Controls → Shortcuts → Night mode**, press <kbd>A</kbd> and record your preferred combination. Restoring the page's defaults brings back <kbd>SELECT</kbd> + <kbd>X</kbd>.
 
 <details>
 <summary><strong>Where the presets are saved</strong></summary>

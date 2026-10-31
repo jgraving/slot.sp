@@ -382,3 +382,29 @@ fn pause_settings_is_centered_and_the_card_expands_to_the_whole_canvas() {
         assert!(matches!(full.last(),Some(Draw::RoundRect {x,y,w:ww,h,radius,..}) if *x==0.0 && *y==0.0 && *ww==w && *h==480.0 && *radius==0.0));
     }
 }
+
+#[test]
+fn kid_card_expansion_uses_the_shared_interruptible_spatial_spring() {
+    use slot_ui::expressive::SurfaceMotion;
+    let mut reference=0.0;
+    for hz in [30,60,120] {
+        let mut motion=SurfaceMotion::default(); motion.snap(true);
+        for _ in 0..hz/5 {motion.update(false,1.0/hz as f32);}
+        if hz==30 {reference=motion.value();} else {assert!((motion.value()-reference).abs()<0.01);}
+        let before=motion.value(); motion.update(true,0.0); assert_eq!(motion.value(),before);
+        for _ in 0..hz {motion.update(true,1.0/hz as f32);}
+        assert!((motion.value()-1.0).abs()<0.001);
+    }
+}
+
+#[test]
+fn color_temperature_has_one_neutral_to_warm_vocabulary() {
+    use slot_ui::{QuickValue, setting_slider};
+    assert_eq!(QuickValue::temperature(0).text(),"Neutral");
+    assert_eq!(QuickValue::temperature(9).text(),"Warm 100%");
+    for n in 0..=9 {
+        let text=QuickValue::temperature(n).text();
+        let fraction=setting_slider("Color temp",text).unwrap();
+        assert!((fraction-n as f32/9.0).abs()<0.01);
+    }
+}

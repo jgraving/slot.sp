@@ -58,6 +58,7 @@ fn press(app: &mut App, b: Btn) {
     common::through(app, b);
 }
 fn unlock(app: &mut App) {
+    if app.kid_menu.as_ref().unwrap().in_game_card() { press(app,Btn::Down); press(app,Btn::A); }
     if app.kid_menu.as_ref().unwrap().child_menu() {
         press(app, Btn::Up);
         press(app, Btn::A);
@@ -578,6 +579,8 @@ fn kid_pause_menu_allows_volume_brightness_resume_and_exit_without_a_code() {
     preview_menu(&s, "kid-pause-menu.png");
     let mut time = 0;
     raw_tap(&mut s, &mut time, Btn::Down);
+    raw_tap(&mut s, &mut time, Btn::A); // Expand restricted Settings.
+    raw_tap(&mut s, &mut time, Btn::Down);
     for _ in 0..30 { raw_tap(&mut s, &mut time, Btn::Right); }
     assert_eq!(s.app().volume(), s.app().kid_volume_limit());
     raw_tap(&mut s, &mut time, Btn::Left);
@@ -587,10 +590,12 @@ fn kid_pause_menu_allows_volume_brightness_resume_and_exit_without_a_code() {
     raw_tap(&mut s, &mut time, Btn::Left);
     assert_eq!(s.app().brightness(), brightness.saturating_sub(1));
     raw_tap(&mut s, &mut time, Btn::B);
+    assert!(s.app().kid_menu.as_ref().unwrap().in_game_card());
+    raw_tap(&mut s, &mut time, Btn::B);
     assert!(s.app().kid_menu.is_none());
     assert!(matches!(s.app().phase(), Phase::Playing { .. }));
     s.app_mut().apply(Action::QuickMenu);
-    for _ in 0..3 { raw_tap(&mut s, &mut time, Btn::Down); }
+    for _ in 0..2 { raw_tap(&mut s, &mut time, Btn::Down); }
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.is_none());
     assert!(matches!(s.app().phase(), Phase::Ejecting { .. } | Phase::Shelf));
@@ -632,7 +637,7 @@ fn kid_can_exit_when_only_one_game_is_approved() {
     for _ in 0..120 { app.update(1.0 / 60.0); }
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     app.apply(Action::QuickMenu);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..2 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::A);
     assert!(matches!(app.phase(), Phase::Ejecting { .. }));
     for _ in 0..120 { app.update(1.0 / 60.0); }
@@ -803,6 +808,7 @@ fn settings_meter_is_present_only_while_kid_mode_is_on() {
 fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
     let (_d, mut app, _clock) = warning_game(slot::kid_policy::Rule::Daily, 5);
     app.apply(Action::QuickMenu);
+    press(&mut app,Btn::Down); press(&mut app,Btn::A);
     press(&mut app, Btn::Up);
     press(&mut app, Btn::A);
     let remaining = app.kids.remaining(now());

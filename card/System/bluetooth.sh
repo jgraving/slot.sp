@@ -104,6 +104,11 @@ log() { trim_log; printf '%s %s\n' "$(date -u '+%H:%M:%S')" "$*" >> "$SESSION_LO
 valid_mac() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$'; }
 raw_name() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$|^[0-9A-Fa-f]{12}$'; }
 check_cancel() {
+    if [ -n "${SLOT_BT_CANCEL_FILE:-}" ] && [ -f "$SLOT_BT_CANCEL_FILE" ]; then
+        CANCELLED=1
+        log 'Interactive operation cancelled'
+        exit 0
+    fi
     if automatic && [ "$OWNED" = 1 ] && [ -f "$LOCK/cancel" ]; then
         CANCELLED=1
         log 'Automatic reconnect cancelled by a manual action'
@@ -521,7 +526,7 @@ connect() {
     fi
     # An explicit Connect rejection is final after the bounded retry.
     [ -z "$CONNECT_REASON" ] || fail "Connection failed: $CONNECT_REASON"
-    if automatic; then wait_property Connected 8; else wait_property Connected 20; fi
+    if automatic; then wait_property Connected 8; else wait_property Connected 6; fi
     wait_audio_transport
     check_cancel
     # A PCM can outlive a disconnected link briefly. Recheck after endpoint
@@ -539,6 +544,7 @@ connect() {
 }
 trap cleanup 0
 trap 'ERROR="Bluetooth operation interrupted"; exit 1' 1 2 15
+check_cancel
 automatic && { [ ! -f "$PREF" ] || [ -f "$OFF" ]; } && { rm -f "$SESSION_LOG"; exit 0; }
 # Read-only operations use their own scratch directory and never hold the radio lock.
 case "$VERB" in
@@ -568,6 +574,7 @@ case "$VERB" in
                 log 'Requesting cancellation of automatic reconnect'
                 touch "$LOCK/cancel" 2>/dev/null || true
             fi
+            check_cancel
             tries=$((tries + 1))
             [ "$tries" -lt "${SLOT_BT_LOCK_TRIES:-90}" ] || fail 'Another Bluetooth operation is still running; wait and try again'
             sleep "${SLOT_BT_POLL_INTERVAL:-1}"
