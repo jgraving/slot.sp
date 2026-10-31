@@ -40,6 +40,18 @@ fn main(){
         if root==QuickRow::Kids {a.tap(Btn::Down);a.save("parent-code-row");a.tap(Btn::A);a.save("parent-code-editor");}
         a.home();
     }
+    // Exercise the state that previously collapsed the parent rows and clipped
+    // the meter: a real approval, code setup, then activation in the open menu.
+    a.tap(Btn::B);a.tap(Btn::X);a.tap(Btn::Menu);a.nav(QuickRow::Kids);a.tap(Btn::A);
+    a.tap(Btn::Down);a.tap(Btn::A);
+    for b in [Btn::A,Btn::B,Btn::X,Btn::Y,Btn::A,Btn::B,Btn::X,Btn::Y]{a.tap(b);}
+    a.tap(Btn::Up);a.save("parent-before-enable");a.tap(Btn::A);a.save("parent-enabled");
+    assert!(a.f.app().kid_mode());assert_eq!(a.f.app().kid_menu.as_ref().unwrap().scroll_info(),Some((0,5,0,5)));
+    a.tap(Btn::VolUp);a.save("parent-volume-overlay");a.tap(Btn::B);
+    for i in 0..30 {a.frame(vec![]);if [0,2,5,9,15,29].contains(&i){a.capture(&format!("parent-close-{i:02}"));}}
+    assert!(matches!(a.f.app().phase(),Phase::Shelf));a.tap(Btn::Menu);a.save("kid-settings-grid");
+    a.tap(Btn::A);a.save("kid-sound");a.tap(Btn::VolDown);a.save("kid-sound-overlay");a.tap(Btn::B);
+    a.tap(Btn::Right);a.tap(Btn::A);a.save("kid-screen");a.tap(Btn::B);a.tap(Btn::Down);a.tap(Btn::Left);a.tap(Btn::A);a.save("kid-shortcuts");a.tap(Btn::B);
     a.tap(Btn::B);
     for i in 0..45 {a.frame(vec![]);if [0,2,5,9,15,24,44].contains(&i){a.capture(&format!("return-{i:02}"));}}
 }

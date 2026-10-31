@@ -44,6 +44,11 @@ fn main() {
                     expressive::SELECTED,
                 );
             }
+            if name=="kid-pause" {
+                let begin=draws.len();expressive::draw_cached_menu(canvas,tex,MenuFrame::settled(QuickRow::Resume,&[]),&mut draws);
+                let offset=(menu_grid::pause_rect(canvas,3)[1]-expressive::CARD_TOP)/2.0;
+                for draw in &mut draws[begin..]{if let Draw::Part{y,h,..}=draw {if *y==0.0&&*h==expressive::TITLE_H{*y+=offset;}}}
+            }else{
             draws.push(Draw::Tex {
                 x: 0.0,
                 y: 0.0,
@@ -52,8 +57,13 @@ fn main() {
                 tex,
                 alpha: 1.0,
             });
-            draws.append(&mut overlays);
+            }
             draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
+            draws.append(&mut overlays);
+            if name=="kid-pause" || name=="kid-settings" {
+                let face=kid_time_meter(900,1800);let tex=gpu.create_texture(face.w,face.h,&face.rgba);
+                draws.push(Draw::Tex{x:canvas.centred(face.w as f32),y:376.0,w:face.w as f32,h:face.h as f32,tex,alpha:1.0});
+            }
             gpu.begin_frame();
             gpu.draw_list(&draws);
             let mut encoder = png::Encoder::new(
@@ -126,7 +136,7 @@ fn main() {
     save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some(menu_grid::cell(canvas,0,3,3,true)));
     child.input(slot_input::Action::GbaDown(slot_input::Btn::Down),0);
     child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
-    save("kid-settings",child.screen_face_on(canvas),vec![],None);
+    save("kid-settings",child.screen_face_on(canvas),vec![],Some(menu_grid::cell(canvas,0,4,2,false)));
     let mut parent=slot::kid_menu::Menu::new(path.clone(),policy);
     for b in [slot_input::Btn::A,slot_input::Btn::B,slot_input::Btn::X] {parent.input(slot_input::Action::GbaDown(b),0);}
     save("parent-code",parent.screen_face_on(canvas),vec![],None);

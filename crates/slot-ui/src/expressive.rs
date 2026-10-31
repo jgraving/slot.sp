@@ -10,7 +10,7 @@ pub const SELECTED: [f32; 4] = [0.20, 0.31, 0.32, 1.0];
 pub const CARD_TOP: f32 = 56.0;
 pub const CARD_BOTTOM: f32 = 366.0;
 pub const ROW_TOP: f32 = 80.0;
-pub const TITLE_H: f32 = 40.0;
+pub const TITLE_H: f32 = CARD_TOP;
 pub const FOOTER_Y: f32 = 378.0;
 pub const SURFACE: [f32;4] = [0.09, 0.115, 0.125, 1.0];
 pub fn card_rect(canvas:crate::Canvas)->[f32;4] {[MENU_INSET,CARD_TOP,canvas.w-2.0*MENU_INSET,CARD_BOTTOM-CARD_TOP]}
@@ -163,6 +163,7 @@ pub struct MenuMotion {
     compact: Spring,
     outgoing_page: Option<u64>,
     outgoing_focus_y: f32,
+    outgoing_grid_focus:[f32;2],
     target_scroll:f32,
     target_window:f32,
     target_focus:f32,
@@ -249,6 +250,8 @@ impl MenuMotion {
                 });
             if !was_morph {self.pause_focus=Spring::at(previous_frame.map_or(88.0,|f|f.focus_y));}
             self.outgoing_focus_y=previous_frame.map_or(88.0,|f|f.focus_y);
+            self.outgoing_grid_focus=previous_frame.map_or([0.0,0.0],|f|f.grid_focus);
+            if matches!(custom,Some(2009|2010)) {let i=target as usize;self.grid_x=Spring::at((i%2)as f32);self.grid_y=Spring::at((i/2)as f32);}
             self.outgoing_page=self.page;
             self.outgoing = self.row.filter(|_| !opening);
             self.outgoing_custom = self.custom.is_some();
@@ -282,7 +285,11 @@ impl MenuMotion {
             self.switch = Spring::at(if on == Some(true) { 1.0 } else { 0.0 });
         }
         self.row = Some(row);
-        if crate::menu_grid::is_page(row.page()) && custom.is_none() {
+        if matches!(custom,Some(2009|2010)) {
+            let index=target as usize;
+            self.grid_x.step((index%2) as f32,dt,800.0,0.76);
+            self.grid_y.step((index/2) as f32,dt,800.0,0.76);
+        } else if crate::menu_grid::is_page(row.page()) && custom.is_none() {
             self.grid_x.step(crate::menu_grid::position(row,hidden)[0],dt,800.0,0.76);
             self.grid_y.step(crate::menu_grid::position(row,hidden)[1],dt,800.0,0.76);
         }
@@ -342,7 +349,7 @@ impl MenuMotion {
     pub fn outgoing_frame(&self, row: QuickRow, hidden: &[QuickRow]) -> MenuFrame {
         let mut frame = MenuFrame::settled(row, hidden);
         frame.page_shift = -self.direction * self.slide.value;
-        frame.focus_y=self.outgoing_focus_y;
+        frame.focus_y=self.outgoing_focus_y;frame.grid_focus=self.outgoing_grid_focus;
         if let Some(origin)=self.tile_origin {
             frame.tile_origin=Some(origin);
             frame.tile_reveal=1.0-self.slide.value.clamp(0.0,1.0);
@@ -646,3 +653,10 @@ impl ChromeMotion {
     }
 }
 fn fade(mut d:Draw,t:f32,out:&mut Vec<Draw>){if t<=0.0{return;}match &mut d {Draw::Tex{alpha,..}|Draw::Part{alpha,..}|Draw::Turned{alpha,..}=>*alpha*=t,Draw::Rect{colour,..}|Draw::RoundRect{colour,..}=>colour[3]*=t,_=>{}}out.push(d);}
+
+/// Four safe destinations use the same tile layout on the shelf and in game.
+pub fn draw_kid_settings_focus(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>){
+    let [x,y,w,h]=crate::menu_grid::cell(canvas,0,4,2,false);
+    let pitch=(canvas.w-2.0*MENU_INSET-24.0)/2.0;
+    rounded(out,x+frame.grid_focus[0]*pitch+frame.page_shift*(canvas.w-2.0*MENU_INSET),y+frame.grid_focus[1]*crate::menu_grid::PITCH,w,h,22.0,SELECTED);
+}

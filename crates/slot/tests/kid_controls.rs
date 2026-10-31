@@ -57,11 +57,18 @@ fn card() -> tempfile::TempDir {
 fn press(app: &mut App, b: Btn) {
     common::through(app, b);
 }
+fn kid_tile(app:&mut App,label:&str) {
+    assert!(app.kid_menu.as_ref().unwrap().settings_grid());
+    for button in [Btn::Right,Btn::Down,Btn::Left,Btn::Up] {
+        if app.kid_menu.as_ref().unwrap().lines().iter().any(|l|l.starts_with(&format!("SELECTED {label}"))){press(app,Btn::A);return;}
+        press(app,button);
+    }
+    panic!("missing kid tile {label}");
+}
 fn unlock(app: &mut App) {
     if app.kid_menu.as_ref().unwrap().in_game_card() { press(app,Btn::Down); press(app,Btn::A); }
     if app.kid_menu.as_ref().unwrap().child_menu() {
-        press(app, Btn::Up);
-        press(app, Btn::A);
+        kid_tile(app,"Parental controls");
     }
     for b in [Btn::A, Btn::B, Btn::X, Btn::Y] {
         press(app, b);
@@ -137,8 +144,7 @@ fn blocked_shortcuts_cannot_change_rules_or_launch_parent_screens() {
         assert!(app.kid_menu.is_none());
     }
     app.apply(Action::QuickMenu);
-    press(&mut app, Btn::Up);
-    press(&mut app, Btn::A);
+    kid_tile(&mut app,"Parental controls");
     for b in [Btn::A, Btn::A, Btn::A, Btn::A, Btn::Start] {
         press(&mut app, b);
     }
@@ -579,15 +585,19 @@ fn kid_pause_menu_allows_volume_brightness_resume_and_exit_without_a_code() {
     let mut time = 0;
     raw_tap(&mut s, &mut time, Btn::Down);
     raw_tap(&mut s, &mut time, Btn::A); // Expand restricted Settings.
-    raw_tap(&mut s, &mut time, Btn::Down);
+    raw_tap(&mut s, &mut time, Btn::A); // Sound tile.
     for _ in 0..30 { raw_tap(&mut s, &mut time, Btn::Right); }
     assert_eq!(s.app().volume(), s.app().kid_volume_limit());
     raw_tap(&mut s, &mut time, Btn::Left);
     assert!(s.app().volume() < s.app().kid_volume_limit());
-    raw_tap(&mut s, &mut time, Btn::Down);
+    raw_tap(&mut s, &mut time, Btn::B);
+    raw_tap(&mut s, &mut time, Btn::Right);
+    raw_tap(&mut s, &mut time, Btn::A);
     let brightness = s.app().brightness();
     raw_tap(&mut s, &mut time, Btn::Left);
     assert_eq!(s.app().brightness(), brightness.saturating_sub(1));
+    raw_tap(&mut s, &mut time, Btn::B);
+    assert!(s.app().kid_menu.as_ref().unwrap().settings_grid());
     raw_tap(&mut s, &mut time, Btn::B);
     assert!(s.app().kid_menu.as_ref().unwrap().in_game_card());
     raw_tap(&mut s, &mut time, Btn::B);
@@ -782,25 +792,14 @@ fn warning_allows_saving_and_exiting_without_a_parent_code() {
 
 #[test]
 fn settings_meter_is_present_only_while_kid_mode_is_on() {
-    let d = card();
-    let mut app = App::boot(d.path());
-    app.apply(Action::QuickMenu);
-    unlock(&mut app);
-    assert!(app.kid_menu.as_ref().unwrap().remaining_seconds().is_some());
-    let active = app.kid_menu.as_ref().unwrap().screen_face();
-    let band = |face: &slot_ui::UndoFace| (342..366).any(|y|
-        (0..face.w).any(|x| face.rgba[((y * face.w + x) * 4 + 3) as usize] != 0));
-    assert!(band(&active));
-    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
-        write_preview(&dir, "parent-time-meter.png", active);
-    }
-    press(&mut app, Btn::A);
-    assert!(!app.kid_mode());
-    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
-        write_preview(&dir, "parent-mode-off.png", app.kid_menu.as_ref().unwrap().screen_face());
-    }
-    assert_eq!(app.kid_menu.as_ref().unwrap().remaining_seconds(), None);
-    assert!(!band(&app.kid_menu.as_ref().unwrap().screen_face()));
+    let d=card();let mut app=App::boot(d.path());app.apply(Action::QuickMenu);unlock(&mut app);
+    assert!(app.kid_menu.as_ref().unwrap().remaining_meter().is_some());
+    app.set_kid_meter_face((slot_ui::TexId::from_raw(9901),300,36));app.update(1.0);
+    let mut out=vec![];app.draw(&mut out);
+    assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::Tex{tex,y,h,..}if *tex==slot_ui::TexId::from_raw(9901)&&*y==376.0&&*h==36.0)),"the complete pill must bypass the card clip");
+    press(&mut app,Btn::A);assert!(!app.kid_mode());app.update(1.0);
+    assert!(app.kid_menu.as_ref().unwrap().remaining_meter().is_none());let mut out=vec![];app.draw(&mut out);
+    assert!(!out.iter().any(|d|matches!(d,slot_ui::Draw::Tex{tex,..}if *tex==slot_ui::TexId::from_raw(9901))));
 }
 
 #[test]
@@ -808,8 +807,7 @@ fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
     let (_d, mut app, _clock) = warning_game(slot::kid_policy::Rule::Daily, 5);
     app.apply(Action::QuickMenu);
     press(&mut app,Btn::Down); press(&mut app,Btn::A);
-    press(&mut app, Btn::Up);
-    press(&mut app, Btn::A);
+    kid_tile(&mut app,"Parental controls");
     let remaining = app.kids.remaining(now());
     for b in [Btn::A; 4] { press(&mut app, b); }
     let menu = app.kid_menu.as_ref().unwrap();
@@ -999,21 +997,46 @@ fn kid_pause_text_has_equal_top_and_bottom_card_whitespace(){
 }
 
 #[test]
-fn remaining_time_has_a_reserved_band_clear_of_menu_rows() {
+fn kid_settings_use_identical_four_tile_pages_on_the_shelf_and_in_game() {
     let root=tempfile::tempdir().unwrap();let mut policy=slot::kid_policy::Policy::default();policy.active=true;
-    for in_game in [false,true] {
-        let mut menu=slot::kid_menu::Menu::child(root.path().into(),policy.clone(),in_game,50,50);
-        menu.set_remaining(Some((600,1800)));
-        if in_game {menu.input(Action::GbaDown(Btn::Down),0);menu.input(Action::GbaDown(Btn::A),0);}
-        for _ in 0..6 {
-            let face=menu.screen_face_on(slot_ui::Canvas{w:640.0,h:480.0});
-            for y in 300..334 {assert!((0..640).all(|x|face.rgba[((y*640+x)*4+3)as usize]==0),"menu content entered the time-pill gap at {y}");}
-            menu.input(Action::GbaDown(Btn::Down),0);
-        }
-    }
+    let mut shelf=slot::kid_menu::Menu::child(root.path().into(),policy.clone(),false,50,50);
+    let mut game=slot::kid_menu::Menu::child(root.path().into(),policy,true,50,50);
+    shelf.set_remaining(Some((600,1800)));game.set_remaining(Some((600,1800)));
+    game.input(Action::GbaDown(Btn::Down),0);game.input(Action::GbaDown(Btn::A),0);
+    assert!(shelf.settings_grid()&&game.settings_grid());
+    for width in [640.0,720.0] {let canvas=slot_ui::Canvas{w:width,h:480.0};assert_eq!(shelf.screen_face_animated_on(canvas).rgba,game.screen_face_animated_on(canvas).rgba);}
+    for menu in [&mut shelf,&mut game] {assert_eq!(menu.lines().len(),4);menu.input(Action::GbaDown(Btn::Right),0);menu.input(Action::GbaDown(Btn::A),0);assert!(menu.lines().iter().any(|l|l.contains("Brightness")));assert!(!menu.entering_code());menu.input(Action::GbaDown(Btn::B),0);assert!(menu.settings_grid());}
 }
 
 #[test]
 fn parent_volume_slider_can_reach_zero_and_one_hundred(){
     let d=common::tmp_root_with_carts(&["Approved"]);let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());for _ in 0..4{menu.input(Action::GbaDown(Btn::Down),0);}for _ in 0..20{menu.input(Action::GbaDown(Btn::Left),0);}assert_eq!(menu.draft.volume_limit,0);for _ in 0..20{menu.input(Action::GbaDown(Btn::Right),0);}assert_eq!(menu.draft.volume_limit,100);
+}
+
+#[test]
+fn enabling_kid_mode_preserves_all_parent_rows_and_closes_vertically_to_the_shelf() {
+    let d=card();let mut policy=Policy::read(d.path()).unwrap();policy.leave();policy.save(d.path()).unwrap();
+    let mut app=App::boot(d.path());app.apply(Action::QuickMenu);
+    for b in [Btn::Right,Btn::Right,Btn::Down,Btn::A,Btn::A,Btn::B,Btn::X,Btn::Y]{press(&mut app,b);}
+    let menu=app.kid_menu.as_ref().unwrap();assert_eq!(menu.scroll_info(),Some((0,5,0,5)));
+    let sliders=menu.visible_sliders();let y=sliders[0].y;
+    press(&mut app,Btn::A);assert!(app.kid_mode());
+    let menu=app.kid_menu.as_ref().unwrap();assert_eq!(menu.scroll_info(),Some((0,5,0,5)));assert_eq!(menu.visible_sliders()[0].y,y);
+    app.kid_menu.as_mut().unwrap().face=Some(slot_ui::TexId::from_raw(9910));app.set_kid_meter_face((slot_ui::TexId::from_raw(9911),300,36));app.note_custom_menu_face();app.update(1.0);
+    press(&mut app,Btn::B);app.note_custom_menu_face();assert!(app.kid_menu.is_none());assert_eq!(app.quick_menu(),None);assert!(matches!(app.phase(),Phase::Shelf));
+    app.update(0.03);let mut out=vec![];app.draw(&mut out);
+    assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,x,w,..} if *tex==slot_ui::TexId::from_raw(9910)&&(*x+*w/2.0-app.canvas().w/2.0).abs()<0.1)),"closing parent content must stay centered, not slide sideways");
+}
+#[test]
+fn hardware_level_feedback_is_drawn_after_parent_chrome_and_the_remaining_time_pill() {
+    use slot_ui::{Draw,TexId,Icon};
+    let d=card();let mut app=App::boot(d.path());app.apply(Action::QuickMenu);unlock(&mut app);
+    app.kid_menu.as_mut().unwrap().face=Some(TexId::from_raw(9920));app.set_slot_faces(TexId::from_raw(9921),TexId::from_raw(9922));
+    app.set_icon_faces(Icon::ALL.into_iter().enumerate().map(|(i,_)|TexId::from_raw(10000+i)).collect());app.set_kid_meter_face((TexId::from_raw(9923),300,36));app.note_custom_menu_face();app.update(1.0);
+    for action in [Action::VolumeDown,Action::BrightnessDown] {
+        app.apply(action);app.kid_menu.as_mut().unwrap().face=Some(TexId::from_raw(9920));app.note_custom_menu_face();app.tick_ms(app.now()+180);let mut out=vec![];app.draw(&mut out);
+        let foreground=out.iter().position(|d|matches!(d,Draw::RoundRect{w:360.0,h:48.0,..})).expect("level pill missing over parents");
+        for id in [9920,9921,9922,9923] {let i=out.iter().rposition(|d|matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(id))).unwrap();assert!(i<foreground,"level pill painted behind {id}");}
+        assert!(out.iter().skip(foreground).all(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(9920))),"parent texture covers feedback");
+    }
 }

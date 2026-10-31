@@ -459,6 +459,8 @@ pub struct App {
     custom_chrome: Vec<(TexId,Vec<Draw>,Vec<Draw>)>,
     special_menu_cache: std::cell::RefCell<Vec<(u64,Vec<Draw>)>>,
     kid_surface: slot_ui::expressive::SurfaceMotion,
+    kid_meter_motion: slot_ui::expressive::SurfaceMotion,
+    kid_meter_face: Option<(TexId,u32,u32)>,
     footer_motion: slot_ui::expressive::SurfaceMotion,
     settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
@@ -731,6 +733,7 @@ impl App {
             settings_return_game:None,about_heading:None,custom_chrome:Default::default(),
             special_menu_cache: Default::default(),
             kid_surface: Default::default(),
+            kid_meter_motion:Default::default(),kid_meter_face:None,
             footer_motion: Default::default(),
             settings_notice_revision: 0,
             current_custom_face: None,
@@ -1810,6 +1813,9 @@ impl App {
     }
 
 
+    pub fn set_kid_meter_face(&mut self,face:(TexId,u32,u32)){self.kid_meter_face=Some(face);}
+    pub fn kid_meter_presence(&self)->f32 {self.kid_meter_motion.value()}
+    pub fn kid_meter_visible(&self)->bool {self.kid_meter_presence()>0.001}
     pub fn set_custom_chrome(&mut self,tex:TexId,title:Vec<Draw>,hints:Vec<Draw>){if let Some(p)=self.custom_chrome.iter_mut().find(|p|p.0==tex){*p=(tex,title,hints);}else{self.custom_chrome.push((tex,title,hints));}}
     pub fn about_heading_needed(&self)->bool {self.about_heading.is_none()}
     pub fn set_about_heading(&mut self,face:(TexId,u32,u32)){self.about_heading=Some(face);}
@@ -2957,6 +2963,11 @@ impl App {
             _ => self.favorite_removal = None,
         }
         if self.kid_input(action) {
+            return;
+        }
+        if matches!(action,Action::VolumeUp|Action::VolumeDown|Action::MuteToggle|Action::BrightnessUp|Action::BrightnessDown)
+            && !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) {
+            self.adjust(action);
             return;
         }
         self.track_held_dir(action);
@@ -4135,6 +4146,7 @@ impl App {
         self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
         self.menu_title_motion.borrow_mut().advance(dt);self.menu_hint_motion.borrow_mut().advance(dt);
         if let Some(menu)=&self.kid_menu {self.kid_surface.update(menu.in_game_card(),dt);}else{self.kid_surface.advance(dt);}
+        self.kid_meter_motion.update(self.kid_menu.as_ref().and_then(|m|m.remaining_meter()).is_some(),dt);
         self.switch_motion.update(&self.visible_custom_switches(),dt);
         let volume=self.volume();if let Some(menu)=&mut self.bluetooth {menu.current_volume=volume;}
         let sliders=self.visible_custom_sliders();
@@ -4827,6 +4839,14 @@ impl App {
             let kind=row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())});
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
+            let title_end=out.len();
+            if matches!(self.phase,Phase::Playing{..}) {
+                let kid=custom.or_else(||self.menu_motion.current_custom_key()).is_some_and(|key|(2000..3000).contains(&key));
+                let (compact,top)=if kid {(self.kid_surface.value(),slot_ui::menu_grid::pause_rect(self.canvas(),3)[1])}
+                    else {let row=row.or_else(||self.menu_motion.closing_row()).unwrap_or(QuickRow::Resume);let hidden=self.in_game_hidden();(self.menu_motion.frame(row,&hidden).focus_compact,slot_ui::menu_grid::pause_rect(self.canvas(),QuickRow::Resume.shown(&hidden).len())[1])};
+                let offset=(top-slot_ui::expressive::CARD_TOP)*compact/2.0;
+                for draw in &mut out[chrome..title_end] {if let Draw::Tex{y,..}|Draw::Part{y,..}=draw{*y+=offset;}}
+            }
             self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,out);
             let reveal=self.menu_motion.reveal();
             for d in &mut out[chrome..] {if let Draw::Tex{alpha,..}|Draw::Part{alpha,..}=d {*alpha*=reveal;}}
@@ -4836,6 +4856,14 @@ impl App {
             let cart=match &self.phase {Phase::Playing{cart}|Phase::Ejecting{cart,..}=>Some(cart.as_str()),_=>self.settings_return_game.as_deref()};
             if let Some(cart)=cart {self.draw_seated_mouth(cart,out);}else{draw_empty_slot(self.canvas(),self.slot_faces,out);}
         }else {self.menu_title_motion.borrow_mut().reset();self.menu_hint_motion.borrow_mut().reset();}
+        if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) {
+            if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
+                let t=self.kid_meter_motion.value();
+                out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:slot_ui::expressive::FOOTER_Y-2.0+(1.0-t)*48.0,w:w as f32,h:h as f32,tex,alpha:t});
+            }
+            // Transient system feedback is composed after cards, titles and hardware.
+            self.hud.draw_with_bottom_inset(self.canvas(),self.now(),50.0*self.kid_meter_presence(),out);
+        }
     }
 
     fn draw_scene(&self, out: &mut Vec<Draw>) {
@@ -4918,7 +4946,6 @@ impl App {
                 out.push(Draw::Tex {x:self.canvas().centred(96.),y:192.,w:96.,h:96.,tex,alpha:1.});
             }
             self.draw_status_bar(out);
-            self.hud.draw(self.canvas(), self.now(), out);
             return;
         }
         if self.repair_prompt {
@@ -5132,9 +5159,7 @@ impl App {
                             slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
                             slot_ui::expressive::draw_card(self.canvas(),out);
                         }
-                        if matches!(key,1000..=1999|2000..=2002|2009|2010|3000..=3001) {
-                            if key==2001 {slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);}else{let width=self.canvas().w-168.0;slot_ui::expressive::rounded(out,self.canvas().centred(width),frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);}
-                        }
+                        self.draw_custom_focus(key,frame,out);
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
@@ -5164,7 +5189,6 @@ impl App {
         if let Some(menu) = self.game_menu {
             self.draw_game_menu(menu, out);
         }
-        self.hud.draw(self.canvas(), self.now(), out);
     }
 
     pub fn screen_shake(&self) -> f32 {
@@ -5315,6 +5339,16 @@ impl App {
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
+    fn draw_custom_focus(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>){
+        match key {
+            2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
+            2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
+            1000..=1999|2000|2002|2011|2012|3000|3001=>{
+                let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0);
+                slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
+            },_=>{}
+        }
+    }
     fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
         if let Some(previous)=self.menu_motion.outgoing_row() {
             if self.menu_motion.outgoing_custom_key().is_some_and(|key|key>=5000) {
@@ -5323,9 +5357,7 @@ impl App {
             } else if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
-                    if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,1000..=1999|2000..=2002|2009|2010|3000..=3001)) {
-                        if key==2001 {slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);}else{let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0);slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);}
-                    }
+                    if let Some(key)=self.menu_motion.outgoing_custom_key(){self.draw_custom_focus(key,frame,out);}
                     slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                     slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
@@ -5347,14 +5379,7 @@ impl App {
         }
         if !over_game {slot_ui::expressive::draw_card(self.canvas(),out);}
         self.draw_outgoing_menu(over_game,out);
-        if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() || self.bluetooth.is_some() {
-            let compact=self.kid_menu.as_ref().is_some_and(|m|m.in_game_card());
-            if compact {
-                slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);
-            }else{let width=self.canvas().w-168.0;
-                slot_ui::expressive::rounded(out,self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0),frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
-            }
-        }
+        if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);

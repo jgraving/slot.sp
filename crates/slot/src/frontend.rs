@@ -36,6 +36,7 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId)>,
+    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
@@ -199,7 +200,7 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
-            menu_chrome_cache:Vec::new(),
+            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
             bluetooth_tex: None,
             bluetooth_old_tex: None,
             bluetooth_page: None,
@@ -859,6 +860,15 @@ impl Frontend {
             },
             &mut self.switcher,
         );
+        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter());
+        if self.kid_meter_key!=meter {
+            if let Some((seconds,budget))=meter {
+                let face=slot_ui::kid_time_meter(seconds,budget);let size=(face.w,face.h);
+                let tex=upload(compositor,&mut self.kid_meter_tex,face);
+                self.session.app_mut().set_kid_meter_face((tex,size.0,size.1));
+            }
+            self.kid_meter_key=meter;
+        }
         self.draws.clear();
         self.session.app().draw(&mut self.draws);
         let app=self.session.app();
@@ -873,7 +883,7 @@ impl Frontend {
                 self.settings_notice_text=message.to_string();
             }
         }
-        let notice_canvas=if app.kid_mode() && self.settings_notice.text().is_some_and(|s|s.starts_with("Charging: ")) {slot_ui::Canvas{h:canvas.h-80.0,..canvas}}else{canvas};
+        let notice_canvas=slot_ui::Canvas{h:canvas.h-44.0*app.kid_meter_presence(),..canvas};
         self.settings_notice.draw(notice_canvas,self.settings_notice_face,now,&mut self.draws);
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
@@ -1728,7 +1738,7 @@ fn upload_rgba(
 
 fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(UndoFace,TexId)>,face:UndoFace,updates:&mut Vec<(TexId,Vec<Draw>,Vec<Draw>)>)->TexId {
     let mut parts=vec![];
-    for (left,right,y,h) in [(0,face.w,0,40),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
+    for (left,right,y,h) in [(0,face.w,0,slot_ui::expressive::TITLE_H as u32),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
         let ink=|x:u32|(y..y+h).any(|yy|face.rgba[((yy*face.w+x)*4+3)as usize]!=0);
         let Some(x0)=(left..right).find(|&x|ink(x)) else {parts.push(vec![]);continue;};
         let x1=(left..right).rev().find(|&x|ink(x)).unwrap()+1;

@@ -293,12 +293,17 @@ impl Hud {
         self.alpha(now) > 0.0
     }
 
-    pub fn draw(&self, canvas: Canvas, now: Millis, out: &mut Vec<Draw>) {
+    pub fn draw(&self,canvas:Canvas,now:Millis,out:&mut Vec<Draw>){self.draw_with_bottom_inset(canvas,now,0.0,out);}
+
+    pub fn draw_with_bottom_inset(&self, canvas: Canvas, now: Millis, inset:f32, out: &mut Vec<Draw>) {
         let alpha = self.alpha(now);
         let toast = self.toast_alpha(now);
         let audio_notice = toast > 0.0 && self.said.is_some_and(|(t, _)| t.audio_change());
         if toast > 0.0 {
-            self.draw_toast(canvas, now, out);
+            let begin=out.len();self.draw_toast(canvas,now,out);
+            if self.said.is_some_and(|(t,_)|!t.alarm()) {
+                for draw in &mut out[begin..] {match draw {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y-=inset,_=>{}}}
+            }
         }
         if alpha > 0.0 && (toast == 0.0 || audio_notice) {
             self.draw_bar(
