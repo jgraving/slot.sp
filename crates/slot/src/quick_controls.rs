@@ -102,7 +102,7 @@ impl App {
         let begin=out.len();
         let width=self.quick_card.items.len()as f32*80.0+32.0;
         let dy=(1.0-amount)*(self.canvas().h+104.0);
-        let x=self.canvas().centred(width);let y=188.0+dy;
+        let x=self.canvas().centred(width);let y=266.0+dy;
         slot_ui::expressive::rounded(out,x-4.0,y+4.0,width+8.0,108.0,32.0,[0.0,0.0,0.0,0.18]);
         slot_ui::expressive::rounded(out,x,y,width,104.0,28.0,[0.065,0.075,0.085,1.0]);
         for (i,&item) in self.quick_card.items.iter().enumerate() {

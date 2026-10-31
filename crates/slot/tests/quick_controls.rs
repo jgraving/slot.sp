@@ -15,9 +15,9 @@ fn taps_toggle_without_launching_a_game_and_the_card_slides_out() {
     assert!(app.quick_controls_open());assert_eq!(app.input_context(),slot_input::Context::Menu);
     let muted=app.muted();press(&mut app,Btn::A);assert_ne!(app.muted(),muted);
     assert!(matches!(app.phase(),Phase::Shelf));assert_eq!(app.selected_stem(),selected.as_deref());
-    press(&mut app,Btn::B);app.update(0.016);assert!(!app.quick_controls_open());
+    press(&mut app,Btn::B);app.update(0.008);assert!(!app.quick_controls_open());
     let mut out=vec![];app.draw(&mut out);
-    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,h,..}if *h==104.0&&*y>188.0)));
+    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,h,..}if *h==104.0&&*y>266.0)));
     settle(&mut app);out.clear();app.draw(&mut out);
     assert!(!out.iter().any(|d|matches!(d,Draw::RoundRect{h,..}if *h==104.0)));
 }

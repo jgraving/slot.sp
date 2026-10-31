@@ -1003,3 +1003,18 @@ fn kid_pause_text_has_equal_top_and_bottom_card_whitespace() {
     let top=ink[0]-136;let bottom=343-ink[ink.len()-1];
     assert!(top.abs_diff(bottom)<=2,"pause text whitespace is {top} above, {bottom} below");
 }
+
+#[test]
+fn remaining_time_has_a_reserved_band_clear_of_menu_rows() {
+    let root=tempfile::tempdir().unwrap();let mut policy=slot::kid_policy::Policy::default();policy.active=true;
+    for in_game in [false,true] {
+        let mut menu=slot::kid_menu::Menu::child(root.path().into(),policy.clone(),in_game,50,50);
+        menu.set_remaining(Some((600,1800)));
+        if in_game {menu.input(Action::GbaDown(Btn::Down),0);menu.input(Action::GbaDown(Btn::A),0);}
+        for _ in 0..6 {
+            let face=menu.screen_face_on(slot_ui::Canvas{w:640.0,h:480.0});
+            for y in 300..334 {assert!((0..640).all(|x|face.rgba[((y*640+x)*4+3)as usize]==0),"menu content entered the time-pill gap at {y}");}
+            menu.input(Action::GbaDown(Btn::Down),0);
+        }
+    }
+}

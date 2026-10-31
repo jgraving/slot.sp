@@ -165,6 +165,21 @@ pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
     haloed(&r.cov, r.w, r.h, colour)
 }
 
+pub const STATUS_ICON_SIZE:u32=32;
+pub const STATUS_ICON_PX:f32=24.0;
+/// Flat status glyphs share the floating volume pill's native glyph size.
+pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
+    let mut rgba=vec![0;(STATUS_ICON_SIZE*STATUS_ICON_SIZE*4)as usize];
+    if let Some(r)=raster(icon,STATUS_ICON_PX) {
+        let x=STATUS_ICON_SIZE.saturating_sub(r.w)/2;let y=STATUS_ICON_SIZE.saturating_sub(r.h)/2;
+        for yy in 0..r.h.min(STATUS_ICON_SIZE-y){for xx in 0..r.w.min(STATUS_ICON_SIZE-x){
+            let i=(((yy+y)*STATUS_ICON_SIZE+xx+x)*4)as usize;
+            rgba[i..i+4].copy_from_slice(&[ink[0],ink[1],ink[2],r.cov[(yy*r.w+xx)as usize]]);
+        }}
+    }
+    CartFace{rgba,w:STATUS_ICON_SIZE,h:STATUS_ICON_SIZE}
+}
+
 pub fn icon_box(px: f32) -> (u32, u32) {
     match raster(Icon::Volume, px) {
         Some(r) => (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX),
@@ -632,8 +647,8 @@ pub fn kid_smiley_face() -> CartFace {
 /// Flat status symbol, separate from the foil approval sticker.
 pub fn kid_status_face()->CartFace {
     let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#f6f4ef" stroke-width="1.6"/><circle cx="7" cy="7.5" r="1" fill="#f6f4ef"/><circle cx="13" cy="7.5" r="1" fill="#f6f4ef"/><path d="M6 11.5 Q10 16 14 11.5" fill="none" stroke="#f6f4ef" stroke-width="1.6" stroke-linecap="round"/></svg>"##;
-    let hi=crate::art::render_svg(svg,80,80).expect("status smiley SVG");
-    let mut rgba=prefilter_star(&hi,20);
-    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&[255,255,255]);}
-    CartFace{rgba,w:20,h:20}
+    let hi=crate::art::render_svg(svg,128,128).expect("status smiley SVG");
+    let mut rgba=prefilter_star(&hi,32);
+    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&crate::HUD_INK);}
+    CartFace{rgba,w:32,h:32}
 }

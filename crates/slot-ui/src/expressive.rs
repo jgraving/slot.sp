@@ -262,6 +262,23 @@ impl MenuMotion {
         (1.0-self.entry.value)*(canvas.h+32.0)
     }
 
+    /// The opaque sheet expands from, and contracts into, the hardware bay.
+    pub fn transform(&self,canvas:crate::Canvas,draws:&mut[Draw]) {
+        let reveal=self.entry.value.clamp(0.0,1.0);
+        let scale=0.72+0.28*reveal;
+        let anchor=canvas.h-crate::MOUTH_H;
+        let dy=(1.0-reveal)*anchor*0.80;
+        for draw in draws {
+            match draw {
+                Draw::Rect{x,y,w,h,..}|Draw::RoundRect{x,y,w,h,..}|Draw::Tex{x,y,w,h,..}|Draw::Part{x,y,w,h,..}|Draw::Turned{x,y,w,h,..}=>{
+                    *x=canvas.w/2.0+(*x-canvas.w/2.0)*scale;
+                    *y=anchor+(*y-anchor)*scale+dy;*w*=scale;*h*=scale;
+                },_=>{}
+            }
+            if let Draw::RoundRect{radius,..}=draw {*radius*=scale;}
+        }
+    }
+
     pub fn current_custom_key(&self) -> Option<u64> {
         self.custom
     }
@@ -542,12 +559,12 @@ impl RectMotion {
 /// A single opaque surface grows from the pause card into full Settings.
 pub fn draw_pause_surface(canvas: crate::Canvas, frame: MenuFrame, hidden: &[QuickRow], out: &mut Vec<Draw>) {
     let (_, count) = crate::quick_window(QuickRow::Settings, hidden);
-    let ch=(count.saturating_sub(1)as f32*crate::QUICK_PITCH+ROW_H+60.0).min(400.0);
+    let ch=(count.saturating_sub(1)as f32*crate::QUICK_PITCH+ROW_H+24.0).min(400.0);
     draw_pause_surface_at(canvas,frame,(canvas.h-ch)/2.0,ch,out);
 }
 
 pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>) {
-    draw_pause_surface_at(canvas,frame,136.0,208.0,out);
+    draw_pause_surface_at(canvas,frame,154.0,172.0,out);
 }
 
 fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,top:f32,ch:f32,out:&mut Vec<Draw>) {

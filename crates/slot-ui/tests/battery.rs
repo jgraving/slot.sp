@@ -146,10 +146,14 @@ fn the_fill_tracks_the_percent_and_never_leaves_the_capsule() {
 }
 
 #[test]
-fn the_capsule_is_a_fifth_larger_than_it_was() {
-    assert!((GAUGE_W - 22.0 * 1.2).abs() < 0.01);
-    assert!((GAUGE_H - 11.0 * 1.2).abs() < 0.01);
-    assert!((WALL - 1.5 * 1.2).abs() < 0.01);
+fn enlarged_status_glyphs_and_text_stay_inside_the_status_band() {
+    let mut out=vec![];
+    let canvas=slot_ui::Canvas{w:640.0,h:480.0};
+    slot_ui::draw_status(canvas,at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),Some(TexId::from_raw(2)),Printed::new(TexId::from_raw(3),70),HUD_INK,&mut out);
+    slot_ui::draw_corner_audio(at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),Some(TexId::from_raw(4)),Some(TexId::from_raw(5)),&mut out);
+    slot_ui::draw_corner_kid(at(100,Charge::Charging),Printed::new(TexId::from_raw(1),60),TexId::from_raw(6),2,&mut out);
+    assert!(out.iter().all(|d|matches!(d,Draw::Rect{y,h,..}|Draw::Tex{y,h,..}if *y>=0.0&&y+h<=slot_ui::PLATE_H)));
+    assert!(out.iter().any(|d|matches!(d,Draw::Tex{w,h,..}if *w==32.0&&*h==32.0)));
 }
 
 #[test]

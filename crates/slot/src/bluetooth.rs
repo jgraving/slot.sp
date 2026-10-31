@@ -1933,20 +1933,8 @@ pub fn indicator_face() -> UndoFace {
 }
 
 pub fn indicator_face_with_ink(ink: [u8; 3]) -> UndoFace {
-    let source=slot_ui::icon_face(slot_ui::Icon::Bluetooth,18.0,ink);
-    let mut face=UndoFace{rgba:vec![0;20*20*4],w:20,h:20};
-    let points:Vec<_>=source.rgba.chunks_exact(4).enumerate().filter(|(_,p)|p[3]>0).map(|(i,_)|(i as u32%source.w,i as u32/source.w)).collect();
-    let left=points.iter().map(|p|p.0).min().unwrap_or(0);
-    let top=points.iter().map(|p|p.1).min().unwrap_or(0);
-    let w=(points.iter().map(|p|p.0).max().unwrap_or(0)-left+1).min(20);
-    let h=(points.iter().map(|p|p.1).max().unwrap_or(0)-top+1).min(20);
-    let (x,y)=((20-w)/2,(20-h)/2);
-    for yy in 0..h {for xx in 0..w {
-        let src=(((yy+top)*source.w+xx+left)*4)as usize;
-        let dst=(((yy+y)*20+xx+x)*4)as usize;
-        face.rgba[dst..dst+4].copy_from_slice(&source.rgba[src..src+4]);
-    }}
-    face
+    let face=slot_ui::status_icon_face(slot_ui::Icon::Bluetooth,ink);
+    UndoFace{rgba:face.rgba,w:face.w,h:face.h}
 }
 
 #[cfg(test)]

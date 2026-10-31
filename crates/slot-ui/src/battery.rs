@@ -4,19 +4,19 @@ use slot_power::{Battery, Charge};
 use crate::footer::Printed;
 use crate::plate::HINT_H;
 
-pub const BOLT_PX: f32 = 18.0;
+pub const BOLT_PX: f32 = 24.0;
 
-pub const GAUGE_W: f32 = 26.4;
-pub const GAUGE_H: f32 = 13.2;
+pub const GAUGE_W: f32 = 32.0;
+pub const GAUGE_H: f32 = 18.0;
 const _: () = assert!(GAUGE_H < GAUGE_W);
 const NUB_W: f32 = 3.0;
 const NUB_H: f32 = 4.8;
 pub const WALL: f32 = 1.8;
 const GAP: f32 = 7.0;
 
-const BOLT_W: f32 = 14.0;
-const BOLT_H: f32 = 14.0;
-const BOLT_GAP: f32 = 5.0;
+const BOLT_W: f32 = 32.0;
+const BOLT_H: f32 = 32.0;
+const BOLT_GAP: f32 = 8.0;
 const _: () = assert!(BOLT_GAP > 0.0);
 
 pub fn draw_gauge(
@@ -28,6 +28,10 @@ pub fn draw_gauge(
     ink: [u8; 3],
     out: &mut Vec<Draw>,
 ) {
+    draw_gauge_sized(x,y,battery,percent,bolt,ink,HINT_H,out);
+}
+
+pub(crate) fn draw_gauge_sized(x:f32,y:f32,battery:Option<Battery>,percent:Printed,bolt:Option<TexId>,ink:[u8;3],text_h:u32,out:&mut Vec<Draw>) {
     let Some(b) = battery else {
         return;
     };
@@ -75,13 +79,13 @@ pub fn draw_gauge(
 
     if percent.w > 0 {
         let px = cx + GAUGE_W + NUB_W + GAP;
-        let py = y + (GAUGE_H - HINT_H as f32) / 2.0;
+        let py = y + (GAUGE_H - text_h as f32) / 2.0;
         out.push(match percent.face {
             Some(tex) => Draw::Tex {
                 x: px,
                 y: py,
                 w: percent.w as f32,
-                h: HINT_H as f32,
+                h: text_h as f32,
                 tex,
                 alpha: 1.0,
             },
@@ -89,7 +93,7 @@ pub fn draw_gauge(
                 x: px,
                 y: py,
                 w: percent.w as f32,
-                h: HINT_H as f32,
+                h: text_h as f32,
                 colour: [1.0, 1.0, 1.0, 0.08],
             },
         });
