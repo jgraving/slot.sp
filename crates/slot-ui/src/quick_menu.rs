@@ -5,7 +5,7 @@ use crate::plate::{
     CAP_GAP, HINT_EDGE, LEGEND_GAP, UndoFace, blit, centred_hints, word_face, word_ink,
 };
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
-use crate::slot_chrome::{MOUTH_H, opening};
+use crate::slot_chrome::MOUTH_H;
 use crate::text;
 use slot_store::{CarouselAction, GameButton, Shortcut};
 
@@ -113,6 +113,8 @@ pub enum QuickRow {
     GameDetails,
     PlayDetails,
     DisplaySchedule,
+    ClockFormat,
+    CarouselMotion,
 }
 
 impl QuickRow {
@@ -122,7 +124,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 102] = [
+    pub const ALL: [QuickRow; 104] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -225,6 +227,8 @@ impl QuickRow {
         QuickRow::GameDetails,
         QuickRow::PlayDetails,
         QuickRow::DisplaySchedule,
+        QuickRow::ClockFormat,
+        QuickRow::CarouselMotion,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -245,7 +249,7 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 10] = [
+    pub const GENERAL: [QuickRow; 12] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
@@ -255,6 +259,8 @@ impl QuickRow {
         QuickRow::FavoriteSort,
         QuickRow::BootAnimation,
         QuickRow::CarouselSounds,
+        QuickRow::CarouselMotion,
+        QuickRow::ClockFormat,
         QuickRow::DateTime,
     ];
 
@@ -408,7 +414,7 @@ impl QuickRow {
             | QuickRow::LeftStick
             | QuickRow::AutoLoad
             | QuickRow::EjectSave => &QuickRow::GAME,
-            QuickRow::Wallpaper
+            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::DateTime
             | QuickRow::ShellColour
@@ -551,6 +557,8 @@ impl QuickRow {
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
             QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp",
             QuickRow::DateTime => "Date & Time",
+            QuickRow::ClockFormat => "Clock format",
+            QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
@@ -804,10 +812,14 @@ pub enum QuickValue {
     Warm7,
     Warm8,
     Warm9,
+    Hour12,
+    Hour24,
+    Classic,
+    Wheel,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 58] = [
+    pub const ALL: [QuickValue; 62] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -866,6 +878,10 @@ impl QuickValue {
         QuickValue::Warm7,
         QuickValue::Warm8,
         QuickValue::Warm9,
+        QuickValue::Hour12,
+        QuickValue::Hour24,
+        QuickValue::Classic,
+        QuickValue::Wheel,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -896,6 +912,10 @@ impl QuickValue {
 
     pub fn text(self) -> &'static str {
         match self {
+            QuickValue::Hour12 => "12-hour",
+            QuickValue::Hour24 => "24-hour",
+            QuickValue::Classic => "Classic",
+            QuickValue::Wheel => "Wheel",
             QuickValue::Warm0 => "Neutral",
             QuickValue::Warm1 => "Warm 11%",
             QuickValue::Warm2 => "Warm 22%",
@@ -1001,7 +1021,7 @@ const POINTER: [&str; 11] = [
     "XoX.....", "XX......", "X.......",
 ];
 const POINTER_BLEED: u32 = 4;
-const GROUND_SCRIM: f32 = 0.65;
+
 const TYPE_DROP: f32 = 1.0;
 const CARET_GAP: f32 = 14.0;
 const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
@@ -1723,7 +1743,7 @@ impl QuickMenu<'_> {
             // the viewport as the shared container shrinks.
             clip_quads(out,begin,[crate::expressive::MENU_INSET,40.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
         }
-        crate::expressive::tile_transform(self.canvas,frame,&mut out[begin..]);
+        if self.row.page()!=QuickRow::MAIN {crate::expressive::tile_transform(self.canvas,frame,out,begin);}
         clip_quads(out, begin, [crate::expressive::MENU_INSET, 40.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
     }
 
@@ -1740,7 +1760,7 @@ impl QuickMenu<'_> {
             return;
         };
         if self.row.page()==QuickRow::MAIN {crate::menu_grid::draw(self,frame,out);return;}
-        if !self.over_game {rounded(out,MENU_INSET,40.0,self.canvas.w-2.0*MENU_INSET,320.0,28.0,[0.095,0.12,0.14,1.0]);}
+        if !self.over_game {rounded(out,MENU_INSET,80.0,self.canvas.w-2.0*MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
         let pause=self.row.page()==QuickRow::PLAY;
         let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);
@@ -1757,7 +1777,8 @@ impl QuickMenu<'_> {
         // window during wraparound and scrolling so it never covers a heading.
         let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * QUICK_PITCH + 2.0);
         if !frame.suppress_focus {
-            let w=panel_w+(320.0-panel_w)*frame.focus_compact;
+            let expanded=panel_w-16.0;
+            let w=expanded+(320.0-expanded)*frame.focus_compact;
             rounded(out,self.canvas.centred(w),focus_y,w,ROW_H,ROW_RADIUS,SELECTED);
         }
         for (index, row) in shown.iter().copied().enumerate() {
@@ -1874,36 +1895,8 @@ impl QuickMenu<'_> {
     }
 }
 
-pub fn draw_menu_ground(canvas: Canvas, ground: Option<(TexId, u32)>, out: &mut Vec<Draw>) {
-    let (w, h) = (canvas.w, OUT_H as f32);
-    match ground {
-        Some((tex, tex_w)) => {
-            out.push(Draw::Part {
-                x: 0.0,
-                y: 0.0,
-                w,
-                h,
-                tex,
-                alpha: 1.0,
-                uv: canvas.cover(tex_w as f32),
-            });
-            out.push(Draw::Rect {
-                x: 0.0,
-                y: 0.0,
-                w,
-                h,
-                colour: [0.0, 0.0, 0.0, GROUND_SCRIM],
-            });
-        }
-        None => out.push(Draw::Rect {
-            x: 0.0,
-            y: 0.0,
-            w,
-            h,
-            colour: opening(),
-        }),
-    }
-}
+/// The scene owns the wallpaper. Cards are the only opaque menu surface.
+pub fn draw_menu_ground(_canvas: Canvas, _ground: Option<(TexId, u32)>, _out: &mut Vec<Draw>) {}
 
 pub const QUICK_VISIBLE: usize = 5;
 
@@ -1955,7 +1948,7 @@ pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) 
     let (start, len) = quick_window(selected, hidden);
     let top=if row.page()==QuickRow::PLAY {
         (OUT_H as f32-((len.saturating_sub(1))as f32*QUICK_PITCH+crate::expressive::ROW_H))/2.0
-    } else if row.binds(){80.0}else{88.0};
+    } else {88.0};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
 
@@ -1995,8 +1988,6 @@ pub(crate) fn clip_quads(out: &mut Vec<Draw>, begin: usize, bounds: [f32; 4]) {
             Draw::Rect{x,y,w,h,..} | Draw::Tex{x,y,w,h,..} | Draw::Part{x,y,w,h,..} | Draw::RoundRect{x,y,w,h,..} => (x,y,w,h),
             _ => { at += 1; continue; }
         };
-        // Full-screen ground textures stay anchored and uncropped.
-        if bounds[1]>=40.0 && y < 40.0 && matches!(old, Draw::Part { .. }) { at += 1; continue; }
         let (left,top,right,bottom) = (x.max(bounds[0]),y.max(bounds[1]),(x+w).min(bounds[2]),(y+h).min(bounds[3]));
         if right <= left || bottom <= top { out.remove(at); continue; }
         if left != x || top != y || right != x+w || bottom != y+h {
