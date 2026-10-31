@@ -109,13 +109,18 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
     assert!(a.kid_menu.is_none());
     assert_eq!(a.quick_menu(), Some(QuickRow::Reference));
     let mut a = common::app_playing_in(d.path(), "Alpha");
+    let before = std::fs::read(d.path().join("Config/slot.state")).unwrap();
     a.apply(Action::QuickMenu);
     common::navigate_in_game_menu(&mut a,QuickRow::Settings);
     press(&mut a, Btn::A);
-    common::navigate_in_game_menu(&mut a,QuickRow::PlayReference);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
+    common::navigate_in_game_menu(&mut a,QuickRow::Controls);
+    press(&mut a, Btn::A);
+    common::navigate_in_game_menu(&mut a,QuickRow::Reference);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Reference));
     press(&mut a, Btn::A);
     assert!(a.kid_menu.as_ref().unwrap().reference_open());
     press(&mut a, Btn::B);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Reference));
+    assert!(matches!(a.phase(), slot::app::Phase::Playing { cart } if cart == "Alpha"));
+    assert_eq!(std::fs::read(d.path().join("Config/slot.state")).unwrap(), before);
 }
