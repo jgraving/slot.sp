@@ -185,8 +185,7 @@ fn undo_load_in_the_menu_returns_the_emulator_to_the_prior_state() {
     let before = core.bytes();
     a.apply_at(Action::LoadState, 1_000);
     a.apply_at(Action::QuickMenu, 1_100);
-    a.apply_at(Action::GbaDown(Btn::Down), 1_200);
-    a.apply_at(Action::GbaUp(Btn::Down), 1_250);
+    common::navigate_in_game_menu(&mut a,slot_ui::QuickRow::UndoLoad);
     a.apply_at(Action::GbaDown(Btn::A), 1_300);
     assert_eq!(core.bytes(), before);
 }

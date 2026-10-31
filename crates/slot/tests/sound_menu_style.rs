@@ -6,8 +6,8 @@ fn sound_uses_shared_tonal_rows_and_keeps_the_hardware_footer_clear() {
     let lines = ["", "", "COMPACT", "ROW SPEAKER_DEVICE Internal speaker", "SELECTED DEVICE Headphones", "ROW BLUETOOTH On", "B Back · A Connect · Y Forget"].map(str::to_owned);
     let face = screen_face(&lines);
     let pixel=|x:u32,y:u32| { let i=((y*face.w+x)*4) as usize; &face.rgba[i..i+4] };
-    assert_eq!(pixel(60,160)[3],255,"selected row should have a tonal background");
-    assert!(pixel(60,160)[1]>pixel(60,160)[0],"teal focus surface");
+    assert_eq!(pixel(92,186)[3],255,"selected row should have a tonal background");
+    assert!(pixel(92,186)[1]>pixel(92,186)[0],"teal focus surface");
     for y in 88..378 { assert_eq!(pixel(710,y)[3],0,"card keeps its outer margin"); }
     for y in 422..480 { for x in 300..400 {assert_eq!(pixel(x,y)[3],0,"physical slot stays clear");} }
 }
@@ -73,9 +73,9 @@ fn device_icons_have_equal_visible_heights_and_the_check_uses_the_value_edge() {
     if let Ok(path)=std::env::var("SLOT_SOUND_PREVIEW") {
         let mut e=png::Encoder::new(std::fs::File::create(path).unwrap(),face.w,face.h);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&face.rgba).unwrap();
     }
-    assert_eq!(right(89), 639);
-    assert!((right(89) as i32 - right(141) as i32).abs() <= 1);
-    assert!((right(89) as i32 - right(193) as i32).abs() <= 1);
+    assert_eq!(right(113), 623);
+    assert!((right(113) as i32 - right(165) as i32).abs() <= 1);
+    assert!((right(113) as i32 - right(217) as i32).abs() <= 1);
 }
 
 #[test]

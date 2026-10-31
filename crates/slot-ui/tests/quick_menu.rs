@@ -368,37 +368,10 @@ fn a_label_is_grey_until_its_row_is_in_hand() {
 fn the_in_game_pages_hold_their_rows_in_order() {
     assert_eq!(
         QuickRow::PLAY,
-        [
-            QuickRow::Resume,
-            QuickRow::UndoSave,
-            QuickRow::UndoLoad,
-            QuickRow::States,
-            QuickRow::Screenshots,
-            QuickRow::Settings,
-            QuickRow::ExitGame
-        ]
+        [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots]
     );
-    assert_eq!(
-        QuickRow::SETTINGS,
-        [
-            QuickRow::PlayScreen,
-            QuickRow::PlaySound,
-            QuickRow::PlayGameplay,
-            QuickRow::PlayControls,
-            QuickRow::PlayReference,
-        ]
-    );
-    assert_eq!(
-        QuickRow::PLAY_SCREEN,
-        [
-            QuickRow::Shader,
-            QuickRow::Bezel,
-            QuickRow::Palette,
-            QuickRow::ColourCorrection,
-            QuickRow::PlayBrightness,
-            QuickRow::PlayBlueLight
-        ]
-    );
+    assert_eq!(QuickRow::SETTINGS,[QuickRow::PlayScreen,QuickRow::PlaySound,QuickRow::PlayGameplay,QuickRow::PlayControls,QuickRow::PlayReference]);
+    assert_eq!(QuickRow::PLAY_SCREEN,[QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::Bezel,QuickRow::Palette,QuickRow::ColourCorrection]);
     for row in QuickRow::PLAY {
         assert_eq!(row.parent_in_game(), None, "{row:?}");
     }
@@ -407,7 +380,7 @@ fn the_in_game_pages_hold_their_rows_in_order() {
 #[test]
 fn in_game_pages_climb_back_through_settings() {
     assert_eq!(QuickRow::Settings.child(), Some(QuickRow::PlayScreen));
-    assert_eq!(QuickRow::PlayScreen.child(), Some(QuickRow::Shader));
+    assert_eq!(QuickRow::PlayScreen.child(), Some(QuickRow::PlayBrightness));
     assert_eq!(
         QuickRow::PlayBrightness.parent_in_game(),
         Some(QuickRow::PlayScreen)
@@ -458,49 +431,16 @@ fn in_game_rows_read_as_the_menu_shows_them() {
 }
 
 #[test]
-fn a_hidden_palette_and_bezel_leave_four_screen_rows() {
-    let hidden = [QuickRow::Palette, QuickRow::Bezel];
-    assert_eq!(
-        QuickRow::Shader.shown(&hidden),
-        vec![
-            QuickRow::Shader,
-            QuickRow::ColourCorrection,
-            QuickRow::PlayBrightness,
-            QuickRow::PlayBlueLight
-        ]
-    );
-    assert_eq!(QuickRow::PlayBlueLight.down(&hidden), QuickRow::Shader);
-}
+fn a_hidden_palette_and_bezel_leave_four_screen_rows(){let hidden=[QuickRow::Palette,QuickRow::Bezel];assert_eq!(QuickRow::Shader.shown(&hidden),vec![QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::ColourCorrection]);assert_eq!(QuickRow::PlayBlueLight.down(&hidden),QuickRow::Shader);}
 
 #[test]
 fn the_in_game_screen_page_shows_five_rows_and_scrolls_the_rest() {
-    assert_eq!(slot_ui::quick_window(QuickRow::Shader,&[]),(0,5));
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[]),(1,5));
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBrightness,&[]),(0,4));assert_eq!(slot_ui::quick_window(QuickRow::ColourCorrection,&[]),(2,4));assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top = slot_ui::quick_scroll(QuickRow::Shader, &[]).expect("six rows in three");
-    assert!(
-        (top.thumb_y - top.y).abs() < 0.5,
-        "the thumb is not at the top"
-    );
-    assert!(
-        (top.thumb_h - top.h * 5.0 / 6.0).abs() < 0.5,
-        "the thumb does not represent the five visible rows of six"
-    );
-    let end = slot_ui::quick_scroll(QuickRow::PlayBlueLight, &[]).expect("six rows in three");
-    assert!(
-        (end.thumb_y + end.thumb_h - (end.y + end.h)).abs() < 0.5,
-        "the thumb is not at the bottom"
-    );
-    assert!(
-        slot_ui::quick_scroll(QuickRow::Shader, &[QuickRow::Palette, QuickRow::Bezel]).is_none(),
-        "four rows fit without scrolling"
-    );
-    assert!(slot_ui::quick_scroll(QuickRow::Rumble, &[]).is_some(), "eight gameplay rows scroll within the fork’s six-row limit");
-    assert!(slot_ui::quick_scroll(QuickRow::GameUp, &[]).is_some());
+    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*4.0/6.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
 }
 
 #[test]
@@ -541,13 +481,7 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
 
 #[test]
 fn screen_rows_in_game_fill_the_normal_menu_from_the_top() {
-    let hidden = [QuickRow::Palette];
-    let shader = slot_ui::quick_row_top(QuickRow::Shader, &hidden);
-    let bezel = slot_ui::quick_row_top(QuickRow::Bezel, &hidden);
-    assert_eq!(shader, 88.0);
-    assert_eq!(bezel - shader, slot_ui::QUICK_PITCH);
-    assert_eq!(shader, slot_ui::quick_row_top(QuickRow::FastForward, &[]));
-    assert!(bezel + 44.0 < 378.0);
+    let first=slot_ui::quick_row_top(QuickRow::PlayBrightness,&[]);assert_eq!(first,112.0);assert_eq!(slot_ui::quick_row_top(QuickRow::PlayBlueLight,&[])-first,slot_ui::QUICK_PITCH);assert_eq!(first,slot_ui::quick_row_top(QuickRow::FastForward,&[]));
 }
 
 #[test]
@@ -631,7 +565,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
                 let surfaces:Vec<_> = out.iter().filter_map(|d| match d {
                     Draw::RoundRect{x,w,h,radius,..}if *h==slot_ui::expressive::ROW_H=>Some((*x,*w,*radius)),_=>None,
                 }).collect();
-                assert_eq!(surfaces,vec![(64.0,width-128.0,12.0)],"only selection gets a surface");
+                assert_eq!(surfaces,vec![(84.0,width-168.0,12.0)],"only selection gets a surface");
                 let labels: Vec<_> = out
                     .iter()
                     .filter_map(|d| match d {

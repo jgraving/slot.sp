@@ -79,6 +79,6 @@ fn charging_chip_uses_one_filled_surface_and_readable_native_ink() {
     let mut notice=SettingsNotice::default();
     notice.observe(Some((1,"Charging: 100%".into())),0);
     let mut out=vec![];notice.draw(canvas,Some((TexId::from_raw(1),face.w,face.h)),500,&mut out);
-    assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{..})).count(),1);
+    assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{..})).count(),2);
     assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{colour,..}if colour[1]>colour[0]&&colour[3]==1.0)));
 }

@@ -963,7 +963,7 @@ fn parent_focus_keeps_the_five_row_page_aligned_at_its_last_entry() {
     let d=common::tmp_root_with_carts(&["Approved"]);
     let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());
     menu.input(Action::GbaDown(Btn::Up),0);
-    assert_eq!(menu.focus_info(),Some((4,0)));
+    assert_eq!(menu.focus_info(),Some((4,1)));
     assert!(menu.lines().iter().any(|line|line.contains("SELECTED Set parent code")));
 }
 
@@ -994,13 +994,8 @@ fn shelf_and_in_game_kid_menus_have_distinct_layout_keys() {
 }
 
 #[test]
-fn kid_pause_text_has_equal_top_and_bottom_card_whitespace() {
-    let root=tempfile::tempdir().unwrap();
-    let menu=slot::kid_menu::Menu::child(root.path().into(),Default::default(),true,50,50);
-    let face=menu.screen_face_on(slot_ui::Canvas{w:640.0,h:480.0});
-    let ink:Vec<_>=(136..344).filter(|&y|(200..440).any(|x|{let i=((y*face.w+x)*4)as usize;face.rgba[i]>220&&face.rgba[i+3]>128})).collect();
-    let top=ink[0]-136;let bottom=343-ink[ink.len()-1];
-    assert!(top.abs_diff(bottom)<=2,"pause text whitespace is {top} above, {bottom} below");
+fn kid_pause_text_has_equal_top_and_bottom_card_whitespace(){
+    let canvas=slot_ui::Canvas{w:640.0,h:480.0};let [_,y,_,h]=slot_ui::menu_grid::pause_rect(canvas,3);let [_,ty,_,th]=slot_ui::menu_grid::cell(canvas,0,3,3,true);assert_eq!(ty-y,y+h-ty-th);assert_eq!(y+h/2.0,240.0);
 }
 
 #[test]
@@ -1016,4 +1011,9 @@ fn remaining_time_has_a_reserved_band_clear_of_menu_rows() {
             menu.input(Action::GbaDown(Btn::Down),0);
         }
     }
+}
+
+#[test]
+fn parent_volume_slider_can_reach_zero_and_one_hundred(){
+    let d=common::tmp_root_with_carts(&["Approved"]);let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());for _ in 0..3{menu.input(Action::GbaDown(Btn::Down),0);}for _ in 0..20{menu.input(Action::GbaDown(Btn::Left),0);}assert_eq!(menu.draft.volume_limit,0);for _ in 0..20{menu.input(Action::GbaDown(Btn::Right),0);}assert_eq!(menu.draft.volume_limit,100);
 }

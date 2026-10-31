@@ -2761,7 +2761,7 @@ impl App {
             else { format!("{} h {} min", minutes / 60, minutes % 60) };
         let stamp = record.last_utc.map(|utc| format_stamp(utc + i64::from(self.state.utc_offset_min) * 60));
         let date = stamp.as_ref().map(|s| s[..10].to_string()).unwrap_or("Not recorded".into());
-        let time = stamp.as_ref().map(|s| s[11..16].replace('-', ":")).unwrap_or("—".into());
+        let time = stamp.as_ref().map(|s| slot_ui::clock_text(parse_stamp(s).unwrap_or(0),self.clock_12h())).unwrap_or("—".into());
         Some(("Game Details".into(), vec![
             ("System".into(), cart.platform.dir_name().into(), false),
             ("Playtime".into(), duration, false),
@@ -3206,6 +3206,10 @@ impl App {
     fn in_game_menu_input(&mut self, row: QuickRow, action: Action) {
         let hidden = self.in_game_hidden();
         let hidden = &hidden[..];
+        if slot_ui::menu_grid::is_page(row.page()) {
+            let direction=match action {Action::GbaDown(Btn::Left)=>Some((-1,0)),Action::GbaDown(Btn::Right)=>Some((1,0)),Action::GbaDown(Btn::Up)=>Some((0,-1)),Action::GbaDown(Btn::Down)=>Some((0,1)),_=>None};
+            if let Some((dx,dy))=direction{self.in_game_menu=Some(slot_ui::menu_grid::navigate(row,hidden,dx,dy));return;}
+        }
         if row.binds() {
             match action {
                 Action::GbaDown(Btn::A) => return self.start_capture(row),
@@ -4000,6 +4004,8 @@ impl App {
     }
 
     pub fn update(&mut self, dt: f32) {
+        if let Some(menu)=&mut self.display_schedule {if menu.twelve!=self.state.clock_12h {menu.twelve=self.state.clock_12h;menu.face=None;}}
+        if let Some(menu)=&mut self.kid_menu {if menu.twelve!=self.state.clock_12h {menu.twelve=self.state.clock_12h;menu.face=None;}}
         if let Phase::SetClock{picker,..}=&mut self.phase {picker.set_twelve(self.state.clock_12h);}
         for (_,shelf) in &mut self.shelves {shelf.wheel=self.state.carousel_wheel;}
         self.quick_card.motion.update(self.quick_card.shown,dt);
@@ -4028,6 +4034,7 @@ impl App {
         if !self.on_shelf() {
             self.shelf_mut().release_hold();
         }
+        if matches!(self.phase,Phase::QuickMenu{..}|Phase::About|Phase::SetClock{..}) {self.shelf_mut().update(dt);}
         let mut touched = false;
         let at = self.shelf_at;
         let next = match &mut self.phase {
@@ -4795,7 +4802,7 @@ impl App {
                     return;
                 }
                 self.draw_background(out);
-                self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);
+                self.draw_menu_shelf(out);
                 self.draw_cached_overlay(tex, out);
                 draw_empty_slot(self.canvas(), self.slot_faces, out);
                 self.draw_status_bar(out);
@@ -4854,7 +4861,7 @@ impl App {
                 }
                 _ => {
                     self.draw_background(out);
-                    self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);
+                    self.draw_menu_shelf(out);
                 }
             }
             if let Some(tex) = menu.face { self.draw_cached_overlay(tex, out); }
@@ -4907,6 +4914,7 @@ impl App {
             Phase::QuickMenu { row } => self.draw_quick_overlay(*row, false, out),
             Phase::Shelf => {
                 self.draw_background(out);
+                let shelf_begin=out.len();
                 match (self.core_picker_shown(), self.selected_stem()) {
                     (Some(picker), Some(stem)) => {
                         let open = ease(picker.openness(self.now()));
@@ -4954,6 +4962,7 @@ impl App {
                         );
                     }
                 }
+                if self.menu_motion.closing_row().is_some(){self.menu_motion.retreat_shelf(self.canvas(),&mut out[shelf_begin..]);}
                 self.draw_favorite_removal(out);
                 self.draw_kid_removal(out);
             }
@@ -5067,11 +5076,10 @@ impl App {
                             if (2000..3000).contains(&key) {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
                         } else {
                             slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
-                            slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);
+                            slot_ui::expressive::rounded(out,72.0,88.0,self.canvas().w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);
                         }
-                        if matches!(key,2000..=2002|2009|2010|3000..=3001) {
-                            let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
-                            slot_ui::expressive::rounded(out,self.canvas().centred(width),frame.focus_y,width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,slot_ui::expressive::SELECTED);
+                        if matches!(key,1000..=1999|2000..=2002|2009|2010|3000..=3001) {
+                            if key==2001 {slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);}else{let width=self.canvas().w-168.0;slot_ui::expressive::rounded(out,self.canvas().centred(width),frame.focus_y,width,44.0,12.0,slot_ui::expressive::SELECTED);}
                         }
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
@@ -5227,17 +5235,22 @@ impl App {
         self.current_custom_switches=self.visible_custom_switches();
         self.current_custom_sliders=self.visible_custom_sliders();
     }
+    fn draw_menu_shelf(&self,out:&mut Vec<Draw>){
+        let begin=out.len();self.shelf().draw(self.canvas(),self.shelf_shake(),None,out);
+        slot_ui::draw_slot_name_sized(self.canvas(),self.shelf_platform,self.shelf_platform_h,1.0,out);
+        slot_ui::draw_slot_title(self.canvas(),self.shelf_title,1.0,out);
+        self.menu_motion.retreat_shelf(self.canvas(),&mut out[begin..]);
+    }
     fn draw_special_body(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>) {
         let begin=out.len();
         if let Some((_,body))=self.special_menu_cache.borrow().iter().find(|(k,_)|*k==key) {out.extend_from_slice(body);}
         let dx=frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
         for d in &mut out[begin..] {match d {Draw::Rect{x,..}|Draw::RoundRect{x,..}|Draw::Tex{x,..}|Draw::Part{x,..}|Draw::Turned{x,..}=>*x+=dx,_=>{}}}
-        slot_ui::expressive::tile_transform(self.canvas(),frame,out,begin);
     }
     fn draw_special_sheet(&self,key:u64,body:Vec<Draw>,out:&mut Vec<Draw>) {
         {let mut cache=self.special_menu_cache.borrow_mut();
         if let Some((_,old))=cache.iter_mut().find(|(k,_)|*k==key) {*old=body;}else{cache.push((key,body));}}
-        self.draw_background(out);self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);
+        self.draw_background(out);self.draw_menu_shelf(out);
         let begin=out.len();
         slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);
         self.draw_outgoing_menu(false,out);
@@ -5254,18 +5267,14 @@ impl App {
             } else if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
-                    let page_begin=out.len();
-                    if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
-                    if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,2000..=2002|2009|2010|3000..=3001)) {
-                        let width=if key==2001 {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
-                        let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET);
-                        slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,slot_ui::expressive::SELECTED);
+                    if !over_game && frame.tile_origin.is_none() {slot_ui::expressive::rounded(out,72.0+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),88.0,self.canvas().w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
+                    if let Some(key)=self.menu_motion.outgoing_custom_key().filter(|k|matches!(*k,1000..=1999|2000..=2002|2009|2010|3000..=3001)) {
+                        if key==2001 {slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);}else{let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0);slot_ui::expressive::rounded(out,x,frame.focus_y,width,44.0,12.0,slot_ui::expressive::SELECTED);}
                     }
                     slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                     slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
-                    slot_ui::expressive::tile_transform(self.canvas(),frame,out,page_begin);
-                }
+                            }
             } else { self.draw_quick_page(previous,over_game,true,out); }
         }
     }
@@ -5281,15 +5290,16 @@ impl App {
             surface.focus_compact=if self.kid_menu.is_some() {self.kid_surface.value()}else{0.0};
             if self.kid_menu.is_some() {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
         }
+        slot_ui::expressive::draw_shared_card(self.canvas(),frame,false,out);
         self.draw_outgoing_menu(over_game,out);
-        let page_begin=out.len();
-        if !over_game {slot_ui::expressive::rounded(out,slot_ui::expressive::MENU_INSET,80.0,self.canvas().w-2.0*slot_ui::expressive::MENU_INSET,280.0,28.0,[0.095,0.12,0.14,1.0]);}
-        if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() {
+        if !over_game && frame.tile_origin.is_none() {slot_ui::expressive::rounded(out,72.0,88.0,self.canvas().w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
+        if self.kid_menu.as_ref().is_some_and(|m|m.focus_info().is_some()) || self.display_schedule.is_some() || self.bluetooth.is_some() {
             let compact=self.kid_menu.as_ref().is_some_and(|m|m.in_game_card());
-            let width=if compact {352.0}else{self.canvas().w-2.0*slot_ui::expressive::MENU_INSET};
-            slot_ui::expressive::rounded(out,self.canvas().centred(width)+frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET),frame.focus_y,
-                width,slot_ui::expressive::ROW_H,slot_ui::expressive::ROW_RADIUS,
-                [slot_ui::expressive::SELECTED[0],slot_ui::expressive::SELECTED[1],slot_ui::expressive::SELECTED[2],frame.opacity]);
+            if compact {
+                slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out);
+            }else{let width=self.canvas().w-168.0;
+                slot_ui::expressive::rounded(out,self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0),frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
+            }
         }
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
@@ -5299,20 +5309,19 @@ impl App {
             if total>visible {
                 let h=slot_ui::QUICK_PITCH*visible as f32;
                 let thumb=h*visible as f32/total as f32;
-                let y=88.0+(h-thumb)*(frame.scroll_position/(total-1) as f32).clamp(0.0,1.0);
+                let y=112.0+(h-thumb)*(frame.scroll_position/(total-1) as f32).clamp(0.0,1.0);
                 let x=self.canvas().w-44.0;
-                out.push(Draw::Rect{x,y:88.0,w:4.0,h,colour:[0.6,0.6,0.65,0.3]});
+                out.push(Draw::Rect{x,y:112.0,w:4.0,h,colour:[0.6,0.6,0.65,0.3]});
                 out.push(Draw::Rect{x,y,w:4.0,h:thumb,colour:[0.96,0.96,0.96,frame.opacity]});
             }
         }
-        slot_ui::expressive::tile_transform(self.canvas(),frame,out,page_begin);
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
         if !over_game {
             self.draw_background(out);
-            if self.menu_motion.displacement(self.canvas())>0.01 {self.shelf().draw(self.canvas(),self.shelf_shake(),self.slot_faces,out);}
+            self.draw_menu_shelf(out);
         }
         let begin=out.len();
         if over_game {
@@ -5323,6 +5332,7 @@ impl App {
             slot_ui::draw_menu_ground(self.canvas(), self.menu_ground(), out);
         }
         let root=row.page()==QuickRow::MAIN && !over_game;
+        slot_ui::expressive::draw_shared_card(self.canvas(),self.menu_motion.frame(row,&self.hidden_rows()),root,out);
         if root {self.draw_quick_page(row,over_game,false,out);}
         if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
         if !root {self.draw_quick_page(row,over_game,false,out);}
@@ -5364,7 +5374,7 @@ impl App {
             out,
         );
         let audio_start = out.len();
-        slot_ui::draw_corner_audio(
+        slot_ui::draw_corner_audio(self.canvas(),
             self.battery,
             self.battery_percent,
             if in_game {
@@ -5386,7 +5396,7 @@ impl App {
         if self.kids.active {
             if let Some(tex)=self.kid_status_icon {
                 let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
-                slot_ui::draw_corner_kid(self.battery,self.battery_percent,tex,preceding,out);
+                slot_ui::draw_corner_kid(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
@@ -7235,11 +7245,11 @@ impl App {
 
     pub fn polaroid_title(&self, now: &str) -> String {
         if let Some(v) = &self.shot_viewer {
-            return v.title(now);
+            return v.title_format(now,self.clock_12h());
         }
         self.polaroids
             .as_ref()
-            .map_or_else(String::new, |p| p.title(now))
+            .map_or_else(String::new, |p| p.title_format(now,self.clock_12h()))
     }
 
     pub fn set_polaroid_title_face(&mut self, face: TexId) {

@@ -525,7 +525,7 @@ impl Manager {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         let(_,_,first,visible)=self.scroll_info();
         if self.page!=Page::Home {return vec![];}
-        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:94.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:118.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
 
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
@@ -533,7 +533,7 @@ impl Manager {
         self.rows().iter().enumerate().skip(first).take(visible).filter_map(|(i,row)| {
             let (id,value)=if let Some(v)=row.strip_prefix("BLUETOOTH ") {(1,v)}
                 else if let Some(v)=row.strip_prefix("PAUSE_DISCONNECT ") {(2,v)} else {return None;};
-            Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:94.0+(i-first) as f32*slot_ui::QUICK_PITCH})
+            Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:118.0+(i-first) as f32*slot_ui::QUICK_PITCH})
         }).collect()
     }
     pub fn scroll_info(&self) -> (usize,usize,usize,usize) {
@@ -878,7 +878,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     // Reserve six row positions so status text and new scan results cannot
     // recenter the menu or change the visible window.
     let row_top = if compact {
-        88
+        112
     } else if clean {
         (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * slot_ui::QUICK_PITCH as u32) / 2 + 4
     } else {
@@ -886,9 +886,9 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     };
     let selected = lines.iter().skip(3).position(|line|line.starts_with("SELECTED "));
     let mut panel = UndoFace { rgba, w: screen_w, h: OUT_H };
-    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, slot_ui::QUICK_PITCH, row_count as usize, selected);
+    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, slot_ui::QUICK_PITCH, row_count as usize, if switches {selected}else{None});
     let mut rgba = panel.rgba;
-    if compact { let title=slot_ui::quick_heading_face("Sound"); blit(&mut rgba,&title,slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD,40); }
+    if compact { let title=slot_ui::quick_heading_face("Sound"); let x=screen_w.saturating_sub(title.w)/2; blit(&mut rgba,&title,x,40); }
     for (i, line) in lines.iter().enumerate() {
         if compact && (i == 0 || i == 2) {
             continue;
@@ -959,7 +959,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
         }
         if let Some((name, value)) = label
             .strip_prefix("DISCONNECT ")
-            .map(|v| ("Volume on disconnect", v))
+            .map(|v| ("Vol. on disconnect", v))
             .or_else(|| label.strip_prefix("VOLUME ").map(|v| ("Volume", v)))
             .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))

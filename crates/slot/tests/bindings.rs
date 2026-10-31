@@ -34,12 +34,7 @@ fn in_game_at(a: &mut App, row: QuickRow) {
         if depth > 0 {
             press(a, Btn::A);
         }
-        let hidden = a.in_game_hidden();
-        let i=step.position(&hidden);
-        if step.page()==QuickRow::MAIN {
-            for _ in 0..i%4 {press(a,Btn::Right);}
-            for _ in 0..i/4 {press(a,Btn::Down);}
-        }else{for _ in 0..i {press(a,Btn::Down);}}
+        common::navigate_in_game_menu(a,*step);
     }
     assert_eq!(a.in_game_menu(), Some(row));
 }

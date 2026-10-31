@@ -1,18 +1,18 @@
 # Physical UI motion
 
-Menus are persistent surfaces. Opening brings a surface up from below the display; closing returns it along that path. The surface, labels, focus plate, controls and legends move together. They remain opaque and are retired only after they have left the screen. Device chrome stays anchored.
+Menus retain opaque surfaces and native-sized content until their exit completes. Entry and exit use one spring anchored at the cartridge bay; the menu rises and expands as the retained cartridges retreat beneath the bay. Every submenu uses the same retained carousel position. Closing reverses both surfaces continuously, including an interrupted transition. Carousel momentum continues while the menu is open.
 
-All menu positions use the analytic damped spring in `slot-ui/src/expressive.rs`:
+The analytic damped spring in `slot-ui/src/expressive.rs` gives matching trajectories at 30, 60 and 120 Hz, including dropped frames:
 
-- Panel entry and exit: stiffness 800, critical damping (1.0). Boundaries settle without crossing the status bar.
-- Card expansion: stiffness 800, critical damping, retaining its current velocity on reversal.
-- Page travel: stiffness 600 and critical damping (1.0). Back reverses the current two-page trajectory without resetting either page.
-- Focus, switches and sliders: fast spatial response, stiffness 800 and damping ratio 0.76, with a small elastic settle.
+- Panel entry and exit: stiffness 800, damping ratio 1.0.
+- Page travel and shared-container morph: stiffness 600, damping ratio 0.82.
+- Focus, switches and sliders: stiffness 800, damping ratio 0.76.
+- Pause-card expansion: stiffness 800, damping ratio 1.0.
 
-These are positions and velocities, not frame counters. Reversing a target preserves both. Input stays active during motion; navigation does not wait for animations. Time steps use the same closed-form solution at 30, 60 and 120 Hz, including dropped frames.
+The main menu and in-game settings use the same native icon tiles. Pause actions use the same grid, including the restricted child menu. A submenu changes the bounds of the existing container while opaque text and controls travel through it without stretching. Titles stay centered above the card; rows have separate outer and inner margins. Back preserves current position and velocity. Input remains active during motion. Device chrome remains anchored and occludes departing UI.
 
-Neighbouring pages travel through a shared surface instead of crossfading. Compact pause cards expand into full settings while their pages travel. No menu transparency animation substitutes for movement. Cache the last custom page and its controls until its closing surface has left the display.
+Settings notices and charging feedback also travel as opaque surfaces. The charging chip clips a level fill to its capsule, with contrasting native text on each side of the fill boundary. The top status bar follows Android's reading order: time at left, compact status symbols before a horizontal battery at right. Its cached native battery contains the numeric level and a charging bolt, with charging and low-battery colors. Status glyphs share one flat optical size and spring response.
 
-About and the clock editor obey the same sheet rules. Their retained layers are cached draw primitives, not framebuffer copies. HUD and feedback pills also keep their ink opacity while moving; settings feedback retains its spring position and velocity when another notice rearms it or navigation dismisses it.
+Clock format is a presentation preference shared by status, editors, Night mode, parental bedtimes, game details and save/screenshot labels. Internal timestamps, time-zone offsets, durations and stored filenames retain their existing meaning.
 
-The settings grid has one focus surface per selected tile. Its container grows from the selected tile into the settings card; only the container changes shape. Text and controls translate and are clipped by the expanding card, keeping their native proportions. Page titles sit above the card. The scene retains its wallpaper without an additional dark backdrop.
+Reference: [Android unified battery layout](https://android.googlesource.com/platform/frameworks/base/+/a6c764c76a44cd40dd48695512032b807092e19a/packages/SystemUI/src/com/android/systemui/battery/unified/BatteryLayersDrawable.kt) and [Material 3 Expressive motion](https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/).

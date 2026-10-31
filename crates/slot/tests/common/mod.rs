@@ -642,3 +642,10 @@ fn feed_through(
         }
     }
 }
+
+/// Follow the same four-way icon navigation as the physical device.
+pub fn navigate_in_game_menu(app:&mut App,target:slot_ui::QuickRow){
+    use slot_input::{Action,Btn};
+    for _ in 0..32{let current=app.in_game_menu().expect("menu open");if current==target{return;}assert_eq!(current.page(),target.page(),"navigation must stay on the same page");let hidden=app.in_game_hidden();let button=if slot_ui::menu_grid::is_page(current.page()){let cols=slot_ui::menu_grid::columns(current,&hidden);let a=current.position(&hidden);let b=target.position(&hidden);if a%cols<b%cols{Btn::Right}else if a%cols>b%cols{Btn::Left}else{Btn::Down}}else{Btn::Down};app.apply(Action::GbaDown(button));app.apply(Action::GbaUp(button));}
+    panic!("did not reach {target:?}");
+}

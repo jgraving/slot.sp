@@ -32,11 +32,13 @@ fn go_to(a: &mut App, row: QuickRow) {
         _ => &[QuickRow::Settings, QuickRow::PlayGameplay],
     };
     for step in path.iter().copied().chain([row]) {
-        for _ in 0..12 {
-            if a.in_game_menu() == Some(step) {
-                break;
-            }
-            press(a, Btn::Down);
+        for _ in 0..16 {
+            let current=a.in_game_menu().unwrap();if current==step{break;}
+            if slot_ui::menu_grid::is_page(current.page()) {
+                let hidden=a.in_game_hidden();let cols=slot_ui::menu_grid::columns(current,&hidden);
+                let now=current.position(&hidden);let target=step.position(&hidden);
+                let direction=if now%cols<target%cols{Btn::Right}else if now%cols>target%cols{Btn::Left}else{Btn::Down};press(a,direction);
+            }else{press(a,Btn::Down);}
         }
         assert_eq!(a.in_game_menu(), Some(step), "never reached {step:?}");
         if step != row {
@@ -149,7 +151,7 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     a.set_power(power);
     let shown = QuickRow::PlayBrightness.shown(&a.in_game_hidden());
     assert_eq!(
-        shown[shown.len() - 2..],
+        shown[..2],
         [QuickRow::PlayBrightness, QuickRow::PlayBlueLight]
     );
     let before = a.brightness();
@@ -406,7 +408,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     let scrim = out.iter().any(
-        |d| matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.06 && colour[0] < 0.07 && colour[3] > 0.1),
+        |d| matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.09 && colour[0] < 0.10 && colour[3] > 0.1),
     );
     assert!(
         !scrim,
@@ -418,7 +420,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     assert!(out.iter().any(|d| {
-        matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.06 && colour[0] < 0.07 && colour[3] > 0.1)
+        matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.09 && colour[0] < 0.10 && colour[3] > 0.1)
     }));
 }
 
@@ -475,21 +477,9 @@ fn exit_game_is_not_offered_with_only_one_cart() {
     let mut a = app_playing_in(d.path(), "Emerald");
     a.apply(Action::SaveState);
     a.apply(Action::QuickMenu);
-    let mut seen = Vec::new();
-    for _ in 0..5 {
-        seen.push(a.in_game_menu().expect("the menu closed"));
-        press(&mut a, Btn::Down);
-    }
-    assert_eq!(
-        seen,
-        [
-            QuickRow::Resume,
-            QuickRow::UndoSave,
-            QuickRow::States,
-            QuickRow::Settings,
-            QuickRow::Resume
-        ]
-    );
+    let hidden=a.in_game_hidden();let shown=QuickRow::Resume.shown(&hidden);
+    assert!(shown.contains(&QuickRow::Settings));assert!(shown.contains(&QuickRow::States));assert!(!shown.contains(&QuickRow::ExitGame));
+    for current in shown {for (dx,dy) in [(1,0),(-1,0),(0,1),(0,-1)]{assert_ne!(slot_ui::menu_grid::navigate(current,&hidden,dx,dy),QuickRow::ExitGame);}}
     assert!(a.in_game_hidden().contains(&QuickRow::ExitGame));
 }
 

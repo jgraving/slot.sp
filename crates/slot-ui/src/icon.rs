@@ -165,19 +165,22 @@ pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
     haloed(&r.cov, r.w, r.h, colour)
 }
 
-pub const STATUS_ICON_SIZE:u32=32;
-pub const STATUS_ICON_PX:f32=24.0;
+pub const STATUS_ICON_SIZE:u32=24;
+pub const STATUS_ICON_PX:f32=21.0;
 /// Flat status glyphs share the floating volume pill's native glyph size.
 pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
-    let mut rgba=vec![0;(STATUS_ICON_SIZE*STATUS_ICON_SIZE*4)as usize];
-    if let Some(r)=raster(icon,STATUS_ICON_PX) {
-        let x=STATUS_ICON_SIZE.saturating_sub(r.w)/2;let y=STATUS_ICON_SIZE.saturating_sub(r.h)/2;
-        for yy in 0..r.h.min(STATUS_ICON_SIZE-y){for xx in 0..r.w.min(STATUS_ICON_SIZE-x){
-            let i=(((yy+y)*STATUS_ICON_SIZE+xx+x)*4)as usize;
-            rgba[i..i+4].copy_from_slice(&[ink[0],ink[1],ink[2],r.cov[(yy*r.w+xx)as usize]]);
-        }}
-    }
-    CartFace{rgba,w:STATUS_ICON_SIZE,h:STATUS_ICON_SIZE}
+    let path=match icon {
+        Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill-rule="evenodd" d="M11 1 20 9l-5 3 5 3-9 8V14l-5 5-2-2 6-5-6-5 2-2 5 5z M14 6v4l2-2z M14 14v4l2-2z"/>"#,
+        Icon::VolumeMuted|Icon::VolumeZero|Icon::Volume=>r#"<path d="M2 9h4l6-5v16l-6-5H2zM16 7l3 3 3-3 2 2-3 3 3 3-2 2-3-3-3 3-2-2 3-3-3-3z"/>"#,
+        Icon::Headphones|Icon::HeadphonesMuted=>r#"<path d="M3 12a9 9 0 0 1 18 0v9h-6v-9h3a6 6 0 0 0-12 0h3v9H3z"/>"#,
+        Icon::Usb|Icon::UsbMuted=>r#"<path d="m12 1 4 5h-3v7h4V9h-2V5h5v5h-2v4h-5v5a3 3 0 1 1-2 0v-3H6V9a2 2 0 1 1 2 0v5h3V6H8z"/>"#,
+        Icon::Charging=>r#"<path d="M13 1 4 14h7l-1 9L20 9h-7z"/>"#,
+        _=>return icon_face(icon,STATUS_ICON_PX,ink),
+    };
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="#{:02x}{:02x}{:02x}" transform="translate(1 1) scale(.9167)">{path}</g></svg>"##,ink[0],ink[1],ink[2]);
+    let mut rgba=crate::art::render_svg(&svg,24,24).expect("status vector");
+    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&ink);}
+    CartFace{rgba,w:24,h:24}
 }
 
 pub fn icon_box(px: f32) -> (u32, u32) {
@@ -646,9 +649,8 @@ pub fn kid_smiley_face() -> CartFace {
 
 /// Flat status symbol, separate from the foil approval sticker.
 pub fn kid_status_face()->CartFace {
-    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="#f6f4ef" stroke-width="1.6"/><circle cx="7" cy="7.5" r="1" fill="#f6f4ef"/><circle cx="13" cy="7.5" r="1" fill="#f6f4ef"/><path d="M6 11.5 Q10 16 14 11.5" fill="none" stroke="#f6f4ef" stroke-width="1.6" stroke-linecap="round"/></svg>"##;
-    let hi=crate::art::render_svg(svg,128,128).expect("status smiley SVG");
-    let mut rgba=prefilter_star(&hi,32);
+    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#f6f4ef" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M8.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M15.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M6 13a6 6 0 0 0 12 0h-2a4 4 0 0 1-8 0z"/></svg>"##;
+    let mut rgba=crate::art::render_svg(svg,24,24).expect("status smiley");
     for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&crate::HUD_INK);}
-    CartFace{rgba,w:32,h:32}
+    CartFace{rgba,w:24,h:24}
 }

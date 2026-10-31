@@ -55,3 +55,10 @@ fn twelve_hour_clock_handles_midnight_noon_and_local_day_wrap() {
     assert_eq!(clock_text(24*3600,true),"12:00 AM");
     assert_eq!(clock_text(13*3600+5*60,false),"13:05");
 }
+
+#[test]
+fn older_saves_and_screenshots_use_the_selected_clock_format(){
+    assert_eq!(slot_ui::Polaroids::relative_time_format("2026-10-30_00-05-00","2026-10-31_14-00-00",true),"2026-10-30 12:05 AM");
+    assert_eq!(slot_ui::Polaroids::relative_time_format("2026-10-30_12-05-00","2026-10-31_14-00-00",true),"2026-10-30 12:05 PM");
+    assert_eq!(slot_ui::Polaroids::relative_time_format("2026-10-30_23-05-00","2026-10-31_14-00-00",false),"2026-10-30 23:05");
+}

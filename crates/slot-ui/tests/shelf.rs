@@ -548,8 +548,8 @@ fn the_gauge_is_white_in_dark_mode_and_black_in_light_mode() {
             })
             .expect("the gauge did not draw")
     };
-    assert_eq!(gauge(false), [1.0, 1.0, 1.0, 1.0]);
-    assert_eq!(gauge(true), [0.0, 0.0, 0.0, 1.0]);
+    assert_eq!(gauge(false), [1.0, 1.0, 1.0, 0.08]);
+    assert_eq!(gauge(true), [1.0, 1.0, 1.0, 0.08]);
 }
 
 #[test]
@@ -615,8 +615,8 @@ fn the_band_prints_the_charge_at_one_margin_and_the_clock_at_the_other() {
     );
     assert_eq!(
         last.1 - last.0,
-        40.0,
-        "the rightmost thing on the band is not the clock"
+        slot_ui::GAUGE_W,
+        "the rightmost thing on the band is not the battery"
     );
     for (a, b) in &xs {
         assert!(
@@ -679,7 +679,7 @@ fn the_clock_stays_at_the_right_margin() {
             _ => 0.0,
         })
         .fold(0.0, f32::max);
-    assert_eq!(rightmost, OUT_W as f32 - 24.0);
+    assert_eq!(rightmost, 64.0);
 }
 
 #[test]

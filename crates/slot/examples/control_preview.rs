@@ -32,6 +32,7 @@ fn main() {
                 frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
                 expressive::draw_kid_pause_surface(canvas,frame,&mut draws);
             }
+            else {expressive::rounded(&mut draws,72.0,88.0,canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
             if let Some(r) = focus {
                 expressive::rounded(
                     &mut draws,
@@ -91,6 +92,7 @@ fn main() {
         bedtime: (2, 9),
         ..Default::default()
     });
+    schedule.twelve=true;
     schedule.input(slot_input::Action::GbaDown(slot_input::Btn::Up), true);
     let mut switches = expressive::SwitchMotion::default();
     switches.update(&schedule.visible_switches(), 1.0);
@@ -116,12 +118,12 @@ fn main() {
         "schedule",
         schedule.screen_face_animated_on(canvas),
         controls,
-        Some([56.0,244.0,canvas.w-112.0,44.0]),
+        Some([84.0,268.0,canvas.w-168.0,44.0]),
     );
     let mut policy=slot::kid_policy::Policy::default(); policy.active=true;
     let mut child=slot::kid_menu::Menu::child(path.clone(),policy.clone(),true,35,55);
     child.set_remaining(Some((900,1800)));
-    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some([canvas.centred(352.0),166.0,352.0,44.0]));
+    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some(menu_grid::cell(canvas,0,3,3,true)));
     child.input(slot_input::Action::GbaDown(slot_input::Btn::Down),0);
     child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
     save("kid-settings",child.screen_face_on(canvas),vec![],None);
