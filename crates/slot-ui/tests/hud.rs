@@ -259,10 +259,10 @@ fn the_link_badge_outranks_fast_forward() {
 }
 
 #[test]
-fn volume_on_headphones_shows_headphones() {
+fn headphones_show_the_route_until_muted() {
     assert_eq!(HudKind::Volume.icon(40, false, true), Icon::Headphones);
-    assert_eq!(HudKind::Volume.icon(0, false, true), Icon::HeadphonesMuted);
-    assert_eq!(HudKind::Volume.icon(40, true, true), Icon::HeadphonesMuted);
+    assert_eq!(HudKind::Volume.icon(0, false, true), Icon::VolumeMuted);
+    assert_eq!(HudKind::Volume.icon(40, true, true), Icon::VolumeMuted);
     assert_eq!(HudKind::Brightness.icon(4, false, true), Icon::Brightness);
 }
 
@@ -291,7 +291,7 @@ fn audio_notice_and_volume_use_opposite_edges() {
 }
 
 #[test]
-fn bluetooth_volume_is_distinct_from_wired_and_retains_mute_mark() {
+fn all_muted_routes_use_the_same_slashed_speaker() {
     let mut hud = Hud::new();
     hud.set_headphones(true);
     hud.show(HudKind::Volume, 45, false, 0);
@@ -299,9 +299,12 @@ fn bluetooth_volume_is_distinct_from_wired_and_retains_mute_mark() {
     hud.set_bluetooth(true);
     assert_eq!(hud.glyph(), Icon::Bluetooth);
     hud.show(HudKind::Volume, 0, false, 0);
-    assert_eq!(hud.glyph(), Icon::BluetoothMuted);
+    assert_eq!(hud.glyph(), Icon::VolumeMuted);
     hud.show(HudKind::Volume, 45, true, 0);
-    assert_eq!(hud.glyph(), Icon::BluetoothMuted);
+    assert_eq!(hud.glyph(), Icon::VolumeMuted);
+    hud.set_usb(true);
+    assert_eq!(hud.glyph(), Icon::VolumeMuted);
+    hud.set_usb(false);
     hud.set_bluetooth(false);
     hud.set_headphones(false);
     assert_eq!(hud.glyph(), Icon::VolumeMuted);
@@ -311,7 +314,7 @@ fn bluetooth_volume_is_distinct_from_wired_and_retains_mute_mark() {
 }
 
 #[test]
-fn muted_headphones_render_at_native_width_without_stretching() {
+fn muted_speaker_renders_at_native_width_without_stretching() {
     let mut hud = Hud::new();
     hud.set_icons(
         Icon::ALL
@@ -322,7 +325,7 @@ fn muted_headphones_render_at_native_width_without_stretching() {
     );
     hud.set_headphones(true);
     hud.show(HudKind::Volume, 0, false, 0);
-    let face = icon_face(Icon::HeadphonesMuted, HUD_ICON_PX, [255; 3]);
+    let face = icon_face(Icon::VolumeMuted, HUD_ICON_PX, [255; 3]);
     let mut out = Vec::new();
     hud.draw(Canvas::FRAMED, 0, &mut out);
     let (x, w, h) = out

@@ -60,9 +60,8 @@ impl HudKind {
         match self {
             HudKind::Brightness => Icon::Brightness,
             HudKind::BlueLight => Icon::BlueLight,
-            HudKind::Volume if headphones && (muted || value == 0) => Icon::HeadphonesMuted,
-            HudKind::Volume if headphones => Icon::Headphones,
             HudKind::Volume if muted || value == 0 => Icon::VolumeMuted,
+            HudKind::Volume if headphones => Icon::Headphones,
             HudKind::Volume => Icon::Volume,
             HudKind::Rewind => Icon::Rewind,
         }
@@ -240,19 +239,14 @@ impl Hud {
     }
 
     pub fn glyph(&self) -> Icon {
+        if self.kind == HudKind::Volume && (self.muted || self.value == 0) {
+            return Icon::VolumeMuted;
+        }
         if self.kind == HudKind::Volume && self.usb {
-            return if self.muted || self.value == 0 {
-                Icon::HeadphonesMuted
-            } else {
-                Icon::Headphones
-            };
+            return Icon::Headphones;
         }
         if self.kind == HudKind::Volume && self.bluetooth {
-            return if self.muted || self.value == 0 {
-                Icon::BluetoothMuted
-            } else {
-                Icon::Bluetooth
-            };
+            return Icon::Bluetooth;
         }
         self.kind.icon(self.value, self.muted, self.headphones)
     }

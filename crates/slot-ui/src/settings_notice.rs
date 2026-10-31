@@ -14,7 +14,12 @@ impl SettingsNotice {
     pub fn observe(&mut self, source: Option<(u64, String)>, now: u64) {
         self.motion=self.motion_at(now); self.tick=now;
         if self.observed != source {
-            if source.is_some() {self.source=source.clone();self.shown=now;}
+            if let Some((key,text))=&source {
+                let same_connection=self.observed.as_ref().is_some_and(|(old_key,old_text)|
+                    old_key==key && old_text.starts_with("Charging: ") && text.starts_with("Charging: "));
+                self.source=source.clone();
+                if !same_connection {self.shown=now;}
+            }
             self.observed=source;
         }
         if self.observed.is_none() && self.motion.value==0.0 {self.source=None;}
@@ -49,11 +54,20 @@ impl SettingsNotice {
         let Some((tex, w, h)) = face.filter(|_| alpha > 0.0) else {
             return;
         };
-        let (w, h) = (w as f32, h as f32);
-        let x = canvas.centred(w);
         let charging=self.text().is_some_and(|s|s.starts_with("Charging: "));
-        let base = canvas.h - MOUTH_H - 8.0 - h;
-        let y=base+(1.0-alpha)*(canvas.h-base+h+16.0);
+        let (original_w, original_h) = (w as f32, h as f32);
+        // Two smooth breaths after arrival, then a steady pill. Transform the
+        // complete chip together so its measured fill and ink remain aligned.
+        let age=now.saturating_sub(self.shown)as f32;
+        let pulse=if charging && (140.0..1040.0).contains(&age) {
+            let phase=(age-140.0)/450.0;
+            (std::f32::consts::PI*phase.fract()).sin().powi(2)*(1.0-0.25*phase.floor())
+        }else{0.0};
+        let scale=1.0+0.035*pulse*alpha;
+        let (w,h)=(original_w*scale,original_h*scale);
+        let x = canvas.centred(w);
+        let base = canvas.h - MOUTH_H - 8.0 - original_h;
+        let y=base+(1.0-alpha)*(canvas.h-base+original_h+16.0)-(h-original_h)/2.0;
         let begin=out.len();
         crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {[0.16,0.29,0.23,1.0]}else{[0.10, 0.12, 0.14, 1.0]});
         if charging {

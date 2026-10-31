@@ -167,11 +167,13 @@ pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
 
 pub const STATUS_ICON_SIZE:u32=24;
 pub const STATUS_ICON_PX:f32=21.0;
+// Filled speaker and a diagonal slash, shared by the status bar and volume HUD.
+const MUTED_SPEAKER: &str = r#"<path d="M3 9h3l6 6v5l-6-5H3zM12 4 8 8l4 4zM14 7.9v2.8l2.4 2.4A5 5 0 0 0 14 7.9zM14 3.2v2.1a7 7 0 0 1 4.4 9.1l1.5 1.5A9 9 0 0 0 14 3.2zM3.2 2 22 20.8 20.8 22 2 3.2z"/>"#;
 /// Flat status glyphs share the floating volume pill's native glyph size.
 pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
     let path=match icon {
         Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill-rule="evenodd" d="M11 1 20 9l-5 3 5 3-9 8V14l-5 5-2-2 6-5-6-5 2-2 5 5z M14 6v4l2-2z M14 14v4l2-2z"/>"#,
-        Icon::VolumeMuted|Icon::VolumeZero|Icon::Volume=>r#"<path d="M2 9h4l6-5v16l-6-5H2zM16 7l3 3 3-3 2 2-3 3 3 3-2 2-3-3-3 3-2-2 3-3-3-3z"/>"#,
+        Icon::VolumeMuted|Icon::VolumeZero|Icon::Volume=>MUTED_SPEAKER,
         Icon::Headphones|Icon::HeadphonesMuted=>r#"<path d="M3 12a9 9 0 0 1 18 0v9h-6v-9h3a6 6 0 0 0-12 0h3v9H3z"/>"#,
         Icon::Usb|Icon::UsbMuted=>r#"<path d="m12 1 4 5h-3v7h4V9h-2V5h5v5h-2v4h-5v5a3 3 0 1 1-2 0v-3H6V9a2 2 0 1 1 2 0v5h3V6H8z"/>"#,
         Icon::Charging=>r#"<path d="M13 1 4 14h7l-1 9L20 9h-7z"/>"#,
@@ -339,6 +341,15 @@ fn raster(icon: Icon, px: f32) -> Option<Arc<Raster>> {
 fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
     let font = symbols_font()?;
     let f = frame(font, px);
+    if icon == Icon::VolumeMuted {
+        let side=px.round().max(1.0) as u32;
+        let svg=format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="white">{MUTED_SPEAKER}</g></svg>"#);
+        let rgba=crate::art::render_svg(&svg,side,side)?;
+        let mut out=Raster{cov:vec![0;(f.w*f.h)as usize],w:f.w,h:f.h};
+        let (x0,y0)=((f.w-side)/2,(f.h-side)/2);
+        for y in 0..side {for x in 0..side {out.cov[((y+y0)*f.w+x+x0)as usize]=rgba[((y*side+x)*4+3)as usize];}}
+        return Some(out);
+    }
     if matches!(icon, Icon::BluetoothMuted | Icon::HeadphonesMuted) {
         return muted_audio_raster(icon, px);
     }
@@ -349,6 +360,12 @@ fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
         return Some(audio_raster(icon, f.w, f.h, px));
     }
 
+    font_raster(icon,px)
+}
+
+fn font_raster(icon:Icon,px:f32)->Option<Raster> {
+    let font=symbols_font()?;
+    let f=frame(font,px);
     let (m, cov) = font.rasterize(icon.glyph(), px);
     let x0 = m.xmin - f.left;
     let y0 = f.top - (m.ymin + m.height as i32);
@@ -367,10 +384,10 @@ fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
     })
 }
 
-// Keep the device symbol full-size and copy the speaker's exact mute mark.
+// Legacy device-list composites retain their font's separate mute mark.
 // Call rasterise directly: the cache mutex is already held here.
 fn muted_audio_raster(icon: Icon, px: f32) -> Option<Raster> {
-    let speaker = rasterise(Icon::VolumeMuted, px)?;
+    let speaker = font_raster(Icon::VolumeMuted, px)?;
     let base = rasterise(
         if icon == Icon::BluetoothMuted {
             Icon::Bluetooth
@@ -560,7 +577,7 @@ mod mute_tests {
     #[test]
     fn mute_marks_match_speaker_without_shrinking_device_symbols() {
         for px in [20., 24., 32., 40.] {
-            let speaker = rasterise(Icon::VolumeMuted, px).unwrap();
+            let speaker = font_raster(Icon::VolumeMuted, px).unwrap();
             let mark = ink(&speaker, gap(&speaker) + 1, speaker.w).0;
             for (muted, base) in [
                 (Icon::BluetoothMuted, Icon::Bluetooth),

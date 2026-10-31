@@ -123,9 +123,9 @@ fn approval_face_has_readable_dark_eyes_and_smile_at_native_size() {
             p[3] > 240 && p[0] < 55 && p[1] < 40 && p[2] < 30
         }).count()
     };
-    assert!(dark_pixels(8..14, 9..15) >= 4, "left eye disappears into the foil");
-    assert!(dark_pixels(16..22, 9..15) >= 4, "right eye disappears into the foil");
-    assert!(dark_pixels(8..23, 17..24) >= 12, "smile is too fine at native size");
+    assert!(dark_pixels(8..14, 9..15) >= 8, "left eye disappears into the foil");
+    assert!(dark_pixels(16..22, 9..15) >= 8, "right eye disappears into the foil");
+    assert!(dark_pixels(8..23, 17..24) >= 24, "smile is too fine at native size");
 }
 
 #[test]

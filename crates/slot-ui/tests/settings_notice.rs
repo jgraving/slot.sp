@@ -90,3 +90,29 @@ fn an_arriving_notice_floats_whole_above_the_hardware_bay() {
     let mut out=vec![];notice.draw(canvas,Some((TexId::from_raw(1),face.w,face.h)),100,&mut out);
     assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,h,..} if *h==face.h as f32&&*y+*h>422.0&&*y+*h<=480.0)),"the menu footer must not crop the floating capsule");
 }
+
+#[test]
+fn charging_pulses_the_whole_pill_then_settles_without_restarting_on_a_battery_poll() {
+    let canvas=Canvas::FRAMED;
+    let face=settings_notice_face("Charging: 57%",canvas);
+    let texture=Some((TexId::from_raw(1),face.w,face.h));
+    let mut notice=SettingsNotice::default();notice.observe(Some((1,"Charging: 57%".into())),0);
+    let bounds=|notice:&SettingsNotice,ms| {
+        let mut out=vec![];notice.draw(canvas,texture,ms,&mut out);
+        let chip=out.iter().find_map(|d|if let Draw::RoundRect{x,y,w,h,..}=*d{Some((x,y,w,h))}else{None}).unwrap();
+        assert!(out.iter().any(|d|matches!(*d,Draw::Tex{x,y,w,h,alpha:1.0,..} if (x,y,w,h)==chip)),"ink must pulse with the surface");
+        assert!((chip.0+chip.2/2.0-canvas.w/2.0).abs()<0.01);
+        assert!((chip.2/face.w as f32-chip.3/face.h as f32).abs()<0.001);
+        chip
+    };
+    let widths:Vec<_>=(200..1100).step_by(16).map(|ms|bounds(&notice,ms).2).collect();
+    assert!(widths.iter().copied().fold(0.0,f32::max)>face.w as f32*1.02);
+    assert!(widths.iter().all(|w|*w<=face.w as f32*1.036));
+    assert_eq!(bounds(&notice,1200).2,face.w as f32);
+    notice.observe(Some((1,"Charging: 58%".into())),1200);
+    assert_eq!(bounds(&notice,1450).2,face.w as f32,"percentage changes must not restart the pulse");
+    assert_eq!(notice.alpha(2900),0.0,"percentage changes must not extend the notice");
+    notice.observe(None,3000);
+    notice.observe(Some((2,"Charging: 58%".into())),3100);
+    assert!(bounds(&notice,3450).2>face.w as f32*1.02,"a new connection should pulse again");
+}

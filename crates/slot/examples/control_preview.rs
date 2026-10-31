@@ -138,6 +138,7 @@ fn main() {
     child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
     save("kid-settings",child.screen_face_on(canvas),vec![],Some(menu_grid::cell(canvas,0,4,2,false)));
     let mut parent=slot::kid_menu::Menu::new(path.clone(),policy);
+    save("parent-code-empty",parent.screen_face_on(canvas),vec![],None);
     for b in [slot_input::Btn::A,slot_input::Btn::B,slot_input::Btn::X] {parent.input(slot_input::Action::GbaDown(b),0);}
     save("parent-code",parent.screen_face_on(canvas),vec![],None);
     drop(save);
@@ -171,6 +172,11 @@ fn main() {
             &gpu.read_frame(),
         );
     }
+    hud.show(HudKind::Volume,65,true,0);
+    let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);hud.draw(canvas,300,&mut out);
+    let f=status_icon_face(Icon::VolumeMuted,[246,244,239]);let tex=gpu.create_texture(f.w,f.h,&f.rgba);
+    out.push(Draw::Tex{x:canvas.w-48.0,y:64.0,w:f.w as f32,h:f.h as f32,tex,alpha:1.0});
+    gpu.begin_frame();gpu.draw_list(&out);write(&path.join("mute-icons.png"),width,&gpu.read_frame());
     let toasts = Toast::all().into_iter().map(|t| {
         let f=toast_face(t); gpu.create_texture(f.w,f.h,&f.rgba)
     }).collect();
@@ -188,6 +194,18 @@ fn main() {
         feedback.draw(canvas,Some(face),ms,&mut out);
         gpu.begin_frame();gpu.draw_list(&out);
         write(&path.join(format!("settings-notice-{ms}.png")),width,&gpu.read_frame());
+    }
+    for percent in [12,57,100] {
+        let message=format!("Charging: {percent}%");let f=settings_notice_face(&message,canvas);
+        let face=(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h);
+        let mut feedback=SettingsNotice::default();feedback.observe(Some((1,message)),0);
+        for ms in [70,200,365,590,815,1100,2300,2700] {
+            let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);
+            draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut out);
+            feedback.draw(canvas,Some(face),ms,&mut out);
+            gpu.begin_frame();gpu.draw_list(&out);
+            write(&path.join(format!("charging-{percent}-{ms}.png")),width,&gpu.read_frame());
+        }
     }
     let mut picker = ClockPicker::local(slot_store::parse_stamp("2026-10-30_12-00-00").unwrap(), 60);
     picker.set_twelve(true);

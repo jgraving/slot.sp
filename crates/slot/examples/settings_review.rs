@@ -42,9 +42,12 @@ fn main(){
     }
     // Exercise the state that previously collapsed the parent rows and clipped
     // the meter: a real approval, code setup, then activation in the open menu.
-    a.tap(Btn::B);a.tap(Btn::X);a.tap(Btn::Menu);a.nav(QuickRow::Kids);a.tap(Btn::A);
+    a.tap(Btn::B);a.tap(Btn::X);a.save("approved-carousel");a.tap(Btn::Menu);a.nav(QuickRow::Kids);a.tap(Btn::A);
     a.tap(Btn::Down);a.tap(Btn::A);
-    for b in [Btn::A,Btn::B,Btn::X,Btn::Y,Btn::A,Btn::B,Btn::X,Btn::Y]{a.tap(b);}
+    a.save("parent-code-choose");
+    for b in [Btn::A,Btn::B,Btn::X,Btn::Y]{a.tap(b);}
+    a.save("parent-code-confirm");
+    for b in [Btn::A,Btn::B,Btn::X,Btn::Y]{a.tap(b);}
     a.tap(Btn::Up);a.save("parent-before-enable");a.tap(Btn::A);a.save("parent-enabled");
     assert!(a.f.app().kid_mode());assert_eq!(a.f.app().kid_menu.as_ref().unwrap().scroll_info(),Some((0,5,0,5)));
     a.tap(Btn::VolUp);a.save("parent-volume-overlay");a.tap(Btn::B);

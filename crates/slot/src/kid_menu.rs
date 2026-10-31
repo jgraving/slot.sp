@@ -148,6 +148,14 @@ impl Menu {
     pub fn entering_code(&self) -> bool {
         matches!(self.page, Page::Set | Page::Confirm | Page::Unlock)
     }
+    fn code_instruction(&self) -> &str {
+        match self.page {
+            Page::Set => "Choose four buttons for your code",
+            Page::Confirm => "Enter the same four buttons again",
+            Page::Unlock => "Enter your four-button code",
+            _ => "",
+        }
+    }
     pub fn notice(root: PathBuf, policy: Policy, message: &str) -> Self {
         let mut menu = Self::new(root, policy);
         menu.page = Page::Notice;
@@ -165,9 +173,7 @@ impl Menu {
             return vec![slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0))];
         }
         let title = match self.page {
-            Page::Set => "Choose four buttons",
-            Page::Confirm => "Repeat your code",
-            Page::Unlock => "Parent code",
+            Page::Set | Page::Confirm | Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
             Page::Home | Page::Time | Page::Child | Page::ChildSettings | Page::ChildSound | Page::ChildScreen | Page::Warning | Page::Reference => "",
         };
@@ -236,7 +242,7 @@ impl Menu {
         vec![
             title.into(),
             status,
-            String::new(),
+            self.code_instruction().into(),
             if self.page == Page::Notice {
                 "PARENT NOTICE HINTS".into()
             } else {
@@ -331,19 +337,26 @@ impl Menu {
         }
         let mut face = slot_ui::parent_footer_face_on(canvas, if self.page == Page::Notice { 2 } else { 1 }, false);
         let title = match self.page {
-            Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
             Page::Notice => "Time for a break", _ => "Parent code",
         };
         let title = slot_ui::quick_heading_face(title);
         let left = (face.w - title.w) / 2;
         blit(&mut face, &title, left, 0);
         if self.entering_code() {
+            // Keep the instruction, slots and progress centred in the shared
+            // card. Setup/confirmation change the instruction, never its title.
+            let instruction = slot_ui::quick_value_face(self.code_instruction(), true);
+            let left = (face.w - instruction.w) / 2;
+            blit(&mut face, &instruction, left, 132);
+            let help = slot_ui::quick_description_face(&["Use A/B/X/Y or the D-pad"]);
+            let left = (face.w - help.w) / 2;
+            blit(&mut face, &help, left, 169);
             let buttons = slot_ui::button_code_face(&self.code);
             let left = ((face.w - buttons.w) as i32 / 2 + self.code_offset()) as u32;
-            blit(&mut face, &buttons, left, 208);
+            blit(&mut face, &buttons, left, 200);
             let count = slot_ui::quick_description_face(&[&format!("{} / 4", self.code.len())]);
             let left = (face.w - count.w) / 2;
-            blit(&mut face, &count, left, 284);
+            blit(&mut face, &count, left, 272);
         }
         let cooldown = self.gate.remaining(Instant::now());
         let retry = format!("Try again in {cooldown} seconds");

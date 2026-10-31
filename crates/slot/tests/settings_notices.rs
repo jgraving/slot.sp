@@ -62,9 +62,11 @@ fn charger_notice_appears_once_per_connection_and_clears_on_unplug() {
     app.on_battery(Battery{percent:57,charge:Charge::Discharging});
     assert!(app.settings_notice().is_none());
     app.on_battery(Battery{percent:57,charge:Charge::Charging});
+    assert_eq!(app.take_sfx(),Some(slot::audio::Sfx::Charging));
     let first=app.settings_notice().unwrap();
     assert_eq!(first.1,"Charging: 57%");
     app.on_battery(Battery{percent:57,charge:Charge::Charging});
+    assert_eq!(app.take_sfx(),None);
     assert_eq!(app.settings_notice(),Some(first));
     app.update(3.0);
     assert!(app.settings_notice().is_none());
@@ -72,7 +74,21 @@ fn charger_notice_appears_once_per_connection_and_clears_on_unplug() {
     assert!(app.settings_notice().is_none());
     app.on_battery(Battery{percent:57,charge:Charge::Discharging});
     app.on_battery(Battery{percent:58,charge:Charge::Charging});
+    assert_eq!(app.take_sfx(),Some(slot::audio::Sfx::Charging));
     assert_eq!(app.settings_notice().unwrap().1,"Charging: 58%");
     app.on_battery(Battery{percent:58,charge:Charge::Discharging});
     assert!(app.settings_notice().is_none());
+}
+
+#[test]
+fn discovering_a_connected_charger_at_boot_is_silent() {
+    use slot_power::{Battery,Charge};
+    let mut app=App::new(vec![]);
+    app.on_battery(Battery{percent:99,charge:Charge::Charging});
+    assert_eq!(app.take_sfx(),None);
+    app.on_battery(Battery{percent:100,charge:Charge::Full});
+    assert_eq!(app.take_sfx(),None,"finishing a charge is not another connection");
+    app.on_battery(Battery{percent:99,charge:Charge::Discharging});
+    app.on_battery(Battery{percent:99,charge:Charge::Charging});
+    assert_eq!(app.take_sfx(),Some(slot::audio::Sfx::Charging));
 }

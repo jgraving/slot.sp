@@ -448,6 +448,8 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     raw_tap(&mut s, &mut time, Btn::Down);
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose four buttons for your code");
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
     for (i, b) in [Btn::A, Btn::B].into_iter().enumerate() {
         raw_tap(&mut s, &mut time, b);
@@ -456,8 +458,8 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
         assert!(menu.lines()[1].contains(&format!("{} of 4", i + 1)));
         assert_ne!(menu.screen_face().rgba, empty);
         let face = menu.screen_face();
-        let x0 = (face.w - 320) / 2 + i as u32 * 80;
-        let visible = (208..272).any(|y| (x0..x0 + 80).any(|x| {
+        let x0 = (face.w - 256) / 2 + i as u32 * 64;
+        let visible = (200..256).any(|y| (x0..x0 + 64).any(|x| {
             let at = ((y * face.w + x) * 4) as usize;
             face.rgba[at + 3] > 0 && face.rgba[at..at + 3].iter().any(|c| *c > 150)
         }));
@@ -466,15 +468,16 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     }
     raw_tap(&mut s, &mut time, Btn::X);
     raw_tap(&mut s, &mut time, Btn::Y);
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Repeat your code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     assert!(!dir.join("code").exists());
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Enter the same four buttons again");
     preview_menu(&s, "parent-confirm-empty.png");
     for b in [Btn::A; 4] { raw_tap(&mut s, &mut time, b); }
     assert!(!dir.join("code").exists(), "mismatched confirmation created a code");
     assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(), &[0; 4]);
     s.app_mut().update(0.4);
     assert!(s.app().kid_menu.as_ref().unwrap().entered_buttons().is_empty());
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Repeat your code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     for b in [Btn::A, Btn::B, Btn::X, Btn::Y] { raw_tap(&mut s, &mut time, b); }
     assert!(dir.join("code").exists());
     assert!(!s.app().kid_mode());
@@ -825,7 +828,7 @@ fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
         }
         if i < 20 {
             let moving = menu.screen_face();
-            for y in (0..208).chain(272..moving.h) {
+            for y in (0..200).chain(256..moving.h) {
                 let row = (y * moving.w * 4) as usize;
                 assert_eq!(&moving.rgba[row..row + moving.w as usize * 4],
                     &still.rgba[row..row + still.w as usize * 4]);

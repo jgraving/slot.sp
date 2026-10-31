@@ -6666,7 +6666,14 @@ impl App {
         self.battery=Some(b);
         let charging=matches!(b.charge,Charge::Charging|Charge::Full);
         let was_charging=self.last_charge.is_some_and(|c|matches!(c,Charge::Charging|Charge::Full));
-        if charging && !was_charging {self.charging_notice_at=Some(self.now());}
+        if charging && !was_charging {
+            self.charging_notice_at=Some(self.now());
+            // Initial battery discovery can already be plugged in. Only an
+            // observed unplugged-to-plugged transition makes a connection sound.
+            if self.last_charge.is_some() && !self.powering_off {
+                self.sfx=Some(Sfx::Charging);
+            }
+        }
         if !charging {self.charging_notice_at=None;}
         self.last_charge=Some(b.charge);
         if charging || b.percent>BATTERY_LOW+5 {self.battery_warned=false;}
