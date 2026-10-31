@@ -5,8 +5,28 @@ use crate::{quick_row_top_at, Draw, QuickRow};
 pub const ACCENT: [f32; 4] = [0.33, 0.76, 0.72, 1.0];
 pub const MENU_INSET: f32 = 56.0;
 pub const ROW_RADIUS: f32 = 12.0;
-pub const ROW_H: f32 = 44.0;
-pub const SELECTED: [f32; 4] = [0.20, 0.30, 0.32, 1.0];
+pub const ROW_H: f32 = 48.0;
+pub const SELECTED: [f32; 4] = [0.20, 0.31, 0.32, 1.0];
+pub const CARD_TOP: f32 = 56.0;
+pub const CARD_BOTTOM: f32 = 366.0;
+pub const ROW_TOP: f32 = 80.0;
+pub const TITLE_H: f32 = 40.0;
+pub const FOOTER_Y: f32 = 378.0;
+pub const SURFACE: [f32;4] = [0.09, 0.115, 0.125, 1.0];
+pub fn card_rect(canvas:crate::Canvas)->[f32;4] {[MENU_INSET,CARD_TOP,canvas.w-2.0*MENU_INSET,CARD_BOTTOM-CARD_TOP]}
+pub fn draw_card(canvas:crate::Canvas,out:&mut Vec<Draw>) {let [x,y,w,h]=card_rect(canvas);rounded(out,x,y,w,h,28.0,SURFACE);}
+pub fn is_chrome(d:&Draw)->bool {matches!(*d,Draw::Tex{y,h,..}|Draw::Part{y,h,..} if (y==0.0 && h==TITLE_H) || (y==FOOTER_Y && h<=44.0))}
+
+/// Visible for the whole scroll session, including when the thumb is at either end.
+pub fn draw_scrollbar(canvas:crate::Canvas,top:f32,visible:usize,total:usize,start:f32,out:&mut Vec<Draw>) {
+    if total<=visible || visible==0 {return;}
+    let h=crate::QUICK_PITCH*visible as f32-6.0;
+    let thumb=(h*visible as f32/total as f32).max(24.0);
+    let y=top+(h-thumb)*(start/(total-visible) as f32).clamp(0.0,1.0);
+    let x=canvas.w-MENU_INSET-10.0;
+    rounded(out,x,top,3.0,h,1.5,[0.55,0.64,0.65,0.22]);
+    rounded(out,x,y,3.0,thumb,1.5,[0.76,0.84,0.83,1.0]);
+}
 
 pub fn rounded(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, h: f32, radius: f32, colour: [f32; 4]) {
     if w > 0.0 && h > 0.0 && colour[3] > 0.0 {
@@ -286,6 +306,7 @@ impl MenuMotion {
         let t=self.entry.value.clamp(0.0,1.0);let dy=t*(canvas.h+96.0);
         for draw in draws {match draw {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}|Draw::Turned{y,..}=>*y+=dy,_=>{}}}
     }
+    pub fn reveal(&self)->f32 {self.entry.value.clamp(0.0,1.0)}
     pub fn displacement(&self, canvas: crate::Canvas) -> f32 {
         (1.0-self.entry.value)*(canvas.h+32.0)
     }
@@ -297,6 +318,7 @@ impl MenuMotion {
         let anchor=canvas.h-crate::MOUTH_H;
         let dy=(1.0-reveal)*anchor*0.80;
         for draw in draws {
+            if is_chrome(draw) {continue;}
             match draw {
                 Draw::Rect{x,y,w,h,..}|Draw::RoundRect{x,y,w,h,..}|Draw::Tex{x,y,w,h,..}|Draw::Part{x,y,w,h,..}|Draw::Turned{x,y,w,h,..}=>{
                     *x=canvas.w/2.0+(*x-canvas.w/2.0)*scale;
@@ -373,7 +395,7 @@ impl MenuMotion {
             closing: !self.active,
         };
 
-        if custom==Some(2001) {frame.focus_y+=78.0;}
+        if custom==Some(2001) {frame.focus_y+=190.0-ROW_TOP;}
         if self.pause_morph && self.outgoing.is_some() {
             frame.focus_y=self.pause_focus.value;
         }
@@ -483,26 +505,12 @@ pub fn draw_cached_menu(
 ) {
     let begin = out.len();
     let dx = frame.page_shift * (canvas.w - 2.0 * MENU_INSET);
-    out.push(Draw::Part {
-        x: dx,
-        y: 40.0,
-        w: canvas.w,
-        h: 338.0,
-        tex,
-        alpha: frame.opacity,
-        uv: [0.0, 40.0 / 480.0, 1.0, 338.0 / 480.0],
-    });
-    crate::quick_menu::clip_quads(out, begin, [MENU_INSET, 40.0, canvas.w - MENU_INSET, 378.0]);
+    out.push(Draw::Part {x:dx,y:CARD_TOP,w:canvas.w,h:CARD_BOTTOM-CARD_TOP,tex,alpha:frame.opacity,
+        uv:[0.0,CARD_TOP/canvas.h,1.0,(CARD_BOTTOM-CARD_TOP)/canvas.h]});
+    crate::quick_menu::clip_quads(out,begin,[MENU_INSET,CARD_TOP,canvas.w-MENU_INSET,CARD_BOTTOM]);
     if !frame.outgoing {
-        out.push(Draw::Part {
-            x: 0.0,
-            y: 378.0,
-            w: canvas.w,
-            h: 44.0,
-            tex,
-            alpha: frame.opacity,
-            uv: [0.0, 378.0 / 480.0, 1.0, 44.0 / 480.0],
-        });
+        out.push(Draw::Part{x:0.0,y:0.0,w:canvas.w,h:TITLE_H,tex,alpha:1.0,uv:[0.0,0.0,1.0,TITLE_H/canvas.h]});
+        out.push(Draw::Part{x:0.0,y:FOOTER_Y,w:canvas.w,h:44.0,tex,alpha:1.0,uv:[0.0,FOOTER_Y/canvas.h,1.0,44.0/canvas.h]});
     }
 }
 
@@ -599,17 +607,12 @@ pub fn draw_pause_surface(canvas:crate::Canvas,frame:MenuFrame,hidden:&[QuickRow
 }
 pub fn draw_kid_pause_surface(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Draw>){draw_pause_surface_at(canvas,frame,crate::menu_grid::pause_rect(canvas,3),out);}
 fn draw_pause_surface_at(canvas:crate::Canvas,frame:MenuFrame,small:[f32;4],out:&mut Vec<Draw>){
-    let t=frame.focus_compact.clamp(0.0,1.0);let full=[72.0,88.0,canvas.w-144.0,248.0];
+    let t=frame.focus_compact.clamp(0.0,1.0);let full=card_rect(canvas);
     let a=std::array::from_fn::<_,4,_>(|i|full[i]+(small[i]-full[i])*t);
-    rounded(out,a[0],a[1],a[2],a[3],28.0,[0.095,0.12,0.14,1.0]);
+    rounded(out,a[0],a[1],a[2],a[3],28.0,SURFACE);
 }
-pub fn draw_shared_card(canvas:crate::Canvas,frame:MenuFrame,root:bool,out:&mut Vec<Draw>){
-    if frame.tile_origin.is_none(){return;}
-    let t=if root {1.0-frame.tile_reveal}else{frame.tile_reveal};
-    let from=[MENU_INSET,88.0,canvas.w-2.0*MENU_INSET,260.0];let to=[72.0,88.0,canvas.w-144.0,248.0];
-    let a=std::array::from_fn::<_,4,_>(|i|from[i]+(to[i]-from[i])*t);
-    rounded(out,a[0],a[1],a[2],a[3],28.0,[0.095,0.12,0.14,1.0]);
-}
+pub fn draw_shared_card(canvas:crate::Canvas,_frame:MenuFrame,_root:bool,out:&mut Vec<Draw>){draw_card(canvas,out);}
+
 
 /// The hardware bay occludes moving sheets; menu ink cannot pass over it.
 pub fn clip_panel(out:&mut Vec<Draw>,begin:usize,canvas:crate::Canvas) {
@@ -622,3 +625,24 @@ pub fn draw_kid_grid_focus(canvas:crate::Canvas,frame:MenuFrame,out:&mut Vec<Dra
     let [x,y,w,h]=crate::menu_grid::cell(canvas,0,3,3,true);
     rounded(out,x+index*120.0+frame.page_shift*(canvas.w-112.0),y,w,h,22.0,SELECTED);
 }
+
+/// Crossfade only changing labels. Shared button legends remain fully opaque.
+#[derive(Default,Debug)]
+pub struct ChromeMotion {key:Option<u64>,old:Vec<Draw>,current:Vec<Draw>,progress:Spring,pending:f32}
+impl ChromeMotion {
+    pub fn advance(&mut self,dt:f32){self.pending+=dt.max(0.0);self.progress.step(1.0,dt,1000.0,1.0);if self.progress.value==1.0 {self.old.clear();}}
+    pub fn reset(&mut self){*self=Self::default();}
+    pub fn present(&mut self,key:u64,draws:Vec<Draw>,out:&mut Vec<Draw>){
+        if self.current!=draws {
+            let mut snapshot=vec![];self.render(&mut snapshot);
+            self.old=snapshot;self.progress=Spring::at(if self.key.is_none(){1.0}else{0.0});self.key=Some(key);self.progress.step(1.0,self.pending,1000.0,1.0);
+        }
+        self.pending=0.0;self.current=draws;self.render(out);
+    }
+    fn render(&self,out:&mut Vec<Draw>){
+        let t=self.progress.value.clamp(0.0,1.0);
+        for d in &self.old {if !self.current.contains(d){fade(*d,1.0-t,out);}}
+        for d in &self.current {fade(*d,if self.old.contains(d){1.0}else{t},out);}
+    }
+}
+fn fade(mut d:Draw,t:f32,out:&mut Vec<Draw>){if t<=0.0{return;}match &mut d {Draw::Tex{alpha,..}|Draw::Part{alpha,..}|Draw::Turned{alpha,..}=>*alpha*=t,Draw::Rect{colour,..}|Draw::RoundRect{colour,..}=>colour[3]*=t,_=>{}}out.push(d);}

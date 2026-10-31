@@ -35,6 +35,7 @@ const DOZE_TIMEOUT: Duration = Duration::from_secs(180);
 const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
+    menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId)>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
@@ -198,6 +199,7 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
+            menu_chrome_cache:Vec::new(),
             bluetooth_tex: None,
             bluetooth_old_tex: None,
             bluetooth_page: None,
@@ -731,6 +733,7 @@ impl Frontend {
         self.session.app_mut().set_quick_control_progress(progress);
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
+        let mut chrome_updates=vec![];
         if let Some(menu) = &mut self.session.app_mut().bluetooth {
             if self.bluetooth_page != Some(menu.page_key()) {
                 std::mem::swap(&mut self.bluetooth_tex, &mut self.bluetooth_old_tex);
@@ -739,11 +742,8 @@ impl Frontend {
             menu.progress_face = progress;
             let lines = menu.lines();
             if lines != self.bluetooth_lines || menu.face.is_none() {
-                menu.face = Some(upload(
-                    compositor,
-                    &mut self.bluetooth_tex,
-                    crate::bluetooth::screen_face_without_switches(&lines, sound_footer_ink, sound_canvas),
-                ));
+                let face=crate::bluetooth::screen_face_without_switches(&lines,sound_footer_ink,sound_canvas);
+                menu.face=Some(upload_menu_face(compositor,&mut self.bluetooth_tex,&mut self.menu_chrome_cache,face,&mut chrome_updates));
                 self.bluetooth_lines = lines;
             }
         }
@@ -780,7 +780,7 @@ impl Frontend {
                 std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
                 self.schedule_page=Some(menu.page_key()); menu.face=None;
             }
-            if menu.face.is_none() { menu.face = Some(upload(compositor, &mut self.schedule_tex, menu.screen_face_animated_on(sound_canvas))); }
+            if menu.face.is_none() { menu.face = Some(upload_menu_face(compositor,&mut self.schedule_tex,&mut self.menu_chrome_cache,menu.screen_face_animated_on(sound_canvas),&mut chrome_updates)); }
         }
         if let Some(menu) = &mut self.session.app_mut().kid_menu {
             if self.kid_page != Some(menu.page_key()) {
@@ -789,10 +789,11 @@ impl Frontend {
             }
             let lines = menu.lines();
             if lines != self.kid_lines || menu.face.is_none() {
-                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face_animated_on(sound_canvas)));
+                menu.face = Some(upload_menu_face(compositor,&mut self.kid_tex,&mut self.menu_chrome_cache,menu.screen_face_animated_on(sound_canvas),&mut chrome_updates));
                 self.kid_lines = lines;
             }
         }
+        for (tex,title,hints) in chrome_updates {self.session.app_mut().set_custom_chrome(tex,title,hints);}
         self.session.app_mut().note_custom_menu_face();
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
         sync_binding_faces(self.session.app_mut(), compositor);
@@ -1636,6 +1637,11 @@ fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace)
     });
     let id = upload(compositor, &mut state.tex, face);
     app.set_sticker_face(id);
+    if app.about_heading_needed() {
+        let heading=slot_ui::quick_heading_face("About");
+        let tex=compositor.create_texture(heading.w,heading.h,&heading.rgba);
+        app.set_about_heading((tex,heading.w,heading.h));
+    }
 }
 
 /// The textures the core picker reuses from one cart to the next.
@@ -1718,4 +1724,19 @@ fn upload_rgba(
             id
         }
     }
+}
+
+fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(UndoFace,TexId)>,face:UndoFace,updates:&mut Vec<(TexId,Vec<Draw>,Vec<Draw>)>)->TexId {
+    let mut parts=vec![];
+    for (left,right,y,h) in [(0,face.w,0,40),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
+        let ink=|x:u32|(y..y+h).any(|yy|face.rgba[((yy*face.w+x)*4+3)as usize]!=0);
+        let Some(x0)=(left..right).find(|&x|ink(x)) else {parts.push(vec![]);continue;};
+        let x1=(left..right).rev().find(|&x|ink(x)).unwrap()+1;
+        let w=x1-x0;let mut rgba=vec![];
+        for yy in y..y+h {let a=((yy*face.w+x0)*4)as usize;rgba.extend_from_slice(&face.rgba[a..a+(w*4)as usize]);}
+        let tex=if let Some((_,t))=cache.iter().find(|(f,_)|f.w==w&&f.h==h&&f.rgba==rgba){*t}
+            else{let t=gpu.create_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t));t};
+        parts.push(vec![Draw::Tex{x:x0 as f32,y:y as f32,w:w as f32,h:h as f32,tex,alpha:1.0}]);
+    }
+    let tex=upload(gpu,body,face);let title=parts.remove(0);let hints=parts.into_iter().flatten().collect();updates.push((tex,title,hints));tex
 }

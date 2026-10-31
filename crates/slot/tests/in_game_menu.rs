@@ -27,9 +27,9 @@ fn go_to(a: &mut App, row: QuickRow) {
     a.apply(Action::QuickMenu);
     let path: &[QuickRow] = match row.page() {
         p if p == QuickRow::PLAY => &[],
-        p if p == QuickRow::SETTINGS => &[QuickRow::Settings],
-        p if p == QuickRow::PLAY_SCREEN => &[QuickRow::Settings, QuickRow::PlayScreen],
-        _ => &[QuickRow::Settings, QuickRow::PlayGameplay],
+        p if p == QuickRow::MAIN => &[QuickRow::Settings],
+        p if p == QuickRow::PLAY_SCREEN => &[QuickRow::Settings, QuickRow::Screen],
+        _ => &[QuickRow::Settings, QuickRow::Game],
     };
     for step in path.iter().copied().chain([row]) {
         for _ in 0..16 {
@@ -81,7 +81,7 @@ fn b_climbs_the_in_game_pages_and_never_the_shelf_ones() {
     let (_d, mut a) = playing();
     go_to(&mut a, QuickRow::Rumble);
     press(&mut a, Btn::B);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayGameplay));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Game));
     press(&mut a, Btn::B);
     assert_eq!(a.in_game_menu(), Some(QuickRow::Settings));
     press(&mut a, Btn::B);
@@ -100,12 +100,12 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     ];
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::Theme, QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
     a.set_palette_live(true);
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::Theme, QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
 }
 
@@ -408,7 +408,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     let scrim = out.iter().any(
-        |d| matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.09 && colour[0] < 0.10 && colour[3] > 0.1),
+        |d| matches!(d, slot_ui::Draw::RoundRect { colour, .. } if *colour == slot_ui::expressive::SURFACE && colour[3] > 0.1),
     );
     assert!(
         !scrim,
@@ -420,7 +420,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     assert!(out.iter().any(|d| {
-        matches!(d, slot_ui::Draw::RoundRect { colour, .. } if colour[0] > 0.09 && colour[0] < 0.10 && colour[3] > 0.1)
+        matches!(d, slot_ui::Draw::RoundRect { colour, .. } if *colour == slot_ui::expressive::SURFACE && colour[3] > 0.1)
     }));
 }
 
@@ -492,14 +492,14 @@ fn exit_game_is_offered_with_two_carts() {
 #[test]
 fn sound_opens_in_game_and_returns_to_the_same_settings_row() {
     let (_d, mut a) = playing();
-    go_to(&mut a, QuickRow::PlaySound);
+    go_to(&mut a, QuickRow::Bluetooth);
     press(&mut a, Btn::A);
     assert!(a.bluetooth.is_some());
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlaySound));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Bluetooth));
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     press(&mut a, Btn::B);
     assert!(a.bluetooth.is_none());
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlaySound));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Bluetooth));
     press(&mut a, Btn::B);
     assert_eq!(a.in_game_menu(), Some(QuickRow::Settings));
 }
@@ -797,4 +797,27 @@ fn a_refused_double_tap_in_the_menu_with_no_states_stays_on_a_shown_row() {
     a.apply(Action::Polaroids);
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     cursor_on_a_shown_row(&a);
+}
+
+#[test]
+fn settings_opens_the_same_complete_four_column_home_as_the_carousel() {
+    let (_d,mut a)=playing();go_to(&mut a,QuickRow::Settings);press(&mut a,Btn::A);
+    assert_eq!(a.in_game_menu(),Some(QuickRow::General));
+    assert_eq!(slot_ui::menu_grid::columns(QuickRow::General,&a.in_game_hidden()),4);
+    for row in QuickRow::MAIN {common::navigate_in_game_menu(&mut a,row);assert_eq!(a.in_game_menu(),Some(row));}
+    assert!(matches!(a.phase(),Phase::Playing{..}));
+}
+#[test]
+fn about_and_clock_return_to_the_same_paused_game_without_powering_it_down() {
+    for row in [QuickRow::About,QuickRow::DateTime] {
+        let (_d,mut a)=playing();a.update(1.0);a.apply(Action::QuickMenu);
+        common::navigate_in_game_menu(&mut a,QuickRow::Settings);press(&mut a,Btn::A);
+        common::navigate_in_game_menu(&mut a,if row==QuickRow::DateTime{QuickRow::General}else{row});
+        if row==QuickRow::DateTime {press(&mut a,Btn::A);for _ in 0..16 {if a.in_game_menu()==Some(row){break;}press(&mut a,Btn::Down);}}
+        assert_eq!(a.in_game_menu(),Some(row));press(&mut a,Btn::A);a.update(1.0);
+        assert!(matches!((row,a.phase()),(QuickRow::About,Phase::About)|(QuickRow::DateTime,Phase::SetClock{..})));
+        assert_eq!(a.screen_power(),1.0);
+        press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{cart}if cart=="Emerald"));assert_eq!(a.in_game_menu(),Some(row));
+        press(&mut a,Btn::B);assert_eq!(a.in_game_menu(),Some(if row==QuickRow::DateTime{QuickRow::General}else{QuickRow::Settings}));
+    }
 }

@@ -525,7 +525,7 @@ impl Manager {
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
         let(_,_,first,visible)=self.scroll_info();
         if self.page!=Page::Home {return vec![];}
-        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:118.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:slot_ui::expressive::ROW_TOP+6.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
     }
 
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
@@ -533,13 +533,13 @@ impl Manager {
         self.rows().iter().enumerate().skip(first).take(visible).filter_map(|(i,row)| {
             let (id,value)=if let Some(v)=row.strip_prefix("BLUETOOTH ") {(1,v)}
                 else if let Some(v)=row.strip_prefix("PAUSE_DISCONNECT ") {(2,v)} else {return None;};
-            Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:118.0+(i-first) as f32*slot_ui::QUICK_PITCH})
+            Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:slot_ui::expressive::ROW_TOP+6.0+(i-first) as f32*slot_ui::QUICK_PITCH})
         }).collect()
     }
     pub fn scroll_info(&self) -> (usize,usize,usize,usize) {
         let total=self.rows().len();
         let visible=total.min(slot_ui::QUICK_VISIBLE);
-        (self.selected,total,self.selected.saturating_sub(slot_ui::QUICK_VISIBLE-1),visible)
+        (self.selected,total,self.selected.saturating_sub(visible/2).min(total.saturating_sub(visible)),visible)
     }
     pub fn page_key(&self) -> u64 { 1000 + self.page.clone() as u64 }
     pub fn lines(&self) -> Vec<String> {
@@ -557,7 +557,7 @@ impl Manager {
         } else {
             self.status.clone()
         };
-        let compact = matches!(self.page, Page::Home | Page::Pair);
+        let compact = true;
         let mut lines = vec![
             title.to_owned(),
             message,
@@ -570,7 +570,7 @@ impl Manager {
             },
         ];
         let visible = if compact { slot_ui::QUICK_VISIBLE } else { 3 };
-        let first = self.selected.saturating_sub(visible - 1);
+        let first = self.scroll_info().2;
         for (i, row) in self.rows().iter().enumerate().skip(first).take(visible) {
             lines.push(format!(
                 "{}{}",
@@ -878,7 +878,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     // Reserve six row positions so status text and new scan results cannot
     // recenter the menu or change the visible window.
     let row_top = if compact {
-        112
+        slot_ui::expressive::ROW_TOP as u32
     } else if clean {
         (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * slot_ui::QUICK_PITCH as u32) / 2 + 4
     } else {
@@ -888,7 +888,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     let mut panel = UndoFace { rgba, w: screen_w, h: OUT_H };
     slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, slot_ui::QUICK_PITCH, row_count as usize, if switches {selected}else{None});
     let mut rgba = panel.rgba;
-    if compact { let title=slot_ui::quick_heading_face("Sound"); let x=screen_w.saturating_sub(title.w)/2; blit(&mut rgba,&title,x,40); }
+    if compact { let title=slot_ui::quick_heading_face("Sound"); let x=screen_w.saturating_sub(title.w)/2; blit(&mut rgba,&title,x,0); }
     for (i, line) in lines.iter().enumerate() {
         if compact && (i == 0 || i == 2) {
             continue;
@@ -954,7 +954,7 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
         }
         if label == "CONFIRM_FORGET" {
             let hint = slot_ui::sound_forget_confirmation();
-            blit(&mut rgba, &hint, (screen_w - hint.w) / 2, 12);
+            blit(&mut rgba, &hint, (screen_w - hint.w) / 2, 320);
             continue;
         }
         if let Some((name, value)) = label

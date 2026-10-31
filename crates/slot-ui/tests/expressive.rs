@@ -215,8 +215,8 @@ fn cached_settings_share_the_same_native_grid_and_only_one_selection_surface() {
         );
         assert_eq!(face.w, width);
         let alpha = |x, y| face.rgba[((y * width + x) * 4 + 3) as usize];
-        assert_eq!(alpha(92, 130), 255);
-        assert_eq!(alpha(92, 182), 0, "unselected rows have no backing card");
+        assert_eq!(alpha(92, 98), 255);
+        assert_eq!(alpha(92, 152), 0, "unselected rows have no backing card");
         for y in 88..184 {
             for x in (0..56).chain(width - 56..width) {
                 assert_eq!(alpha(x, y), 0, "body edge padding");
@@ -362,7 +362,7 @@ fn details_and_clock_content_fit_both_native_canvases() {
 fn pause_settings_is_centered_and_the_card_expands_to_the_whole_canvas() {
     use slot_ui::*;
     for w in [640.0,720.0]{let canvas=Canvas{w,h:480.0};let hidden=[QuickRow::UndoSave,QuickRow::UndoLoad];let count=QuickRow::Resume.shown(&hidden).len();let rect=menu_grid::pause_rect(canvas,count);assert_eq!(rect[0]+rect[2]/2.0,w/2.0);assert_eq!(rect[1]+rect[3]/2.0,240.0);
-    let mut full=vec![];expressive::draw_pause_surface(canvas,MenuFrame::settled(QuickRow::PlayScreen,&hidden),&hidden,&mut full);assert!(matches!(full.last(),Some(Draw::RoundRect{x,y,w:ww,h,..})if *x==72.0&&*y==88.0&&*ww==w-144.0&&*h==248.0));}
+    let mut full=vec![];expressive::draw_pause_surface(canvas,MenuFrame::settled(QuickRow::PlayScreen,&hidden),&hidden,&mut full);assert!(matches!(full.last(),Some(Draw::RoundRect{x,y,w:ww,h,..})if *x==slot_ui::expressive::MENU_INSET&&*y==slot_ui::expressive::CARD_TOP&&*ww==w-2.0*slot_ui::expressive::MENU_INSET&&*h==slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::CARD_TOP));}
 }
 
 #[test]
@@ -440,7 +440,7 @@ fn full_kid_menu_focus_uses_its_own_row_origin() {
         let mut motion=MenuMotion::default();
         motion.update_page_at(Some(QuickRow::Kids),&[],None,Some(2010),Some((selected,0)),1.0);
         let frame=motion.frame_page(QuickRow::Kids,&[],Some(2010));
-        assert_eq!(frame.focus_y,112.0+selected as f32*QUICK_PITCH);
+        assert_eq!(frame.focus_y,slot_ui::expressive::ROW_TOP+selected as f32*QUICK_PITCH);
     }
 }
 
@@ -483,7 +483,7 @@ fn grid_tiles_have_matching_native_assets_and_directional_navigation() {
     for canvas in [Canvas{w:640.0,h:480.0},Canvas{w:720.0,h:480.0}] {
         for (i,row) in QuickRow::MAIN.into_iter().enumerate() {
             let [x,y,w,h]=rect(canvas,i);
-            assert!(x>=56.0 && x+w<=canvas.w-56.0 && y>=88.0 && y+h<=348.0);
+            assert!(x>=56.0 && x+w<=canvas.w-56.0 && y>=slot_ui::expressive::CARD_TOP && y+h<=slot_ui::expressive::CARD_BOTTOM);
             for lit in [false,true] {
                 let f=quick_label_face(row,lit);
                 assert!(f.w as f32<=w && f.h as f32<=h);
@@ -498,7 +498,41 @@ fn grid_tiles_have_matching_native_assets_and_directional_navigation() {
     assert_eq!(navigate(QuickRow::General,&[],0,1),QuickRow::Power);
 }
 #[test]
-fn card_transform_starts_at_its_tile_and_finishes_at_full_size() {
+fn every_settings_page_retains_the_same_tall_card_during_navigation() {
     use slot_ui::*;
-    let canvas=Canvas{w:640.0,h:480.0};for (t,want_x,want_w)in[(0.0,56.0,528.0),(1.0,72.0,496.0)]{let mut f=MenuFrame::settled(QuickRow::Wallpaper,&[]);f.tile_origin=Some([0.0,0.0]);f.tile_reveal=t;let mut out=vec![];expressive::draw_shared_card(canvas,f,false,&mut out);assert!(matches!(out[0],Draw::RoundRect{x,w,..}if x==want_x&&w==want_w));}
+    for canvas in [Canvas{w:640.0,h:480.0},Canvas{w:720.0,h:480.0}] {
+        for row in QuickRow::ALL {
+            for t in [0.0,0.25,0.5,0.75,1.0] {
+                let mut frame=MenuFrame::settled(row,&[]);frame.tile_origin=Some([0.0,0.0]);frame.tile_reveal=t;
+                let mut out=vec![];expressive::draw_shared_card(canvas,frame,row.page()==QuickRow::MAIN,&mut out);
+                let [x,y,w,h]=expressive::card_rect(canvas);
+                assert!(matches!(out.as_slice(),[Draw::RoundRect{x:xx,y:yy,w:ww,h:hh,..}] if (*xx,*yy,*ww,*hh)==(x,y,w,h)),"{row:?} at {t}");
+            }
+        }
+    }
+}
+
+#[test]
+fn hints_keep_their_anchors_and_shared_buttons_through_interruption() {
+    use slot_ui::{Draw,TexId,expressive::ChromeMotion};
+    let hint=|id,x|Draw::Tex{x,y:378.0,w:96.0,h:32.0,tex:TexId::from_raw(id),alpha:1.0};
+    let back=hint(1,16.0);let a=hint(2,520.0);let b=hint(3,520.0);let c=hint(4,520.0);
+    let mut m=ChromeMotion::default();m.present(1,vec![back,a],&mut vec![]);
+    m.present(2,vec![back,b],&mut vec![]);m.advance(0.05);
+    let mut before=vec![];m.present(2,vec![back,b],&mut before);
+    assert!(before.contains(&back));
+    let mut interrupted=vec![];m.present(3,vec![back,c],&mut interrupted);
+    assert_eq!(before.len(),interrupted.len());assert!(before.iter().all(|d|interrupted.contains(d)),"retargeting changed the currently visible frame");
+    for hz in [30,60,120] {for _ in 0..hz {m.advance(1.0/hz as f32);let mut out=vec![];m.present(3,vec![back,c],&mut out);assert!(out.contains(&back));assert!(out.iter().all(|d|matches!(d,Draw::Tex{y:378.0,h:32.0,alpha,..} if (0.0..=1.0).contains(alpha))));}}
+    let mut out=vec![];m.present(3,vec![back,c],&mut out);assert_eq!(out,vec![back,c]);
+}
+#[test]
+fn all_long_pages_keep_the_track_and_thumb_inside_the_shared_card() {
+    use slot_ui::{expressive::*,Canvas,Draw};
+    for canvas in [Canvas{w:640.0,h:480.0},Canvas{w:720.0,h:480.0}] {
+        for total in [6,12,20] {for start in [0.0,(total-5)as f32] {
+            let mut out=vec![];draw_scrollbar(canvas,ROW_TOP,5,total,start,&mut out);assert_eq!(out.len(),2);
+            for draw in out {assert!(matches!(draw,Draw::RoundRect{x,y,w,h,..} if x>=MENU_INSET&&x+w<=canvas.w-MENU_INSET&&y>=CARD_TOP&&y+h<=CARD_BOTTOM));}
+        }}
+    }
 }

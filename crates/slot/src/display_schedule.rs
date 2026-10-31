@@ -65,10 +65,10 @@ impl Menu {
     pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
     pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
-        if self.time_field.is_none(){vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.settings.bedtime.1 as f32/9.0,y:118.0+3.0*slot_ui::QUICK_PITCH}]}else{vec![]}
+        if self.time_field.is_none(){vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+3,fraction:self.settings.bedtime.1 as f32/9.0,y:slot_ui::expressive::ROW_TOP+6.0+3.0*slot_ui::QUICK_PITCH}]}else{vec![]}
     }
     pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
-        if self.time_field.is_none() {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.settings.schedule,y:118.0}]} else {vec![]}
+        if self.time_field.is_none() {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.settings.schedule,y:slot_ui::expressive::ROW_TOP+6.0}]} else {vec![]}
     }
     pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,false)}
     pub fn screen_face_animated_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,true)}
@@ -92,11 +92,10 @@ impl Menu {
         let mut face = settings_face(canvas, &rows, selected, 0, status, 0.0);
         let heading = slot_ui::quick_heading_face(title);
         let x = face.w.saturating_sub(heading.w)/2;
-        for y in 0..heading.h.min(face.h.saturating_sub(40)) {
+        for y in 0..heading.h.min(face.h) {
             for xx in 0..heading.w.min(face.w.saturating_sub(x)) {
-                let from = ((y * heading.w + xx) * 4) as usize;
-                let to = (((y + 40) * face.w + x + xx) * 4) as usize;
-                if heading.rgba[from+3] > 0 { face.rgba[to..to+4].copy_from_slice(&heading.rgba[from..from+4]); }
+                let from=((y*heading.w+xx)*4)as usize;let to=((y*face.w+x+xx)*4)as usize;
+                if heading.rgba[from+3]>0 {face.rgba[to..to+4].copy_from_slice(&heading.rgba[from..from+4]);}
             }
         }
         face

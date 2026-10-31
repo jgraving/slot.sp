@@ -504,6 +504,7 @@ fn the_about_footer_puts_restart_on_the_right() {
     open_at(&mut a, QuickRow::About);
     assert!(!drawn(&frame(&a), 404), "Restart is on the menu");
     press(&mut a, Btn::A);
+    a.update(1.0);
     let out = frame(&a);
     let (lx, ly, _) = legend_box(&out, 400);
     let (rx, ry, rw) = legend_box(&out, 404);
@@ -1461,15 +1462,13 @@ fn about_remains_present_and_opaque_while_back_reverses_its_travel() {
 }
 
 #[test]
-fn full_menu_legends_slide_in_and_out_without_transparency() {
+fn full_menu_legends_stay_anchored_while_the_sheet_opens_and_closes() {
     let (_d,mut a,_)=on_carousel();fake_faces(&mut a);a.apply(Action::QuickMenu);a.update(0.0);
-    assert!(!drawn(&frame(&a),400),"the bay occludes the arriving legends");
-    a.update(0.2);let middle=legend_box(&frame(&a),400).1;
-    a.update(1.0);let resting=legend_box(&frame(&a),400).1;
-    assert!(resting<middle);
-    a.apply(Action::QuickMenu);a.update(0.005);
-    let leaving=frame(&a);assert!(legend_box(&leaving,400).1>resting);
-    assert!(leaving.iter().filter_map(|d|match d {Draw::Tex{tex,alpha,..} if *tex==TexId::from_raw(400)=>Some(*alpha),_=>None}).all(|a|a==1.0));
+    let alpha=|out:&[Draw]|out.iter().find_map(|d|match d {Draw::Tex{tex,alpha,..} if *tex==TexId::from_raw(400)=>Some(*alpha),_=>None}).unwrap_or(0.0);
+    assert_eq!(alpha(&frame(&a)),0.0);
+    a.update(0.04);let arriving=frame(&a);let y=legend_box(&arriving,400).1;let first=alpha(&arriving);assert!(first>0.0&&first<1.0);
+    a.update(1.0);let resting=frame(&a);assert_eq!(legend_box(&resting,400).1,y);assert_eq!(alpha(&resting),1.0);
+    a.apply(Action::QuickMenu);a.update(0.04);let leaving=frame(&a);assert_eq!(legend_box(&leaving,400).1,y);assert!(alpha(&leaving)>0.0&&alpha(&leaving)<1.0);
     a.update(1.0);assert!(!drawn(&frame(&a),400));
 }
 
@@ -1563,4 +1562,25 @@ fn games_retreat_once_stay_offscreen_on_subpages_and_return_continuously(){
     let y=|app:&App|frame(app).iter().filter_map(|d|match d{Draw::Tex{tex,y,..}|Draw::Part{tex,y,..}if *tex==TexId::from_raw(7900)=>Some(*y),_=>None}).fold(f32::INFINITY,f32::min);
     let rest=y(&app);app.apply(Action::QuickMenu);app.update(0.06);let departing=y(&app);assert!(departing>rest);app.update(1.0);let parked=y(&app);assert!(parked>480.0);
     press(&mut app,Btn::A);app.update(0.1);assert!((y(&app)-parked).abs()<0.1);press(&mut app,Btn::B);press(&mut app,Btn::B);app.update(0.06);let returning=y(&app);assert!(returning>rest&&returning<parked);app.update(1.0);assert!((y(&app)-rest).abs()<0.1);
+}
+
+#[test]
+fn the_hardware_bay_stays_present_on_every_settings_drawing_path() {
+    for row in [QuickRow::General,QuickRow::BootAnimation,QuickRow::Brightness,QuickRow::GbcShader,QuickRow::FastForward,QuickRow::LidClose,QuickRow::GameUp,QuickRow::ScSave,QuickRow::Bluetooth,QuickRow::Kids,QuickRow::DisplaySchedule,QuickRow::DateTime,QuickRow::About] {
+        let (_d,mut a,_)=on_carousel();fake_faces(&mut a);a.set_slot_faces(TexId::from_raw(77),TexId::from_raw(78));open_at(&mut a,row);
+        if matches!(row,QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::DateTime|QuickRow::About){press(&mut a,Btn::A);}
+        if let Some(menu)=&mut a.bluetooth {menu.face=Some(TexId::from_raw(9000));}
+        if let Some(menu)=&mut a.kid_menu {menu.face=Some(TexId::from_raw(9000));}
+        if let Some(menu)=&mut a.display_schedule {menu.face=Some(TexId::from_raw(9000));}
+        a.update(1.0);
+        for tex in [77,78] {assert!(drawn(&frame(&a),tex),"hardware bay missing on {row:?}");}
+    }
+}
+#[test]
+fn closing_settings_keeps_one_carousel_label_at_a_continuous_position() {
+    let (_d,mut a,_)=on_carousel_with(SlotState{show_titles:true,..Default::default()});fake_faces(&mut a);
+    a.set_shelf_title_face(TexId::from_raw(9500),120);a.update(1.0);a.apply(Action::QuickMenu);a.update(1.0);frame(&a);
+    a.apply(Action::QuickMenu);
+    let mut last=None;
+    for _ in 0..45 {a.update(1.0/60.0);let out=frame(&a);let labels:Vec<_>=out.iter().filter_map(|d|match d{Draw::Tex{y,tex,alpha,..}if *tex==TexId::from_raw(9500)=>Some((*y,*alpha)),_=>None}).collect();assert_eq!(labels.len(),1,"the returning carousel was drawn twice");let y=labels[0].0;if let Some(old)=last{assert!(y<=old+0.001,"carousel label reversed/jumped while returning");assert!(old-y<130.0,"carousel label snapped to its destination");}last=Some(y);}
 }

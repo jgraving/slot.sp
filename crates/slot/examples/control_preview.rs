@@ -32,7 +32,7 @@ fn main() {
                 frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
                 expressive::draw_kid_pause_surface(canvas,frame,&mut draws);
             }
-            else {expressive::rounded(&mut draws,72.0,88.0,canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
+            else {expressive::draw_card(canvas,&mut draws);}
             if let Some(r) = focus {
                 expressive::rounded(
                     &mut draws,
@@ -118,7 +118,7 @@ fn main() {
         "schedule",
         schedule.screen_face_animated_on(canvas),
         controls,
-        Some([84.0,268.0,canvas.w-168.0,44.0]),
+        Some([84.0,expressive::ROW_TOP+3.0*QUICK_PITCH,canvas.w-168.0,expressive::ROW_H]),
     );
     let mut policy=slot::kid_policy::Policy::default(); policy.active=true;
     let mut child=slot::kid_menu::Menu::child(path.clone(),policy.clone(),true,35,55);

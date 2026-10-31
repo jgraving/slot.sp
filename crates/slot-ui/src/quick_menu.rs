@@ -466,11 +466,7 @@ impl QuickRow {
     }
 
     pub fn parent_in_game(self) -> Option<QuickRow> {
-        match self.parent() {
-            Some(QuickRow::Game) => Some(QuickRow::PlayGameplay),
-            Some(QuickRow::ControlsInGame) => Some(QuickRow::PlayControls),
-            parent => parent,
-        }
+        if self.page()==QuickRow::MAIN {Some(QuickRow::Settings)}else if self.page()==QuickRow::PLAY_SCREEN {Some(QuickRow::Screen)}else{self.parent()}
     }
 
     /// The title is cached once per page, never built during an animation.
@@ -500,7 +496,7 @@ impl QuickRow {
             QuickRow::Power => Some(QuickRow::POWER[0]),
             QuickRow::Screen => Some(QuickRow::SCREEN[0]),
             QuickRow::Game => Some(QuickRow::GAME[0]),
-            QuickRow::Settings => Some(QuickRow::SETTINGS[0]),
+            QuickRow::Settings => Some(QuickRow::MAIN[0]),
             QuickRow::PlayScreen => Some(QuickRow::PLAY_SCREEN[0]),
             QuickRow::PlayGameplay => Some(QuickRow::GAME[0]),
             QuickRow::PlayControls => Some(QuickRow::CONTROLS[0]),
@@ -1002,9 +998,9 @@ impl QuickValue {
     }
 }
 
-pub const QUICK_PITCH: f32 = 52.0;
+pub const QUICK_PITCH: f32 = 54.0;
 pub const MENU_HINT_H: u32 = 32;
-pub const QUICK_VISIBLE_ROWS: usize = 4;
+pub const QUICK_VISIBLE_ROWS: usize = 5;
 pub const QUICK_EDGE: f32 = 96.0;
 pub const QUICK_LABEL_X: f32 = 96.0;
 const POINTER_SCALE: usize = 4;
@@ -1165,7 +1161,11 @@ pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
 }
 
 pub fn quick_heading_face(label: &str) -> UndoFace {
-    quick_text_face(&menu_sentence_case(label), MENU_INK, text::Role::Display)
+    let label=menu_sentence_case(label);
+    let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h:40};};
+    let layout=text::fit_preserving_case(font,&label,280.0,1,24.0,20.0);
+    let w=text::line_width(font,&label,layout.px,layout.tracking).ceil() as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*40*4)as usize];text::draw_centred(&mut rgba,w,40,&layout,MENU_INK);UndoFace{rgba,w,h:40}
 }
 
 pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
@@ -1337,9 +1337,9 @@ pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,b
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = parent_footer_face_on(canvas,footer,rows.get(selected).is_some_and(|r|r.2));
-    let visible = rows.len().min(if reserve>0.0 {QUICK_VISIBLE-1}else{QUICK_VISIBLE});
+    let visible = rows.len().min(if reserve>0.0 {3}else{QUICK_VISIBLE});
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = 112.0;
+    let top = crate::expressive::ROW_TOP;
     crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, switches.then_some(selected - start));
     let pad = MENU_PAD as f32;
     let right = width as f32 - QUICK_EDGE;
@@ -1374,16 +1374,9 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
             parent_blit(&mut face, &value, right + pad - value.w as f32, y);
         }
     }
-    if rows.len() > visible {
-        let h = QUICK_PITCH * visible as f32;
-        let thumb = h * visible as f32 / rows.len() as f32;
-        let y = top + (h - thumb) * selected as f32 / (rows.len() - 1) as f32;
-        for yy in y as u32..(y + thumb) as u32 {
-            for x in width - 44..width - 40 {
-                let at = ((yy * width + x) * 4) as usize;
-                face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, 255]);
-            }
-        }
+    if switches && rows.len()>visible {
+        let mut bar=vec![];crate::expressive::draw_scrollbar(canvas,top,visible,rows.len(),start as f32,&mut bar);
+        for draw in bar {if let Draw::RoundRect{x,y,w,h,radius,colour}=draw {crate::expressive::raster_round(&mut face,x,y,w,h,radius,colour);}}
     }
     if !status.is_empty() {
         let description = quick_description_face(&[status]);
@@ -1720,6 +1713,7 @@ impl QuickMenu<'_> {
         let dy = (1.0 - frame.entry) * (self.canvas.h+32.0);
         let dx = frame.page_shift * (self.canvas.w - 2.0 * crate::expressive::MENU_INSET);
         for draw in &mut out[begin..] {
+            if crate::expressive::is_chrome(draw) {continue;}
             match draw {
                 Draw::RoundRect { x, y, colour, .. } => { *x += dx; *y += dy; colour[3] *= frame.opacity; }
                 Draw::Tex { x, y, alpha, .. } => { *x += dx; *y += dy; *alpha *= frame.opacity*frame.content_opacity; }
@@ -1733,10 +1727,10 @@ impl QuickMenu<'_> {
         if frame.tile_origin.is_some() {
             // Clip in card space first, so off-card scroll rails cannot enter
             // the viewport as the shared container shrinks.
-            clip_quads(out,begin,[crate::expressive::MENU_INSET,40.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
+            clip_quads(out,begin,[crate::expressive::MENU_INSET,0.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
         }
 
-        clip_quads(out, begin, [crate::expressive::MENU_INSET, 40.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
+        clip_quads(out, begin, [crate::expressive::MENU_INSET, 0.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
     }
 
     fn draw_content(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
@@ -1752,15 +1746,15 @@ impl QuickMenu<'_> {
             return;
         };
         if crate::menu_grid::is_page(self.row.page()) {crate::menu_grid::draw(self,frame,out);return;}
-        if !self.over_game && frame.tile_origin.is_none() {rounded(out,72.0,88.0,self.canvas.w-144.0,248.0,28.0,[0.095,0.12,0.14,1.0]);}
+        if frame.background && !self.over_game {crate::expressive::draw_card(self.canvas,out);}
         let pause=self.row.page()==QuickRow::PLAY;
         let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);
         let (start, len) = quick_window(self.row, self.hidden);
         if len == 0 { return; }
         let top = quick_row_top_at(shown[start], self.row, self.hidden);
-        let panel_y = 40.0;
-        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| !pause && *key == self.row.page()[0]) {
+        let panel_y = 0.0;
+        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| !frame.outgoing && *key == self.row.page()[0]) {
             push(out,*tex,self.canvas.centred(*w as f32),panel_y,*w,*h);
         }
         // The selection travels as one shape. Keep it within the current
@@ -1845,29 +1839,9 @@ impl QuickMenu<'_> {
             push(out, left_tex, vx + pad - CARET_GAP - lw as f32, y, lw, lh);
             clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
         }
-        if let Some(mut bar) = quick_scroll(self.row, self.hidden).filter(|_| !frame.outgoing) {
-            let along = (frame.scroll_position / (shown.len() - 1) as f32).clamp(0.0, 1.0);
-            bar.thumb_y = bar.y + (bar.h - bar.thumb_h) * along;
-            let x=if pause {self.canvas.w/2.0+172.0}else{self.canvas.w-SCROLL_INSET-SCROLL_W};
-            let ink = DIM_INK.map(|c| f32::from(c) / 255.0);
-            out.push(Draw::Rect {
-                x,
-                y: bar.y,
-                w: SCROLL_W,
-                h: bar.h,
-                colour: [ink[0], ink[1], ink[2], 0.3],
-            });
-            let lit = crate::hud::HUD_INK.map(|c| f32::from(c) / 255.0);
-            out.push(Draw::Rect {
-                x,
-                y: bar.thumb_y,
-                w: SCROLL_W,
-                h: bar.thumb_h,
-                colour: [lit[0], lit[1], lit[2], 1.0],
-            });
-        }
+        crate::expressive::draw_scrollbar(self.canvas,top,len,shown.len(),frame.window_start,out);
         if let Some((tex, w, h)) = self.description {
-            let y = LEGEND_Y - h as f32 - if self.row.binds() { 8.0 } else { DESCRIPTION_GAP };
+            let y = crate::expressive::CARD_BOTTOM - h as f32 - 16.0;
             push(out, tex, self.canvas.centred(w as f32), y, w, h);
         }
         if self.over_game || self.footer_legends {
@@ -1888,12 +1862,10 @@ impl QuickMenu<'_> {
 /// The scene owns the wallpaper. Cards are the only opaque menu surface.
 pub fn draw_menu_ground(_canvas: Canvas, _ground: Option<(TexId, u32)>, _out: &mut Vec<Draw>) {}
 
-pub const QUICK_VISIBLE: usize = 4;
+pub const QUICK_VISIBLE: usize = 5;
 
 
-const SCROLL_INSET: f32 = 40.0;
 
-const SCROLL_W: f32 = 4.0;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct QuickScroll {
@@ -1903,7 +1875,7 @@ pub struct QuickScroll {
     pub thumb_h: f32,
 }
 
-fn visible(_page: &[QuickRow]) -> usize { QUICK_VISIBLE }
+fn visible(page: &[QuickRow]) -> usize { if page.first().is_some_and(|r|r.binds()){QUICK_VISIBLE-1}else{QUICK_VISIBLE} }
 
 pub fn quick_window(selected: QuickRow, hidden: &[QuickRow]) -> (usize, usize) {
     let count = selected.shown(hidden).len();
@@ -1923,9 +1895,9 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
         return None;
     }
     let y = quick_row_top_at(shown[start], selected, hidden);
-    let h = QUICK_PITCH * len as f32;
-    let thumb_h = h * len as f32 / shown.len() as f32;
-    let along = selected.position(hidden) as f32 / (shown.len() - 1) as f32;
+    let h = QUICK_PITCH * len as f32 - 6.0;
+    let thumb_h = (h * len as f32 / shown.len() as f32).max(24.0);
+    let along = start as f32 / (shown.len() - len) as f32;
     Some(QuickScroll {
         y,
         h,
@@ -1938,7 +1910,7 @@ pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) 
     let (start, len) = quick_window(selected, hidden);
     let top=if row.page()==QuickRow::PLAY {
         (OUT_H as f32-((len.saturating_sub(1))as f32*QUICK_PITCH+crate::expressive::ROW_H))/2.0
-    } else {112.0};
+    } else {crate::expressive::ROW_TOP};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
 
@@ -1999,18 +1971,21 @@ pub fn reference_face(canvas: Canvas, title: &str, rows: &[(String,String,bool)]
     let content=canvas.w-2.0*QUICK_LABEL_X;
     let label_w=(content-24.0)*0.44;
     let value_w=content-24.0-label_w;
-    let heading=bounded_menu_face(&menu_sentence_case(title),text::Role::Display,MENU_INK,content,30.0);
-    parent_blit(&mut face,&heading,(canvas.w-heading.w as f32)/2.0,40.0);
+    let heading=quick_heading_face(title);
+    parent_blit(&mut face,&heading,(canvas.w-heading.w as f32)/2.0,0.0);
     for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
         let label=bounded_menu_face(&menu_sentence_case(label),text::Role::Menu,DIM_INK,label_w,26.0);
         let value=reference_binding_face(value,value_w);
-        let y=104.0+i as f32*36.0;
+        let y=80.0+i as f32*40.0;
         parent_blit(&mut face,&label,QUICK_LABEL_X-MENU_PAD as f32,y);
         parent_blit(&mut face,&value,canvas.w-QUICK_EDGE+MENU_PAD as f32-value.w as f32,y);
     }
     if pages>1 {
         let count=quick_description_face(&[&format!("{} / {}",page+1,pages)]);
-        parent_blit(&mut face,&count,(canvas.w-count.w as f32)/2.0,350.0);
+        parent_blit(&mut face,&count,(canvas.w-count.w as f32)/2.0,328.0);
+        let w=120.0;let left=canvas.centred(w);let h=3.0;
+        crate::expressive::raster_round(&mut face,left,357.0,w,h,1.5,[0.55,0.64,0.65,0.22]);
+        crate::expressive::raster_round(&mut face,left+w*page as f32/pages as f32,357.0,w/pages as f32,h,1.5,[0.76,0.84,0.83,1.0]);
     }
     face
 }

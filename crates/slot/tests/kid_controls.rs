@@ -439,7 +439,7 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     preview_menu(&s, "parent-first-settings.png");
     // Select Parent code. Merely opening settings must not create a code.
     assert!(!dir.join("code").exists());
-    for _ in 0..4 { raw_tap(&mut s, &mut time, Btn::Down); }
+    raw_tap(&mut s, &mut time, Btn::Down);
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
@@ -607,7 +607,7 @@ fn parent_settings_apply_volume_immediately_and_use_transparent_menu_artwork() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..4 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Left);
     assert_eq!(app.kid_volume_limit(), 40);
     assert_eq!(Policy::read(d.path()).unwrap().volume_limit, 40);
@@ -655,7 +655,7 @@ fn parent_can_adjust_the_volume_cap_and_resume_the_same_game() {
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..4 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Left);
     assert_eq!(app.kid_volume_limit(), 40);
     assert!(matches!(app.phase(), Phase::Playing { .. }));
@@ -855,7 +855,7 @@ fn time_controls_allow_one_minute_steps_and_separate_hours_and_minutes() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..2 { press(&mut app, Btn::Down); }
+    for _ in 0..3 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Right);
     assert_eq!(app.kids.minutes, 6);
     press(&mut app, Btn::A);
@@ -892,7 +892,7 @@ fn bedtime_editor_wraps_at_midnight_in_one_minute_steps() {
     policy.bedtime = 1439;
     let mut menu = Menu::new(d.path().to_owned(), policy);
     let tap = |m: &mut Menu, b| m.input(Action::GbaDown(b), now());
-    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::A] { tap(&mut menu, b); }
+    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::Down, Btn::A] { tap(&mut menu, b); }
     tap(&mut menu, Btn::Down);
     tap(&mut menu, Btn::Right);
     assert_eq!(menu.draft.bedtime, 0);
@@ -909,7 +909,7 @@ fn holding_time_arrows_repeats_and_stops_on_release_sleep_and_long_frames() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..2 { press(&mut app, Btn::Down); }
+    for _ in 0..3 { press(&mut app, Btn::Down); }
     app.apply(Action::GbaDown(Btn::Right));
     assert_eq!(app.kids.minutes, 6);
     for _ in 0..20 { app.update(0.05); }
@@ -943,7 +943,7 @@ fn an_expired_bedtime_edit_shows_feedback_and_stops_repeating() {
     policy.begin(wall).unwrap();
     policy.save(d.path()).unwrap();
     let mut menu = Menu::new(d.path().to_owned(), policy);
-    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::A, Btn::Down, Btn::Left] {
+    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::Down, Btn::A, Btn::Down, Btn::Left] {
         menu.input(Action::GbaDown(b), wall);
     }
     assert_eq!(menu.draft.bedtime, 12 * 60 + 1);
@@ -963,8 +963,8 @@ fn parent_focus_keeps_the_five_row_page_aligned_at_its_last_entry() {
     let d=common::tmp_root_with_carts(&["Approved"]);
     let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());
     menu.input(Action::GbaDown(Btn::Up),0);
-    assert_eq!(menu.focus_info(),Some((4,1)));
-    assert!(menu.lines().iter().any(|line|line.contains("SELECTED Set parent code")));
+    assert_eq!(menu.focus_info(),Some((4,0)));
+    assert!(menu.lines().iter().any(|line|line.contains("SELECTED Volume limit")));
 }
 
 #[test]
@@ -1015,5 +1015,5 @@ fn remaining_time_has_a_reserved_band_clear_of_menu_rows() {
 
 #[test]
 fn parent_volume_slider_can_reach_zero_and_one_hundred(){
-    let d=common::tmp_root_with_carts(&["Approved"]);let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());for _ in 0..3{menu.input(Action::GbaDown(Btn::Down),0);}for _ in 0..20{menu.input(Action::GbaDown(Btn::Left),0);}assert_eq!(menu.draft.volume_limit,0);for _ in 0..20{menu.input(Action::GbaDown(Btn::Right),0);}assert_eq!(menu.draft.volume_limit,100);
+    let d=common::tmp_root_with_carts(&["Approved"]);let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());for _ in 0..4{menu.input(Action::GbaDown(Btn::Down),0);}for _ in 0..20{menu.input(Action::GbaDown(Btn::Left),0);}assert_eq!(menu.draft.volume_limit,0);for _ in 0..20{menu.input(Action::GbaDown(Btn::Right),0);}assert_eq!(menu.draft.volume_limit,100);
 }
