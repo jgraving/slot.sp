@@ -84,6 +84,10 @@ impl App {
             return false;
         }
         if self.kid_menu.is_some() {
+            if matches!(action,Action::VolumeUp|Action::VolumeDown|Action::MuteToggle|Action::BrightnessUp|Action::BrightnessDown){
+                self.adjust(action);let volume=self.volume();let brightness=((u16::from(self.brightness())*100+u16::from(BRIGHTNESS_MAX)/2)/u16::from(BRIGHTNESS_MAX))as u8;
+                let menu=self.kid_menu.as_mut().unwrap();menu.child_volume=volume;menu.child_brightness=brightness;menu.face=None;return true;
+            }
             let wall = self.wall_secs();
             let menu = self.kid_menu.as_mut().unwrap();
             menu.input(action, wall);
@@ -108,12 +112,18 @@ impl App {
                 if blocked { self.stop_for_parent(); }
                 if scope_changed { self.apply_kid_scope(); }
             }
-            if close { self.kid_menu = None; }
+            if close {
+                self.kid_menu=None;
+                if self.kids.active {
+                    if matches!(self.phase,Phase::QuickMenu{..}){self.phase=Phase::Shelf;}
+                    self.in_game_menu=None;
+                }
+            }
             if let Some(action) = child_action {
                 if action == Action::Eject { self.apply(action); } else { self.adjust(action); }
             }
             let volume = self.volume();
-            let brightness = (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8;
+            let brightness = ((u16::from(self.brightness()) * 100 + u16::from(BRIGHTNESS_MAX)/2) / u16::from(BRIGHTNESS_MAX)) as u8;
             let time_left = self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget()));
             if let Some(menu) = &mut self.kid_menu {
                 menu.set_remaining(time_left);
@@ -129,7 +139,7 @@ impl App {
                 if let Some(root) = self.root.clone() {
                     let mut menu = crate::kid_menu::Menu::child(root, self.kids.clone(),
                         matches!(self.phase, Phase::Playing { .. }), self.volume(),
-                        (u16::from(self.brightness()) * 100 / u16::from(BRIGHTNESS_MAX)) as u8);
+                        ((u16::from(self.brightness()) * 100 + u16::from(BRIGHTNESS_MAX)/2) / u16::from(BRIGHTNESS_MAX)) as u8);
                     menu.set_reference(self.reference_pages(matches!(self.phase, Phase::Playing { .. })));
                     menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
                     self.kid_surface.snap(matches!(self.phase,Phase::Playing{..}));

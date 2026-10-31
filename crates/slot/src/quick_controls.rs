@@ -82,7 +82,7 @@ impl App {
           if let Some(item)=self.quick_card.pending_settings.take() {
             if self.kids.active {
                 self.apply(Action::QuickMenu);
-                if let Some(menu)=&mut self.kid_menu {menu.input(Action::GbaDown(Btn::Down),0);}
+                if let Some(menu)=&mut self.kid_menu {menu.open_sound();}
             } else {
                 let row=if item==2 {QuickRow::DisplaySchedule}else{QuickRow::Bluetooth};
                 self.phase=Phase::QuickMenu{row};
@@ -120,6 +120,6 @@ impl App {
             out.push(Draw::Tex{x:if i==0{16.0}else{self.canvas().w-16.0-w as f32},y:378.0+dy,w:w as f32,h:h as f32,tex,alpha:1.0});
         }
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
-        self.draw_status_bar(out);self.hud.draw(self.canvas(),self.now(),out);true
+        self.draw_status_bar(out);true
     }
 }

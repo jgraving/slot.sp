@@ -41,7 +41,8 @@ pub fn navigate(row:QuickRow,hidden:&[QuickRow],dx:i32,dy:i32)->QuickRow {
     rows[next]
 }
 
-pub fn tile_face(row:QuickRow,lit:bool)->UndoFace {
+pub fn tile_face(row:QuickRow,lit:bool)->UndoFace {tile_face_label(row,lit,None)}
+pub fn tile_face_label(row:QuickRow,lit:bool,label_override:Option<&str>)->UndoFace {
     // Filled silhouettes with transparent inset details stay legible on the handheld.
     let (label,paths)=match row {
         QuickRow::General|QuickRow::Settings=>("General",r##"<path fill-rule="evenodd" d="M40.34 19.31 L44.46 19.28 L44.46 28.72 L40.34 28.69 L38.87 32.24 L41.81 35.13 L35.13 41.81 L32.24 38.87 L28.69 40.34 L28.72 44.46 L19.28 44.46 L19.31 40.34 L15.76 38.87 L12.87 41.81 L6.19 35.13 L9.13 32.24 L7.66 28.69 L3.54 28.72 L3.54 19.28 L7.66 19.31 L9.13 15.76 L6.19 12.87 L12.87 6.19 L15.76 9.13 L19.31 7.66 L19.28 3.54 L28.72 3.54 L28.69 7.66 L32.24 9.13 L35.13 6.19 L41.81 12.87 L38.87 15.76z M31 24a7 7 0 1 0-14 0 7 7 0 0 0 14 0"/>"##),
@@ -58,14 +59,17 @@ pub fn tile_face(row:QuickRow,lit:bool)->UndoFace {
         QuickRow::PlayReference=>("Shortcuts",r##"<path d="M7 7h34v34H7z"/><path fill="#192125" d="M13 15h6v6h-6zM23 15h6v6h-6zM33 15h3v6h-3zM13 27h23v5H13z"/>"##),
         _=>("About",r##"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M22 21v14h4V21z M24 12a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>"##),
     };
-    let label=match row {QuickRow::Settings=>"Settings",QuickRow::UndoSave=>"Undo save",QuickRow::UndoLoad=>"Undo load",_=>label};
+    let label=label_override.unwrap_or(match row {QuickRow::Settings=>"Settings",QuickRow::UndoSave=>"Undo save",QuickRow::UndoLoad=>"Undo load",_=>label});
     let ink=if lit {"#effbf8"}else{"#dce4e7"};
     let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="{ink}">{paths}</g></svg>"##);
     let icon=crate::art::render_svg(&svg,44,44).expect("menu tile SVG");
     let (w,h)=(112,100);
     let mut rgba=vec![0;(w*h*4) as usize];
     for y in 0..44usize {let dst=((y+4)*w as usize+34)*4;rgba[dst..dst+44*4].copy_from_slice(&icon[y*44*4..(y+1)*44*4]);}
-    let layout=text::Layout{lines:label.lines().map(str::to_owned).collect(),px:18.0,tracking:0.0,role:if lit{text::Role::Focus}else{text::Role::Menu}};
+    let role=if lit{text::Role::Focus}else{text::Role::Menu};
+    let width=text::font(role).map_or(0.0,|font|label.lines().map(|line|text::line_width(font,line,20.0,0.0)).fold(0.0,f32::max));
+    let px=20.0*(104.0/width.max(104.0));
+    let layout=text::Layout{lines:label.lines().map(str::to_owned).collect(),px,tracking:0.0,role};
     let mut words=vec![0;(w*48*4) as usize];
     text::draw_centred(&mut words,w,48,&layout,if lit{[246,249,248]}else{[211,219,222]});
     rgba[(52*w*4) as usize..].copy_from_slice(&words);

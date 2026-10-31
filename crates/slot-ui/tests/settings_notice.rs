@@ -82,3 +82,11 @@ fn charging_chip_uses_one_filled_surface_and_readable_native_ink() {
     assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{..})).count(),2);
     assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{colour,..}if colour[1]>colour[0]&&colour[3]==1.0)));
 }
+
+#[test]
+fn an_arriving_notice_floats_whole_above_the_hardware_bay() {
+    let canvas=Canvas{w:640.0,h:480.0};let face=settings_notice_face("Saved",canvas);
+    let mut notice=SettingsNotice::default();notice.observe(Some((1,"Saved".into())),0);
+    let mut out=vec![];notice.draw(canvas,Some((TexId::from_raw(1),face.w,face.h)),100,&mut out);
+    assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{y,h,..} if *h==face.h as f32&&*y+*h>422.0&&*y+*h<=480.0)),"the menu footer must not crop the floating capsule");
+}

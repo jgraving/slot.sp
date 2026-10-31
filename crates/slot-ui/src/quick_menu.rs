@@ -1161,11 +1161,11 @@ pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
 }
 
 pub fn quick_heading_face(label: &str) -> UndoFace {
-    let label=menu_sentence_case(label);
-    let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h:40};};
-    let layout=text::fit_preserving_case(font,&label,280.0,1,24.0,20.0);
-    let w=text::line_width(font,&label,layout.px,layout.tracking).ceil() as u32+2*MENU_PAD;
-    let mut rgba=vec![0;(w*40*4)as usize];text::draw_centred(&mut rgba,w,40,&layout,MENU_INK);UndoFace{rgba,w,h:40}
+    let label=menu_sentence_case(label);let h=crate::expressive::TITLE_H as u32;
+    let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h};};
+    let layout=text::fit_preserving_case(font,&label,260.0,1,32.0,24.0);
+    let w=layout.lines.iter().map(|line|text::line_width(font,line,layout.px,layout.tracking)).fold(0.0,f32::max).ceil() as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*h*4)as usize];text::draw_centred(&mut rgba,w,h,&layout,MENU_INK);UndoFace{rgba,w,h}
 }
 
 pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {

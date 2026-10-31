@@ -49,8 +49,7 @@ fn reference_uses_saved_bindings_and_child_pages_never_advertise_blocked_shortcu
     // Expand restricted Settings, then reach the reference without unlocking.
     menu.input(Action::GbaDown(Btn::Down), 0);
     menu.input(Action::GbaDown(Btn::A), 0);
-    menu.input(Action::GbaDown(Btn::Up), 0);
-    menu.input(Action::GbaDown(Btn::Up), 0);
+    menu.input(Action::GbaDown(Btn::Down), 0);
     menu.input(Action::GbaDown(Btn::A), 0);
     assert!(menu.reference_open());
     menu.input(Action::GbaDown(Btn::Right), 0);

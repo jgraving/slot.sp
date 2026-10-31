@@ -71,7 +71,9 @@ impl SettingsNotice {
             tex,
             alpha:1.0,
         });
-        crate::quick_menu::clip_quads(out,begin,[16.0,40.0,canvas.w-16.0,canvas.h-MOUTH_H-8.0]);
+        // Floating feedback crosses the hardware/footer while entering. Only
+        // the physical display boundary clips it, never a menu's viewport.
+        crate::quick_menu::clip_quads(out,begin,[0.0,0.0,canvas.w,crate::OUT_H as f32]);
     }
 }
 
