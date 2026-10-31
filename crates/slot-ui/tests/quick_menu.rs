@@ -690,3 +690,14 @@ fn control_names_are_text_but_device_chords_are_keycaps() {
         assert!(face.rgba.chunks_exact(4).any(|p|p[0]==224 && p[1]==227 && p[2]==232 && p[3]==255),"{value} has no native keycap");
     }
 }
+
+#[test]
+fn carousel_names_and_jump_letters_are_native_larger_type() {
+    let name=slot_ui::carousel_name_face("Favorites",false);
+    let letter=slot_ui::carousel_name_face("M",true);
+    assert_eq!(name.h,36);assert_eq!(letter.h,48);
+    assert!(name.h>slot_ui::word_face("Favorites").h);
+    let mut out=vec![];
+    slot_ui::draw_slot_name_sized(slot_ui::Canvas::FRAMED,slot_ui::Printed::new(slot_ui::TexId::from_raw(44),letter.w),letter.h,1.0,&mut out);
+    assert!(matches!(out[0],slot_ui::Draw::Tex{y,h,..}if y+h<480.0-slot_ui::MOUTH_H));
+}

@@ -1443,10 +1443,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         if platform_shown.is_empty() {
             app.clear_shelf_platform();
         } else {
-            let face = word_ink(&platform_shown, [0xff, 0xff, 0xff]);
-            let w = face.w;
+            let face = slot_ui::carousel_name_face(&platform_shown,platform_shown.chars().count()==1);
+            let (w,h) = (face.w,face.h);
             let id = upload(compositor, &mut clocks.platform_tex, face);
-            app.set_shelf_platform_face(id, w);
+            app.set_shelf_name_face(id, w,h);
         }
     }
     let title_shown = app.title_text().unwrap_or_default();

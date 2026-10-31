@@ -19,7 +19,7 @@ use slot_ui::{
     HOP_LIFT, Hud, HudKind, Icon, LinkBadge, MOUTH_H, Millis, Placed, Polaroids, PowerChoice,
     QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
     SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
-    TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, draw_slot_name,
+    TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, 
     draw_sticker, ease, footer_ink, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at,
 };
@@ -483,6 +483,7 @@ pub struct App {
     hud_bolt: Option<TexId>,
     slot_faces: Option<(TexId, TexId)>,
     shelf_platform: slot_ui::Printed,
+    shelf_platform_h:u32,
     shelf_title: slot_ui::Printed,
     name_pending: bool,
     slot_letter: Option<char>,
@@ -744,6 +745,7 @@ impl App {
             hud_bolt: None,
             slot_faces: None,
             shelf_platform: slot_ui::Printed::default(),
+            shelf_platform_h:slot_ui::HINT_H,
             shelf_title: slot_ui::Printed::default(),
             name_pending: false,
             slot_letter: None,
@@ -1865,6 +1867,10 @@ impl App {
 
     pub fn set_shelf_platform_face(&mut self, face: TexId, w: u32) {
         self.shelf_platform = slot_ui::Printed::new(face, w);
+    }
+
+    pub fn set_shelf_name_face(&mut self,face:TexId,w:u32,h:u32) {
+        self.set_shelf_platform_face(face,w);self.shelf_platform_h=h;
     }
 
     pub fn clear_shelf_platform(&mut self) {
@@ -4899,9 +4905,10 @@ impl App {
                                 out,
                             );
                         }
-                        draw_slot_name(
+                        slot_ui::draw_slot_name_sized(
                             self.canvas(),
                             self.shelf_platform,
+                            self.shelf_platform_h,
                             self.slot_name_alpha(),
                             out,
                         );

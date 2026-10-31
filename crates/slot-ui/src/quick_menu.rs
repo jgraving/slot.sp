@@ -1136,6 +1136,17 @@ pub fn reference_binding_face(value:&str,max_w:f32)->UndoFace {
     unreachable!()
 }
 
+pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
+    let h=if jump {48}else{36};
+    let px=if jump {36.0}else{26.0};
+    let Some(font)=text::font(text::Role::Focus)else{return quick_value_face(label,true)};
+    let layout=text::fit_preserving_case(font,label,480.0,1,px,px);
+    let w=layout.lines.iter().map(|s|text::line_width(font,s,layout.px,layout.tracking)).fold(0.0,f32::max).ceil()as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*h*4)as usize];
+    text::draw_centred(&mut rgba,w,h,&layout,[255,255,255]);
+    UndoFace{rgba,w,h}
+}
+
 pub fn quick_heading_face(label: &str) -> UndoFace {
     quick_text_face(&menu_sentence_case(label), MENU_INK, text::Role::Display)
 }
