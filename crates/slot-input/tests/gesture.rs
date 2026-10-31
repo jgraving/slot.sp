@@ -1016,3 +1016,26 @@ fn a_press_seen_during_a_capture_leaves_nothing_behind() {
         "a stale L1 completed the pair"
     );
 }
+
+#[test]
+fn select_tap_opens_quick_controls_only_on_the_shelf_and_chords_win() {
+    let mut g=on_shelf(vec![entry(Some(Mod::Select),X,Favorite,slot_input::Contexts::SHELF)]);
+    assert!(g.feed(Down(Select),0).is_empty());
+    assert_eq!(g.feed(Up(Select),60),vec![QuickControls]);
+    assert!(g.feed(Down(Select),100).is_empty());
+    assert!(g.feed(Down(X),120).contains(&Favorite));
+    assert!(!g.feed(Up(Select),150).contains(&QuickControls));
+    g.feed(Up(X),160);
+    g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),200);
+    assert_eq!(g.feed(Up(Select),230),vec![GbaDown(Select)]);
+    assert_eq!(g.tick(280),vec![GbaUp(Select)]);
+}
+
+#[test]
+fn select_pressed_in_a_game_does_not_open_controls_after_returning_to_the_shelf() {
+    let mut g=Gestures::new();g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),0);assert_eq!(g.tick(SELECT_CHORD_MS),vec![GbaDown(Select)]);
+    g.set_context(slot_input::Context::Shelf);
+    assert_eq!(g.feed(Up(Select),SELECT_CHORD_MS+100),vec![GbaUp(Select)]);
+}

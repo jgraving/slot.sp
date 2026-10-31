@@ -430,6 +430,7 @@ impl Session {
             .bluetooth
             .as_mut()
             .and_then(|menu| menu.route_choice.take())
+            .or_else(||self.app.quick_bluetooth.as_mut().and_then(|menu|menu.route_choice.take()))
             .or(automatic_choice)
         {
             let usb = crate::usb_audio::valid_route(&output);

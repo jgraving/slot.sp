@@ -60,7 +60,7 @@ pub fn valid_address(address: &str) -> bool {
             .all(|p| p.len() == 2 && p.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
-fn bluetooth_enabled(root: &std::path::Path) -> bool {
+pub(crate) fn bluetooth_enabled(root: &std::path::Path) -> bool {
     !root.join("Config/bluetooth-off").exists()
         && (root.join("Config/bluetooth-enabled").exists()
             || root.join("Config/bluetooth-headphones").exists())
@@ -146,6 +146,10 @@ impl Manager {
             manager.ask("list", None);
         }
         manager
+    }
+
+    pub fn quick_toggle(root:PathBuf)->Self {
+        let mut menu=Self::new(root,false);menu.bluetooth_available=true;menu.toggle_bluetooth();menu
     }
 
     pub fn set_available(&mut self, available: bool) {
