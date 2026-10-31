@@ -819,7 +819,7 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
     press(&mut a, Btn::B);
     press(&mut a,Btn::Right);
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::CarouselSounds.position(&a.hidden_rows()) {
+    for _ in 0..QuickRow::ClockFormat.position(&a.hidden_rows()) {
         press(&mut a, Btn::Down);
     }
     let out = frame(&a);
@@ -1078,22 +1078,20 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
 }
 
 #[test]
-fn the_about_label_sits_on_the_same_tinted_ground_as_the_menu() {
-    let (_d, mut a, _) = on_carousel();
+fn about_and_settings_keep_the_wallpaper_without_a_second_dark_backdrop() {
+    let (_d,mut a,_)=on_carousel();
     fake_faces(&mut a);
-    a.set_ground(TexId::from_raw(800));
-    a.set_blur(TexId::from_raw(801));
-    open_at(&mut a, QuickRow::About);
-    let menu = frame(&a);
-    press(&mut a, Btn::A);
-    assert!(matches!(a.phase(), Phase::About), "{:?}", a.phase());
-    let about = frame(&a);
-    let grounds=|out:&[Draw]| {
-        let i=out.iter().position(|d|matches!(d,Draw::Part{tex,..}if *tex==TexId::from_raw(801))).expect("blurred wallpaper");
-        assert!(matches!(out[i+1],Draw::Rect{colour,..}if colour[..3]==[0.0;3]&&colour[3]>0.5));
-        out[i..i+2].to_vec()
-    };
-    assert_eq!(grounds(&about),grounds(&menu));
+    a.set_ground(TexId::from_raw(800));a.set_blur(TexId::from_raw(801));
+    open_at(&mut a,QuickRow::About);
+    let menu=frame(&a);
+    press(&mut a,Btn::A);
+    assert!(matches!(a.phase(),Phase::About));
+    let about=frame(&a);
+    for out in [&menu,&about] {
+        assert!(out.iter().any(|d|matches!(d,Draw::Lava{..})),"scene wallpaper missing");
+        assert!(!out.iter().any(|d|matches!(d,Draw::Part{tex,..}if *tex==TexId::from_raw(801))),"extra blur layer");
+        assert!(!out.iter().any(|d|matches!(d,Draw::Rect{colour,..}if colour[..3]==[0.0;3]&&colour[3]>0.5)),"extra dark backdrop");
+    }
 }
 
 fn on_own_wallpaper(tint: slot_store::WallpaperTint) -> (TempDir, App) {
@@ -1521,7 +1519,7 @@ fn closing_main_menu_is_occluded_by_the_physical_slot() {
     a.apply(Action::QuickMenu);a.update(1.0);press(&mut a,Btn::B);a.update(0.016);
     let mut out=vec![];a.draw(&mut out);
     let bay=out.iter().rposition(|d|matches!(d,Draw::Part{tex,..}if *tex==front)).unwrap();
-    let scene=out.iter().rposition(|d|matches!(d,Draw::Part{tex,..}|Draw::Tex{tex,..}if *tex==TexId::from_raw(8003))).unwrap();
+    let scene=out.iter().rposition(|d|matches!(d,Draw::Lava{..})).unwrap();
     assert!(bay>scene,"the menu was drawn on top of the cartridge bay");
 }
 
@@ -1539,4 +1537,22 @@ fn wallpaper_stays_beneath_the_transparent_slot_edges_after_menu_settles() {
     assert!(frame(&a).iter().any(|d|matches!(d,Draw::Lava{..})));
     press(&mut a,Btn::B);press(&mut a,Btn::B);a.update(0.016);
     assert!(frame(&a).iter().any(|d|matches!(d,Draw::Lava{..})));
+}
+
+#[test]
+fn clock_and_carousel_choices_change_and_persist() {
+    let (d,mut a,_)=on_carousel();
+    open_at(&mut a,QuickRow::ClockFormat);
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::ClockFormat),Some(QuickValue::Hour12));
+    assert!(read_slot_state(d.path()).clock_12h);
+    press(&mut a,Btn::A);
+    assert_eq!(a.quick_value(QuickRow::ClockFormat),Some(QuickValue::Hour24));
+    press(&mut a,Btn::B);press(&mut a,Btn::B);
+    open_at(&mut a,QuickRow::CarouselMotion);
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::CarouselMotion),Some(QuickValue::Classic));
+    assert!(!read_slot_state(d.path()).carousel_wheel);
+    press(&mut a,Btn::A);
+    assert_eq!(a.quick_value(QuickRow::CarouselMotion),Some(QuickValue::Wheel));
 }
