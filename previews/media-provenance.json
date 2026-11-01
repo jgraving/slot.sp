@@ -4,18 +4,21 @@
   "files": [
     {
       "path": "previews/boot-brand.gif",
-      "bytes": 532437,
-      "sha256": "30e2cdd705b877f428dbf9db87039bf5f441002fa464741124638bf2118ae98b"
+      "bytes": 229666,
+      "sha256": "09503f9c302e427aa05e2afe5b7f017c916f76ffd36004d0b42b495fdd722c0c",
+      "source_commit": "141f2f6a50cb7dc07558b1f8f6ffd575f98b96f4"
     },
     {
       "path": "previews/boot-brand.mp4",
-      "bytes": 117196,
-      "sha256": "f9e7435f0106c46908514d456a004bf1532c87e92df40861e1330c64c86848a8"
+      "bytes": 108218,
+      "sha256": "a24c5c99d5c3af385c63bfca38ea56658bd8d707731714603d3e319f55bd4067",
+      "source_commit": "141f2f6a50cb7dc07558b1f8f6ffd575f98b96f4"
     },
     {
       "path": "previews/boot-brand.png",
-      "bytes": 22186,
-      "sha256": "422bc5677d5fd5ed1ac0e18feb9acf2b006ec51c1667b4d5e23d6eea5f68a84e"
+      "bytes": 33455,
+      "sha256": "1d1f3e6ad727c966927248e39d620787510b33427ff616fd7e680040c2c5072e",
+      "source_commit": "141f2f6a50cb7dc07558b1f8f6ffd575f98b96f4"
     },
     {
       "path": "previews/cart-motion.mp4",

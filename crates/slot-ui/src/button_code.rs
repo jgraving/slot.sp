@@ -5,7 +5,8 @@ pub fn button_code_face(code: &[u8]) -> UndoFace {
     let (w, h) = (256, 56);
     let mut rgba = vec![0; (w * h * 4) as usize];
     let buttons = [ButtonLegend::A, ButtonLegend::B, ButtonLegend::X, ButtonLegend::Y,
-        ButtonLegend::Up, ButtonLegend::Down, ButtonLegend::Left, ButtonLegend::Right];
+        ButtonLegend::Up, ButtonLegend::Down, ButtonLegend::Left, ButtonLegend::Right,
+        ButtonLegend::L1, ButtonLegend::R1, ButtonLegend::L2, ButtonLegend::R2];
     for i in 0..4 {
         let x = i * 64;
         if let Some(which) = code.get(i as usize).and_then(|b| buttons.get(*b as usize)) {

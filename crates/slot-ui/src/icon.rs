@@ -652,10 +652,14 @@ pub fn sound_device_icon(icon: Icon, ink: [u8; 3]) -> crate::UndoFace {
     crate::UndoFace { rgba, w, h }
 }
 
+pub(crate) const SMILEY_FEATURES: &str = r#"<circle cx="17" cy="17" r="4"/><circle cx="31" cy="17" r="4"/><path d="M12 26a12 12 0 0 0 24 0h-4a8 8 0 0 1-16 0z"/>"#;
+pub(crate) const SMILEY_PATH: &str = r#"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M17 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M31 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M12 26a12 12 0 0 0 24 0h-4a8 8 0 0 1-16 0z"/>"#;
+
 /// Gold foil approval sticker, rendered once at four times native resolution.
 pub fn kid_smiley_face() -> CartFace {
     let w = 30;
-    let svg = sticker_svg(include_str!("../assets/kid-smiley.svg"));
+    let source = include_str!("../assets/kid-smiley.svg").replace("<!-- smiley-features -->", SMILEY_FEATURES);
+    let svg = sticker_svg(&source);
     let hi = crate::art::render_svg(&svg, w * 4, w * 4).expect("embedded smiley SVG");
     CartFace {
         rgba: prefilter_star(&hi, w),
@@ -666,8 +670,8 @@ pub fn kid_smiley_face() -> CartFace {
 
 /// Flat status symbol, separate from the foil approval sticker.
 pub fn kid_status_face()->CartFace {
-    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#f6f4ef" fill-rule="evenodd" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M8.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M15.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M6 13a6 6 0 0 0 12 0h-2a4 4 0 0 1-8 0z"/></svg>"##;
-    let mut rgba=crate::art::render_svg(svg,24,24).expect("status smiley");
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="#f6f4ef">{SMILEY_PATH}</g></svg>"##);
+    let mut rgba=crate::art::render_svg(&svg,24,24).expect("status smiley");
     for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&crate::HUD_INK);}
     CartFace{rgba,w:24,h:24}
 }

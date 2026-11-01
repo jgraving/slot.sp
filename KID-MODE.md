@@ -78,13 +78,13 @@ Your full Favorites and Recents lists are kept. Turning kid mode off shows them 
 
 ## The parent code
 
-Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd> or the D-pad. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
+Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd>, the D-pad, or <kbd>L1</kbd>, <kbd>R1</kbd>, <kbd>L2</kbd> and <kbd>R2</kbd>. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
 
 ![Entering the parent code: an incorrect code shakes and clears, then the correct code opens settings](previews/parent-code.gif)
 
 | Button | Action |
 | :--- | :--- |
-| <kbd>A</kbd> / <kbd>B</kbd> / <kbd>X</kbd> / <kbd>Y</kbd> / D-pad | Enter a button in the code. |
+| <kbd>A</kbd> / <kbd>B</kbd> / <kbd>X</kbd> / <kbd>Y</kbd> / D-pad / <kbd>L1</kbd> / <kbd>R1</kbd> / <kbd>L2</kbd> / <kbd>R2</kbd> | Enter a button in the code. |
 | <kbd>SELECT</kbd> | Delete the last entry. |
 | <kbd>MENU</kbd> | Cancel code entry. |
 
