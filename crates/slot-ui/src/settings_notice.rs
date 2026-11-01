@@ -80,6 +80,18 @@ impl SettingsNotice {
             crate::expressive::rounded(&mut fill,x,y,w,h,h/2.0,colours.fill);
             crate::quick_menu::clip_quads(&mut fill,0,[x,y,x+w*level,y+h]);
             out.extend(fill);
+            if pulse>0.0 {
+                // Two soft packets of light flow into the bolt. Concentric
+                // quads soften the glow without new textures or render passes;
+                // the measured charge boundary and overlaid text stay intact.
+                let phase=((age-140.0)/450.0).fract();
+                let travel=phase*phase*(3.0-2.0*phase);
+                let centre=x+w-31.0*scale-(w-62.0*scale)*travel;
+                for ring in 0..8 {
+                    let radius=(22.0-ring as f32*2.0)*scale;
+                    crate::expressive::rounded(out,centre-radius,y+h/2.0-radius,2.0*radius,2.0*radius,radius,[1.0,1.0,1.0,0.012*pulse*alpha]);
+                }
+            }
         }
         out.push(Draw::Tex {
             x,

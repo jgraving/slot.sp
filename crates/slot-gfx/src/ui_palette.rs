@@ -6,6 +6,16 @@ pub const DIM:[u8;3]=[78,94,103];
 fn near(a:[f32;3],b:[f32;3])->bool {a.into_iter().zip(b).all(|(a,b)|(a-b).abs()<0.014)}
 pub fn light_colour(mut c:[f32;4])->[f32;4] {
     let rgb=[c[0],c[1],c[2]];
+    // Live switches interpolate grey -> accent before reaching the compositor.
+    // Map that entire ramp, not just the two endpoint colours: a near-colour
+    // lookup otherwise exposes dark-theme frames and snaps at either end.
+    let switch_t=(rgb[1]-0.36)/0.40;
+    if (0.0..=1.0).contains(&switch_t)
+        && (rgb[0]-0.33).abs()<0.00001
+        && (rgb[2]-(0.40+0.32*switch_t)).abs()<0.00001 {
+        for i in 0..3 {c[i]=[0.43,0.51,0.56][i]+([0.05,0.43,0.38][i]-[0.43,0.51,0.56][i])*switch_t;}
+        return c;
+    }
     let next=if near(rgb,[0.92,0.95,0.98]) {Some([0.08,0.20,0.23])}
         else if near(rgb,[0.76,0.84,0.83]) {Some([0.29,0.40,0.43])}
         else if near(rgb,[0.24,0.42,0.43]) {Some([0.69,0.86,0.81])}
@@ -103,6 +113,17 @@ mod tests {
         for p in mapped[..8].chunks_exact(4){assert!((luminance([p[0],p[1],p[2]])+0.05)/(luminance(INK)+0.05)>4.5);}
     }
     #[test] fn coloured_badges_are_preserved(){assert_eq!(light_texture(&[249,186,45,255,120,230,150,255]),[249,186,45,255,120,230,150,255]);}
+    #[test] fn light_switch_track_interpolates_between_light_endpoints_without_flashing() {
+        let (off,on)=([0.33,0.36,0.40,0.6],[0.33,0.76,0.72,0.6]);
+        let (light_off,light_on)=([0.43,0.51,0.56],[0.05,0.43,0.38]);
+        for step in 0..=1000 {
+            let t=step as f32/1000.0;
+            let source=std::array::from_fn(|i|off[i]+(on[i]-off[i])*t);
+            let mapped=light_colour(source);
+            assert_eq!(mapped[3],0.6);
+            for i in 0..3 {let expected=light_off[i]+(light_on[i]-light_off[i])*t;assert!((mapped[i]-expected).abs()<0.00001,"switch flashed at {t}: {mapped:?}");}
+        }
+    }
 }
 
 /// Choose header ink from a few CPU samples; wallpaper changes never require

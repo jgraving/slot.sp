@@ -60,6 +60,23 @@ fn main(){
     // Fractional positions exposed the cropped off-state thumb. Check the
     // actual GLES/GL raster at both saved endpoints and a transition midpoint.
     for (index,t) in [0.0,0.5,1.0].into_iter().enumerate(){let mut draws=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.09,0.115,0.125,1.0]}];slot_ui::draw_switch(&mut draws,100.0,100.0,t,1.0);a.g.begin_frame();a.g.draw_list(&draws);let pixels=a.g.read_frame();let mut ys=vec![];for y in 95..140 {for x in 95..170 {let p=&pixels[((y*width+x)*4)as usize..][..4];if p[0]>230&&p[1]>230&&p[2]>230{ys.push(y);}}}assert!(!ys.is_empty());let lo=*ys.iter().min().unwrap();let hi=*ys.iter().max().unwrap();assert!((lo+hi)as i32>=228&&(lo+hi)as i32<=230,"switch thumb is not vertically centered");for y in 100..130 {let count=|row:u32|(95..170).filter(|x|{let p=&pixels[((row*width+x)*4)as usize..][..3];p.iter().all(|&v|v>230)}).count();assert!(count(y).abs_diff(count(229-y))<=2,"asymmetric switch thumb at row {y}");}a.capture(&format!("switch-{index}"));}
+    // Check every intermediate switch colour through the production renderer.
+    // Endpoints alone cannot catch dark-theme colours flashing during a toggle.
+    for light in [false,true] {
+        a.g.set_light_ui(light);
+        let (off,on)=if light {([0.43,0.51,0.56],[0.05,0.43,0.38])}else{([0.33,0.36,0.40],[0.33,0.76,0.72])};
+        for step in 0..=100 {
+            let t=step as f32/100.0;
+            let mut draws=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:if light{slot_gfx::ui_palette::BACKDROP}else{[0.09,0.115,0.125,1.0]}}];
+            slot_ui::draw_switch(&mut draws,100.0,100.0,t,1.0);
+            a.g.begin_frame();a.g.draw_list(&draws);let pixels=a.g.read_frame();
+            // The bottom centre of the track stays clear of the moving thumb.
+            let at=((127*width+130)*4)as usize;let pixel=&pixels[at..at+3];
+            for channel in 0..3 {let expected=((off[channel]+(on[channel]-off[channel])*t)*255.0).round()as u8;assert!(pixel[channel].abs_diff(expected)<=1,"switch palette flashed: light={light}, t={t}, pixel={pixel:?}");}
+            if step%25==0 {a.capture(&format!("switch-{}-{step:03}",if light{"light"}else{"dark"}));}
+        }
+    }
+    a.g.set_light_ui(false);
     // Production shelf views for every background choice, including custom and
     // random image paths. The fixture is a colourful image, not UI artwork.
     for (name,wallpaper) in [("flowing",slot_store::WallpaperPick::Default),("static",slot_store::WallpaperPick::Static),("plain",slot_store::WallpaperPick::None),("custom",slot_store::WallpaperPick::File("review.png".into())),("random",slot_store::WallpaperPick::Random)] {
@@ -118,6 +135,18 @@ fn main(){
             for d in &mut hud_out[start..] {match d {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y+=70.0+i as f32*80.0,_=>{}}}
         }
         a.g.begin_frame();a.g.draw_list(&hud_out);a.capture(if light{"light-hud-controls"}else{"dark-hud-controls"});
+        // The charging confirmation draws energy towards the bolt in two
+        // gentle pulses, then returns to a steady percentage capsule.
+        {
+            let face=slot_ui::settings_notice_face_on("Charging: 57%",a.f.app().canvas(),light);
+            let tex=a.g.create_texture(face.w,face.h,&face.rgba);
+            let mut notice=slot_ui::SettingsNotice::default();notice.observe(Some((1,"Charging: 57%".into())),0);
+            for ms in [220,320,420,520,760,1200] {
+                let mut frame=vec![hud_out[0]];
+                notice.draw_on(a.f.app().canvas(),Some((tex,face.w,face.h)),ms,light,&mut frame);
+                a.g.begin_frame();a.g.draw_list(&frame);a.capture(&format!("charging-energy-{}-{ms:04}",if light{"light"}else{"dark"}));
+            }
+        }
         // Actual transient notifications, including Bluetooth connect/disconnect,
         // pass through the UI palette using their untouched alpha ramps.
         let toasts:Vec<_>=slot_ui::Toast::all().into_iter().map(|toast|{let f=slot_ui::toast_face(toast);a.g.create_ui_texture(f.w,f.h,&f.rgba)}).collect();

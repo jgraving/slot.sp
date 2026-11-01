@@ -33,17 +33,6 @@ pub fn status_battery_face_on(b:Battery,light:bool)->UndoFace {
     let edge=BODY*b.percent.min(100)as f32/100.0;
     // Intersect the level with the capsule's existing mask; no square fill corners.
     for y in 0..h {for x in 0..edge.ceil()as u32 {let i=((y*w+x)*4)as usize;for c in 0..3 {face.rgba[i+c]=(fill[c]*255.0)as u8;}}}
-    if light {
-        // A narrow native outline keeps the empty capsule visible on a pale backdrop.
-        let radius=GAUGE_H/2.0;
-        for y in 0..h {for x in 0..BODY as u32 {
-            let dx=(radius-(x as f32+0.5)).max(x as f32+0.5-(BODY-radius)).max(0.0);
-            let dy=y as f32+0.5-radius;
-            let inset=radius-(dx*dx+dy*dy).sqrt();
-            let border=(1.5-inset).clamp(0.0,1.0);let i=((y*w+x)*4)as usize;
-            for c in 0..3 {face.rgba[i+c]=(slot_gfx::ui_palette::DIM[c]as f32*border+face.rgba[i+c]as f32*(1.0-border)).round()as u8;}
-        }}
-    }
     // The bolt and number share both the capsule and its two contrast inks.
     let ink=content_mask(b.percent,charging);
     for y in 0..h {for x in 0..w {let i=((y*w+x)*4)as usize;let a=ink[i+3]as f32/255.0;let colour=if (x as f32)<edge {filled_ink}else{empty_ink};for c in 0..3{face.rgba[i+c]=(colour[c]as f32*a+face.rgba[i+c]as f32*(1.0-a)).round()as u8;}}}
