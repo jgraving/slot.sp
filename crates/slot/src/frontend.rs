@@ -607,12 +607,13 @@ impl Frontend {
         self.session.app_mut().set_panel(window);
         compositor.fit(window);
         if let Some((brand,started))=self.boot_intro.take() {
-            let started=started.unwrap_or_else(Instant::now);
-            let elapsed=started.elapsed().as_millis() as u64;
+            let elapsed=started.map_or(0,|start|start.elapsed().as_millis()as u64);
             if !self.boot_intro_cancelled && elapsed<crate::boot_motion::BOOT_MS
                 && matches!(self.session.app().phase(),crate::app::Phase::Shelf) {
                 self.compose_boot_frame(compositor,&brand,elapsed);
-                self.boot_intro=Some((brand,Some(started)));
+                // First-frame texture setup can be expensive on the handheld.
+                // Start motion only after the static firmware frame is built.
+                self.boot_intro=Some((brand,Some(started.unwrap_or_else(Instant::now))));
             } else {brand.release(compositor);self.compose(compositor);}
         } else {self.compose(compositor);}
         compositor.end_frame(window);
@@ -769,7 +770,7 @@ impl Frontend {
         compositor.set_game_source_rect(self.session.app().source_rect());
         self.grab_link_shot(compositor);
         compositor.begin_frame();
-        if self.draw_rebuild(compositor) {
+        if self.draw_rebuild(compositor,intro.is_some_and(|(_,ms)|ms>0)) {
             return;
         }
         if let Some([r, g, b]) = self.session.app().blank_panel() {
@@ -955,9 +956,11 @@ impl Frontend {
         }
     }
 
-    fn draw_rebuild(&mut self, compositor: &mut Compositor) -> bool {
+    fn draw_rebuild(&mut self, compositor: &mut Compositor, boot_moving:bool) -> bool {
         self.poll_label_check();
-        self.poll_ui_faces(compositor);
+        // Upload a ready batch on the static opening frame or after the intro.
+        // Any input cancels the intro, so menus still become available at once.
+        if !boot_moving {self.poll_ui_faces(compositor);}
         let Some(rebuild) = &mut self.rebuild else {
             return false;
         };
