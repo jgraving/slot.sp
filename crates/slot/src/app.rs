@@ -467,6 +467,7 @@ pub struct App {
     switch_motion: slot_ui::expressive::SwitchMotion,
     slider_motion: slot_ui::expressive::SliderMotion,
     clock_motion: slot_ui::expressive::RectMotion,
+    footer_contrast:Option<[bool;2]>,
     current_custom_sliders: Vec<slot_ui::MenuSlider>,
     previous_custom_sliders: Vec<slot_ui::MenuSlider>,
     current_custom_switches: Vec<slot_ui::MenuSwitch>,
@@ -738,7 +739,7 @@ impl App {
             settings_notice_revision: 0,
             current_custom_face: None,
             switch_motion: Default::default(),
-            slider_motion:Default::default(),clock_motion:Default::default(),
+            slider_motion:Default::default(),clock_motion:Default::default(),footer_contrast:None,
             current_custom_sliders:Vec::new(),previous_custom_sliders:Vec::new(),
             current_custom_switches: Vec::new(),
             previous_custom_switches: Vec::new(),
@@ -1656,7 +1657,7 @@ impl App {
             draw_ground(self.canvas(), face, out);
         }
         if face.is_none() && self.light() {
-            out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.975,0.97,1.0]});
+            out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:slot_gfx::ui_palette::BACKDROP});
         }
         let alpha = tint_alpha(self.state.wallpaper_tint);
         if alpha > 0.0 && self.own_wallpaper_shown() {
@@ -1665,7 +1666,7 @@ impl App {
                 y: 0.0,
                 w: self.canvas().w,
                 h: OUT_H as f32,
-                colour: if self.light() {[0.96,0.975,0.97,alpha]}else{[0.0,0.0,0.0,alpha]},
+                colour: if self.light() {let mut c=slot_gfx::ui_palette::BACKDROP;c[3]=alpha;c}else{[0.0,0.0,0.0,alpha]},
             });
         }
     }
@@ -2643,6 +2644,8 @@ impl App {
     pub fn shell_colour(&self) -> slot_store::ShellColour {
         self.state.shell_colour.resolved(self.light())
     }
+
+    pub fn set_footer_contrast(&mut self,light:[bool;2]){self.footer_contrast=Some(light);}
 
     pub fn light(&self) -> bool {
         self.state.appearance.light()
@@ -4832,6 +4835,13 @@ impl App {
         let custom=self.custom_menu_key();
         let active=!self.shutting_down()&&!matches!(self.phase,Phase::Doze{..})&&(row.is_some()||custom.is_some()||self.menu_motion.closing_row().is_some());
         if active {
+            if matches!(self.phase,Phase::Playing{..}|Phase::Ejecting{..}) || self.settings_return_game.is_some() {
+                if let Some(game)=out[begin..].iter().rposition(|d|matches!(d,Draw::Game)) {
+                    let mut tint=if self.light() {slot_gfx::ui_palette::BACKDROP}else{[0.0,0.0,0.0,1.0]};
+                    tint[3]=if self.light(){0.65}else{0.60}*self.menu_motion.reveal();
+                    out.insert(begin+game+1,Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:tint});
+                }
+            }
             let mut title=vec![];let mut hints=vec![];
             let mut i=begin;
             while i<out.len() {
@@ -5338,7 +5348,6 @@ impl App {
         if let Some((_,old))=cache.iter_mut().find(|(k,_)|*k==key) {*old=body;}else{cache.push((key,body));}}
         if self.settings_return_game.is_some() {self.push_game(out);}else{self.draw_background(out);self.draw_menu_shelf(out);}
         let begin=out.len();
-        if self.settings_return_game.is_some() && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         slot_ui::expressive::draw_card(self.canvas(),out);
         self.draw_outgoing_menu(false,out);
         let frame=self.menu_motion.frame_page(QuickRow::Kids,&[],Some(key));
@@ -5378,7 +5387,6 @@ impl App {
     fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
         let begin=out.len();
         let over_game=matches!(self.phase,Phase::Playing{..});
-        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let mut frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
         frame.entry=1.0;
@@ -5405,7 +5413,6 @@ impl App {
             self.draw_menu_shelf(out);
         }
         let begin=out.len();
-        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         if over_game {
             let hidden = self.in_game_hidden();
             let frame = self.menu_motion.frame(row, &hidden);
@@ -5538,10 +5545,9 @@ impl App {
         let Some(faces) = &self.quick_menu_faces else {
             return;
         };
-        let [back, _, _, _, restart, ..] = match self.light() {
-            true => faces.legend_light,
-            false => faces.legend,
-        };
+        let contrast=self.footer_contrast.unwrap_or([self.light();2]);
+        let back=if contrast[0]{faces.legend_light[0]}else{faces.legend[0]};
+        let restart=if contrast[1]{faces.legend_light[4]}else{faces.legend[4]};
         self.draw_side_legend(back, false, LINK_LEGEND_Y, out);
         self.draw_side_legend(restart, true, LINK_LEGEND_Y, out);
     }
@@ -5550,10 +5556,9 @@ impl App {
         let Some(faces) = &self.quick_menu_faces else {
             return;
         };
-        let [back, change, open, resume, _, set, clear, reset] = match self.light() {
-            true => faces.legend_light,
-            false => faces.legend,
-        };
+        let contrast=self.footer_contrast.unwrap_or([self.light();2]);
+        let [back,_,_,resume,..]=if contrast[0]{faces.legend_light}else{faces.legend};
+        let [_,change,open,_,_,set,clear,reset]=if contrast[1]{faces.legend_light}else{faces.legend};
         if row.binds() {
             let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
             let legends = match self.page_is_default(row) {
@@ -7251,7 +7256,7 @@ impl App {
             (menu.page_key(),message)
         } else if let Some(menu)=&self.quick_bluetooth {
             if !menu.status.starts_with("Error:"){return None;}
-            (6000,menu.status.clone())
+            (6000,crate::bluetooth::error_notice(&menu.status).into())
         } else { return None; };
         Some((page ^ self.settings_notice_revision.wrapping_mul(65536),message))
     }

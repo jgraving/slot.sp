@@ -109,3 +109,22 @@ fn round_buttons_stay_round_at_the_compact_hint_height() {
     let ys:Vec<_>=(0..f.h).filter(|&y|(0..MENU_HINT_H).any(|x| f.rgba[((y*f.w+x)*4+3) as usize]>128)).collect();
     assert!((xs.len() as i32-ys.len() as i32).abs()<=1,"button icon was stretched");
 }
+
+#[test]
+fn adaptive_hints_reverse_keycaps_and_letters_together_without_losing_edges() {
+    use slot_gfx::ui_palette::{hint_texture,INK};
+    let white=quick_legend_faces(footer_ink(false));
+    let black=quick_legend_faces(footer_ink(true));
+    for dark in [false,true] {
+        for (a,b) in white.iter().zip(&black) {
+            let mapped=hint_texture(&a.rgba,dark);
+            assert_eq!(mapped,hint_texture(&b.rgba,dark),"hint palette followed the UI theme instead of its backdrop");
+            assert!(mapped.chunks_exact(4).zip(a.rgba.chunks_exact(4)).all(|(p,s)|p[3]==s[3]),"keycap edges lost their alpha ramp");
+        }
+        let face=&white[0];let mapped=hint_texture(&face.rgba,dark);
+        let cap:Vec<_>=(0..face.h).flat_map(|y|(0..MENU_HINT_H).map(move|x|((y*face.w+x)*4)as usize)).filter(|&i|mapped[i+3]>240).map(|i|[mapped[i],mapped[i+1],mapped[i+2]]).collect();
+        assert!(cap.contains(&if dark {INK}else{[224,227,232]}),"capsule fill disappeared");
+        assert!(cap.contains(&if dark {[242,247,245]}else{[34,37,42]}),"button letter disappeared");
+        assert!(cap.iter().collect::<std::collections::BTreeSet<_>>().len()>20,"button lettering lost its antialiasing");
+    }
+}

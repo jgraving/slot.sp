@@ -66,6 +66,8 @@ pub struct Sprites {
     ui_textures:std::collections::BTreeMap<usize,(u32,u32,Vec<u8>)>,
     background_textures:std::collections::BTreeMap<usize,(u32,u32,Vec<u8>)>,
     light_ui:bool,
+    backdrop_textures:std::collections::BTreeMap<usize,usize>,
+    backdrop_light:[bool;5],
     u_rect: gl::types::GLint,
     u_colour: gl::types::GLint,
     u_turn: gl::types::GLint,
@@ -108,6 +110,7 @@ impl Sprites {
             ui_textures:Default::default(),
             background_textures:Default::default(),
             light_ui:false,
+            backdrop_textures:Default::default(),backdrop_light:[false;5],
             u_rect,
             u_colour,
             u_turn,
@@ -135,7 +138,8 @@ impl Sprites {
         let id=self.create_texture(w,h,&pixels);self.ui_textures.insert(id.0,(w,h,rgba.to_vec()));id
     }
     pub fn update_ui_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]) {
-        let pixels=if self.light_ui {crate::ui_palette::light_texture(rgba)}else{rgba.to_vec()};
+        let pixels=if let Some(&zone)=self.backdrop_textures.get(&id.0) {self.backdrop_pixels(rgba,w,h,zone)}
+            else if self.light_ui {crate::ui_palette::light_texture(rgba)}else{rgba.to_vec()};
         self.update_texture(id,w,h,&pixels);self.ui_textures.insert(id.0,(w,h,rgba.to_vec()));
     }
     pub fn create_background_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {
@@ -148,10 +152,34 @@ impl Sprites {
     }
     pub fn set_light_ui(&mut self,light:bool){
         if self.light_ui==light {return;}self.light_ui=light;
-        let updates:Vec<_>=self.ui_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if light {crate::ui_palette::light_texture(rgba)}else{rgba.clone()})).collect();
+        let updates:Vec<_>=self.ui_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if let Some(&zone)=self.backdrop_textures.get(&id) {self.backdrop_pixels(rgba,*w,*h,zone)}else if light {crate::ui_palette::light_texture(rgba)}else{rgba.clone()})).collect();
         for (id,w,h,rgba) in updates {self.update_texture(id,w,h,&rgba);}
         let backgrounds:Vec<_>=self.background_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if light {crate::ui_palette::light_background(rgba)}else{rgba.clone()})).collect();
         for (id,w,h,rgba) in backgrounds {self.update_texture(id,w,h,&rgba);}
+    }
+
+    pub fn mark_backdrop_texture(&mut self,id:TexId,zone:usize) {
+        assert!(zone<5);if self.backdrop_textures.get(&id.0)==Some(&zone){return;}self.backdrop_textures.insert(id.0,zone);
+        if let Some((w,h,rgba))=self.ui_textures.get(&id.0).cloned(){self.update_ui_texture(id,w,h,&rgba);}
+    }
+    pub fn set_backdrop_light(&mut self,light:[bool;3]) {
+        if self.backdrop_light[..3]==light{return;}self.backdrop_light[..3].copy_from_slice(&light);
+        self.refresh_backdrop_textures();
+    }
+    pub fn mark_hint_texture(&mut self,id:TexId,side:usize) {
+        assert!(side<2);self.mark_backdrop_texture(id,side+3);
+    }
+    pub fn set_hint_light(&mut self,light:[bool;2]) {
+        if self.backdrop_light[3..]==light{return;}self.backdrop_light[3..].copy_from_slice(&light);
+        self.refresh_backdrop_textures();
+    }
+    fn backdrop_pixels(&self,rgba:&[u8],w:u32,h:u32,zone:usize)->Vec<u8> {
+        if zone<3 {crate::ui_palette::backdrop_text(rgba,w,h,self.backdrop_light[zone])}
+        else {crate::ui_palette::hint_texture(rgba,self.backdrop_light[zone])}
+    }
+    fn refresh_backdrop_textures(&mut self) {
+        let ids:Vec<_>=self.backdrop_textures.keys().copied().collect();
+        for id in ids {if let Some((w,h,rgba))=self.ui_textures.get(&id).cloned(){self.update_ui_texture(TexId(id),w,h,&rgba);}}
     }
 
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {

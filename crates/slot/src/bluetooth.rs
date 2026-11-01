@@ -115,6 +115,22 @@ pub struct Manager {
     forget_confirmation: Option<String>,
 }
 
+/// A brief cause and next step; raw helper details stay in the saved report.
+pub fn error_notice(status:&str)->&'static str {
+    let error=status.to_ascii_lowercase();
+    if error.contains("usb") && (error.contains("unplug")||error.contains("no longer connected")) {"USB audio disconnected. Reconnect it and retry."}
+    else if error.contains("save") {"Couldn’t save settings. Check the SD card."}
+    else if error.contains("br-connection-busy") || error.contains("another bluetooth operation") || error.contains("inprogress") {"Bluetooth is busy. Wait a moment, then retry."}
+    else if error.contains("page-timeout") || error.contains("waiting for connected") {"Device didn’t answer. Wake it and try again."}
+    else if error.contains("authentication") || error.contains("pairing failed") {"Pairing failed. Forget the device and pair again."}
+    else if error.contains("profile-unavailable") || error.contains("not supported") {"Bluetooth audio unavailable. Try pairing again."}
+    else if error.contains("notready") || error.contains("no default controller") || error.contains("initialization") || error.contains("couldn’t start") {"Bluetooth isn’t ready. Turn it off and on."}
+    else if error.contains("worker stopped") {"Bluetooth stopped. Turn it off and on."}
+    else if error.contains("timed out") || error.contains("timeout") {"Bluetooth timed out. Move closer and retry."}
+    else if error.contains("requires the handheld") {"Bluetooth needs a supported handheld."}
+    else {"Bluetooth failed. Turn it off and on, then retry."}
+}
+
 impl Manager {
     pub fn new(root: PathBuf, bluetooth_available: bool) -> Self {
         let disconnect_volume = disconnect_volume(&root);
@@ -555,11 +571,11 @@ impl Manager {
         let message = if self.forget_confirmation.is_some() {
             "CONFIRM_FORGET".to_owned()
         } else if self.recovering.load(Ordering::Relaxed) {
-            "Error".into()
+            "Bluetooth is restarting. Please wait.".into()
         } else if self.busy() {
             String::new()
         } else if self.status.starts_with("Error:") {
-            "Error".into()
+            error_notice(&self.status).into()
         } else if self.status.is_empty() && self.disconnect_notice {
             "Device disconnected — choose output".into()
         } else {
@@ -898,11 +914,13 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
     let mut rgba = panel.rgba;
     if compact { let title=slot_ui::quick_heading_face("Sound"); let x=screen_w.saturating_sub(title.w)/2; blit(&mut rgba,&title,x,0); }
     for (i, line) in lines.iter().enumerate() {
-        if compact && (i == 0 || i == 2) {
+        // Transient feedback belongs to the floating pill, not a second line
+        // inside the card. Keep the inline destructive-action confirmation.
+        if compact && (i == 0 || i == 2 || (i==1 && line!="CONFIRM_FORGET")) {
             continue;
         }
         let (label, top, h, px, max_lines, highlight) = match i {
-            1 if compact => (if line.starts_with("Error:") { "Error" } else { line.as_str() }, 346, 26, 16.0, 1, false),
+            1 if compact => (if line.starts_with("Error:") { error_notice(line) } else { line.as_str() }, 346, 26, 16.0, 1, false),
             0 => (line.as_str(), 16, 46, 30.0, 1, false),
             1 => (line.as_str(), 66, 82, 22.0, 3, false),
             2 => (line.as_str(), 146, 30, 20.0, 1, false),
@@ -1171,6 +1189,19 @@ mod menu_tests {
         }
     }
     #[test]
+    fn error_pills_explain_the_reported_busy_and_unreachable_cases_concisely() {
+        for (raw,want) in [
+            ("Error: Connection failed: org.bluez.Error.Failed br-connection-busy","Bluetooth is busy. Wait a moment, then retry."),
+            ("Error: Connection failed: org.bluez.Error.Failed br-connection-page-timeout","Device didn’t answer. Wake it and try again."),
+            ("Error: Pairing failed: AuthenticationFailed","Pairing failed. Forget the device and pair again."),
+            ("Error: unknown raw details /mnt/sdcard/private.txt","Bluetooth failed. Turn it off and on, then retry."),
+        ] {
+            assert_eq!(error_notice(raw),want);assert!(want.chars().count()<=60);
+            let mut m=menu();m.status=raw.into();assert_eq!(m.lines()[1],want);
+        }
+    }
+
+    #[test]
     fn opening_discovery_is_silent_but_requested_work_has_progress() {
         let mut m=menu();let(_tx,rx)=mpsc::channel();m.pending=Some(rx);
         assert!(m.busy());assert!(!m.show_progress());
@@ -1222,14 +1253,14 @@ mod menu_tests {
     }
 
     #[test]
-    fn recovery_shows_only_error_and_never_exposes_helper_details() {
+    fn recovery_shows_a_brief_next_step_without_exposing_helper_details() {
         let mut m = menu();
         m.status = "Error: org.bluez.Error.Failed, secret debug detail".into();
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth failed. Turn it off and on, then retry.");
         assert!(!m.lines().iter().any(|l| l.contains("org.bluez") || l.contains("debug detail")));
         m.recovering.store(true, Ordering::Relaxed);
         m.status.clear();
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth is restarting. Please wait.");
     }
 
     #[test]
@@ -1257,7 +1288,7 @@ mod menu_tests {
         .unwrap();
         m.poll();
         assert!(!m.busy());
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth failed. Turn it off and on, then retry.");
         assert_eq!(&m.lines()[3..], &idle[3..]);
     }
 
@@ -2050,6 +2081,8 @@ pub fn probe(root: &std::path::Path) -> Option<Receiver<bool>> {
         }
     });
     Some(rx)
+
+
 }
 
 /// Small antialiased progress ring. Frames are cached once by the frontend;

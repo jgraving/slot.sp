@@ -159,6 +159,10 @@ impl Compositor {
     pub fn update_ui_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]){self.sprites.update_ui_texture(id,w,h,rgba);}
     pub fn create_background_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {self.sprites.create_background_texture(w,h,rgba)}
     pub fn update_background_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]){self.sprites.update_background_texture(id,w,h,rgba);}
+    pub fn mark_hint_texture(&mut self,id:TexId,side:usize){self.sprites.mark_hint_texture(id,side);}
+    pub fn set_hint_light(&mut self,light:[bool;2]){self.sprites.set_hint_light(light);}
+    pub fn mark_backdrop_texture(&mut self,id:TexId,zone:usize){self.sprites.mark_backdrop_texture(id,zone);}
+    pub fn set_backdrop_light(&mut self,light:[bool;3]){self.sprites.set_backdrop_light(light);}
     pub fn set_light_ui(&mut self,light:bool){self.sprites.set_light_ui(light);}
 
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {

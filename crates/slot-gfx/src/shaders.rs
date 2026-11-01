@@ -170,11 +170,11 @@ void main() {
         if (u_lava > 1.5) {
             // The same convection in a light palette: mint, sky and lavender
             // flow over a pale neutral base, including behind dark UI text.
-            vec3 pale = (vec3(0.73, 0.89, 0.86) * (a.x + e.x)
-                       + vec3(0.85, 0.80, 0.94) * (b.x + d.x + f.x)
-                       + vec3(0.76, 0.87, 0.96) * c.x) / max(field.x, 0.001);
-            vec3 paper = vec3(0.96, 0.975, 0.97);
-            float depth = body * (0.50 + 0.25 * (1.0 - diffuse));
+            vec3 pale = (vec3(0.57, 0.77, 0.68) * (a.x + e.x)
+                       + vec3(0.74, 0.64, 0.82) * (b.x + d.x + f.x)
+                       + vec3(0.57, 0.72, 0.85) * c.x) / max(field.x, 0.001);
+            vec3 paper = vec3(232.0, 227.0, 216.0) / 255.0;
+            float depth = body * (0.78 + 0.16 * (1.0 - diffuse));
             colour = mix(paper, pale, calm * depth);
             colour += calm * body * sheen * 0.012;
         }

@@ -26,3 +26,19 @@ fn time_is_left_and_the_icon_cluster_and_battery_are_right_without_overlap(){
         for id in 3..=5{let [x,y,w,h]=rect(id);assert_eq!((w,h),(24.0,24.0));assert!(y>=0.0&&y+h<=slot_ui::PLATE_H);assert!(x>116.0&&x+w<rect(1)[0]);}
     }
 }
+
+#[test]
+fn light_battery_has_distinct_readable_ink_and_a_visible_empty_outline(){
+    use slot_ui::status_battery_face_on;
+    for charge in [Charge::Charging,Charge::Full,Charge::Discharging] {
+        for percent in [0,10,50,82,100] {
+            let f=status_battery_face_on(at(percent,charge),true);
+            assert_eq!(pixel(&f,0,0)[3],0);
+            assert!(pixel(&f,0,13)[..3].iter().all(|&v|v<160),"empty battery edge vanished");
+            let colours:std::collections::BTreeSet<_>=f.rgba.chunks_exact(4).filter(|p|p[3]>240).map(|p|[p[0],p[1],p[2]]).collect();
+            assert!(colours.len()>20,"percentage lost its antialiased text edges");
+            assert!(colours.iter().any(|p|p.iter().all(|&v|v<130)));
+            if percent>20 {assert!(colours.iter().any(|p|p.iter().all(|&v|v>235)),"filled battery lost its light percentage");}
+        }
+    }
+}
