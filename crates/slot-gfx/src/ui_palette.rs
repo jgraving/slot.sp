@@ -51,6 +51,25 @@ pub fn light_texture(rgba:&[u8])->Vec<u8> {
     }
     out
 }
+/// Footer artwork uses semantic keycap colours, so invert the capsule and its
+/// lettering together while choosing the caption for the actual backdrop.
+/// Original pixels are retained by the compositor for exact palette changes.
+pub fn hint_texture(rgba:&[u8],dark_ink:bool)->Vec<u8> {
+    let mut out=rgba.to_vec();
+    let caption=if dark_ink {INK}else{[246,244,239]};
+    let (letter,fill)=if dark_ink {([242,247,245],INK)}else{([34,37,42],[224,227,232])};
+    for p in out.chunks_exact_mut(4) {
+        if p[3]==0 {continue;}
+        let cap=(i16::from(p[1])-i16::from(p[0])-3).abs()<=1
+            && (i16::from(p[2])-i16::from(p[0])-8).abs()<=1;
+        if cap {
+            let t=((p[0]as f32-34.0)/190.0).clamp(0.0,1.0);
+            for c in 0..3 {p[c]=(letter[c]as f32+(fill[c]as f32-letter[c]as f32)*t).round()as u8;}
+        } else {p[..3].copy_from_slice(&caption);}
+    }
+    out
+}
+
 /// Lift wallpaper tones into a pale range, keeping the original hue, detail and
 /// alpha. Normalising to the source peak also gives the dark built-in static
 /// gradient its full light palette. Only background textures use this path.

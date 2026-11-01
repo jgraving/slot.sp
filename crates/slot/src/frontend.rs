@@ -35,7 +35,7 @@ const DOZE_TIMEOUT: Duration = Duration::from_secs(180);
 const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
-    menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId)>,
+    menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
@@ -337,9 +337,11 @@ impl Frontend {
         );
         self.session.app_mut().set_shot_tick_face(tick);
         let hint = set_clock_hint_face();
-        self.clocks.hint = Some(compositor.create_ui_texture(hint.w, hint.h, &hint.rgba));
+        let tex=compositor.create_ui_texture(hint.w,hint.h,&hint.rgba);compositor.mark_hint_texture(tex,1);
+        self.clocks.hint=Some(tex);
         let back = slot_ui::prompt_legends(slot_ui::HUD_INK,"Back","Save").into_iter().next().unwrap();
         let tex = compositor.create_ui_texture(back.w, back.h, &back.rgba);
+        compositor.mark_hint_texture(tex,0);
         self.session.app_mut().set_clock_back_face((tex, back.w));
         let removal = slot_ui::favorite_remove_face();
         let tex = compositor.create_ui_texture(removal.w, removal.h, &removal.rgba);
@@ -358,7 +360,7 @@ impl Frontend {
         let smiley=slot_ui::kid_status_face();
         self.session.app_mut().kid_status_icon=Some(compositor.create_ui_texture(smiley.w,smiley.h,&smiley.rgba));
         let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::control_icon_face(icon,32,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
-        let hints=slot_ui::quick_controls_legends().into_iter().map(|f|(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
+        let hints=slot_ui::quick_controls_legends().into_iter().enumerate().map(|(side,f)|{let tex=compositor.create_ui_texture(f.w,f.h,&f.rgba);compositor.mark_hint_texture(tex,side);(tex,f.w,f.h)}).collect();
         self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
@@ -533,6 +535,7 @@ impl Frontend {
             look.applied = None;
         }
         for (_, (tex,_,_)) in &headings {compositor.mark_backdrop_texture(*tex,2);}
+        for legends in [&legend,&legend_light] {for (i,(tex,_)) in legends.iter().enumerate(){compositor.mark_hint_texture(*tex,if matches!(i,0|3|7){0}else{1});}}
         let app = self.session.app_mut();
         app.set_link_badge_faces(link_badges);
         app.set_shutdown_faces(lines);
@@ -804,6 +807,7 @@ impl Frontend {
         let footer=if !app.light() && self.wallpaper.image.is_some() && app.seated_cart().is_none() {self.wallpaper.footer_light}else{[app.light();2]};
         self.session.app_mut().set_footer_contrast(footer);
         compositor.set_backdrop_light(header);
+        compositor.set_hint_light(footer);
         for tex in [self.mute_icon,self.audio_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
@@ -1752,7 +1756,7 @@ fn upload_rgba(
     }
 }
 
-fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(UndoFace,TexId)>,face:UndoFace,updates:&mut Vec<(TexId,Vec<Draw>,Vec<Draw>)>)->TexId {
+fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(UndoFace,TexId,usize)>,face:UndoFace,updates:&mut Vec<(TexId,Vec<Draw>,Vec<Draw>)>)->TexId {
     let mut parts=vec![];
     for (left,right,y,h) in [(0,face.w,0,slot_ui::expressive::TITLE_H as u32),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
         let ink=|x:u32|(y..y+h).any(|yy|face.rgba[((yy*face.w+x)*4+3)as usize]!=0);
@@ -1761,9 +1765,10 @@ fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(
         if y==0 {x0=x0.saturating_sub(1);x1=(x1+1).min(face.w);}
         let w=x1-x0;let mut rgba=vec![];
         for yy in y..y+h {let a=((yy*face.w+x0)*4)as usize;rgba.extend_from_slice(&face.rgba[a..a+(w*4)as usize]);}
-        let tex=if let Some((_,t))=cache.iter().find(|(f,_)|f.w==w&&f.h==h&&f.rgba==rgba){*t}
-            else{let t=gpu.create_ui_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t));t};
-        if y==0 {gpu.mark_backdrop_texture(tex,2);}
+        let zone=if y==0 {2}else if left==0 {0}else{1};
+        let tex=if let Some((_,t,_))=cache.iter().find(|(f,_,z)|*z==zone&&f.w==w&&f.h==h&&f.rgba==rgba){*t}
+            else{let t=gpu.create_ui_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t,zone));t};
+        if y==0 {gpu.mark_backdrop_texture(tex,2);}else{gpu.mark_hint_texture(tex,zone);}
         parts.push(vec![Draw::Tex{x:x0 as f32,y:y as f32,w:w as f32,h:h as f32,tex,alpha:1.0}]);
     }
     let tex=upload(gpu,body,face);let title=parts.remove(0);let hints=parts.into_iter().flatten().collect();updates.push((tex,title,hints));tex

@@ -78,7 +78,26 @@ fn main(){
         let mut pixels=vec![];for _y in 0..32 {for x in 0..64 {pixels.extend_from_slice(if x<22 {&[240,232,218,255]}else{&[24,32,40,255]});}}
         let mut e=png::Encoder::new(std::fs::File::create(root.join("Wallpapers/contrast.png")).unwrap(),64,32);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&pixels).unwrap();
         slot_store::write_slot_state(&root,&slot_store::SlotState{clock_set:true,wallpaper:slot_store::WallpaperPick::File("contrast.png".into()),..Default::default()}).unwrap();
-        let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root)));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.now=0;a.tap(Btn::Menu);a.save("custom-header-contrast");
+        let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root)));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.now=0;a.tap(Btn::Menu);a.save("custom-header-contrast");a.nav(QuickRow::Bluetooth);a.tap(Btn::A);a.save("custom-sound-hints");a.tap(Btn::B);a.nav(QuickRow::Kids);a.tap(Btn::A);a.save("custom-parent-hints");
+    }
+    // Keycaps follow each footer backdrop independently of the global theme.
+    // Reuse the same uploaded textures through both palette/theme round trips.
+    {
+        let faces=slot_ui::quick_legend_faces(slot_ui::footer_ink(false));
+        let ids:[slot_gfx::TexId;2]=[0,2].map(|i|{let f=&faces[i];let id=a.g.create_ui_texture(f.w,f.h,&f.rgba);a.g.mark_hint_texture(id,usize::from(i!=0));id});
+        let mut baseline=std::collections::BTreeMap::new();
+        for (frame,(theme,left)) in [(false,true),(true,false),(true,true),(false,false),(false,true)].into_iter().enumerate() {
+            a.g.set_light_ui(theme);a.g.set_hint_light([left,!left]);
+            let bright=slot_gfx::ui_palette::BACKDROP;let dark=[0.04,0.06,0.08,1.0];
+            let mut out=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32/2.0,h:480.0,colour:if left{bright}else{dark}},Draw::Rect{x:width as f32/2.0,y:0.0,w:width as f32/2.0,h:480.0,colour:if left{dark}else{bright}}];
+            for (side,i) in [0,2].into_iter().enumerate(){let f=&faces[i];out.push(Draw::Tex{x:if side==0{16.0}else{width as f32-16.0-f.w as f32},y:200.0,w:f.w as f32,h:f.h as f32,tex:ids[side],alpha:1.0});}
+            a.g.begin_frame();a.g.draw_list(&out);let pixels=a.g.read_frame();
+            let cap_pixel=|side:usize| {let x=if side==0{20}else{width-24};let y=200+slot_ui::MENU_HINT_H/2;let i=((y*width+x)*4)as usize;pixels[i..i+3].to_vec()};
+            assert_eq!(cap_pixel(0),if left{slot_gfx::ui_palette::INK.to_vec()}else{vec![224,227,232]});
+            assert_eq!(cap_pixel(1),if left{vec![224,227,232]}else{slot_gfx::ui_palette::INK.to_vec()});
+            if let Some(previous)=baseline.get(&left){assert_eq!(&pixels,previous,"global theme or palette round trip changed adaptive hint artwork");}else{baseline.insert(left,pixels);}
+            a.capture(&format!("adaptive-hints-{frame}"));
+        }
     }
     // Inspect native-sized battery glyphs, slider thumbs, charging and error
     // notices through the same compositor used on the handheld.
