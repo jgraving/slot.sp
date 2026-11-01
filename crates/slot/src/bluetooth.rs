@@ -99,6 +99,7 @@ pub struct Manager {
     pub status: String,
     output: String,
     pending: Option<Receiver<ResultMessage>>,
+    progress_requested: bool,
     recovering: Arc<AtomicBool>,
     cancel_path: Option<PathBuf>,
     pub face: Option<TexId>,
@@ -132,6 +133,7 @@ impl Manager {
             status: String::new(),
             output: "speaker".into(),
             pending: None,
+            progress_requested: false,
             recovering: Arc::default(),
             cancel_path: None,
             face: None,
@@ -163,6 +165,10 @@ impl Manager {
         self.pending.is_some()
     }
 
+    pub fn show_progress(&self) -> bool { self.busy() && self.progress_requested }
+
+    pub fn select_usb_automatically(&mut self,route:String){self.select_usb(route);self.progress_requested=false;}
+
     pub fn select_usb(&mut self, route: String) {
         self.ask("usb", Some(route));
     }
@@ -172,6 +178,7 @@ impl Manager {
     pub fn adopt_usb_switch(&mut self, other: &mut Self) {
         self.cancel_pending();
         self.pending = other.pending.take();
+        self.progress_requested = other.progress_requested;
         self.cancel_path = other.cancel_path.take();
         self.recovering = other.recovering.clone();
         self.choosing_route = other.choosing_route;
@@ -199,6 +206,7 @@ impl Manager {
         let root = self.root.clone();
         let (tx, rx) = mpsc::channel();
         self.pending = Some(rx);
+        self.progress_requested = verb != "list";
         self.status = match verb {
             "scan" => "Scanning…",
             "connect"
@@ -1150,6 +1158,7 @@ mod menu_tests {
             status: String::new(),
             output: "speaker".into(),
             pending: None,
+            progress_requested: false,
             recovering: Arc::default(),
             cancel_path: None,
             face: None,
@@ -1160,6 +1169,13 @@ mod menu_tests {
             choosing_route: false,
             forget_confirmation: None,
         }
+    }
+    #[test]
+    fn opening_discovery_is_silent_but_requested_work_has_progress() {
+        let mut m=menu();let(_tx,rx)=mpsc::channel();m.pending=Some(rx);
+        assert!(m.busy());assert!(!m.show_progress());
+        m.cancel_pending();m.ask("scan",None);assert!(m.show_progress());
+        m.cancel_pending();assert!(!m.show_progress());
     }
     #[test]
     fn backing_out_cancels_work_and_keeps_the_sound_menu_responsive() {

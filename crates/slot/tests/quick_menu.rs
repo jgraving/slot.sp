@@ -114,7 +114,7 @@ fn the_quick_menu_is_only_on_the_carousel() {
 }
 
 #[test]
-fn wallpaper_cycles_flowing_static_blur_then_the_folder_and_saves() {
+fn wallpaper_cycles_flowing_static_then_the_folder_and_saves() {
     let (d, mut a, _) = on_carousel();
     let dir = d.path().join("Wallpapers");
     std::fs::create_dir_all(&dir).unwrap();
@@ -132,9 +132,6 @@ fn wallpaper_cycles_flowing_static_blur_then_the_folder_and_saves() {
     assert_eq!(a.resolved_wallpaper(), WallpaperPick::Static);
     assert_eq!(a.resolved_wallpaper().label(), "Static Gradient");
     assert_eq!(read_slot_state(d.path()).wallpaper, WallpaperPick::Static);
-    press(&mut a, Btn::Right);
-    assert_eq!(a.resolved_wallpaper(), WallpaperPick::Blur);
-    assert_eq!(a.resolved_wallpaper().label(), "DEFAULT BLUR");
     for name in ["a.png", "b.png", "Crt.png"] {
         press(&mut a, Btn::Right);
         assert_eq!(a.resolved_wallpaper(), WallpaperPick::File(name.into()));
@@ -212,7 +209,7 @@ fn random_with_an_empty_folder_shows_the_default() {
 #[test]
 fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
     let (_d, a, _) = on_carousel();
-    assert!(a.hidden_rows().contains(&QuickRow::Theme));
+    assert!(!a.hidden_rows().contains(&QuickRow::Theme));
     assert!(!a.hidden_rows().contains(&QuickRow::ShellColour));
     assert!(!a.hidden_rows().contains(&QuickRow::Wallpaper));
 }
@@ -1144,7 +1141,6 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     press(&mut a, Btn::Up);
     for (pick, shown) in [
         (WallpaperPick::Static, false),
-        (WallpaperPick::Blur, false),
         (WallpaperPick::File("a.png".into()), true),
         (WallpaperPick::None, false),
         (WallpaperPick::Random, true),
@@ -1333,7 +1329,7 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
     press(&mut a,Btn::Right);
     assert_eq!(a.quick_value(QuickRow::ShellColour),Some(QuickValue::Graphite));
     press(&mut a,Btn::Left);
-    assert!(a.hidden_rows().contains(&QuickRow::Theme));
+    assert!(!a.hidden_rows().contains(&QuickRow::Theme));
     assert_eq!(a.shell_colour(), ShellColour::PearlPink);
     let (b, _) = app_booting_at(d.path(), CLOCK_IS_SET);
     assert_eq!(b.shell_colour(), ShellColour::PearlPink);

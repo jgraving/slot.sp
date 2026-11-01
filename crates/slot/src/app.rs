@@ -1183,7 +1183,7 @@ impl App {
 
     pub fn in_game_hidden(&self) -> Vec<QuickRow> {
         let no_bezel = self.playing_platform() == Platform::Gba && !self.framed_panel();
-        let mut hidden = vec![QuickRow::Theme];
+        let mut hidden = vec![];
         if self.hidden_rows().contains(&QuickRow::WallpaperTint){hidden.push(QuickRow::WallpaperTint);}
         if !self.palette_live {
             hidden.push(QuickRow::Palette);
@@ -1567,6 +1567,7 @@ impl App {
 
     pub fn resolved_wallpaper(&self) -> WallpaperPick {
         match &self.state.wallpaper {
+            WallpaperPick::Blur => WallpaperPick::Default,
             WallpaperPick::File(name) if !self.wallpaper_files().iter().any(|n| n == name) => {
                 WallpaperPick::Default
             }
@@ -1600,7 +1601,6 @@ impl App {
             WallpaperPick::Random,
             WallpaperPick::Default,
             WallpaperPick::Static,
-            WallpaperPick::Blur,
         ];
         choices.extend(self.wallpaper_files().into_iter().map(WallpaperPick::File));
         let key = self.resolved_wallpaper().key();
@@ -1655,6 +1655,9 @@ impl App {
         } else {
             draw_ground(self.canvas(), face, out);
         }
+        if face.is_none() && self.light() {
+            out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.975,0.97,1.0]});
+        }
         let alpha = tint_alpha(self.state.wallpaper_tint);
         if alpha > 0.0 && self.own_wallpaper_shown() {
             out.push(Draw::Rect {
@@ -1662,7 +1665,7 @@ impl App {
                 y: 0.0,
                 w: self.canvas().w,
                 h: OUT_H as f32,
-                colour: [0.0, 0.0, 0.0, alpha],
+                colour: if self.light() {[0.96,0.975,0.97,alpha]}else{[0.0,0.0,0.0,alpha]},
             });
         }
     }
@@ -1792,7 +1795,7 @@ impl App {
             self.state.wallpaper,
             WallpaperPick::File(_) | WallpaperPick::Random
         );
-        let mut hidden = vec![QuickRow::Theme];
+        let mut hidden = vec![];
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -1888,6 +1891,10 @@ impl App {
 
     pub fn set_hud_bolt_face(&mut self, bolt: TexId) {
         self.hud_bolt = Some(bolt);
+    }
+
+    pub fn compose_boot_intro(&self,motion:&crate::boot_motion::BootMotion,ms:u64,out:&mut Vec<Draw>) {
+        motion.compose(ms,self.canvas(),self.slot_faces,out);
     }
 
     pub fn set_slot_faces(&mut self, back: TexId, front: TexId) {
@@ -4203,13 +4210,12 @@ impl App {
                 return;
             }
             Phase::Ejecting { .. } => {
-                self.footer = match self.screen > 0.0 {
-                    true => (self.footer + dt / POWER_OFF_S).min(1.0),
-                    false => 1.0,
-                };
-                self.footer_row = None;
+                self.footer_motion.update(true,dt);
+                self.footer=self.footer_motion.value();
+                self.footer_row=None;
                 return;
             }
+            Phase::About | Phase::SetClock { .. } if self.settings_return_game.is_some() => self.in_game_menu,
             _ => {
                 self.footer = 0.0;
                 self.footer_motion.snap(false);
@@ -4856,7 +4862,9 @@ impl App {
                 out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
             }
             let cart=match &self.phase {Phase::Playing{cart}|Phase::Ejecting{cart,..}=>Some(cart.as_str()),_=>self.settings_return_game.as_deref()};
+            let mouth=out.len();
             if let Some(cart)=cart {self.draw_seated_mouth(cart,out);}else{draw_empty_slot(self.canvas(),self.slot_faces,out);}
+            if cart.is_some() {shift_down(&mut out[mouth..],self.menu_footer_offset());}
         }else {self.menu_title_motion.borrow_mut().reset();self.menu_hint_motion.borrow_mut().reset();}
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) {
             if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
@@ -4875,7 +4883,6 @@ impl App {
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
                     self.push_game(out);
-                    if let Phase::Playing{cart}=&self.phase {self.draw_seated_mouth(cart,out);}
                     self.draw_cached_overlay(tex,out);
                     self.draw_status_bar(out);
                     return;
@@ -4934,10 +4941,7 @@ impl App {
             .filter(|_| !matches!(self.phase, Phase::Doze { .. }))
         {
             match &self.phase {
-                Phase::Playing { cart } => {
-                    self.push_game(out);
-                    self.draw_seated_mouth(cart, out);
-                }
+                Phase::Playing { .. } => self.push_game(out),
                 _ => {
                     self.draw_background(out);
                     self.draw_menu_shelf(out);
@@ -5332,8 +5336,9 @@ impl App {
     fn draw_special_sheet(&self,key:u64,body:Vec<Draw>,out:&mut Vec<Draw>) {
         {let mut cache=self.special_menu_cache.borrow_mut();
         if let Some((_,old))=cache.iter_mut().find(|(k,_)|*k==key) {*old=body;}else{cache.push((key,body));}}
-        self.draw_background(out);self.draw_menu_shelf(out);
+        if self.settings_return_game.is_some() {self.push_game(out);}else{self.draw_background(out);self.draw_menu_shelf(out);}
         let begin=out.len();
+        if self.settings_return_game.is_some() && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         slot_ui::expressive::draw_card(self.canvas(),out);
         self.draw_outgoing_menu(false,out);
         let frame=self.menu_motion.frame_page(QuickRow::Kids,&[],Some(key));
@@ -5342,14 +5347,17 @@ impl App {
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_custom_focus(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>){
+        let begin=out.len();
+        if frame.suppress_focus {return;}
         match key {
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
             1000..=1999|2000|2002|2011|2012|3000|3001=>{
-                let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0);
-                slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
+                let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
+                slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
         }
+        slot_ui::clip_menu_body(out,begin,self.canvas());
     }
     fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
         if let Some(previous)=self.menu_motion.outgoing_row() {
@@ -5370,6 +5378,7 @@ impl App {
     fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
         let begin=out.len();
         let over_game=matches!(self.phase,Phase::Playing{..});
+        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let mut frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
         frame.entry=1.0;
@@ -5396,6 +5405,7 @@ impl App {
             self.draw_menu_shelf(out);
         }
         let begin=out.len();
+        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         if over_game {
             let hidden = self.in_game_hidden();
             let frame = self.menu_motion.frame(row, &hidden);
@@ -5597,6 +5607,7 @@ impl App {
         let Some((cart, face)) = self.shelf().find(stem) else {
             return;
         };
+        let begin=out.len();
         let alpha = self.alert_alpha();
         let (rest, scale) = self.shelf().selected_at(self.canvas());
         SlotChrome {
@@ -5621,6 +5632,7 @@ impl App {
             canvas: self.canvas(),
         }
         .draw_with_marks(self.shelf().star_for(stem), self.shelf().kid_for(stem), out);
+        if matches!(self.phase,Phase::Ejecting{..}) {shift_down(&mut out[begin..],self.menu_footer_offset());}
     }
 
     pub fn alert_visible(&self) -> bool {

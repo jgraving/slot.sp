@@ -152,7 +152,7 @@ impl WallpaperPick {
             "random" => WallpaperPick::Random,
             "" | "default" => WallpaperPick::Default,
             "static_gradient" => WallpaperPick::Static,
-            "default_blur" => WallpaperPick::Blur,
+            "default_blur" => WallpaperPick::Default,
             other => WallpaperPick::File(other.to_string()),
         }
     }

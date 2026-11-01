@@ -402,6 +402,7 @@ impl MenuMotion {
             closing: !self.active,
         };
 
+        if custom.is_some() {frame.focus_y=ROW_TOP+(self.scroll.value-self.window.value)*crate::QUICK_PITCH;}
         if custom==Some(2001) {frame.focus_y+=190.0-ROW_TOP;}
         if self.pause_morph && self.outgoing.is_some() {
             frame.focus_y=self.pause_focus.value;

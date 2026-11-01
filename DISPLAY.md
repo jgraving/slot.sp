@@ -24,7 +24,7 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → Theme** changes the light or dark appearance.
+The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses pale cards and dark text across settings, status, prompts and feedback.
 
 ![The four SP colors](previews/rgsp-shell-finishes.png)
 
@@ -34,13 +34,13 @@ Open **Menu → General**:
 
 | Setting | What to choose |
 | :--- | :--- |
-| **Wallpaper** | Flowing Gradient, Static Gradient, a blurred background, None, Random, or one of your own images. |
+| **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
 | **Wallpaper Tint** | Darken a custom or random background so the games stand out. |
 | **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
 | **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
 
-**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup.
+**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup. Light UI uses pale mint, sky and lavender for the flowing gradient, a matching light static gradient, and a plain light surface with wallpaper off. Custom and random wallpapers receive a soft light palette too; Wallpaper Tint adds a light veil instead of darkening them. Returning to Dark restores their original colours.
 
 ![The slot.sp startup animation](previews/boot-brand.gif)
 

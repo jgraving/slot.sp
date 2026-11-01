@@ -381,11 +381,11 @@ impl Session {
                     if let Some(menu) = &mut self.app.bluetooth {
                         // A deliberate user action already in progress wins.
                         if !menu.busy() {
-                            menu.select_usb(device.route);
+                            menu.select_usb_automatically(device.route);
                         }
                     } else {
                         let mut worker = crate::bluetooth::Manager::new(self.root.clone(), false);
-                        worker.select_usb(device.route);
+                        worker.select_usb_automatically(device.route);
                         self.usb_switch = Some(worker);
                     }
                 }

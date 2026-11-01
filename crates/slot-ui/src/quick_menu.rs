@@ -565,7 +565,7 @@ impl QuickRow {
             QuickRow::Turbo => "Turbo Buttons",
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
-            QuickRow::Theme => "Theme",
+            QuickRow::Theme => "UI theme",
             QuickRow::ShellColour => "Shell Color",
             QuickRow::Wallpaper => "Wallpaper",
             QuickRow::Recents => "Recents",
@@ -1645,8 +1645,10 @@ pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
             for (i,ink) in [34u32,37,42].iter().enumerate() {rgba[at+i]=((u32::from(rgba[at+i])*(16-coverage)+ink*coverage)/16) as u8;}
         }}
     } else if let Some(font)=text::font(text::Role::Value) {
-        let px=if aspect>1.0 {h as f32*0.32}else{h as f32*0.62};
-        let layout=text::fit_preserving_case(font,label,w as f32-8.0,1,px,px);
+        let px=if label.len()>2 {h as f32*0.45}else if aspect>1.0 {h as f32*0.50}else{h as f32*0.62};
+        let safe_width=w as f32-h as f32*0.28;
+        let px=px.min(px*safe_width/text::line_width(font,label,px,text::tracking_for(px)).max(1.0));
+        let layout=text::fit_preserving_case(font,label,safe_width,1,px,px);
         text::draw_centred(&mut rgba,w,h,&layout,[34,37,42]);
     }
     UndoFace{rgba,w,h}
@@ -2001,4 +2003,17 @@ fn bounded_menu_face(label: &str, role: text::Role, ink:[u8;3], max_w:f32, px:f3
     let mut rgba=vec![0;(w*MENU_H*4) as usize];
     text::draw_centred(&mut rgba,w,MENU_H,&layout,ink);
     UndoFace{rgba,w,h:MENU_H}
+}
+
+#[cfg(test)]
+mod keycap_tests {
+    use super::*;
+    #[test]
+    fn word_keycaps_have_large_legible_text_inside_the_pill() {
+        for height in [28,40] {for button in [ButtonLegend::L1,ButtonLegend::R1,ButtonLegend::L2,ButtonLegend::R2,ButtonLegend::Start,ButtonLegend::Select,ButtonLegend::Menu] {
+            let face=controller_button_face(button,height);let mut ys=vec![];
+            for y in 0..face.h {for x in 0..face.w {let p=&face.rgba[((y*face.w+x)*4)as usize..][..4];if p[3]>240&&p[0]<100 {assert!(y>=4&&y<face.h-4&&x>=4&&x<face.w-4,"word escaped keycap");ys.push(y);}}}
+            assert!(!ys.is_empty());assert!(ys.iter().max().unwrap()-ys.iter().min().unwrap()>=if height==28 {8}else{11});
+        }}
+    }
 }
