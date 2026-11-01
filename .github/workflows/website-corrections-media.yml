@@ -1,0 +1,50 @@
+name: Capture website corrections
+on:
+  push:
+    branches: [fix/website-coherence]
+    paths: ['previews/site_refresh.rs', 'previews/collect_sound_refresh.py', 'tools/capture-readme-model.cjs', 'site/docs/assets/wordmark.png', '.github/workflows/website-corrections-media.yml']
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      SLOT_SILENT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Install capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0 av==16.0.0
+          npm install --prefix "$RUNNER_TEMP/readme-model" playwright@1.62.1
+      - name: Capture Bluetooth-enabled audio menus
+        run: |
+          cp previews/egl_surface.rs crates/slot/examples/egl_surface.rs
+          cp previews/site_refresh.rs crates/slot/examples/site_refresh.rs
+          cargo run --locked -p slot --no-default-features --example site_refresh -- /tmp/website-corrections audio
+          python3 previews/collect_sound_refresh.py /tmp/website-corrections
+      - name: Capture README with the original firmware wordmark
+        env:
+          NODE_PATH: ${{ runner.temp }}/readme-model/node_modules
+        run: |
+          node tools/capture-readme-model.cjs /tmp/website-corrections
+          mkdir -p /tmp/website-corrections/publish/previews/readme-model
+          python3 tools/opaque_preview_gif.py /tmp/website-corrections/model-frames /tmp/website-corrections/publish/previews/readme-model/hero.gif --width 820 --frame-ms 80
+          python3 previews/collect_readme_model.py /tmp/website-corrections
+      - name: Prepare media objects for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/website-corrections --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: website-corrections-media
+          retention-days: 1
+          path: |
+            /tmp/website-corrections/publish/**
+            /tmp/website-corrections/media-entries.json
+          if-no-files-found: error

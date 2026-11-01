@@ -113,6 +113,23 @@ impl Capture{
   self.chord(Btn::Select,Btn::Menu);self.wait(90);assert!(self.f.app().game_menu_open());self.shot("link-host");self.tap(Btn::Right);self.save("link-join");self.tap(Btn::B);
  }
  fn kid_warning(&mut self){if matches!(self.f.app().phase(),Phase::Shelf){self.tap(Btn::A);self.wait(180);}assert!(matches!(self.f.app().phase(),Phase::Playing{..}),"kid game did not open");self.wait(60);self.frame+=75*60*FPS;self.f.advance_at(&mut Input(vec![]),self.frame*1000/FPS,75.0*60.0);self.f.compose(&mut self.g);assert!(self.f.app().kid_menu.as_ref().is_some_and(|m|m.time_warning()),"time milestone did not pause for a reminder");self.save("kid-warning");}
+ fn sound(&mut self){
+  // Desktop recordings explicitly model a Bluetooth-capable handheld. No
+  // hardware commands or pairings are performed by these synthetic devices.
+  fs::write(self.f.app().root().unwrap().join("Config/bluetooth-enabled"), "").unwrap();
+  self.tap(Btn::Menu);self.nav(QuickRow::Bluetooth);self.tap(Btn::A);self.wait(45);
+  let menu=self.f.app_mut().bluetooth.as_mut().unwrap();
+  menu.bluetooth_available=true;
+  menu.devices=vec![slot::bluetooth::Headphones{address:"00:11:22:33:44:55".into(),name:"Headphones".into(),paired:true,connected:false}];
+  menu.selected=3;menu.face=None;
+  assert!(menu.rows().iter().any(|r|r.starts_with("BLUETOOTH ")));
+  assert!(menu.rows().iter().any(|r|r=="Pair audio device"));
+  self.save("sound");
+  let menu=self.f.app_mut().bluetooth.as_mut().unwrap();menu.selected=menu.rows().len()-1;menu.face=None;
+  self.save("sound-options");
+  let menu=self.f.app_mut().bluetooth.as_mut().unwrap();menu.page=slot::bluetooth::Page::Pair;menu.selected=0;menu.face=None;
+  self.save("sound-pair");
+ }
  fn settings(&mut self,light:bool){
   self.save("carousel");self.boot("boot");self.tap(Btn::Menu);self.save("settings");
   self.nav(QuickRow::General);self.rec("settings");self.tap(Btn::A);self.wait(65);self.nav(QuickRow::Theme);self.wait(45);self.shot("general");
@@ -142,9 +159,10 @@ fn fixture(root:&Path,light:bool,finish:ShellColour,playing:bool,kid:bool){
 }
 fn main(){
  let out=PathBuf::from(std::env::args().nth(1).expect("capture output root"));fs::create_dir_all(&out).unwrap();
- let mode=std::env::args().nth(2).unwrap_or_else(||"all".into());assert!(["all","docs","hero","special","hero-gallery"].contains(&mode.as_str()),"capture mode");
+ let mode=std::env::args().nth(2).unwrap_or_else(||"all".into());assert!(["all","docs","hero","special","hero-gallery","audio"].contains(&mode.as_str()),"capture mode");
  let surface=egl_surface::HeadlessSurface::new().unwrap();
  for light in [false,true]{let theme=if light{"light"}else{"dark"};
+  if mode=="audio" {let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-audio")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,false,false);c.sound();drop(c);}
   if mode=="all"||mode=="docs"{let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-docs")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,false,false);c.settings(light);drop(c);
    let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-kid")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,false,true);c.tap(Btn::Menu);c.save("kid-menu");drop(c);
    let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-game")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,true,false);assert!(matches!(c.f.app().phase(),Phase::Playing{..}));c.tap(Btn::Menu);c.save("in-game-menu");c.nav_play(QuickRow::Settings);c.tap(Btn::A);c.save("in-game-settings");drop(c);
