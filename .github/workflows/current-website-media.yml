@@ -1,7 +1,7 @@
 name: Capture current website media
 on:
   push:
-    branches: [docs/website-ui-refresh]
+    branches: [docs/website-ui-refresh, fix/hero-and-screenshot-gallery]
     paths:
       - 'previews/site_refresh.rs'
       - 'previews/collect_site_refresh.py'
@@ -22,6 +22,7 @@ jobs:
       LIBGL_ALWAYS_SOFTWARE: '1'
       SLOT_SILENT: '1'
       UI_RELEASE_REV: 4b3c6f2bdf387e74b3ffd67ff1f81630318c853e
+      CAPTURE_MODE: ${{ github.ref_name == 'fix/hero-and-screenshot-gallery' && 'hero-gallery' || 'all' }}
     steps:
       - uses: actions/checkout@v7
       - name: Install native capture dependencies
@@ -30,10 +31,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
           python3 -m pip install pillow==13.0.0 av==16.0.0
       - uses: dtolnay/rust-toolchain@1.96.0
-      - name: Open the exact current UI release
+      - name: Open the selected UI source
         run: |
-          git fetch origin "$UI_RELEASE_REV" --depth 1
-          git worktree add --detach /tmp/slot-ui-release "$UI_RELEASE_REV"
+          capture_rev="$UI_RELEASE_REV"
+          if [ "$CAPTURE_MODE" = hero-gallery ]; then capture_rev="$GITHUB_SHA"; fi
+          git fetch origin "$capture_rev" --depth 1
+          git worktree add --detach /tmp/slot-ui-release "$capture_rev"
+          echo "UI_CAPTURE_REV=$capture_rev" >> "$GITHUB_ENV"
           cp previews/egl_surface.rs /tmp/slot-ui-release/crates/slot/examples/egl_surface.rs
           cp previews/site_refresh.rs /tmp/slot-ui-release/crates/slot/examples/site_refresh.rs
       - name: Build and check the production frontend recorder
@@ -41,11 +45,15 @@ jobs:
         run: |
           cargo build --locked -p slot --no-default-features --example site_refresh
           cargo test --locked -p slot --no-default-features --test ui_accessibility --test kid_controls --test parent_code --test button_code --test in_game_menu --test screenshot --test sound_menu_style -- --test-threads=1
-          cargo test --locked -p slot-ui --test battery --test settings_notice --test toggle --test legend
+          cargo test --locked -p slot-ui --test battery --test settings_notice --test toggle --test legend --test shot_viewer
       - name: Capture both themes and all four finishes
         run: |
-          /tmp/slot-ui-release/target/debug/examples/site_refresh /tmp/slot-current-media
-          python3 previews/collect_site_refresh.py /tmp/slot-current-media
+          /tmp/slot-ui-release/target/debug/examples/site_refresh /tmp/slot-current-media "$CAPTURE_MODE"
+          if [ "$CAPTURE_MODE" = hero-gallery ]; then
+            UI_RELEASE_REV="$UI_CAPTURE_REV" python3 previews/collect_site_refresh.py /tmp/slot-current-media --refresh-hero-gallery
+          else
+            python3 previews/collect_site_refresh.py /tmp/slot-current-media
+          fi
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
@@ -70,4 +78,8 @@ jobs:
           path: |
             /tmp/slot-current-media/publish/**
             /tmp/slot-current-media/media-entries.json
+            /tmp/slot-current-media/raw/homepage/**/hero-insert-*.png
+            /tmp/slot-current-media/raw/homepage/**/hero-playing.png
+            /tmp/slot-current-media/raw/homepage/**/hero-ejecting.png
+            /tmp/slot-current-media/raw/homepage/**/hero-timeline.json
           if-no-files-found: error

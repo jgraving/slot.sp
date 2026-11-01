@@ -1264,6 +1264,37 @@ pub fn quick_legend_faces(ink: [u8; 3]) -> [UndoFace; 8] {
 
 /// Sound uses the same bitmap buttons and typography as the other menus.
 /// Back goes on the left; Forget and Connect/Select/Change on the right.
+/// Screenshot controls use the same final-size keycaps as settings.
+pub fn gallery_button_legends() -> Vec<UndoFace> {
+    crate::SHOT_HINTS.iter().map(|&(key,label)| {
+        let button=match key {
+            "A"=>button_face(ButtonLegend::A), "B"=>button_face(ButtonLegend::B),
+            "Y"=>button_face(ButtonLegend::Y), "SELECT"=>button_face(ButtonLegend::Select),
+            _=>direction_pad_face(),
+        };
+        with_hint(button,label,Some([246,244,239]),true)
+    }).collect()
+}
+
+fn direction_pad_face() -> UndoFace {
+    let h=MENU_HINT_H;let mut rgba=vec![0;(h*h*4)as usize];
+    let tri=|x:f32,y:f32,points:[(f32,f32);3]| {
+        let side=|a:(f32,f32),b:(f32,f32)|(x-b.0)*(a.1-b.1)-(a.0-b.0)*(y-b.1);
+        let d=[side(points[0],points[1]),side(points[1],points[2]),side(points[2],points[0])];
+        !(d.iter().any(|&v|v<0.0)&&d.iter().any(|&v|v>0.0))
+    };
+    for y in 0..h {for x in 0..h {
+        let (mut cover,mut ink)=(0u32,0u32);
+        for sy in 0..4 {for sx in 0..4 {
+            let px=x as f32+(sx as f32+0.5)/4.0;let py=y as f32+(sy as f32+0.5)/4.0;
+            let inside=((11.0..=21.0).contains(&px)&&(2.0..=30.0).contains(&py)) || ((2.0..=30.0).contains(&px)&&(11.0..=21.0).contains(&py));
+            if inside {cover+=1;if [ [(16.0,4.0),(12.5,9.0),(19.5,9.0)],[(16.0,28.0),(12.5,23.0),(19.5,23.0)],[(4.0,16.0),(9.0,12.5),(9.0,19.5)],[(28.0,16.0),(23.0,12.5),(23.0,19.5)] ].iter().any(|&t|tri(px,py,t)){ink+=1;}}
+        }}
+        if cover>0 {let at=((y*h+x)*4)as usize;for c in 0..3{rgba[at+c]=(([224,227,232][c]*(cover-ink)+[34,37,42][c]*ink)/cover)as u8;}rgba[at+3]=(cover*255/16)as u8;}
+    }}
+    UndoFace{rgba,w:h,h}
+}
+
 pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
     let ink = Some(ink);
     [

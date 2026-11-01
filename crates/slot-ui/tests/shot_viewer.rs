@@ -125,9 +125,9 @@ fn labels(v: &ShotViewer) -> Vec<&'static str> {
 #[test]
 fn each_mode_has_its_legend() {
     let mut v = viewer(2);
-    assert_eq!(labels(&v), ["View", "Back", "Delete", "Multi"]);
+    assert_eq!(labels(&v), ["Back", "Move", "View", "Delete", "Select"]);
     v.open();
-    assert_eq!(labels(&v), ["Zoom", "Back", "Delete"]);
+    assert_eq!(labels(&v), ["Back", "Move", "Zoom", "Delete"]);
 }
 
 #[test]
@@ -362,10 +362,10 @@ fn zoomed_shows_the_position_box_not_the_count() {
 fn the_zoomed_legend_drops_zoom_at_four() {
     let mut v = full(720, 480);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Zoom", "Zoom Out"]);
+    assert_eq!(labels(&v), ["Zoom out", "Pan", "Zoom"]);
     v.zoom_in(C720);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Zoom Out"]);
+    assert_eq!(labels(&v), ["Zoom out", "Pan"]);
 }
 
 #[test]
@@ -381,12 +381,12 @@ fn thumbnail_fits_whole_and_averages() {
 }
 
 #[test]
-fn panning_needs_no_explanatory_hint() {
+fn zoomed_pictures_show_the_direction_pad_pan_hint() {
     let mut v = full(720, 480);
-    v.set_hint_faces((0..9).map(|i| TexId::from_raw(200 + i)).collect());
+    v.set_hint_faces(slot_ui::gallery_button_legends().iter().enumerate().map(|(i,f)|(TexId::from_raw(200+i),f.w)).collect());
     v.zoom_in(C720);
     let out = drawn(&v, C720);
-    assert!(tex_at(&out, TexId::from_raw(204)).is_none());
+    assert!(tex_at(&out, TexId::from_raw(204)).is_some());
 }
 
 #[test]
@@ -471,9 +471,9 @@ fn removing_the_ticked_keeps_the_rest_and_leaves_multi_select() {
 #[test]
 fn the_multi_select_legend() {
     let mut v = viewer(3);
-    assert_eq!(labels(&v), ["View", "Back", "Delete", "Multi"]);
+    assert_eq!(labels(&v), ["Back", "Move", "View", "Delete", "Select"]);
     v.toggle_selecting();
-    assert_eq!(labels(&v), ["Tick", "Delete", "Done"]);
+    assert_eq!(labels(&v), ["Done", "Move", "Tick", "Delete"]);
 }
 
 #[test]
@@ -541,4 +541,27 @@ fn deleting_uses_the_panel_it_is_given_to_scroll() {
     v.index = 21;
     v.remove_selected(tall);
     assert_eq!(v.top_row(), 7 + 1 - grid_rows_shown(tall));
+}
+
+#[test]
+fn gallery_button_hints_fit_both_panels_and_leave_room_for_the_count() {
+    for canvas in [C720,Canvas{w:640.0,h:480.0}] {
+        let mut v=viewer(20);
+        v.set_hint_faces(slot_ui::gallery_button_legends().iter().enumerate().map(|(i,f)|(TexId::from_raw(200+i),f.w)).collect());
+        v.set_count_face(Some((TexId::from_raw(300),110)));
+        for mode in 0..5 {
+            match mode {1=>v.toggle_selecting(),2=>{v.toggle_selecting();v.open();v.set_face(Some((TexId::from_raw(400),720,480)));},3=>v.zoom_in(canvas),4=>{v.zoom_in(canvas);v.zoom_in(canvas);},_=>{}}
+            let mut out=vec![];v.draw_on(canvas,None,Default::default(),None,Default::default(),true,&mut out);
+            let end=canvas.w-16.0-if mode>=3 {48.0}else{110.0};
+            for d in out {if let Draw::Tex{x,y,w,h,tex,..}=d {if (200..210).any(|i|tex==TexId::from_raw(i)) {assert!(x>=16.0&&x+w<=end-8.0,"hint overlaps counter on {canvas:?}: {x} {w}");assert!(h>=28.0&&y>=440.0&&y+h<=480.0,"hint too small or clipped: {y} {h}");}}}
+        }
+    }
+}
+
+#[test]
+fn light_gallery_changes_chrome_without_changing_the_picture_rectangle() {
+    let v=full(720,480);let mut light=vec![];
+    v.draw_on(C720,None,Default::default(),None,Default::default(),true,&mut light);
+    assert_eq!(tex_at(&light,TexId::from_raw(5)),tex_at(&drawn(&v,C720),TexId::from_raw(5)));
+    assert!(matches!(light[0],Draw::Rect{colour,..} if colour[0]>0.8&&colour[1]>0.8));
 }

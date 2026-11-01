@@ -44,4 +44,4 @@ The guides show the default controls. If you remap them, the on-screen button hi
 
 ## About the examples
 
-Images and clips are made with the current interface and sample cartridges. Example gameplay and gallery pictures use test patterns. slot.sp does not include games. The gallery, save-state and link examples use Dark mode.
+Images and clips are made with the current interface and sample cartridges. Example gameplay and gallery pictures use test patterns. slot.sp does not include games. Gallery examples use Light mode. Save-state and link examples use Dark mode.

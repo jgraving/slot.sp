@@ -61,7 +61,7 @@
       const current = ++request;
       preview.pause();
       preview.poster = new URL(`hero-dark-${finish}.png`, media).href;
-      preview.setAttribute('aria-label', `Browse the current cartridge carousel and startup animation, ${button.getAttribute('aria-label')} finish`);
+      preview.setAttribute('aria-label', `Watch a cartridge enter the slot, eject and return to the carousel, ${button.getAttribute('aria-label')} finish`);
       preview.addEventListener('loadedmetadata', () => {
         if (current !== request) return;
         preview.currentTime = Math.min(position, Math.max(0, preview.duration - .01));

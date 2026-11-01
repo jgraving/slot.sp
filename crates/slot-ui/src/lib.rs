@@ -105,7 +105,7 @@ pub use power_menu::{
     PowerChoice, MENU_PAD, POWER_SWITCH_MS, POWER_SWITCH_SLIDE_MS,
 };
 pub use quick_menu::{
-    core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
+    core_button_legends, gallery_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
     reference_face, reference_binding_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, quick_controls_legends, carousel_name_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,

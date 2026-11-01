@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-reduced-motion: reduce)" srcset="previews/readme-model/hero.png">
-  <img src="previews/readme-model/hero.gif" width="820" alt="slot.sp: Your games. SP style. An SP illustration displays the current light interface, cartridge carousel and startup animation.">
+  <img src="previews/readme-model/hero.gif" width="820" alt="slot.sp: Your games. SP style. An SP illustration shows the current light interface: a cartridge enters the slot, ejects and returns to the carousel.">
 </picture>
 
 **[Website & guide](https://jakegraving.com/slot.sp/)** · **[New installation](https://jakegraving.com/slot.sp/installing/)** · **[Update](https://jakegraving.com/slot.sp/updating/)** · **[Cart Studio](https://jakegraving.com/slot.sp/studio/)**

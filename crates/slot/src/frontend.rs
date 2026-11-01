@@ -318,16 +318,9 @@ impl Frontend {
         self.session.app_mut().set_alert_face(alert);
         let legend = legend_faces(compositor, &LEGEND);
         self.session.app_mut().set_legend_faces(legend);
-        let shot_hints = slot_ui::SHOT_HINTS
-            .iter()
-            .map(|&(key, label)| {
-                let f = match key == slot_ui::PAN_KEY {
-                    true => slot_ui::pad_hint_face(label),
-                    false => hint_face(key, label),
-                };
-                compositor.create_ui_texture(f.w, f.h, &f.rgba)
-            })
-            .collect();
+        let shot_hints = slot_ui::gallery_button_legends().iter().map(|f| {
+            let tex=compositor.create_ui_texture(f.w,f.h,&f.rgba);compositor.mark_hint_texture(tex,0);(tex,f.w)
+        }).collect();
         self.session.app_mut().set_shot_hint_faces(shot_hints);
         let tick = slot_ui::tick_cap_face();
         let tick = (
@@ -1352,8 +1345,8 @@ fn sync_gallery(app: &mut App, compositor: &mut Compositor, state: &mut Switcher
     }
     if state.counted.as_deref() != Some(count.as_str()) {
         let face = slot_ui::word_face(&count);
-        let id = upload_rgba(compositor, &mut state.count, face.w, face.h, &face.rgba);
-        app.set_shot_count_face(Some((id, face.w)));
+        let w=face.w;let id=upload(compositor,&mut state.count,face);
+        app.set_shot_count_face(Some((id,w)));
         state.counted = Some(count);
     }
     let prompted = app.delete_shot_lines();
