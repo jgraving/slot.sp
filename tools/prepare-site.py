@@ -130,6 +130,12 @@ def main():
         name = f'{source.stem}.{digest}{source.suffix}'
         (generated / name).write_text(content)
         config = config.replace('"' + relative + '"', '"assets/generated/' + name + '"')
+    # The logo changes with the UI font; never reuse a cached previous image.
+    wordmark = DOCS / 'assets/wordmark.png'
+    wordmark_name = f'wordmark.{hashlib.sha256(wordmark.read_bytes()).hexdigest()[:12]}.png'
+    shutil.copyfile(wordmark, generated / wordmark_name)
+    config = config.replace('[project.extra]\n',
+                            f'[project.extra]\nwordmark_asset = "assets/generated/{wordmark_name}"\n')
     (ROOT / 'site/zensical.build.toml').write_text(config)
     print(f'Prepared {len(GUIDES)} guides, reviewed media, font and fingerprinted website assets')
 
