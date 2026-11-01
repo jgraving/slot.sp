@@ -54,6 +54,7 @@ export function mountSP(stage, video) {
   key.castShadow=true;key.shadow.mapSize.set(1024,1024);
   Object.assign(key.shadow.camera,{left:-105,right:105,top:115,bottom:-110,near:50,far:500});
   key.shadow.normalBias=.12;key.shadow.bias=-.0001;
+  const fill = new T.PointLight(0xfffbf4,18000,0,2);fill.position.set(-110,160,170);scene.add(fill);
   const rim = new T.DirectionalLight(0xddeaff,1.1); rim.position.set(140,40,-60); scene.add(rim);
 
   function textureCanvas(width,height,paint) {
@@ -199,7 +200,7 @@ export function mountSP(stage, video) {
   mesh(extrusion(surround,.34,.11),chrome,lid,0,0,-.23);
   const screenMat=track(new T.MeshBasicMaterial({color:0x080b10,toneMapped:false}));
   const screen=mesh(new T.PlaneGeometry(72.3,48.2),screenMat,lid,0,42,.02);
-  const glass=material({color:0xbecedc,metalness:.12,roughness:.12,transparent:true,opacity:.055,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:.6,depthWrite:false});
+  const glass=material({color:0xbecedc,metalness:.12,roughness:.12,transparent:true,opacity:.085,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:.6,depthWrite:false});
   mesh(new T.PlaneGeometry(73.5,55.2),glass,lid,0,42,.16);
   for(const x of [-35.4,35.4])for(const y of [7.3,74.1]) {
     disc(lid,1.75,.14,seam,x,y,.13);disc(lid,1.48,.25,rubber,x,y,.27);
@@ -279,6 +280,7 @@ export function mountSP(stage, video) {
   const fold=stage.closest('.sp-preview').querySelector('.model-fold');
   function foldLid() {
     closed=!closed;targetHinge=closed?Math.PI-.04:-.31;
+    hardware.forEach(element=>{element.hidden=closed;});
     fold.setAttribute('aria-pressed',String(closed));fold.setAttribute('aria-label',closed?'Open lid':'Close lid');fold.title=closed?'Open lid':'Close lid';
     if(reduced.matches)hinge=targetHinge;
     stage.dataset.lid=closed?'closed':'open';stage.dispatchEvent(new CustomEvent('sp:lid'));wake();
@@ -316,6 +318,7 @@ export function mountSP(stage, video) {
     renderer.shadowMap.needsUpdate=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.0001||!!pressed||!stage.dataset.modelReady;
     renderer.render(scene,camera);
     stage.dataset.modelReady='true';
+    stage.dataset.pose=Math.abs(hinge-targetHinge)<.002 ? (closed?'closed':'open') : 'moving';
     const moving=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.001;
     if(moving||pressed||(!video.paused&&video.readyState>=2))wake();
   }
@@ -372,7 +375,7 @@ export function mountSP(stage, video) {
     stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('click',press);fold.removeEventListener('click',foldLid);
     for(const {element,parent,next}of originals){parent.insertBefore(element,next?.parentElement===parent?next:null);element.removeAttribute('style');element.hidden=false;}
     videoParent.insertBefore(video,videoNext?.parentElement===videoParent?videoNext:null);
-    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('aria-label');
+    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('role');stage.removeAttribute('aria-label');delete stage.dataset.pose;
     canvas.remove();poster?.dispose();for(const item of disposables)item.dispose();renderer.dispose();
   }
   // Commit only after the first complete render. Failure leaves the original
@@ -382,7 +385,7 @@ export function mountSP(stage, video) {
     const {width,height}=stage.getBoundingClientRect();renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
     renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
     stage.append(canvas,video,...hardware);stage.classList.add('model-ready');stage.dataset.lid='open';
-    stage.tabIndex=0;stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to turn. Home resets the view.');
+    stage.tabIndex=0;stage.setAttribute('role','group');stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to turn. Home resets the view.');
     resizeObserver.observe(stage);visibilityObserver.observe(stage);loadPoster();resize();
     finish(fallback.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
   } catch(error) { cleanup();throw error; }

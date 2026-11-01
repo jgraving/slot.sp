@@ -71,10 +71,11 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       if(width===1366)await stage.screenshot({path:path.join(out,'graphite-model.png')});
       await page.getByRole('button',{name:'Platinum',exact:true}).click();
       await page.getByRole('button',{name:'Close lid',exact:true}).click();
-      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.lid==='closed');
+      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='closed');
       assert(!(await page.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible()));
       if(width===1366)await stage.screenshot({path:path.join(out,'closed-model.png')});
       await page.getByRole('button',{name:'Open lid',exact:true}).click();
+      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='open');
       await stage.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
       if(width===1366)await stage.screenshot({path:path.join(out,'turned-model.png')});
       await page.keyboard.press('Home');
