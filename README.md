@@ -11,7 +11,7 @@
 
 **slot.sp** is a game launcher for Anbernic handhelds, inspired by the SP. Browse your games as cartridges, press **A** and play.
 
-🎨 Four SP colors · 🙂 Kid mode with time limits · 🎧 Bluetooth & USB audio · 🌗 Light & dark themes · Day/night presets · 💾 Save & resume · ⭐ Favorites & Recents
+🎨 Four SP colors · 🙂 Kid mode with time limits · 🎧 Bluetooth & USB audio · 🌗 Light & dark themes · Scheduled day/night presets · 💾 Save & resume · ⭐ Favorites sorting & Recents · 🕹️ Remappable buttons
 
 **[Explore the features and controls →](https://jakegraving.com/slot.sp/features/guide/)**
 

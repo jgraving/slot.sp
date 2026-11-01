@@ -4,6 +4,8 @@
 
 [Capture](#take-a-screenshot) · [Browse & zoom](#browse--zoom) · [Select & delete](#select--delete) · [Files](#find-your-pictures)
 
+Save pictures of a game, view them on the handheld, or copy the PNG files to your computer. The gallery supports zooming and deleting several pictures together.
+
 ## Take a screenshot
 
 During a game, press <kbd>MENU</kbd> + <kbd>X</kbd> together, then release both buttons. Avoid holding <kbd>MENU</kbd> on its own: that exits the game.

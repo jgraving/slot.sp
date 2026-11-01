@@ -1,8 +1,6 @@
-# Storage Reference
+# Storage reference
 
-slot.sp keeps everything on the card in plain folders.
-
-If you use two cards, all of this is on the one in `SD2`.
+Games, artwork, saves and settings are separate folders on your content card. With two cards, this is the card in `SD2`; with one card, it is the content partition on `SD1`.
 
 ## The folders
 
@@ -10,7 +8,7 @@ If you use two cards, all of this is on the one in `SD2`.
 |-----------------------------------------|-------------------------------------|
 | `Games/GBA`, `Games/GB`, `Games/GBC`    | Your games                          |
 | `Labels/GBA`, `Labels/GB`, `Labels/GBC` | Cart labels                         |
-| `Saves/`                                | Battery saves, the game's own saves |
+| `Saves/`                                | Progress saved by the game itself |
 | `States/`                               | Save states                         |
 | `Screenshots/`                          | Your screenshots                    |
 | `BIOS/`                                 | Optional BIOS files                 |
@@ -32,7 +30,7 @@ slot.sp makes any of these that are missing when it boots, except `Screenshots/`
 
 The folder decides which carousel a game goes on.
 
-!!! warning "ROMs must be unzipped!"
+!!! warning "Extract game archives first"
 
     slot.sp does not read `.zip` or `.7z` files.
 
@@ -40,14 +38,14 @@ Put games right in the folder. slot.sp doesn't look inside subdirectories.
 
 ## Names matter
 
-Everything about a game hangs off its file name: its battery save, save states, label, cart shell and emulator choice.
+slot.sp matches a game’s save files, artwork, cartridge appearance and emulator choice by filename.
 
 If you rename `Metroid Fusion.gba`, rename its save in `Saves/GBA` too, or slot.sp won't find it.
 
 ## Saves and states
 
 - Battery saves are `Saves/<system>/<game>.sav`.
-- Save states are in `States/<system>/<emulator>/<game>/`. Each one has a `.png` next to it for the switcher.
+- Save states are in `States/<system>/<emulator>/<game>/`. Each state has a PNG next to it for the save-state browser.
 
 Periodically back up `Saves/` and `States/`. Keep a backup before changing or replacing the card.
 

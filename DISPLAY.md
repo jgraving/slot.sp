@@ -6,11 +6,9 @@
 
 ![General settings with Light UI theme selected](previews/current/light/general.png)
 
-## Type
+## Text
 
-Google Sans Flex is used across menus, cartridge captions, notices and settings. Selected rows gain weight and a little width. Headings use rounder letterforms, while hints and small text use an optical size chosen for readability. Numeric values use equal-width digits so changing a clock or percentage does not make the text jump.
-
-The About sticker credits the typeface alongside the artwork and symbols.
+Menus, game names and notices use Google Sans Flex. The selected setting has heavier text, and clock and percentage digits keep a fixed width as their values change. The About screen credits the typeface, artwork and symbols.
 
 ## Colors
 
@@ -24,7 +22,7 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses warm neutral backgrounds, white floating cards and dark green controls. Dark uses deep tones and soft teal accents. Clock, status and button hints adapt to custom backgrounds. During play, settings float over the game picture.
+The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
 
 [Preview all four SP colors on the homepage](https://jakegraving.com/slot.sp/#intro-title).
 
@@ -35,14 +33,16 @@ Open **Menu → General**:
 | Setting | What to choose |
 | :--- | :--- |
 | **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
-| **Wallpaper Tint** | Darken a custom/random background in Dark mode, or add a light veil in Light mode. |
-| **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
-| **Carousel motion** | Wheel moves neighboring cartridges along a shallow arc; Classic keeps a horizontal arrangement. Wheel is the default. |
+| **Wallpaper Tint** | Darken a custom or random wallpaper in Dark mode, or lighten it in Light mode. |
+| **Boot Animation** | Show or skip the startup animation, where the letters gather and drop into the slot. |
+| **Carousel motion** | Wheel places cartridges along a curved path; Classic keeps them in a horizontal line. Wheel is the default. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
 | **Clock format** | Use 12-hour or 24-hour time in the status bar, time editors, schedules and time labels. The default is 24-hour. |
 | **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
 
-**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup. Light UI uses pale mint, sky and lavender for the flowing gradient, a matching light static gradient, and a plain light surface with wallpaper off. Custom and random wallpapers receive a soft light palette too; Wallpaper Tint adds a light veil instead of darkening them. The tint option appears for custom and random wallpapers. Returning to Dark restores their original colours.
+**Flowing Gradient** animates the background; **Static Gradient** keeps it still. Both have separate Light and Dark colors. **None** uses a plain background. **Random** chooses one of your images from `Wallpapers/` at startup.
+
+Custom and random wallpapers are lightened in Light mode. **Wallpaper Tint** adjusts how strongly they are lightened or darkened; it appears only for these wallpapers. Switching back to Dark restores their original colors.
 
 ![Letters gather into a small blob and drop behind the slot at startup](previews/current/light/boot.gif)
 
@@ -69,6 +69,10 @@ Each system remembers its own settings. Game Boy palettes include **Auto**, gray
 | <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Stretch the picture / restore its original proportions. |
 
 The picture-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
+
+### Automatic day and night
+
+Set start times in **Screen → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
 
 ## Your own backgrounds & borders
 
@@ -102,9 +106,3 @@ Remove the custom BMP to return to the bundled startup image.
 ---
 
 [Day & night](NIGHT-DISPLAY.md) · [Games & artwork](LIBRARY.md) · [Buttons & shortcuts](CONTROLS.md)
-
-### Automatic day and night
-
-**Screen → Night mode** lets you enable automatic switching and choose when each display preset begins. Times use the device's local Date & Time setting. Left/right changes a start time by 15 minutes; A opens separate hour/minute controls. Day and night must start at different times.
-
-The day/night shortcut still works while automatic switching is enabled. Your manual choice lasts until the next scheduled change, including across sleep and restart. A clock correction or schedule edit clears that override. Brightness and blue-light adjustments remain separate for each preset. Automatic switching is off by default and requires a valid device clock.

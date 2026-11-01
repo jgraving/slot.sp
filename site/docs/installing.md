@@ -6,21 +6,21 @@ hide:
 
 # Install slot.sp
 
-Starting with a new card? First install **BaseOS**, the handheld's operating system, then copy **slot.sp-SD2.zip** onto your content card. That ZIP includes the launcher, folder structure and starting settings.
+For a new card, first install **BaseOS**, the handheld’s operating system. Then extract **slot.sp-SD2.zip** and copy its contents onto the card used for games. The ZIP includes the launcher, starting folders and settings.
 
-Choose your card setup below. Already running slot or slot.sp? Use the **[update guide](updating.md)** to keep your games, saves and settings.
+Choose the instructions for one or two SD cards below. If your card already runs slot or slot.sp, follow the **[update guide](updating.md)**.
 
 <details class="way" id="one-sd-card" open markdown>
-<summary>One SD Card</summary>
+<summary>One SD card</summary>
 
 <div class="install-steps" markdown>
 
-1.  Flash BaseOS to an SD card
+1.  Write BaseOS to an SD card
     { .step-title role="heading" aria-level="3" }
 
     Download the latest release of
     [BaseOS](https://github.com/pvaibhav/BaseOS/releases/latest) and write the `.img` to an SD card with
-    something like [Rufus](https://rufus.ie) or [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+    a tool such as [Rufus](https://rufus.ie) or [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 
     Insert this card into the SD card slot labeled `SD1`.
 
@@ -29,29 +29,28 @@ Choose your card setup below. Already running slot or slot.sp? Use the **[update
 
     After inserting the SD card, power on your device. You should see a BaseOS boot logo and a message saying that storage is being expanded.
 
-    Once the storage is expanded, a message will say that no frontend was found. Power off your device.
+    When expansion finishes, BaseOS reports that no frontend (game launcher) was found. Power off the device.
 
 3.  Download the latest release
     { .step-title role="heading" aria-level="3" }
 
-    Go fetch the [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
+    Download [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
 
 4.  Copy it onto your SD card
     { .step-title role="heading" aria-level="3" }
 
-    Eject the SD card from `SD1` and connect it back to your computer. Unzip the release zip you downloaded and copy the contents to the root of the SD card.
+    Eject the SD card from `SD1` and connect it back to your computer. Extract the ZIP and copy its contents to the card’s top folder, so System and Games are directly inside it.
 
 5.  Add your games
     { .step-title role="heading" aria-level="3" }
 
-    Drop your legally obtained ROM files into their corresponding platform's folder in `Games/`. You may optionally place labels into the matching platform folder found in
-    `Labels/`.
+    Copy your game files into the matching `Games/GBA`, `Games/GBC` or `Games/GB` folder. Put label artwork in the matching folder under `Labels/`, using the same filename as the game with a `.png` extension.
 
-    !!! warning "ROMs must be unzipped!"
+    !!! warning "Extract game archives first"
 
-        slot does not read `.zip` or `.7z` files.
+        slot.sp reads `.gba`, `.gb` and `.gbc` game files. Extract `.zip` or `.7z` archives before copying them to the card.
 
-6.  Re-insert the card into `SD1` and boot!
+6.  Put the card back in `SD1` and power on
     { .step-title role="heading" aria-level="3" }
 
     Open the [user guide](features/guide.md) for buttons, settings and features.
@@ -61,42 +60,41 @@ Choose your card setup below. Already running slot or slot.sp? Use the **[update
 </details>
 
 <details class="way" id="two-sd-cards" markdown>
-<summary>Two SD Cards</summary>
+<summary>Two SD cards</summary>
 
 <div class="install-steps" markdown>
 
-1.  Flash BaseOS to an SD card
+1.  Write BaseOS to an SD card
     { .step-title role="heading" aria-level="3" }
 
     Download the latest release of
     [BaseOS](https://github.com/pvaibhav/BaseOS/releases/latest) and write the `.img` to an SD card with
-    something like [Rufus](https://rufus.ie) or [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
+    a tool such as [Rufus](https://rufus.ie) or [Raspberry Pi Imager](https://www.raspberrypi.com/software/).
 
     Insert this card into the SD card slot labeled `SD1`.
 
 2.  Download the latest release
     { .step-title role="heading" aria-level="3" }
 
-    Go fetch the [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
+    Download [slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip) from GitHub.
 
 3.  Copy it onto SD2
     { .step-title role="heading" aria-level="3" }
 
     Prepare your second SD card by formatting it to `FAT32` or `exFAT` with a `Master Boot Record (MBR)` partition scheme.
 
-    Once formatted, unzip the release zip you downloaded and copy the contents to the second SD card.
+    Extract the ZIP and copy its contents to the second card’s top folder, so System and Games are directly inside it.
 
 4.  Add your games
     { .step-title role="heading" aria-level="3" }
 
-    Drop your legally obtained ROM files into their corresponding platform's folder in `Games/`. You may optionally place labels into the matching platform folder found in
-    `Labels/`.
+    Copy your game files into the matching `Games/GBA`, `Games/GBC` or `Games/GB` folder. Put label artwork in the matching folder under `Labels/`, using the same filename as the game with a `.png` extension.
 
-    !!! warning "ROMs must be unzipped!"
+    !!! warning "Extract game archives first"
 
-        slot does not read `.zip` or `.7z` files.
+        slot.sp reads `.gba`, `.gb` and `.gbc` game files. Extract `.zip` or `.7z` archives before copying them to the card.
 
-5.  Put the second card into `SD2` and boot!
+5.  Put the second card into `SD2` and power on
     { .step-title role="heading" aria-level="3" }
 
     Open the [user guide](features/guide.md) for buttons, settings and features.

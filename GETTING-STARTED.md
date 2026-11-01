@@ -4,11 +4,13 @@
 
 [Update an existing installation](#update-an-existing-installation) · [First installation](#first-installation) · [Add games](#add-games) · [Card folders](#card-folders)
 
+Use the System ZIP to update an existing installation, or the SD2 ZIP for a new content card. A new installation also needs BaseOS, the handheld’s operating system.
+
 ## Choose your download
 
 | Download | Use it for |
 | :--- | :--- |
-| **[slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** | Updating an installation that already runs slot. Contains the `System` folder. |
+| **[slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)** | Updating a card that already runs slot or slot.sp. Contains the `System` folder. |
 | **[slot.sp-SD2.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-SD2.zip)** | A new content card, with the folder structure and starting settings. |
 
 ## Update an existing installation

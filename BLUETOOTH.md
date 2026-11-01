@@ -4,6 +4,8 @@
 
 [Outputs](#choose-an-output) · [Bluetooth](#pair-bluetooth-headphones) · [Volume](#volume--mute) · [Disconnect volume](#volume-on-disconnect)
 
+Use the speaker, wired headphones, Bluetooth headphones or USB audio. Each output remembers its own volume and mute setting. You can also choose what happens when headphones disconnect.
+
 ## Choose an output
 
 Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** during play. The selected output has a checkmark.
@@ -35,7 +37,16 @@ Select **Internal speaker** or **Wired headphones** to return to local audio. Th
 
 The **Bluetooth** switch appears below Volume on supported handhelds. Green means on; gray means off. Press <kbd>A</kbd> or use <kbd>Left</kbd> / <kbd>Right</kbd> to change it. Turning it off keeps your saved pairings. The choice is remembered.
 
-A failed operation shows a short cause and next step in a bottom notification pill. Use the Sound menu to retry or choose another output. A radio operation may restart Bluetooth and retry once; an unavailable headphone connection does not always restart the radio. Opening Sound refreshes device information quietly. The progress spinner appears for actions such as scanning or changing outputs.
+A failed connection shows a short message near the bottom of the screen:
+
+| Message | Next step |
+| :--- | :--- |
+| **Bluetooth is busy** | Wait a moment, then retry. |
+| **Device didn’t answer** | Wake the headphones or put them in pairing mode, then try again. |
+| **Pairing failed** | Forget the saved device and pair it again. |
+| **Bluetooth isn’t ready** | Turn Bluetooth off and on. |
+
+Opening Sound checks the device list without showing a spinner. A spinner appears when you start a scan or change outputs.
 
 ### Forget a device
 
@@ -63,6 +74,12 @@ In Sound, set **Volume on disconnect** to choose the volume used after Bluetooth
 
 If wired headphones are plugged in when Bluetooth disconnects, the chosen level applies to those headphones. Otherwise it applies to the speaker.
 
+## Pause on disconnect
+
+Turn on **Sound → Pause on disconnect** to pause when the active headphones or USB audio device disconnects. It is off by default. Reconnecting does not resume the game: choose Resume yourself. Kid mode opens the kid menu.
+
+Intentional output changes do not trigger this pause, and link play keeps running so the other player is not interrupted. The separate **Volume on disconnect** setting still applies. Both choices are saved in `Config/sound.conf`.
+
 <details>
 <summary><strong>Sound menu buttons</strong></summary>
 
@@ -80,9 +97,3 @@ If wired headphones are plugged in when Bluetooth disconnects, the chosen level 
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Kid mode](KID-MODE.md) · [Sleep & power](POWER-OPTIONS.md)
-
-## Pause on disconnect
-
-**Sound → Pause on disconnect** optionally pauses the game when the active wired headphones, Bluetooth device, or USB audio device disconnects. It is off by default. The normal pause menu opens; reconnecting does not resume the game automatically. Kid mode opens its existing child menu.
-
-Intentional output changes do not trigger this pause, and link play keeps running so the other player is not interrupted. The separate **Volume on disconnect** setting still applies. Both choices are saved in `Config/sound.conf`.

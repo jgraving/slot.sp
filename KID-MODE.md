@@ -4,7 +4,7 @@
 
 [Set up](#set-it-up) · [Kid menu](#the-kid-menu) · [Limits](#time--volume-limits) · [Time reminders](#time-reminders) · [Approvals](#approve--remove-games) · [Parent code](#the-parent-code)
 
-Choose which games children can play, set a time allowance and cap the volume. Children keep the regular system, Favorites and Recents carousels, filtered to the games you approve.
+Choose which games children can play, set a daily allowance, session timer or bedtime, and cap the volume. Children keep the regular system, Favorites and Recents carousels, filtered to the games you approve.
 
 ## Set it up
 
@@ -17,7 +17,7 @@ Choose which games children can play, set a time allowance and cap the volume. C
 
 ![Parent settings with time and volume limits](previews/current/light/parent-settings.png)
 
-You can also set the code separately through **Set parent code**. Kid mode starts off on a new installation.
+You can also set the code separately through **Set parent code**. Kid mode is off by default.
 
 ## The kid menu
 
@@ -32,7 +32,7 @@ During a game, tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game*
 
 ![The four-tile kid settings menu](previews/current/light/kid-menu.png)
 
-Use the D-pad to select a tile, <kbd>A</kbd> to open it and <kbd>B</kbd> to return. In Sound and Screen, use <kbd>Left</kbd> / <kbd>Right</kbd> to adjust the value. <kbd>MENU</kbd> closes the menu. Children can browse, play and leave games without entering a code. Parent dialogs pause and mute the game.
+Use the D-pad to select a tile, <kbd>A</kbd> to open it and <kbd>B</kbd> to return. In Sound and Screen, use <kbd>Left</kbd> / <kbd>Right</kbd> to adjust the value. <kbd>MENU</kbd> closes the menu. Children can browse, play and leave games without entering a code. Entering a parent code or changing parent settings pauses and mutes the game.
 
 ## Time & volume limits
 
@@ -82,7 +82,7 @@ Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd>, th
 | <kbd>SELECT</kbd> | Delete the last entry. |
 | <kbd>MENU</kbd> | Cancel code entry. |
 
-To change the code, open **Parental controls**, unlock it and choose **Set parent code**. Enter and confirm the new code. A mismatched confirmation shakes and clears; re-enter the confirmation to try again.
+To change the code, open **Parental controls**, unlock it and choose **Set parent code**. Enter and confirm the new code. If the two entries differ, enter the confirmation again.
 
 ### Turn kid mode off
 

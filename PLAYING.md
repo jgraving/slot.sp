@@ -4,6 +4,8 @@
 
 [Launch & exit](#launch--exit) · [Saving](#save--resume) · [Save states](#save-states--undo) · [Emulators](#choose-an-emulator) · [Speed controls](#fast-forward-rewind--turbo)
 
+Resume games where you stopped, or start from the title screen. Manual save states let you return to a chosen moment; fast-forward, rewind and turbo change how you play.
+
 ## Launch & exit
 
 On the carousel, tap <kbd>A</kbd> to launch a game. When **Load State on Insert** is on, it picks up from its resume state. Hold <kbd>A</kbd> to start from the title screen instead; the game's own save remains available.
@@ -16,11 +18,11 @@ Kid mode uses a [shorter menu](KID-MODE.md#the-kid-menu) with Resume, Settings a
 
 ## Save & resume
 
-There are three ways to keep your place:
+The game’s own saves and the launcher’s snapshots serve different purposes:
 
 | Save type | What it keeps | How to use it |
 | :--- | :--- | :--- |
-| **Game save** | Progress saved through the game's own menu. | Save as you would on the original Game Boy. Files are kept in `Saves/`. |
+| **Game save** | Progress saved through the game's own menu. | Use the game’s own save menu. Files are kept in `Saves/`. |
 | **Resume state** | A snapshot used when you next launch or resume the game. | Written periodically, before sleep and shutdown, and on exit when enabled. |
 | **Manual save state** | A moment you choose to keep. | Save with <kbd>SELECT</kbd> + <kbd>R1</kbd>, then return through the state browser. |
 
@@ -43,7 +45,7 @@ The resume snapshot is also refreshed every five minutes of play. Closing the li
 
 ![The current save-state browser, shown in Dark mode](previews/current/dark/save-states.png)
 
-The browser shows snapshots of your saves. Each game keeps ten manual states, with the oldest replaced when you save another.
+The browser shows a picture of each saved moment. Each game keeps ten manual states, with the oldest replaced when you save another.
 
 | In the browser | Action |
 | :--- | :--- |

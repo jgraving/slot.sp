@@ -2,11 +2,11 @@
 
 [← Overview](README.md) · [All guides](GUIDE.md) · **[Open Cart Studio](https://jakegraving.com/slot.sp/studio/)**
 
-Find artwork for your games, design labels and choose cartridge colors and finishes in your browser.
+Find scanned labels and logos, design your own labels, and choose cartridge colors and finishes. Edit one game or several together, then save to the card or export a ZIP.
 
 ## Your files stay on your device
 
-Cart Studio is a **static website**. The editor runs in your browser, on your device. Your games, labels and edits are never uploaded to or stored on a Studio server.
+Cart Studio runs in your browser. Your game files, labels and edits are never uploaded to or stored on a Studio server.
 
 It downloads game databases and artwork to find matches. Your changes stay in the browser until you choose **Write to card** or download a ZIP. Save before closing the tab to keep your edits.
 
@@ -32,7 +32,7 @@ Studio downloads scanned labels and logos from the published artwork catalog. St
 
 Use the **Game** selector if the automatic match needs changing. **Fill unlabelled carts** helps you choose artwork for games without labels.
 
-Rounded black or white scanner backgrounds are cleaned automatically, using the same process as the handheld. Cleaned corners remain transparent when you save a label. Previews use the current slot.sp cartridge artwork, including textured plastic and clear-shell interiors.
+Studio removes black or white backgrounds around rounded label scans. The cleaned corners stay transparent when you save. The preview shows how the label will look on a slot.sp cartridge, including solid, clear and glitter finishes.
 
 ## Change the look
 
