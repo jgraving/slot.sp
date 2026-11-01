@@ -48,7 +48,7 @@ The **Capture current website media** workflow on `docs/website-ui-refresh` runs
 
 The homepage keeps its two-column introduction, concise linked feature list and illustrated handheld. Its colors follow the device UI: a dark navy backdrop, charcoal surfaces, teal controls and gold details. Flat pill buttons and rounded surfaces use the same fast spatial spring as the device; color changes do not overshoot. Reduced motion disables these transitions. Its four SP finishes use current dark-theme native clips showing a real insertion, ejection and return to the carousel, plus a matching reduced-motion poster. Updated screenshots and controlled animations illustrate the guide pages. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
 
-The README uses the same Platinum light-theme clip inside the website's illustrated SP, with the exact firmware wordmark extracted from `card/System/bootlogo.bmp`. `tools/capture-readme-model.cjs` and `previews/collect_readme_model.py` preserve a matching poster and record provenance. The prior capture scripts remain available for specialist asset work; the website publishes only the current reviewed manifest.
+The README uses the same Platinum light-theme clip inside the website's illustrated SP, with the current UI’s rounded Google Sans Flex display lettering, built by `tools/build-web-wordmark.py` from the pinned `display.ttf` profile. `tools/capture-readme-model.cjs` and `previews/collect_readme_model.py` preserve a matching poster and record provenance. The prior capture scripts remain available for specialist asset work; the website publishes only the current reviewed manifest.
 
 ## Layout and copy
 
