@@ -3,7 +3,7 @@ fn svg_button_faces_are_distinct_and_nonempty() {
     let empty = slot_ui::button_code_face(&[]);
     assert_eq!((empty.w, empty.h), (256, 56));
     let mut faces = Vec::new();
-    for button in 0..8 {
+    for button in 0..12 {
         let face = slot_ui::button_code_face(&[button]);
         assert!(face.rgba.chunks_exact(4).any(|p| p[3] > 0));
         assert_ne!(face.rgba, empty.rgba);

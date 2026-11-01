@@ -106,7 +106,7 @@ impl Gate {
             .open(&temp)?;
         let recovery = parent.join("parent-code.txt");
         let previous = fs::read(&recovery).ok();
-        let names = ["A", "B", "X", "Y", "UP", "DOWN", "LEFT", "RIGHT"];
+        let names = ["A", "B", "X", "Y", "UP", "DOWN", "LEFT", "RIGHT", "L1", "R1", "L2", "R2"];
         let sequence = code
             .iter()
             .map(|&b| names[b as usize])
@@ -151,7 +151,7 @@ impl Gate {
     }
 }
 fn validate(code: &[u8]) -> io::Result<()> {
-    if code.len() != 4 || code.iter().any(|b| *b > 7) {
+    if code.len() != 4 || code.iter().any(|b| *b > 11) {
         return Err(io::Error::other("Use exactly four buttons"));
     }
     Ok(())

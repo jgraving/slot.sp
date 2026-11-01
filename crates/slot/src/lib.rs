@@ -12,6 +12,7 @@ pub mod bezel;
 pub mod boot_time;
 pub mod bootlogo;
 pub mod brand_motion;
+pub mod boot_motion;
 pub mod build_info;
 pub mod cable;
 pub mod card_log;

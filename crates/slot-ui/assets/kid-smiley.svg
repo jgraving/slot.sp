@@ -9,10 +9,8 @@
   <path d="M28 48L94 75M26 53L96 82M43 28L99 53M43 91L79 103" fill="none" stroke="#e1cc96" stroke-opacity=".16" stroke-width=".45"/>
   <use href="#smiley" fill="none" stroke="url(#rim)" stroke-width="1.15"/>
   <path d="M25 43A45 45 0 0 1 64 19" fill="none" stroke="#fff0b6" stroke-width=".8" stroke-linecap="round" opacity=".70"/>
-  <!-- Broad, solid ink stays distinct from the foil at the native 30px size. -->
-  <g fill="#21170d">
-    <ellipse cx="45" cy="50" rx="8.5" ry="10.5"/>
-    <ellipse cx="83" cy="50" rx="8.5" ry="10.5"/>
-    <path d="M34 73Q64 88 94 73C87 108 41 108 34 73z"/>
+  <!-- The same circular eyes and curved smile used by settings and status. -->
+  <g fill="#21170d" transform="translate(4 4) scale(2.5)">
+    <!-- smiley-features -->
   </g>
 </svg>

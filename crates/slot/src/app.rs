@@ -1707,7 +1707,7 @@ impl App {
         if changed && (active || lost) {
             let now = self.now();
             self.hud
-                .show(HudKind::Volume, self.output_volume(), self.muted(), now);
+                .show(HudKind::Volume, self.feedback_volume(), self.muted(), now);
             self.hud.toast(
                 if active {
                     Toast::BluetoothConnected
@@ -1740,7 +1740,7 @@ impl App {
         }
         let now = self.now();
         self.hud
-            .show(HudKind::Volume, self.output_volume(), self.muted(), now);
+            .show(HudKind::Volume, self.feedback_volume(), self.muted(), now);
         if active || unplugged {
             self.hud.toast(
                 if active {
@@ -3900,13 +3900,13 @@ impl App {
         let muted = !self.muted();
         *self.muted_mut() = muted;
         self.hud
-            .show(HudKind::Volume, self.output_volume(), muted, now);
+            .show(HudKind::Volume, self.feedback_volume(), muted, now);
         self.persist_soon();
     }
 
     fn hud_value(&self, kind: HudKind, value: u8) -> u8 {
         match kind {
-            HudKind::Volume => self.output_volume(),
+            HudKind::Volume => self.feedback_volume(),
             _ => value,
         }
     }
@@ -4005,15 +4005,17 @@ impl App {
         self.persist_soon();
         let now = self.now();
         self.hud
-            .show(HudKind::Volume, self.output_volume(), self.muted(), now);
+            .show(HudKind::Volume, self.feedback_volume(), self.muted(), now);
+    }
+
+    /// The user's level, independent of a parent menu temporarily silencing gameplay.
+    pub fn feedback_volume(&self) -> u8 {
+        if self.muted() { 0 } else { self.volume() }
     }
 
     pub fn output_volume(&self) -> u8 {
-        if self.muted() || (self.kid_menu.is_some() && !self.shutting_down()) {
-            0
-        } else {
-            self.level().min(self.kid_volume_limit())
-        }
+        if self.kid_menu.is_some() && !self.shutting_down() { 0 }
+        else { self.feedback_volume() }
     }
 
     pub fn hud_icon(&self) -> Icon {
@@ -4482,7 +4484,7 @@ impl App {
                 }
                 let now = self.now();
                 self.hud
-                    .show(HudKind::Volume, self.output_volume(), self.muted(), now);
+                    .show(HudKind::Volume, self.feedback_volume(), self.muted(), now);
             }
         }
         if self.now() >= self.charge_at {

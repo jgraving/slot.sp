@@ -91,7 +91,7 @@ pub struct Frontend {
     link_shot_shown: bool,
     boot_intro_cancelled: bool,
     boot_intro_requested: bool,
-    boot_intro: Option<(crate::brand_motion::BrandMotion, Option<Instant>)>,
+    boot_intro: Option<(crate::boot_motion::BootMotion, Option<Instant>)>,
 }
 
 #[derive(Default)]
@@ -585,7 +585,7 @@ impl Frontend {
             return;
         }
         self.boot_intro_requested = true;
-        // Avoid decoding/uploading the atlas when motion is disabled, input has
+        // Avoid decoding/uploading the mark when motion is disabled, input has
         // already dismissed the intro, or a game is resuming automatically.
         if !self.session.app().boot_animation_enabled()
             || self.boot_intro_cancelled
@@ -595,7 +595,7 @@ impl Frontend {
             return;
         }
         self.boot_intro =
-            crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
+            crate::boot_motion::BootMotion::upload(compositor).map(|brand| (brand, None));
     }
 
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
@@ -609,11 +609,11 @@ impl Frontend {
                 .as_millis() as u64;
             // Never cover automatic game resume, and never hold up the emulator loop.
             if !self.boot_intro_cancelled
-                && elapsed < crate::brand_motion::BOOT_MS
+                && elapsed < crate::boot_motion::BOOT_MS
                 && matches!(self.session.app().phase(), crate::app::Phase::Shelf)
             {
                 let mut intro = Vec::with_capacity(2);
-                brand.boot(elapsed, slot_gfx::Canvas::of(window), &mut intro);
+                brand.draw(elapsed, slot_gfx::Canvas::of(window), &mut intro);
                 compositor.draw_list(&intro);
             } else if let Some((brand, _)) = self.boot_intro.take() {
                 brand.release(compositor);

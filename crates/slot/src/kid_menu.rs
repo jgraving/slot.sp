@@ -150,9 +150,9 @@ impl Menu {
     }
     fn code_instruction(&self) -> &str {
         match self.page {
-            Page::Set => "Choose four buttons for your code",
-            Page::Confirm => "Enter the same four buttons again",
-            Page::Unlock => "Enter your four-button code",
+            Page::Set => "Choose 4 buttons",
+            Page::Confirm => "Repeat your 4 buttons",
+            Page::Unlock => "Enter your 4-button code",
             _ => "",
         }
     }
@@ -232,7 +232,7 @@ impl Menu {
             )
         } else {
             if self.entering_code() && self.status.is_empty() {
-                format!("{} of 4 buttons · A/B/X/Y or D-pad", self.code.len())
+                format!("{} of 4 buttons", self.code.len())
             } else if self.entering_code() {
                 format!("{} · {} of 4 buttons", self.status, self.code.len())
             } else {
@@ -343,20 +343,14 @@ impl Menu {
         let left = (face.w - title.w) / 2;
         blit(&mut face, &title, left, 0);
         if self.entering_code() {
-            // Keep the instruction, slots and progress centred in the shared
+            // Keep one instruction and the slots centred in the shared
             // card. Setup/confirmation change the instruction, never its title.
             let instruction = slot_ui::quick_value_face(self.code_instruction(), true);
             let left = (face.w - instruction.w) / 2;
-            blit(&mut face, &instruction, left, 132);
-            let help = slot_ui::quick_description_face(&["Use A/B/X/Y or the D-pad"]);
-            let left = (face.w - help.w) / 2;
-            blit(&mut face, &help, left, 169);
+            blit(&mut face, &instruction, left, 160);
             let buttons = slot_ui::button_code_face(&self.code);
             let left = ((face.w - buttons.w) as i32 / 2 + self.code_offset()) as u32;
             blit(&mut face, &buttons, left, 200);
-            let count = slot_ui::quick_description_face(&[&format!("{} / 4", self.code.len())]);
-            let left = (face.w - count.w) / 2;
-            blit(&mut face, &count, left, 272);
         }
         let cooldown = self.gate.remaining(Instant::now());
         let retry = format!("Try again in {cooldown} seconds");
@@ -642,6 +636,10 @@ impl Menu {
             Action::GbaDown(Btn::Down) => Some(5),
             Action::GbaDown(Btn::Left) => Some(6),
             Action::GbaDown(Btn::Right) => Some(7),
+            Action::GbaDown(Btn::L1) => Some(8),
+            Action::GbaDown(Btn::R1) => Some(9),
+            Action::GbaDown(Btn::L2) => Some(10),
+            Action::GbaDown(Btn::R2) => Some(11),
             _ => None,
         };
         if let Some(button) = button {

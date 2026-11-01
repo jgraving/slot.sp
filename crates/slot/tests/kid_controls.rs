@@ -449,7 +449,7 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
     assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose four buttons for your code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose 4 buttons");
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
     for (i, b) in [Btn::A, Btn::B].into_iter().enumerate() {
         raw_tap(&mut s, &mut time, b);
@@ -470,7 +470,7 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     raw_tap(&mut s, &mut time, Btn::Y);
     assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     assert!(!dir.join("code").exists());
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Enter the same four buttons again");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Repeat your 4 buttons");
     preview_menu(&s, "parent-confirm-empty.png");
     for b in [Btn::A; 4] { raw_tap(&mut s, &mut time, b); }
     assert!(!dir.join("code").exists(), "mismatched confirmation created a code");
@@ -1042,4 +1042,44 @@ fn hardware_level_feedback_is_drawn_after_parent_chrome_and_the_remaining_time_p
         for id in [9920,9921,9922,9923] {let i=out.iter().rposition(|d|matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(id))).unwrap();assert!(i<foreground,"level pill painted behind {id}");}
         assert!(out.iter().skip(foreground).all(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(9920))),"parent texture covers feedback");
     }
+}
+
+#[test]
+fn shoulder_code_roundtrips_through_raw_setup_confirmation_and_unlock() {
+    use slot::{session::Session,kid_menu::Menu};
+    let d=card();
+    std::fs::remove_dir_all(Policy::directory(d.path())).unwrap();
+    let mut s=Session::boot(d.path().to_owned());
+    s.app_mut().kid_menu=Some(Menu::new(d.path().to_owned(),Policy::default()));
+    let mut time=0;
+    raw_tap(&mut s,&mut time,Btn::Down);raw_tap(&mut s,&mut time,Btn::A);
+    for b in [Btn::L1,Btn::R1,Btn::L2] {raw_tap(&mut s,&mut time,b);}
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(),&[8,9,10]);
+    raw_tap(&mut s,&mut time,Btn::Select);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(),&[8,9]);
+    raw_tap(&mut s,&mut time,Btn::L2);raw_tap(&mut s,&mut time,Btn::R2);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2],"Repeat your 4 buttons");
+    for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2] {raw_tap(&mut s,&mut time,b);}
+    let recovery=std::fs::read_to_string(Policy::directory(d.path()).join("parent-code.txt")).unwrap();
+    assert!(recovery.contains("L1 R1 L2 R2"));
+    s.app_mut().kid_menu=Some(Menu::new(d.path().to_owned(),Policy::default()));
+    for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2] {raw_tap(&mut s,&mut time,b);}
+    assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
+}
+
+#[test]
+fn first_kid_activation_keeps_volume_feedback_live_without_changing_the_limit() {
+    let d=card();let mut policy=Policy::read(d.path()).unwrap();policy.leave();policy.save(d.path()).unwrap();
+    let mut app=App::boot(d.path());app.apply(Action::QuickMenu);
+    for b in [Btn::Right,Btn::Right,Btn::Down,Btn::A,Btn::A,Btn::B,Btn::X,Btn::Y,Btn::A] {press(&mut app,b);}
+    assert!(app.kid_mode());assert_eq!(app.kid_volume_limit(),50);
+    for action in [Action::VolumeDown,Action::VolumeUp,Action::VolumeDown] {
+        let before=app.volume();app.apply(action);
+        assert_ne!(app.volume(),before);
+        assert_eq!(app.feedback_volume(),app.volume());
+        assert_ne!(app.hud_icon(),slot_ui::Icon::VolumeMuted,"the live slider must not read the paused output's zero");
+        assert_eq!(app.output_volume(),0,"gameplay stays silent while parent controls are open");
+    }
+    let volume=app.volume();press(&mut app,Btn::B);
+    assert_eq!(app.output_volume(),volume);assert_eq!(app.kid_volume_limit(),50);
 }

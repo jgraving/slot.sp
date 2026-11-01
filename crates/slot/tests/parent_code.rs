@@ -44,7 +44,7 @@ fn damaged_lock_fails_closed_and_invalid_codes_cannot_be_saved() {
     let path = dir.path().join("lock");
     let mut gate = Gate::new(path.clone());
     assert!(gate.set(&[0; 3]).is_err());
-    assert!(gate.set(&[9; 4]).is_err());
+    assert!(gate.set(&[12; 4]).is_err());
     std::fs::write(path, b"broken").unwrap();
     assert!(gate.locked());
     assert!(gate.verify(&[0; 4], Instant::now()).is_err());
@@ -54,7 +54,7 @@ fn svg_button_faces_are_distinct_and_nonempty() {
     let empty = slot_ui::button_code_face(&[]);
     assert_eq!((empty.w, empty.h), (256, 56));
     let mut faces = Vec::new();
-    for button in 0..8 {
+    for button in 0..12 {
         let face = slot_ui::button_code_face(&[button]);
         assert!(face.rgba.chunks_exact(4).any(|p| p[3] > 0));
         assert_ne!(face.rgba, empty.rgba);
