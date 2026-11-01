@@ -185,6 +185,25 @@ pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
     CartFace{rgba,w:24,h:24}
 }
 
+/// Flat, antialiased control symbols with a common square box and stroke weight.
+/// Floating pills provide their own surface, so these need no glyph-font halo.
+pub fn control_icon_face(icon:Icon,size:u32,ink:[u8;3])->CartFace {
+    let paths=match icon {
+        Icon::Volume=>r#"<path d="M11 5 6 9H3v6h3l5 4Z"/><path fill="none" stroke="currentColor" stroke-width="2" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>"#,
+        Icon::VolumeZero=>r#"<path d="M11 5 6 9H3v6h3l5 4Z"/>"#,
+        Icon::VolumeMuted=>MUTED_SPEAKER,
+        Icon::Brightness=>r#"<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g>"#,
+        Icon::BlueLight=>r#"<g fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0Zm2-6v9.5M17 6h2m-2 4h3"/></g><circle cx="12" cy="18" r="1.8"/>"#,
+        Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill="none" stroke="currentColor" stroke-width="2" d="m6 7 12 10-6 5V2l6 5L6 17"/>"#,
+        Icon::Headphones|Icon::HeadphonesMuted=>r#"<path fill="none" stroke="currentColor" stroke-width="2" d="M4 14v-2a8 8 0 0 1 16 0v2M4 12h3v8H4Zm13 0h3v8h-3Z"/>"#,
+        _=>return icon_face(icon,size as f32,ink),
+    };
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g color="#{:02x}{:02x}{:02x}" fill="currentColor" stroke-linecap="round" stroke-linejoin="round">{paths}</g></svg>"##,ink[0],ink[1],ink[2]);
+    let mut rgba=crate::art::render_svg(&svg,size,size).expect("control icon");
+    for p in rgba.chunks_exact_mut(4){p[..3].copy_from_slice(&ink);}
+    CartFace{rgba,w:size,h:size}
+}
+
 pub fn icon_box(px: f32) -> (u32, u32) {
     match raster(Icon::Volume, px) {
         Some(r) => (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX),

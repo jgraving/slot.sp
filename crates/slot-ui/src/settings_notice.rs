@@ -50,6 +50,9 @@ impl SettingsNotice {
         now: u64,
         out: &mut Vec<Draw>,
     ) {
+        self.draw_on(canvas,face,now,false,out);
+    }
+    pub fn draw_on(&self,canvas:Canvas,face:Option<(TexId,u32,u32)>,now:u64,light:bool,out:&mut Vec<Draw>) {
         let alpha = self.alpha(now);
         let Some((tex, w, h)) = face.filter(|_| alpha > 0.0) else {
             return;
@@ -69,11 +72,12 @@ impl SettingsNotice {
         let base = canvas.h - MOUTH_H - 8.0 - original_h;
         let y=base+(1.0-alpha)*(canvas.h-base+original_h+16.0)-(h-original_h)/2.0;
         let begin=out.len();
-        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {[0.16,0.29,0.23,1.0]}else{[0.10, 0.12, 0.14, 1.0]});
+        let colours=crate::battery::charge_colours(light);
+        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {colours.track}else{[0.10, 0.12, 0.14, 1.0]});
         if charging {
             let level=self.text().and_then(|s|s.strip_prefix("Charging: ")).and_then(|s|s.trim_end_matches('%').parse::<f32>().ok()).unwrap_or(0.0).clamp(0.0,100.0)/100.0;
             let mut fill=vec![];
-            crate::expressive::rounded(&mut fill,x,y,w,h,h/2.0,[0.69,0.94,0.80,1.0]);
+            crate::expressive::rounded(&mut fill,x,y,w,h,h/2.0,colours.fill);
             crate::quick_menu::clip_quads(&mut fill,0,[x,y,x+w*level,y+h]);
             out.extend(fill);
         }
@@ -91,8 +95,9 @@ impl SettingsNotice {
     }
 }
 
-pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {
-    if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent);}
+pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {settings_notice_face_on(message,canvas,false)}
+pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace {
+    if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent,light);}
     let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
             rgba: vec![],
@@ -114,12 +119,13 @@ pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {
         w,
         h,
     };
-    text::draw_centred(&mut face.rgba, w, h, &layout, [246, 244, 239]);
+    text::draw_centred(&mut face.rgba, w, h, &layout, if light {slot_gfx::ui_palette::INK}else{[246,244,239]});
     face
 }
 
 /// Filled charging chip with a native vector bolt, never a font substitute.
-fn charging_notice_face(percent:&str)->UndoFace {
+fn charging_notice_face(percent:&str,light:bool)->UndoFace {
+    let colours=crate::battery::charge_colours(light);
     let label=format!("{percent} · Charging");
     let font=text::font(text::Role::Value).expect("value font");
     let layout=text::fit_preserving_case(font,&label,300.0,1,22.0,22.0);
@@ -127,12 +133,12 @@ fn charging_notice_face(percent:&str)->UndoFace {
     let (w,h)=(tw+76,52);
     let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
     let mut words=vec![0;(tw*h*4) as usize];
-    text::draw_centred(&mut words,tw,h,&layout,[16,48,35]);
+    text::draw_centred(&mut words,tw,h,&layout,colours.filled_ink);
     crate::plate::blit(&mut face.rgba,w,&words,tw,h,52,0);
-    let svg=r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#103023" d="M13 1 4 14h7l-1 9 10-14h-7z"/></svg>"##;
-    let bolt=crate::art::render_svg(svg,26,30).expect("charging bolt");
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#{:02x}{:02x}{:02x}" d="M13 1 4 14h7l-1 9 10-14h-7z"/></svg>"##,colours.filled_ink[0],colours.filled_ink[1],colours.filled_ink[2]);
+    let bolt=crate::art::render_svg(&svg,26,30).expect("charging bolt");
     crate::plate::blit(&mut face.rgba,w,&bolt,26,30,18,11);
     let level=percent.trim_end_matches('%').parse::<f32>().unwrap_or(0.0).clamp(0.0,100.0)/100.0;
-    for (i,pixel) in face.rgba.chunks_exact_mut(4).enumerate(){if (i as u32%w)as f32>=w as f32*level && pixel[3]>0 {pixel[..3].copy_from_slice(&[218,250,230]);}}
+    for (i,pixel) in face.rgba.chunks_exact_mut(4).enumerate(){if (i as u32%w)as f32>=w as f32*level && pixel[3]>0 {pixel[..3].copy_from_slice(&colours.empty_ink);}}
     face
 }

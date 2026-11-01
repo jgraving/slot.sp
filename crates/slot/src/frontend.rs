@@ -126,6 +126,8 @@ struct BezelSync {
 
 #[derive(Default)]
 struct WallpaperSync {
+    header_light:[bool;3],
+    footer_light:[bool;2],
     tex: Option<TexId>,
     image: Option<(String, (u32, u32))>,
     label: String,
@@ -306,7 +308,7 @@ impl Frontend {
         let icons = Icon::ALL
             .iter()
             .map(|i| {
-                let f = icon_face(*i, HUD_ICON_PX, HUD_INK);
+                let f = match i {Icon::Volume|Icon::VolumeZero|Icon::VolumeMuted|Icon::Brightness|Icon::BlueLight|Icon::Bluetooth|Icon::BluetoothMuted|Icon::Headphones|Icon::HeadphonesMuted=>slot_ui::control_icon_face(*i,HUD_ICON_PX as u32,HUD_INK),_=>icon_face(*i, HUD_ICON_PX, HUD_INK)};
                 compositor.create_ui_texture(f.w, f.h, &f.rgba)
             })
             .collect();
@@ -355,7 +357,7 @@ impl Frontend {
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
         let smiley=slot_ui::kid_status_face();
         self.session.app_mut().kid_status_icon=Some(compositor.create_ui_texture(smiley.w,smiley.h,&smiley.rgba));
-        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::icon_face(icon,32.0,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::control_icon_face(icon,32,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
         let hints=slot_ui::quick_controls_legends().into_iter().map(|f|(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
         self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
@@ -485,7 +487,7 @@ impl Frontend {
             .into_iter()
             .map(|l| l.map(&mut up))
             .collect();
-        let headings = faces.quick_headings.into_iter().map(|(r, f)| (r, up(f))).collect();
+        let headings:Vec<_> = faces.quick_headings.into_iter().map(|(r, f)| (r, up(f))).collect();
         let pointer = up(faces.quick_pointer);
         let values = faces
             .quick_values
@@ -530,6 +532,7 @@ impl Frontend {
             look.legend = [link_legend.clone(), link_legend_light];
             look.applied = None;
         }
+        for (_, (tex,_,_)) in &headings {compositor.mark_backdrop_texture(*tex,2);}
         let app = self.session.app_mut();
         app.set_link_badge_faces(link_badges);
         app.set_shutdown_faces(lines);
@@ -795,12 +798,18 @@ impl Frontend {
         }
         for (tex,title,hints) in chrome_updates {self.session.app_mut().set_custom_chrome(tex,title,hints);}
         self.session.app_mut().note_custom_menu_face();
-        sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
+        sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
+        let app=self.session.app();
+        let header=if !app.light() && self.wallpaper.image.is_some() && app.seated_cart().is_none() {self.wallpaper.header_light}else{[app.light();3]};
+        let footer=if !app.light() && self.wallpaper.image.is_some() && app.seated_cart().is_none() {self.wallpaper.footer_light}else{[app.light();2]};
+        self.session.app_mut().set_footer_contrast(footer);
+        compositor.set_backdrop_light(header);
+        for tex in [self.mute_icon,self.audio_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
+        sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
-        sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
         sync_game_bezel(self.session.app_mut(), compositor, &mut self.game_bezel);
         compositor.set_game_bezel(self.session.app().shown_game_bezel());
         compositor.set_sp_frame(self.session.app().sp_frame());
@@ -874,16 +883,17 @@ impl Frontend {
         let (now,canvas)=(app.now(),app.canvas());
         self.settings_notice.observe(app.settings_notice(),now);
         if let Some(message)=self.settings_notice.text() {
-            if message!=self.settings_notice_text {
-                let face=slot_ui::settings_notice_face(message,canvas);
+            let key=format!("{light}:{message}");
+            if key!=self.settings_notice_text {
+                let face=slot_ui::settings_notice_face_on(message,canvas,light);
                 let (w,h)=(face.w,face.h);
-                let tex=upload(compositor,&mut self.settings_notice_tex,face);
+                let tex=upload_rgba(compositor,&mut self.settings_notice_tex,face.w,face.h,&face.rgba);
                 self.settings_notice_face=Some((tex,w,h));
-                self.settings_notice_text=message.to_string();
+                self.settings_notice_text=key;
             }
         }
         let notice_canvas=slot_ui::Canvas{h:canvas.h-44.0*app.kid_meter_presence(),..canvas};
-        self.settings_notice.draw(notice_canvas,self.settings_notice_face,now,&mut self.draws);
+        self.settings_notice.draw_on(notice_canvas,self.settings_notice_face,now,light,&mut self.draws);
         if let Some((motion,ms))=intro {app.compose_boot_intro(motion,ms,&mut self.draws);}
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
@@ -1429,7 +1439,7 @@ fn sync_binding_faces(app: &mut App, compositor: &mut Compositor) {
     }
 }
 
-fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
+fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks,header:[bool;3]) {
     let ink = app.status_ink();
     if clocks.ink != ink {
         clocks.ink = ink;
@@ -1450,6 +1460,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         clocks.shown = shown;
         let w = face.w;
         let id = upload(compositor, &mut clocks.shelf, face);
+        compositor.mark_backdrop_texture(id,0);
         app.set_shelf_clock_face(id, w);
     }
     let platform_shown = app.slot_text().unwrap_or_default();
@@ -1478,14 +1489,14 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     }
     let battery_shown = app
         .battery()
-        .map(|b| format!("{}:{:?}", b.percent,b.charge))
+        .map(|b| format!("{}:{:?}:{}", b.percent,b.charge,header[1]))
         .unwrap_or_default();
     if battery_shown != clocks.battery {
         clocks.battery = battery_shown.clone();
         if !battery_shown.is_empty() {
-            let face = slot_ui::status_battery_face(app.battery().unwrap());
+            let face = slot_ui::status_battery_face_on(app.battery().unwrap(),header[1]);
             let w = face.w;
-            let id = upload(compositor, &mut clocks.battery_tex, face);
+            let id = upload_rgba(compositor, &mut clocks.battery_tex, face.w,face.h,&face.rgba);
             app.set_battery_percent_face(id, w);
         }
     }
@@ -1561,6 +1572,10 @@ fn sync_wallpaper(app: &mut App, compositor: &mut Compositor, state: &mut Wallpa
                 .map(|root| root.join("Wallpapers").join(name))
                 .and_then(|path| wallpaper_face(&path, w, h))
             {
+                state.header_light=slot_gfx::ui_palette::header_contrast(&rgba,w,h);
+                let top=378.min(h);let bottom=422.min(h);
+                let footer=slot_gfx::ui_palette::header_contrast(&rgba[(top*w*4)as usize..(bottom*w*4)as usize],w,bottom-top);
+                state.footer_light=[footer[0],footer[1]];
                 let id = match state.tex {
                     Some(id) => {
                         compositor.update_background_texture(id, w, h, &rgba);
@@ -1650,6 +1665,7 @@ fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace)
     if app.about_heading_needed() {
         let heading=slot_ui::quick_heading_face("About");
         let tex=compositor.create_ui_texture(heading.w,heading.h,&heading.rgba);
+        compositor.mark_backdrop_texture(tex,2);
         app.set_about_heading((tex,heading.w,heading.h));
     }
 }
@@ -1740,12 +1756,14 @@ fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(
     let mut parts=vec![];
     for (left,right,y,h) in [(0,face.w,0,slot_ui::expressive::TITLE_H as u32),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
         let ink=|x:u32|(y..y+h).any(|yy|face.rgba[((yy*face.w+x)*4+3)as usize]!=0);
-        let Some(x0)=(left..right).find(|&x|ink(x)) else {parts.push(vec![]);continue;};
-        let x1=(left..right).rev().find(|&x|ink(x)).unwrap()+1;
+        let Some(mut x0)=(left..right).find(|&x|ink(x)) else {parts.push(vec![]);continue;};
+        let mut x1=(left..right).rev().find(|&x|ink(x)).unwrap()+1;
+        if y==0 {x0=x0.saturating_sub(1);x1=(x1+1).min(face.w);}
         let w=x1-x0;let mut rgba=vec![];
         for yy in y..y+h {let a=((yy*face.w+x0)*4)as usize;rgba.extend_from_slice(&face.rgba[a..a+(w*4)as usize]);}
         let tex=if let Some((_,t))=cache.iter().find(|(f,_)|f.w==w&&f.h==h&&f.rgba==rgba){*t}
             else{let t=gpu.create_ui_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t));t};
+        if y==0 {gpu.mark_backdrop_texture(tex,2);}
         parts.push(vec![Draw::Tex{x:x0 as f32,y:y as f32,w:w as f32,h:h as f32,tex,alpha:1.0}]);
     }
     let tex=upload(gpu,body,face);let title=parts.remove(0);let hints=parts.into_iter().flatten().collect();updates.push((tex,title,hints));tex

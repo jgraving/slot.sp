@@ -861,3 +861,15 @@ fn about_from_in_game_settings_keeps_the_game_behind_the_card() {
     assert!(!out.iter().any(|d|matches!(d,Draw::Lava{..})),"launcher wallpaper leaked into About");
     press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{..}));assert_eq!(a.in_game_menu(),Some(QuickRow::About));
 }
+
+#[test]
+fn the_game_menu_uses_one_translucent_tint_to_the_bottom_edge_before_its_card() {
+    for light in [false,true] {
+        let (d,mut a)=playing();
+        if light {let mut state=slot_store::read_slot_state(d.path());state.appearance=slot_store::Appearance::Light;slot_store::write_slot_state(d.path(),&state).unwrap();a=App::boot(d.path());a.set_snapshot(common::StubSnapshot::boxed());a.on_core_ready();frames(&mut a,120);}
+        a.set_game_ready(true);menu_faces(&mut a);a.apply(Action::QuickMenu);frames(&mut a,50);
+        let mut out=vec![];a.draw(&mut out);let game=out.iter().position(|d|matches!(d,Draw::Game)).unwrap();
+        assert!(matches!(out[game+1],Draw::Rect{x:0.0,y:0.0,w,h,colour} if w==a.canvas().w&&h==480.0&&colour[3]>0.5&&colour[3]<0.7));
+        assert_eq!(out.iter().filter(|d|matches!(d,Draw::Rect{x:0.0,y:0.0,w,h,colour} if *w==a.canvas().w&&*h==480.0&&colour[3]>0.5&&colour[3]<0.95)).count(),1);
+    }
+}

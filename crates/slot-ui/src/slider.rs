@@ -3,6 +3,7 @@ pub const MENU_SLIDER_W: f32 = 140.0;
 pub const MENU_SLIDER_SPAN: f32 = 280.0;
 pub const SLIDER_TRACK_H: f32 = 6.0;
 pub const SLIDER_THUMB: f32 = 14.0;
+const THUMB_COLOUR: [f32; 4] = [0.92, 0.95, 0.98, 1.0];
 
 /// One slider vocabulary for settings and transient volume/display feedback.
 pub fn draw_slider(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, value: f32, alpha: f32) {
@@ -10,7 +11,7 @@ pub fn draw_slider(out: &mut Vec<Draw>, x: f32, y: f32, w: f32, value: f32, alph
     let track = [0.33, 0.36, 0.40, 0.65 * alpha];
     let mut fill = crate::expressive::ACCENT;
     fill[3] *= alpha;
-    let mut thumb = crate::toggle::SWITCH_THUMB;
+    let mut thumb = THUMB_COLOUR;
     thumb[3] *= alpha;
     crate::expressive::rounded(out, x, y + 12.0, w, SLIDER_TRACK_H, 3.0, track);
     crate::expressive::rounded(out, x, y + 12.0, w * value, SLIDER_TRACK_H, 3.0, fill);

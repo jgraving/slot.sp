@@ -334,7 +334,7 @@ impl Hud {
             [0.07, 0.085, 0.10, 0.97 * alpha],
         );
         if let Some(tex) = self.icon() {
-            let (w, h) = crate::icon::glyph_box(self.glyph(), HUD_ICON_PX);
+            let (w, h) = match self.glyph() {Icon::Volume|Icon::VolumeZero|Icon::VolumeMuted|Icon::Brightness|Icon::BlueLight|Icon::Bluetooth|Icon::BluetoothMuted|Icon::Headphones|Icon::HeadphonesMuted=>(24,24),icon=>crate::icon::glyph_box(icon,HUD_ICON_PX)};
             out.push(Draw::Tex {
                 x: x + 16.0,
                 y: y + (48.0 - h as f32) / 2.0,

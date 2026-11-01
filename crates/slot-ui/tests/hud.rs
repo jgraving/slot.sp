@@ -325,7 +325,7 @@ fn muted_speaker_renders_at_native_width_without_stretching() {
     );
     hud.set_headphones(true);
     hud.show(HudKind::Volume, 0, false, 0);
-    let face = icon_face(Icon::VolumeMuted, HUD_ICON_PX, [255; 3]);
+    let face = slot_ui::control_icon_face(Icon::VolumeMuted, HUD_ICON_PX as u32, [255; 3]);
     let mut out = Vec::new();
     hud.draw(Canvas::FRAMED, 0, &mut out);
     let (x, w, h) = out

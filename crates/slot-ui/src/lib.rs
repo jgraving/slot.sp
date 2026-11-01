@@ -25,7 +25,7 @@ pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
 mod settings_notice;
-pub use settings_notice::{SettingsNotice,settings_notice_face};
+pub use settings_notice::{settings_notice_face_on,SettingsNotice,settings_notice_face};
 mod icon;
 mod link_art;
 mod material;
@@ -56,7 +56,7 @@ pub use backdrop::{
     draw_ground, game_bezel_face, wallpaper_face,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
-pub use battery::{status_battery_face, draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
+pub use battery::{status_battery_face,status_battery_face_on, draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
 pub use board::{
     board_at, board_face, board_from, board_in, board_x, board_zoom, chip_face, chip_shadow_face,
     grown, lid_at, lid_from, lift_of, on_board, padded, rom_marking, rom_marking_face, shelf_cart,
@@ -83,7 +83,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, kid_status_face, status_icon_face, STATUS_ICON_SIZE, STATUS_ICON_PX, warm_fonts, Badge, Icon,
+    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, kid_status_face, status_icon_face,control_icon_face, STATUS_ICON_SIZE, STATUS_ICON_PX, warm_fonts, Badge, Icon,
 };
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
