@@ -168,3 +168,12 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
  .mast-mark{grid-column:2}
 }
 @media(max-width:540px){.mast-tabs .mast-link{font-size:14px;min-height:44px;padding:10px 8px}}
+
+/* Only guide pages need a topic drawer; global destinations stay in the header. */
+.md-sidebar--primary .md-nav--primary>.md-nav__list>.md-nav__item:not(.md-nav__item--active){display:none}
+@media(max-width:1219.98px){
+ .md-header__inner[data-guide-topics=true]>label[for=__drawer]{display:block;grid-column:1;grid-row:1;margin:0}
+ .md-header__inner[data-guide-topics=true]>.mast-mark{grid-column:2}
+ .md-header__inner[data-guide-topics=false]>label[for=__drawer]{display:none}
+ .md-header__inner[data-guide-topics=false]>.mast-mark{grid-column:1}
+}

@@ -11,6 +11,7 @@ on:
       - 'tools/prepare-site.py'
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
+      - 'tools/check-site-navigation.cjs'
       - '.github/workflows/pages.yml'
   push:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - 'tools/prepare-site.py'
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
+      - 'tools/check-site-navigation.cjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -99,6 +101,19 @@ jobs:
           fi
       - name: Check published links and assets
         run: python tools/check-site.py
+      - name: Check navigation on desktop and phones
+        env:
+          NODE_PATH: ${{ runner.temp }}/website-browser/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/website-browser" playwright@1.62.1
+          node tools/check-site-navigation.cjs "$RUNNER_TEMP/website-navigation-review"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: website-navigation-review
+          retention-days: 1
+          path: ${{ runner.temp }}/website-navigation-review
+          if-no-files-found: ignore
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
