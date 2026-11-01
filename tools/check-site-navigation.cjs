@@ -50,7 +50,10 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
           await page.locator('.md-header label[for="__drawer"]').click();
           assert(await page.locator('#__drawer').isChecked(),`${width}: guide drawer did not open`);
           assert(await page.locator('.md-sidebar--primary .nav-topic').first().isVisible(),`${width}: guide topics unavailable`);
-          await page.locator('label.md-overlay[for="__drawer"]').click({position:{x:width-12,y:450}});
+          const overlay=page.locator('label.md-overlay[for="__drawer"]');
+          const overlayBox=await overlay.boundingBox();
+          assert(overlayBox && overlayBox.width>0,`${width}: guide overlay unavailable`);
+          await overlay.click({position:{x:overlayBox.width-12,y:Math.min(450,overlayBox.height/2)}});
           assert(!(await page.locator('#__drawer').isChecked()),`${width}: guide drawer did not close`);
         }
         results.push({width,route,...info});
