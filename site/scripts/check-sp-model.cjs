@@ -82,13 +82,19 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       assert.deepEqual(errors,[],`Browser errors at ${width}`);
       report.push({width,webgl:true,overflow:false,controls:true,reducedMotion:true,errors});await page.close();
     }
-    const fallback=await pageFor(390);
-    await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:get.call(this,type,...args);};});
-    await fallback.goto(origin,{waitUntil:'networkidle'});
-    await fallback.locator('.sp-stage').scrollIntoViewIfNeeded();
-    assert(await fallback.locator('.device').isVisible());assert(await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
-    assert(!(await fallback.locator('.model-fold').isVisible()));
-    await fallback.screenshot({path:path.join(out,'no-webgl.png')});await fallback.close();
+    for(const width of [1366,390,320]) {
+      const fallback=await pageFor(width);
+      await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:get.call(this,type,...args);};});
+      await fallback.goto(origin,{waitUntil:'networkidle'});
+      await fallback.locator('.sp-stage').scrollIntoViewIfNeeded();
+      assert(await fallback.locator('.device').isVisible());assert(await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
+      assert(!(await fallback.locator('.model-fold').isVisible()));
+      await fallback.locator('.preview-controls').scrollIntoViewIfNeeded();
+      const uncovered=await fallback.locator('.preview-toggle,[data-shell]').evaluateAll(nodes=>nodes.every(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;}));
+      assert(uncovered,`${width}: fallback covers its playback or color controls`);
+      assert(await fallback.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Fallback overflow');
+      await fallback.screenshot({path:path.join(out,`no-webgl-${width}.png`)});await fallback.close();
+    }
     fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
     console.log('PASS: 3D desktop and mobile renders, native clip actions, color changes, fold, keyboard rotation, reduced motion and WebGL fallback');
   }finally{await browser.close();}

@@ -201,3 +201,8 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-stage.model-ready>.hero-screen{position:absolute;left:50%;top:50%;width:1px;height:1px;opacity:.001;visibility:visible;z-index:0;pointer-events:none}
 
 .preview-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex:none}
+
+/* Perspective extends the illustration beyond its layout box. Reserve room for
+   controls on browsers that use the non-WebGL fallback. */
+.sp-preview .sp-stage:not(.model-ready){margin-bottom:32px}
+.sp-preview .sp-stage:not(.model-ready)>.device{scale:.86}
