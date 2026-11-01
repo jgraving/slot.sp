@@ -1,0 +1,58 @@
+name: Refresh README wordmark
+
+on:
+  push:
+    branches: [style/cohesive-navigation-and-studio]
+    paths:
+      - 'tools/capture-readme-model.cjs'
+      - '.github/workflows/readme-wordmark.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Prepare the pinned full website font
+        run: |
+          python3 -m pip install 'fonttools[woff]==4.61.1' pillow==13.0.0 av==16.0.0
+          python3 tools/prepare-site.py
+          npm install --prefix "$RUNNER_TEMP/readme-browser" playwright@1.62.1
+      - name: Capture the matching wordmark around existing native playback
+        env:
+          NODE_PATH: ${{ runner.temp }}/readme-browser/node_modules
+        run: |
+          node tools/capture-readme-model.cjs "$RUNNER_TEMP/readme-wordmark"
+          mkdir -p "$RUNNER_TEMP/readme-wordmark/publish/previews/readme-model"
+          python3 tools/opaque_preview_gif.py "$RUNNER_TEMP/readme-wordmark/model-frames" "$RUNNER_TEMP/readme-wordmark/publish/previews/readme-model/hero.gif" --width 820 --frame-ms 80
+          python3 previews/collect_readme_model.py "$RUNNER_TEMP/readme-wordmark"
+      - name: Prepare reviewed media blobs without changing any branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py "$RUNNER_TEMP/readme-wordmark" --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          retention-days: 1
+          name: readme-wordmark-review
+          path: |
+            ${{ runner.temp }}/readme-wordmark/publish/**
+            ${{ runner.temp }}/readme-wordmark/media-entries.json
+            ${{ runner.temp }}/readme-wordmark/model-capture.json
+            ${{ runner.temp }}/readme-wordmark/native-frames.json
+            ${{ runner.temp }}/readme-wordmark/model-frames/0000.png
+            ${{ runner.temp }}/readme-wordmark/model-frames/0014.png
+            ${{ runner.temp }}/readme-wordmark/model-frames/0038.png
+            ${{ runner.temp }}/readme-wordmark/model-frames/0103.png
+          if-no-files-found: error
