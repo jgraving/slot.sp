@@ -10,7 +10,7 @@ Resume games where you stopped, or start from the title screen. Manual save stat
 
 On the carousel, tap <kbd>A</kbd> to launch a game. When **Load State on Insert** is on, it picks up from its resume state. Hold <kbd>A</kbd> to start from the title screen instead; the game's own save remains available.
 
-During play, tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and temporary undo choices appear when available. Settings opens the same complete settings home as the carousel, floating over the game picture. Hold <kbd>MENU</kbd> to save on exit when enabled and return to the carousel.
+During play, tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and temporary undo choices appear when available. Settings opens the same complete settings home as the carousel, floating over the game screen. Hold <kbd>MENU</kbd> to save on exit when enabled and return to the carousel.
 
 Kid mode uses a [shorter menu](KID-MODE.md#the-kid-menu) with Resume, Settings and Exit game. Its settings are a four-tile grid.
 

@@ -7,7 +7,7 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 | Tile | Use it for | Instructions |
 | :--- | :--- | :--- |
 | **General** | Light or Dark menus, SP color, wallpaper, Favorites order, carousel motion, Recents, game names, startup animation, carousel sounds, clock format and date/time. | [Appearance & screen](DISPLAY.md) |
-| **Screen** | Brightness, screen warmth and day/night schedules, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#the-game-picture) · [Day & night](NIGHT-DISPLAY.md) |
+| **Screen** | Brightness, screen warmth and day/night schedules, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
 | **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects. | [Audio & headphones](BLUETOOTH.md) |
 | **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. | [Playing & saving](PLAYING.md) |
 | **Power & lid** | Lid behavior, sleep and shutdown timer. | [Sleep & power](POWER-OPTIONS.md) |
@@ -19,7 +19,7 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 
 ## During a game
 
-Settings float over the game picture. Screen opens picture controls for the current system; open **Screen → Night mode** from the carousel to edit the automatic schedule. Tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and undo choices appear when available.
+Settings float over the game screen. Screen opens display settings for the current system; open **Screen → Night mode** from the carousel to edit the automatic schedule. Tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and undo choices appear when available.
 
 In kid mode, **Settings** opens four tiles: Sound, Screen, Buttons & shortcuts and Parental controls. See the [kid menu](KID-MODE.md#the-kid-menu).
 

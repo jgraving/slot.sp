@@ -51,7 +51,7 @@ The clock, status icons and button hints adapt their colors to the wallpaper. **
 
 Put a PNG in `Bezels/GBA/`, `Bezels/GBC/` or `Bezels/GB/` and select it under **Screen → [system] → Bezel**.
 
-A bezel is the border around the game picture. Leave the game area transparent so it remains visible:
+A bezel is the border around the game screen. Leave the game area transparent so it remains visible:
 
 | Device | Bezel size | Game area |
 | --- | --- | --- |

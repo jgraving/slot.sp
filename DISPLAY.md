@@ -2,7 +2,7 @@
 
 [← Overview](README.md) · [All guides](GUIDE.md)
 
-[Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
+[Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Screen effects & borders](#screen-effects--borders) · [Your own artwork](#your-own-backgrounds--borders)
 
 ![General settings with Light UI theme selected](previews/current/light/general.png)
 
@@ -46,7 +46,9 @@ Custom and random wallpapers are lightened in Light mode. **Wallpaper Tint** adj
 
 ![Letters gather into a small blob and drop behind the slot at startup](previews/current/light/boot.gif)
 
-## The game picture
+<span id="the-game-picture"></span>
+
+## Screen effects & borders
 
 Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
 
@@ -55,20 +57,20 @@ Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** o
 | **Shader** | The screen effect: LCD3x, grid, dots or a simpler texture, depending on the system. |
 | **Color Correction** | Adjust colors toward the original handheld's display. |
 | **Palette** | Choose the colors for original Game Boy games. |
-| **Bezel** | Choose the border around the game picture. |
+| **Bezel** | Choose the border around the game screen. |
 
 Each system remembers its own settings. Game Boy palettes include **Auto**, grayscale, DMG Green, GB Pocket, GB Light, Game Boy Color presets and Super Game Boy palettes.
 
-### Picture shortcuts
+### Display shortcuts
 
 | Button | Action |
 | :--- | :--- |
 | <kbd>SELECT</kbd> + <kbd>A</kbd> / <kbd>B</kbd> | Next / previous shader. |
 | <kbd>SELECT</kbd> + <kbd>Y</kbd> | Toggle color correction. |
 | <kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd> | Previous / next Game Boy palette. |
-| <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Stretch the picture / restore its original proportions. |
+| <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Stretch the game screen / restore its original proportions. |
 
-The picture-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
+The screen-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
 
 ### Automatic day and night
 
