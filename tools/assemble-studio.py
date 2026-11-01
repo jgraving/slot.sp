@@ -27,7 +27,7 @@ script.write_text(text)
 for css in bundle.glob('*.css'):
     css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))
 html = (source / 'web/index.html').read_text()
-for name in ['studio.js', 'studio.css', 'slot-sp.css']:
+for name in ['studio.js', 'studio.css', 'slot-sp.css', 'navigation.css', 'navigation.js']:
     html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
 html = html.replace('<div class="foot-meta">', '<div class="foot-meta"><p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p>')
 (target / 'index.html').write_text(html)

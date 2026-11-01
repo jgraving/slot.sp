@@ -77,6 +77,11 @@ assert studio_info['renderer_repository'] == 'jgraving/slot.sp'
 assert studio_info['assets_base'] == f"assets/{studio_info['source_commit'][:12]}/"
 assert (ROOT / 'studio' / studio_info['assets_base'] / 'pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
+for name in ['navigation.css','navigation.js']:
+    assert (ROOT.parent / 'docs/assets' / name).read_bytes() == (ROOT.parents[1] / '_studio/slot-cart-studio/web' / name).read_bytes(), f'Studio and website {name} differ'
+    assert (ROOT / 'studio' / studio_info['assets_base'] / name).is_file(), name
+assert 'effects.svg' in home
+assert '/updating/' in home or './updating/' in home
 hero_durations = []
 hero_manifest = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())
 hero_revision = hero_manifest.get('capture_source_commit',hero_manifest['source_commit'])[:12]
@@ -102,7 +107,7 @@ assert f'hero-dark-platinum.mp4' in home
 assert hero_manifest['sequence']==['insert','eject','browse','boot']
 assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 and t['visible_game_frames']==0 and t['omitted_test_pattern'] for t in hero_manifest['timelines'])
 for theme in ['dark','light']:
-    for scene in ['screenshots-full','screenshots-zoom','screenshots-select']:
+    for scene in ['screenshots-full','screenshots-zoom','screenshots-select','sound-bluetooth','bluetooth-pairing']:
         with Image.open(ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png') as image:assert image.size==(720,480)
 for video in (ROOT / 'media/fork').rglob('*.mp4'):
     with av.open(str(video)) as container:

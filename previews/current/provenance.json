@@ -486,6 +486,54 @@
       "sha256": "6f4b5abd677b2580abb25fc5e6d6eeb08e2896095cebe4b71f2df1ec5a3395e2",
       "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
       "ui_source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e"
+    },
+    {
+      "path": "previews/current/dark/sound-bluetooth.png",
+      "sha256": "406f6ee12d3db35a8bcd8238ad426325d1e00abee107d7fb763aa6025054dbda",
+      "bytes": 110434,
+      "dimensions": [
+        720,
+        480
+      ],
+      "capture_source_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "ui_release_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "capture_helper_sha256": "2f072ffde5c90c15b76e17658b6a29210b485c1949ac82e41faba120c9b5fee6"
+    },
+    {
+      "path": "previews/current/dark/bluetooth-pairing.png",
+      "sha256": "b0518aaaf67f39dabadc26b9aa8a72c0d50001b8ac74227e25e6e18f2269987b",
+      "bytes": 102589,
+      "dimensions": [
+        720,
+        480
+      ],
+      "capture_source_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "ui_release_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "capture_helper_sha256": "2f072ffde5c90c15b76e17658b6a29210b485c1949ac82e41faba120c9b5fee6"
+    },
+    {
+      "path": "previews/current/light/sound-bluetooth.png",
+      "sha256": "9f664cbff8e57fd734a679ff69362e2aaf0505c30610aaa104c0d8b1759331a8",
+      "bytes": 91542,
+      "dimensions": [
+        720,
+        480
+      ],
+      "capture_source_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "ui_release_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "capture_helper_sha256": "2f072ffde5c90c15b76e17658b6a29210b485c1949ac82e41faba120c9b5fee6"
+    },
+    {
+      "path": "previews/current/light/bluetooth-pairing.png",
+      "sha256": "9992f9ba18a3998088a1754db22015dece73a61e6b26493e84c8b2180a72b219",
+      "bytes": 84347,
+      "dimensions": [
+        720,
+        480
+      ],
+      "capture_source_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "ui_release_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "capture_helper_sha256": "2f072ffde5c90c15b76e17658b6a29210b485c1949ac82e41faba120c9b5fee6"
     }
   ],
   "base_capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
@@ -494,5 +542,23 @@
     "screenshots-full",
     "screenshots-zoom",
     "screenshots-select"
+  ],
+  "additional_captures": [
+    {
+      "capture_source_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "ui_release_commit": "f70bb6a7ab4f297cbf7d576cc3c9f27d83f622d9",
+      "capture_helper": "previews/bluetooth_guide_review.rs",
+      "capture_helper_sha256": "2f072ffde5c90c15b76e17658b6a29210b485c1949ac82e41faba120c9b5fee6",
+      "rendering": "Production Frontend, Bluetooth Manager and native desktop GL compositor; compiled with --no-default-features --features device. Deterministic BaseOS helper responses advertise Bluetooth support and supply generic example headphones. No app behavior changes; not physical radio/hardware testing.",
+      "encoding": "Lossless PNG optimization with decoded RGBA pixels verified unchanged.",
+      "command": "cargo build --locked -p slot --no-default-features --features device --example bluetooth_guide_review; target/debug/examples/bluetooth_guide_review OUTPUT",
+      "assertions": [
+        "Bluetooth hardware probe succeeds through the helper fixture",
+        "Sound contains Volume, Bluetooth On, Internal speaker, saved Headphones, Pair audio device, disconnect volume, pause on disconnect",
+        "Pair audio device entered through production input",
+        "Scan initiated through production input and completes",
+        "Discovered Wireless headphones selected and A Connect hint visible"
+      ]
+    }
   ]
 }

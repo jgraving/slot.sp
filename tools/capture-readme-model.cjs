@@ -57,12 +57,12 @@ const server = http.createServer((req, res) => {
       await document.fonts.ready;
       const style = getComputedStyle(element), rect = element.getBoundingClientRect();
       return { text:element.textContent, family:style.fontFamily, weight:style.fontWeight,
-        variation_settings:style.fontVariationSettings, letter_spacing_em:parseFloat(style.letterSpacing)/parseFloat(style.fontSize),
+        variation_settings:style.fontVariationSettings, optical_sizing:style.fontOpticalSizing, letter_spacing_em:parseFloat(style.letterSpacing)/parseFloat(style.fontSize),
         loaded:document.fonts.check('720 136px "Google Sans Flex"', 'slot.sp'),
         bounds:{x:rect.x,y:rect.y,right:rect.right,bottom:rect.bottom} };
     });
     if (!wordmark.loaded || !wordmark.family.includes('Google Sans Flex') || wordmark.weight !== '720' ||
-        wordmark.variation_settings !== '"ROND" 60' || Math.abs(wordmark.letter_spacing_em + .05) > .0001)
+        wordmark.variation_settings !== '"ROND" 60, "opsz" 25' || wordmark.optical_sizing !== 'none' || Math.abs(wordmark.letter_spacing_em + .05) > .0001)
       throw Error('README wordmark must use the website mast-mark typography: ' + JSON.stringify(wordmark));
     if (wordmark.bounds.x < 8 || wordmark.bounds.right > 470 || wordmark.bounds.y < 8 || wordmark.bounds.bottom > 712)
       throw Error('README wordmark clipped: ' + JSON.stringify(wordmark.bounds));

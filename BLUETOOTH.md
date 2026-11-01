@@ -19,7 +19,7 @@ Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** du
 
 The status and volume icons show the current audio output. A manual output choice stays selected until another USB attachment or restart.
 
-![Sound settings in the current interface; available outputs depend on the hardware](previews/current/light/sound.png)
+![Sound showing Bluetooth enabled, a saved headphone device, and Pair audio device](previews/current/light/sound-bluetooth.png)
 
 ## Pair Bluetooth headphones
 
@@ -28,6 +28,8 @@ The status and volume icons show the current audio output. A manual output choic
 3. Choose **Scan for devices**.
 4. Select your headphones with the D-pad and press <kbd>A</kbd>.
 5. Once connected, adjust the volume with the handheld's volume buttons.
+
+![Bluetooth scan results, with headphones selected for connection](previews/current/light/bluetooth-pairing.png)
 
 Saved headphones appear by name on the main Sound screen. Select a device and press <kbd>A</kbd> to reconnect. The selected Bluetooth device reconnects automatically at startup and after a connection is lost while the handheld is awake.
 
