@@ -1,6 +1,6 @@
 <header class="md-header" data-md-component="header">
-  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
-    <label class="md-header__button md-icon" for="__drawer" aria-label="{{ lang.t('nav') }}">
+  <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}" data-guide-topics="{{ 'true' if page and ((page.url or '')[:9] == 'features/' or (page.url or '')[:6] == 'guide/') else 'false' }}">
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Guide topics">
       {% set icon = config.theme.icon.menu or "material/menu" %}
       {% include ".icons/" ~ icon ~ ".svg" %}
     </label>
