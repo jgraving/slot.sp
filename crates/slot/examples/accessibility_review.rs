@@ -25,6 +25,17 @@ fn main(){
     // round trip must restore the original cached glyph pixels exactly.
     let pixels=[246,244,239,255];let ui=g.create_ui_texture(1,1,&pixels);let art=g.create_texture(1,1,&pixels);
     for light in [true,false,true,false] {g.set_light_ui(light);g.begin_frame();g.draw_list(&[Draw::Tex{x:10.0,y:10.0,w:20.0,h:20.0,tex:ui,alpha:1.0},Draw::Tex{x:40.0,y:10.0,w:20.0,h:20.0,tex:art,alpha:1.0}]);let frame=g.read_frame();let at=|x:u32|((15*width+x)*4)as usize;assert_eq!(&frame[at(45)..at(45)+3],&pixels[..3]);assert_eq!(&frame[at(15)..at(15)+3],if light{&slot_gfx::ui_palette::INK[..]}else{&pixels[..3]});}
+    // Background textures have their own palette; ordinary art remains exact.
+    let original=[15,40,85,255,80,20,100,128];let bg=g.create_background_texture(2,1,&original);
+    for light in [true,false] {g.set_light_ui(light);g.begin_frame();g.draw_list(&[Draw::Tex{x:0.0,y:0.0,w:2.0,h:1.0,tex:bg,alpha:1.0}]);let frame=g.read_frame();let expected=if light {slot_gfx::ui_palette::light_background(&original)}else{original.to_vec()};assert_eq!(&frame[..3],&expected[..3]);}
+    // Exercise both shader palettes and actual motion on both graphics APIs.
+    let mut first=vec![];
+    for (name,light,phase) in [("dark-flow-field",false,0.0),("light-flow-field",true,0.0),("light-flow-field-moved",true,1.0)] {
+        g.set_light_ui(light);g.begin_frame();g.draw_list(&[Draw::Lava{w:width as f32,h:480.0,phase}]);let frame=g.read_frame();
+        if light {assert!(frame.chunks_exact(4).all(|p|p[..3].iter().all(|&c|c>=200)),"light flow became too dark");if first.is_empty(){first=frame.clone();}else{assert!(first.iter().zip(&frame).filter(|(a,b)|a.abs_diff(**b)>3).count()>width as usize*20,"flow stopped moving");}}
+        let mut e=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&frame).unwrap();
+    }
+    g.set_light_ui(false);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut g);f.render(&mut g,(width,480));let mut a=Review{f,g,now:0,dir,width};
     a.save("dark-carousel");a.tap(Btn::Menu);a.save("dark-grid");a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Theme);a.save("dark-theme-row");a.tap(Btn::Right);assert!(a.f.app().light());a.save("light-theme-row");
     a.nav(QuickRow::UiVibration);a.save("light-vibration");a.tap(Btn::Left);a.nav(QuickRow::ChargingVibration);a.tap(Btn::Left);a.save("light-vibration-off");
@@ -37,5 +48,16 @@ fn main(){
     // Fractional positions exposed the cropped off-state thumb. Check the
     // actual GLES/GL raster at both saved endpoints and a transition midpoint.
     for (index,t) in [0.0,0.5,1.0].into_iter().enumerate(){let mut draws=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.09,0.115,0.125,1.0]}];slot_ui::draw_switch(&mut draws,100.0,100.0,t,1.0);a.g.begin_frame();a.g.draw_list(&draws);let pixels=a.g.read_frame();let mut ys=vec![];for y in 95..140 {for x in 95..170 {let p=&pixels[((y*width+x)*4)as usize..][..4];if p[0]>230&&p[1]>230&&p[2]>230{ys.push(y);}}}assert!(!ys.is_empty());let lo=*ys.iter().min().unwrap();let hi=*ys.iter().max().unwrap();assert!((lo+hi)as i32>=228&&(lo+hi)as i32<=230,"switch thumb is not vertically centered");for y in 100..130 {let count=|row:u32|(95..170).filter(|x|{let p=&pixels[((row*width+x)*4)as usize..][..3];p.iter().all(|&v|v>230)}).count();assert!(count(y).abs_diff(count(229-y))<=2,"asymmetric switch thumb at row {y}");}a.capture(&format!("switch-{index}"));}
+    // Production shelf views for every background choice, including custom and
+    // random image paths. The fixture is a colourful image, not UI artwork.
+    for (name,wallpaper) in [("flowing",slot_store::WallpaperPick::Default),("static",slot_store::WallpaperPick::Static),("plain",slot_store::WallpaperPick::None),("custom",slot_store::WallpaperPick::File("review.png".into())),("random",slot_store::WallpaperPick::Random)] {
+        let root=a.dir.join(format!("card-{name}"));slot::root::ensure(&root);std::fs::create_dir_all(root.join("Wallpapers")).unwrap();
+        let mut image=vec![];for y in 0..32 {for x in 0..32 {image.extend_from_slice(&[(x*8)as u8,(y*8)as u8,((31-x)*8)as u8,255]);}}
+        let mut e=png::Encoder::new(std::fs::File::create(root.join("Wallpapers/review.png")).unwrap(),32,32);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&image).unwrap();
+        slot_store::write_slot_state(&root,&slot_store::SlotState{clock_set:true,appearance:slot_store::Appearance::Light,wallpaper,..Default::default()}).unwrap();
+        for name in ["Aurora","Borealis"]{std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")),[0;256]).unwrap();}
+        let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root)));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.now=0;a.save(&format!("light-background-{name}"));
+    }
+
 }
 #[cfg(not(target_os="linux"))] fn main(){}

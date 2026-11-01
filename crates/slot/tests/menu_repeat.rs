@@ -67,6 +67,12 @@ fn a_held_left_or_right_changes_a_menu_value_once() {
     a.apply_at(Action::GbaUp(Btn::Down), T - 690);
     a.apply_at(Action::GbaDown(Btn::Down), T - 650);
     a.apply_at(Action::GbaUp(Btn::Down), T - 640);
+    // Theme is visible now; find the value row rather than assuming its offset.
+    for i in 0..8 {
+        if a.quick_menu()==Some(QuickRow::Recents) {break;}
+        a.apply_at(Action::GbaDown(Btn::Down), T-600+i*30);
+        a.apply_at(Action::GbaUp(Btn::Down), T-590+i*30);
+    }
     assert_eq!(a.quick_menu(), Some(QuickRow::Recents));
     let before=a.quick_value(QuickRow::Recents);
     a.apply_at(Action::GbaDown(Btn::Right), T);

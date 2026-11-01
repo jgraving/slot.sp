@@ -403,10 +403,10 @@ impl Frontend {
         let Some(rgba) = slot_ui::default_background() else {
             return;
         };
-        let id = compositor.create_texture(OUT_W, OUT_H, rgba);
+        let id = compositor.create_background_texture(OUT_W, OUT_H, rgba);
         self.session.app_mut().set_ground(id);
         if let Some(rgba) = slot_ui::blur_background() {
-            let id = compositor.create_texture(OUT_W, OUT_H, rgba);
+            let id = compositor.create_background_texture(OUT_W, OUT_H, rgba);
             self.session.app_mut().set_blur(id);
         }
     }
@@ -1563,11 +1563,11 @@ fn sync_wallpaper(app: &mut App, compositor: &mut Compositor, state: &mut Wallpa
             {
                 let id = match state.tex {
                     Some(id) => {
-                        compositor.update_texture(id, w, h, &rgba);
+                        compositor.update_background_texture(id, w, h, &rgba);
                         id
                     }
                     None => {
-                        let id = compositor.create_texture(w, h, &rgba);
+                        let id = compositor.create_background_texture(w, h, &rgba);
                         state.tex = Some(id);
                         id
                     }

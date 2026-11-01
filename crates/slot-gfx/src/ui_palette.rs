@@ -22,7 +22,7 @@ pub fn light_texture(rgba:&[u8])->Vec<u8> {
     let badge=opaque*3>count*2&&dark*5>opaque*2;
     for p in out.chunks_exact_mut(4) {
         if p[3]==0 {continue;}
-        // Keycap pills and white switch thumbs retain their material colour.
+        // Preserve antialiasing while reversing keycap fill and lettering.
         let rgb=[p[0],p[1],p[2]];
         if badge && rgb.iter().max().unwrap()-rgb.iter().min().unwrap()<35 {
             let value=rgb.iter().map(|&c|c as f32).sum::<f32>()/3.0;
@@ -32,7 +32,7 @@ pub fn light_texture(rgba:&[u8])->Vec<u8> {
         }
         if (i16::from(rgb[1])-i16::from(rgb[0])-3).abs()<=1 && (i16::from(rgb[2])-i16::from(rgb[0])-8).abs()<=1 {
             let t=((rgb[0]as f32-34.0)/190.0).clamp(0.0,1.0);
-            for i in 0..3 {p[i]=(INK[i]as f32+([196,209,218][i]as f32-INK[i]as f32)*t).round()as u8;}
+            for i in 0..3 {p[i]=([246,249,248][i]as f32+(INK[i]as f32-[246,249,248][i]as f32)*t).round()as u8;}
             continue;
         }
         if rgb.into_iter().zip([242,247,245]).all(|(a,b)|a.abs_diff(b)<=1) {continue;}
@@ -47,16 +47,37 @@ pub fn light_texture(rgba:&[u8])->Vec<u8> {
     }
     out
 }
+/// Lift wallpaper tones into a pale range, keeping the original hue, detail and
+/// alpha. Normalising to the source peak also gives the dark built-in static
+/// gradient its full light palette. Only background textures use this path.
+pub fn light_background(rgba: &[u8]) -> Vec<u8> {
+    let peak = rgba.chunks_exact(4).filter(|p| p[3] != 0)
+        .flat_map(|p| p[..3].iter().copied()).max().unwrap_or(1).max(1) as f32;
+    let mut out = rgba.to_vec();
+    for p in out.chunks_exact_mut(4) {
+        if p[3] == 0 { continue; }
+        for i in 0..3 {
+            p[i] = ([245,249,247][i] as f32 - (peak-p[i] as f32) * (40.0/peak)).round() as u8;
+        }
+    }
+    out
+}
 #[cfg(test)]
 mod tests {
     use super::*;
     fn luminance(rgb:[u8;3])->f32 {rgb.into_iter().zip([0.2126,0.7152,0.0722]).map(|(v,w)|{let x=v as f32/255.0;w*if x<=0.04045{x/12.92}else{((x+0.055)/1.055).powf(2.4)}}).sum()}
-    #[test] fn readable_text_preserves_alpha_and_keycap_labels(){let src=[246,244,239,128,224,227,232,255,34,37,42,255,242,247,245,255];let p=light_texture(&src);assert_eq!(&p[..4],&[28,42,49,128]);assert_eq!(&p[4..8],&[196,209,218,255]);assert_eq!(&p[8..12],&[28,42,49,255]);assert_eq!(&p[12..],&src[12..]);for ink in [INK,DIM] {assert!((luminance([245,249,247])+0.05)/(luminance(ink)+0.05)>4.5);}}
+    #[test] fn readable_text_preserves_alpha_and_keycap_labels(){let src=[246,244,239,128,224,227,232,255,34,37,42,255,242,247,245,255];let p=light_texture(&src);assert_eq!(&p[..4],&[28,42,49,128]);assert_eq!(&p[4..8],&[28,42,49,255]);assert_eq!(&p[8..12],&[246,249,248,255]);assert_eq!(&p[12..],&src[12..]);for ink in [INK,DIM] {assert!((luminance([245,249,247])+0.05)/(luminance(ink)+0.05)>4.5);}}
     #[test] fn badge_text_edges_stay_smooth_through_the_keycap_colour_range(){
         let mut rgba=vec![];for _ in 0..250 {rgba.extend_from_slice(&[26,31,36,255]);}
         for n in 0..=100 {for (bg,ink) in [26,31,36].into_iter().zip([246,244,239]) {rgba.push(((bg* (100-n)+ink*n)/100)as u8);}rgba.push(255);}
         let mapped=light_texture(&rgba);let mut previous=255;
         for p in mapped[250*4..].chunks_exact(4){assert!(p[0]<=previous,"antialiasing jumped at a mixed text pixel");previous=p[0];}
+    }
+    #[test] fn wallpaper_lift_keeps_hue_order_alpha_and_readable_contrast(){
+        let src=[15,40,85,255,80,20,100,128,0,0,0,0];let mapped=light_background(&src);
+        assert!(mapped[0]<mapped[1]&&mapped[1]<mapped[2]);assert!(mapped[4]>mapped[5]&&mapped[5]<mapped[6]);
+        assert_eq!(mapped[3],255);assert_eq!(mapped[7],128);assert_eq!(&mapped[8..],&src[8..]);
+        for p in mapped[..8].chunks_exact(4){assert!((luminance([p[0],p[1],p[2]])+0.05)/(luminance(INK)+0.05)>7.0);}
     }
     #[test] fn coloured_badges_are_preserved(){assert_eq!(light_texture(&[249,186,45,255,120,230,150,255]),[249,186,45,255,120,230,150,255]);}
 }
