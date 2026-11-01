@@ -4,7 +4,7 @@
 
 Start with [installation](GETTING-STARTED.md), then use the [button reference](CONTROLS.md) while you play.
 
-![The game carousel in slot.sp](previews/guide/carousel.png)
+![The game carousel in slot.sp](previews/current/light/carousel.png)
 
 ## Find a feature
 
@@ -28,15 +28,19 @@ Start with [installation](GETTING-STARTED.md), then use the [button reference](C
 1. Use <kbd>Left</kbd> and <kbd>Right</kbd> to choose a game, then tap <kbd>A</kbd> to play.
 2. Tap <kbd>MENU</kbd> during play to open the game menu.
 3. Back on the carousel, press <kbd>Y</kbd> to add a game to Favorites.
-4. Open **General** to choose your colors and background.
+4. Open **Menu → General** to choose Light or Dark, an SP color, and your background.
 5. Try <kbd>SELECT</kbd> + <kbd>X</kbd> to switch to the night display preset.
 
 ## Reading the controls
 
-A **tap** means press and release. A **hold** means keep the button pressed. For a combination such as <kbd>SELECT</kbd> + <kbd>X</kbd>, hold the first button and press the second.
+A **tap** means press and release. A **hold** means keep the button pressed. For a combination such as <kbd>SELECT</kbd> + <kbd>X</kbd>, press the buttons together, then release. Hold only where the instructions say to.
 
 The guides show the default controls. If you remap them, the on-screen button hints follow your choices. Kid mode has its own [short menu](KID-MODE.md#the-kid-menu).
 
 ## Reference
 
-[Settings](https://jakegraving.com/slot.sp/guide/settings/) · [Card folders](https://jakegraving.com/slot.sp/guide/storage/) · [Custom artwork & BIOS](https://jakegraving.com/slot.sp/guide/customizing/) · [Troubleshooting](https://jakegraving.com/slot.sp/guide/troubleshooting/)
+[Settings](SETTINGS.md) · [Card folders](https://jakegraving.com/slot.sp/guide/storage/) · [Custom artwork & BIOS](https://jakegraving.com/slot.sp/guide/customizing/) · [Troubleshooting](https://jakegraving.com/slot.sp/guide/troubleshooting/)
+
+## About the examples
+
+Images and clips show the current interface with sample cartridges. Gameplay and gallery pictures use software test patterns; games are not included with slot.sp. The screenshot-gallery, save-state and link examples are shown in Dark mode.

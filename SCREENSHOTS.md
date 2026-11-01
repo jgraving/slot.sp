@@ -8,11 +8,13 @@
 
 During a game, press <kbd>MENU</kbd> + <kbd>X</kbd> together, then release both buttons. Avoid holding <kbd>MENU</kbd> on its own: that exits the game.
 
-To change this combination, open **Menu → Controls → Shortcuts → Screenshot** from the carousel and record a new binding.
+To change this combination, open **Menu → Device controls → Shortcuts → Screenshot** from the carousel and record a new binding.
 
 ## Browse & zoom
 
-Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures appear as thumbnails, newest first.
+Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. The Screenshots choice appears once a picture exists. Pictures appear as thumbnails, newest first.
+
+![The screenshot gallery in Dark mode, with example captures](previews/current/dark/screenshots.png)
 
 | View | Button | Action |
 | :--- | :--- | :--- |
@@ -23,7 +25,7 @@ Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures
 | Zoomed picture | D-pad | Pan around the picture. |
 | Zoomed picture | <kbd>B</kbd> | Zoom out. |
 | Open picture | <kbd>B</kbd> | Return to thumbnails. |
-| Thumbnails | <kbd>B</kbd> | Return to the game. |
+| Thumbnails | <kbd>B</kbd> | Return to the pause menu, with Screenshots selected. |
 
 ## Select & delete
 

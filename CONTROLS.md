@@ -71,11 +71,11 @@ Follow the on-screen hints for a confirmation or a screen with different control
 
 ## On-device reference
 
-Open **Menu → Device controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
+Open **Menu → Device controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Device controls → Buttons & shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
 
-![The on-device reference showing the saved shortcut bindings](previews/guide/buttons-shortcuts.png)
+![The on-device reference showing the saved shortcut bindings](previews/current/light/buttons-shortcuts.png)
 
-Kid mode has its own **Buttons & shortcuts** row in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
+Kid mode has its own **Buttons & shortcuts** tile in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
 
 ## Change a button
 
@@ -101,6 +101,4 @@ Shortcuts and carousel bindings accept single buttons or two-button combinations
 
 [Playing & saving](PLAYING.md) · [Day & night](NIGHT-DISPLAY.md) · [Kid mode](KID-MODE.md)
 
-## Gentle vibration
-
-**General → UI vibration** adds a tiny, low-strength tap when you move between menu items or change a setting. **Charging vibration** gives a short double tap when you plug in power. Either can be switched off independently of game rumble. These options appear only when the handheld has a supported motor.
+Game rumble is controlled separately in **Gameplay → Rumble**, on supported devices.

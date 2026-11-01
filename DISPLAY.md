@@ -4,7 +4,7 @@
 
 [Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
 
-![General settings with SP color, theme, wallpaper and animation options](previews/guide/appearance.png)
+![General settings with Light UI theme selected](previews/current/light/general.png)
 
 ## Type
 
@@ -24,9 +24,9 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses pale cards and dark text across settings, status, prompts and feedback.
+The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses warm neutral backgrounds, white floating cards and dark green controls. Dark uses deep tones and soft teal accents. Clock, status and button hints adapt to custom backgrounds. During play, settings float over the game picture.
 
-![The four SP colors](previews/rgsp-shell-finishes.png)
+[Preview all four SP colors on the homepage](https://jakegraving.com/slot.sp/#intro-title).
 
 ## Backgrounds & animation
 
@@ -35,14 +35,16 @@ Open **Menu → General**:
 | Setting | What to choose |
 | :--- | :--- |
 | **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
-| **Wallpaper Tint** | Darken a custom or random background so the games stand out. |
+| **Wallpaper Tint** | Darken a custom/random background in Dark mode, or add a light veil in Light mode. |
 | **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
+| **Carousel motion** | Wheel moves neighboring cartridges along a shallow arc; Classic keeps a horizontal arrangement. Wheel is the default. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
+| **Clock format** | Use 12-hour or 24-hour time in the status bar, time editors, schedules and time labels. The default is 24-hour. |
 | **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
 
-**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup. Light UI uses pale mint, sky and lavender for the flowing gradient, a matching light static gradient, and a plain light surface with wallpaper off. Custom and random wallpapers receive a soft light palette too; Wallpaper Tint adds a light veil instead of darkening them. Returning to Dark restores their original colours.
+**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup. Light UI uses pale mint, sky and lavender for the flowing gradient, a matching light static gradient, and a plain light surface with wallpaper off. Custom and random wallpapers receive a soft light palette too; Wallpaper Tint adds a light veil instead of darkening them. The tint option appears for custom and random wallpapers. Returning to Dark restores their original colours.
 
-![The slot.sp startup animation](previews/boot-brand.gif)
+![Letters gather into a small blob and drop behind the slot at startup](previews/current/light/boot.gif)
 
 ## The game picture
 

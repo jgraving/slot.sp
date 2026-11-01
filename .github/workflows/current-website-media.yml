@@ -1,0 +1,73 @@
+name: Capture current website media
+on:
+  push:
+    branches: [docs/website-ui-refresh]
+    paths:
+      - 'previews/site_refresh.rs'
+      - 'previews/collect_site_refresh.py'
+      - 'tools/capture-readme-model.cjs'
+      - 'site/overrides/home.html'
+      - 'site/docs/assets/slot.css'
+      - 'site/docs/assets/device.css'
+      - '.github/workflows/current-website-media.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      SLOT_SILENT: '1'
+      UI_RELEASE_REV: 4b3c6f2bdf387e74b3ffd67ff1f81630318c853e
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install native capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0 av==16.0.0
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Open the exact current UI release
+        run: |
+          git fetch origin "$UI_RELEASE_REV" --depth 1
+          git worktree add --detach /tmp/slot-ui-release "$UI_RELEASE_REV"
+          cp previews/egl_surface.rs /tmp/slot-ui-release/crates/slot/examples/egl_surface.rs
+          cp previews/site_refresh.rs /tmp/slot-ui-release/crates/slot/examples/site_refresh.rs
+      - name: Build and check the production frontend recorder
+        working-directory: /tmp/slot-ui-release
+        run: |
+          cargo build --locked -p slot --no-default-features --example site_refresh
+          cargo test --locked -p slot --no-default-features --test ui_accessibility --test kid_controls --test parent_code --test button_code --test in_game_menu --test screenshot --test sound_menu_style -- --test-threads=1
+          cargo test --locked -p slot-ui --test battery --test settings_notice --test toggle --test legend
+      - name: Capture both themes and all four finishes
+        run: |
+          /tmp/slot-ui-release/target/debug/examples/site_refresh /tmp/slot-current-media
+          python3 previews/collect_site_refresh.py /tmp/slot-current-media
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Refresh the illustrated README animation
+        env:
+          NODE_PATH: ${{ runner.temp }}/readme-model/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/readme-model" playwright@1.62.1
+          node tools/capture-readme-model.cjs /tmp/slot-current-media /tmp/slot-current-media/publish/previews/homepage/hero-light-platinum.mp4
+          mkdir -p /tmp/slot-current-media/publish/previews/readme-model
+          python3 tools/opaque_preview_gif.py /tmp/slot-current-media/model-frames /tmp/slot-current-media/publish/previews/readme-model/hero.gif --width 820 --frame-ms 80
+          python3 previews/collect_readme_model.py /tmp/slot-current-media
+      - name: Prepare media blobs for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/slot-current-media --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          retention-days: 1
+          name: current-website-media
+          path: |
+            /tmp/slot-current-media/publish/**
+            /tmp/slot-current-media/media-entries.json
+          if-no-files-found: error

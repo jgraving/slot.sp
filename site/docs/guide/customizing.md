@@ -47,7 +47,7 @@ Random picks one at boot.
 
 Other sizes are scaled to fill the screen and cropped from the center. 
 
-If your wallpaper is too bright, the Wallpaper Tint setting can darken it a bit to make everything easier to read.
+If your wallpaper is too bright, the Wallpaper Tint setting can adjust its contrast a bit to make everything easier to read.
 
 ## Bezels
 
