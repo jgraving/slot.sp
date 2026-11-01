@@ -177,3 +177,27 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
  .md-header__inner[data-guide-topics=false]>label[for=__drawer]{display:none}
  .md-header__inner[data-guide-topics=false]>.mast-mark{grid-column:1}
 }
+
+/* The 3D preview occupies the same homepage column as the original handheld. */
+.sp-preview .sp-stage{width:100%;max-width:470px;height:600px;aspect-ratio:auto;margin:0 auto 12px}
+.sp-preview .sp-stage>.device{width:var(--dw);margin:auto}
+.sp-model-canvas{position:absolute;z-index:2;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.sp-stage.is-dragging .sp-model-canvas{cursor:grabbing}
+.sp-stage.model-ready>.device{opacity:0;visibility:hidden;pointer-events:none}
+.sp-stage.model-ready>.hardware-button{z-index:3;width:32px;height:32px;transform:none}
+.sp-stage.model-ready>.hardware-button[hidden]{display:none}
+.sp-stage:focus-visible{outline:1px solid var(--teal);outline-offset:0;border-radius:32px}
+.model-fold{display:none;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border:1px solid var(--rule);border-radius:50%;background:transparent;color:var(--muted);cursor:pointer}
+.model-fold:hover{color:var(--ink);background:var(--selected)}
+.sp-preview:has(.model-ready) .model-fold{display:flex}
+.sp-preview .preview-controls{gap:18px}
+.md-typeset .model-hint{display:none;max-width:none;margin:12px 0 0;text-align:center;color:var(--muted);font-size:13px;font-style:normal;letter-spacing:.01em}
+.sp-preview:has(.model-ready) .model-hint{display:block}
+@media(max-width:960px){.sp-preview .sp-stage{height:560px;max-width:450px}}
+@media(max-width:540px){.sp-preview .sp-stage{height:440px;max-width:340px}.sp-stage.model-ready>.hardware-button{width:28px;height:28px}.sp-preview .preview-controls{gap:16px 14px}.sp-preview .preview-toggle{min-width:150px;padding-inline:14px}.finish-picker{gap:12px}}
+@media(prefers-reduced-motion:reduce){.sp-model-canvas{scroll-behavior:auto}}
+
+/* Keep the texture source painted for browser media scheduling, beneath WebGL. */
+.sp-stage.model-ready>.hero-screen{position:absolute;left:50%;top:50%;width:1px;height:1px;opacity:.001;visibility:visible;z-index:0;pointer-events:none}
+
+.preview-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex:none}
