@@ -159,3 +159,6 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
  .mast-tabs{grid-row:2;grid-column:1/-1;justify-self:center;justify-content:center;flex-wrap:wrap;max-width:100%;gap:2px}
 }
 @media(max-width:540px){.mast-tabs .md-tabs__link{font-size:14px;min-height:44px;padding:10px 8px}}
+
+/* The guide drawer contains topic links; global destinations stay in the header. */
+.md-sidebar--primary .md-nav--primary>.md-nav__list>.md-nav__item:not(.md-nav__item--active){display:none}

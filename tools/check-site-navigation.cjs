@@ -31,6 +31,7 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
           const links=[...header.querySelectorAll('.mast-tabs a,.mast-links a')];
           return {headerHeight:box.height,overflow:document.documentElement.scrollWidth>innerWidth+1,
             links:links.map(link => {const r=link.getBoundingClientRect();return {text:link.textContent.trim(),href:link.href,active:link.matches('[aria-current="page"]') || !!link.closest('.md-tabs__item--active'),fits:r.left>=0 && r.right<=innerWidth+1 && r.top>=box.top && r.bottom<=box.bottom+1,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===link}}),
+            overflowItems:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width && (r.right>innerWidth+1 || r.left< -1)}).slice(0,12).map(el=>({tag:el.tagName,class:el.className,rect:el.getBoundingClientRect().toJSON()})),
             palette:getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),
             columns:document.querySelector('.feature-list') ? getComputedStyle(document.querySelector('.feature-list')).gridTemplateColumns.split(/\s+/).length : null,
             headerMeasured:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-height'))};
@@ -38,7 +39,8 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         assert.deepEqual(info.links.map(x=>x.text),names,`${width} ${route}: destinations`);
         assert.deepEqual(info.links.filter(x=>x.active).map(x=>x.text),active?[active]:[],`${width} ${route}: active destination`);
         assert(info.links.every(x=>x.fits && x.hit),`${width} ${route}: header link covered or out of bounds: ${JSON.stringify(info)}`);
-        assert(!info.overflow,`${width} ${route}: horizontal overflow`);
+        if(info.overflow) await page.screenshot({path:path.join(output,`${width}-overflow.png`)});
+        assert(!info.overflow,`${width} ${route}: horizontal overflow: ${JSON.stringify(info.overflowItems)}`);
         assert.equal(info.palette,'#0e1423');
         assert(Math.abs(info.headerMeasured-info.headerHeight)<1,`${width} ${route}: header measurement`);
         if (info.columns) assert.equal(info.columns,width>960?3:width>540?2:1,`${width}: feature columns`);

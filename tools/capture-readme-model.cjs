@@ -27,7 +27,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 <style>html,body{margin:0;width:1000px;height:720px;overflow:hidden;background:#e8e3d8}
 *,*::before,*::after{animation:none!important;transition:none!important;box-sizing:border-box}
 .readme-brand{position:absolute;left:58px;top:50%;transform:translateY(-50%);width:400px}
-.readme-brand .readme-wordmark{display:block;width:max-content;font-size:136px;line-height:1.02;color:#1c2a31}
+.readme-brand .readme-wordmark{display:block;width:max-content;font-size:136px;line-height:1.02;color:#1c2a31;font-optical-sizing:none;font-variation-settings:"ROND" 60,"opsz" 25}
 .readme-brand p{margin:18px 0 0;font:650 34px/1.3 "Google Sans Flex",sans-serif;font-variation-settings:"ROND" 55;letter-spacing:-.045em;color:#1c2a31}
 .readme-brand p span{color:#0b6e61}
 .readme-model{position:absolute;left:520px;top:0;width:480px;height:720px}
