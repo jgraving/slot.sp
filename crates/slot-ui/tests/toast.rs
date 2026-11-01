@@ -153,13 +153,19 @@ fn a_toast_is_centred() {
 }
 
 #[test]
-fn a_toast_carries_its_own_halo() {
-    let f = toast_face(Toast::StateSaved);
-    let dark = f
-        .rgba
-        .chunks(4)
-        .any(|p| p[3] > 0 && p[0] < 0x40 && p[1] < 0x40 && p[2] < 0x40);
-    assert!(dark, "there is nothing dark behind the type");
+fn every_notification_keeps_smooth_alpha_in_both_palettes_without_an_outline() {
+    for toast in Toast::all() {
+        let f=toast_face(toast);
+        let light=slot_gfx::ui_palette::light_texture(&f.rgba);
+        assert!(f.rgba.chunks_exact(4).any(|p|p[3]>0&&p[3]<255),"{toast:?} lost antialiasing");
+        for (dark,light) in f.rgba.chunks_exact(4).zip(light.chunks_exact(4)) {
+            assert_eq!(dark[3],light[3]);
+            if dark[3]>0 {
+                if dark[..3]==slot_ui::HUD_INK {assert_eq!(&light[..3],&slot_gfx::ui_palette::INK);}
+                else {assert_eq!(&dark[..3],&[255,184,46],"{toast:?} baked an outline into its edges");assert_eq!(dark,light);}
+            }
+        }
+    }
 }
 
 #[test]

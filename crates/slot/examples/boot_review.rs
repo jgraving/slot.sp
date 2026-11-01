@@ -17,10 +17,10 @@ fn main(){
     let motion=BootMotion::upload(&mut g).unwrap();
     let firmware=slot::bootlogo::decode(include_bytes!("../../../card/System/bootlogo.bmp")).unwrap();
     let firmware=slot::bootlogo::compose(&firmware,(width as usize,480)).unwrap();
-    for frame in 0..=66 {
+    for frame in 0..=(BOOT_MS*60).div_ceil(1000)+2 {
         let ms=frame*1000/60;f.compose(&mut g);let normal=g.read_frame();
         f.compose_boot_frame(&mut g,&motion,ms);let pixels=g.read_frame();
-        if ms==0 {for (rgba,rgb) in pixels.chunks_exact(4).zip(&firmware.rgb) {assert_eq!(&rgba[..3],rgb,"boot handoff must open on the exact firmware logo");}}
+        if ms<=33 {for (rgba,rgb) in pixels.chunks_exact(4).zip(&firmware.rgb) {assert_eq!(&rgba[..3],rgb,"boot handoff must open on the exact firmware logo");}}
         if (760..BOOT_MS).contains(&ms) {
             let bay=((480-slot_ui::MOUTH_H as u32)*width*4)as usize;
             assert!(pixels[bay..]==normal[bay..],"the boot mark painted over the hardware bay at {ms} ms");
@@ -29,5 +29,6 @@ fn main(){
         let mut e=png::Encoder::new(std::fs::File::create(dir.join(format!("boot-{frame:03}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&pixels).unwrap();
     }
     motion.release(&mut g);
+    std::fs::write(dir.join("review-complete.txt"),b"Complete native boot review\n").unwrap();
 }
 #[cfg(not(target_os="linux"))] fn main(){}
