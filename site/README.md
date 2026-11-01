@@ -46,7 +46,7 @@ The **Capture current website media** workflow on `docs/website-ui-refresh` runs
 
 `previews/current/provenance.json` records the capture source, UI release, rendering method, sample data, byte sizes and SHA-256 hashes. `previews/homepage/provenance.json` tracks the eight hero variants. The `current-website-media` artifact contains media and prepared Git blob entries for review; capture itself never creates a commit or moves a branch.
 
-The homepage's Light/Dark picker switches both the site palette and the native previews. The header theme control is available throughout the guides; the choice stays in this browser. Four SP finishes retain the illustrated handheld, with synchronized native clips and a matching reduced-motion poster. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
+The homepage retains its established dark styling, concise feature summary and illustrated handheld. Its four SP finishes use current dark-theme native clips and a matching reduced-motion poster. Updated screenshots and controlled animations illustrate the guide pages. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
 
 The README uses the same Platinum light-theme clip inside the website's illustrated SP. `tools/capture-readme-model.cjs` and `previews/collect_readme_model.py` preserve a matching poster and record provenance. The prior capture scripts remain available for specialist asset work; the website publishes only the current reviewed manifest.
 
@@ -56,4 +56,4 @@ The README uses the same Platinum light-theme clip inside the website's illustra
 - Use the actual interface beside the steps it explains. Give clips play controls and keep them quiet until requested.
 - Name the feature and say what it does. Avoid slogans, repeated download sections and lists of vague benefits.
 - Keep the SP illustration and recognizable feature icons. Use the same symbols in the homepage and guide navigation so topics are easy to distinguish. Favor readable labels and space over extra small captions.
-- Use the UI’s warm light and deep dark palettes, rounded floating surfaces and green/teal actions. Keep Google Sans Flex across the site and device UI, and preserve visible keyboard focus.
+- Preserve the established site colors, typography, layout and concise feature copy. Update OS screenshots, animations and guide content without redesigning the website or adding homepage screenshot sections.

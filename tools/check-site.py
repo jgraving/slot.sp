@@ -95,8 +95,10 @@ for theme in ['dark','light']:
         with Image.open(path) as image:assert image.size==(720,480),path
     for scene in ['boot','settings','parent-code','charging','carousel']:
         assert (ROOT/f'media/fork/current/{revision}/{theme}/{scene}.mp4').is_file(),scene
-assert 'site-theme-toggle' in home and 'data-theme-picture' in home
-assert 'data-ui-theme="light"' in home and 'data-ui-theme="dark"' in home
+assert 'site-theme-toggle' not in home and 'ui-theme-picker' not in home
+assert 'detail-pair' not in home and 'motion-section' not in home
+assert home.count('<video') == 1, 'Keep homepage media inside the illustrated SP preview'
+assert f'hero-dark-platinum.mp4' in home
 for video in (ROOT / 'media/fork').rglob('*.mp4'):
     with av.open(str(video)) as container:
         assert container.duration and container.duration > 0, video
