@@ -53,24 +53,15 @@ def main():
         content = '\n'.join(lines) + '\n'
         content = content.replace('<details>', '<details markdown>')
         content = re.sub(r'\]\(([^)#]*)(#[^)]*)?\)', link, content)
-        # GitHub shows the light poster/GIF; the website follows the visitor's
-        # selected theme with native, matching captures and controlled playback.
-        def themed_image(match):
-            label, stem = match.groups()
-            base = f'/slot.sp/media/fork/current/{current_revision}/'
-            import html
-            return (f'<picture data-theme-picture><source data-theme-source media="(prefers-color-scheme:dark)" '
-                    f'srcset="{base}dark/{stem}.png"><img src="{base}light/{stem}.png" '
-                    f'width="720" height="480" loading="lazy" decoding="async" alt="{html.escape(label,quote=True)}"></picture>')
-        def themed_video(match):
-            label, stem = match.groups()
-            base = f'/slot.sp/media/fork/current/{current_revision}/'
+        # Keep the site's established styling; captures show the current OS UI.
+        def video(match):
+            label, theme, stem = match.groups()
+            base = f'/slot.sp/media/fork/current/{current_revision}/{theme}/'
             import html
             return (f'<video controls muted playsinline loop preload="none" width="720" height="480" '
-                    f'data-theme-video data-media="{base}" data-scene="{stem}" poster="{base}light/{stem}.png" '
-                    f'aria-label="{html.escape(label,quote=True)}"><source src="{base}light/{stem}.mp4" type="video/mp4"></video>')
-        content = re.sub(r'!\[([^]]*)\]\(../media/fork/current/[^/]+/light/([^/)]+)\.png\)', themed_image, content)
-        content = re.sub(r'!\[([^]]*)\]\(../media/fork/current/[^/]+/light/([^/)]+)\.gif\)', themed_video, content)
+                    f'poster="{base}{stem}.png" aria-label="{html.escape(label,quote=True)}">'
+                    f'<source src="{base}{stem}.mp4" type="video/mp4"></video>')
+        content = re.sub(r'!\[([^]]*)\]\(../media/fork/current/[^/]+/(light|dark)/([^/)]+)\.gif\)', video, content)
         # Render GitHub callouts as native site admonitions.
         content = re.sub(r'^> \[!(TIP|NOTE|WARNING)\]\n((?:>.*\n?)+)',
             lambda m: '!!! ' + m[1].lower() + '\n\n' + ''.join(

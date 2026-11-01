@@ -1,6 +1,2 @@
 {% extends "base.html" %}
-{% block extrahead %}
-{{ super() }}
-<script>try{var ui=localStorage.getItem('slot.sp.site-theme');document.documentElement.dataset.uiTheme=ui==='light'||ui==='dark'?ui:matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}catch(e){document.documentElement.dataset.uiTheme='light'}</script>
-{% endblock %}
 {% block tabs %}{% endblock %}
