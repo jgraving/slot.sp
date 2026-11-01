@@ -1658,6 +1658,9 @@ impl App {
         } else {
             draw_ground(self.canvas(), face, out);
         }
+        if face.is_none() && self.light() {
+            out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.975,0.97,1.0]});
+        }
         let alpha = tint_alpha(self.state.wallpaper_tint);
         if alpha > 0.0 && self.own_wallpaper_shown() {
             out.push(Draw::Rect {
@@ -1665,10 +1668,9 @@ impl App {
                 y: 0.0,
                 w: self.canvas().w,
                 h: OUT_H as f32,
-                colour: [0.0, 0.0, 0.0, alpha],
+                colour: if self.light() {[0.96,0.975,0.97,alpha]}else{[0.0,0.0,0.0,alpha]},
             });
         }
-        if self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
     }
 
     fn own_wallpaper_shown(&self) -> bool {

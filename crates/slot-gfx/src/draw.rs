@@ -64,6 +64,7 @@ pub struct Sprites {
     white: gl::types::GLuint,
     textures: Vec<gl::types::GLuint>,
     ui_textures:std::collections::BTreeMap<usize,(u32,u32,Vec<u8>)>,
+    background_textures:std::collections::BTreeMap<usize,(u32,u32,Vec<u8>)>,
     light_ui:bool,
     u_rect: gl::types::GLint,
     u_colour: gl::types::GLint,
@@ -105,6 +106,7 @@ impl Sprites {
             white,
             textures: Vec::new(),
             ui_textures:Default::default(),
+            background_textures:Default::default(),
             light_ui:false,
             u_rect,
             u_colour,
@@ -136,10 +138,20 @@ impl Sprites {
         let pixels=if self.light_ui {crate::ui_palette::light_texture(rgba)}else{rgba.to_vec()};
         self.update_texture(id,w,h,&pixels);self.ui_textures.insert(id.0,(w,h,rgba.to_vec()));
     }
+    pub fn create_background_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {
+        let pixels=if self.light_ui {crate::ui_palette::light_background(rgba)}else{rgba.to_vec()};
+        let id=self.create_texture(w,h,&pixels);self.background_textures.insert(id.0,(w,h,rgba.to_vec()));id
+    }
+    pub fn update_background_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]) {
+        let pixels=if self.light_ui {crate::ui_palette::light_background(rgba)}else{rgba.to_vec()};
+        self.update_texture(id,w,h,&pixels);self.background_textures.insert(id.0,(w,h,rgba.to_vec()));
+    }
     pub fn set_light_ui(&mut self,light:bool){
         if self.light_ui==light {return;}self.light_ui=light;
         let updates:Vec<_>=self.ui_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if light {crate::ui_palette::light_texture(rgba)}else{rgba.clone()})).collect();
         for (id,w,h,rgba) in updates {self.update_texture(id,w,h,&rgba);}
+        let backgrounds:Vec<_>=self.background_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if light {crate::ui_palette::light_background(rgba)}else{rgba.clone()})).collect();
+        for (id,w,h,rgba) in backgrounds {self.update_texture(id,w,h,&rgba);}
     }
 
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
@@ -252,7 +264,7 @@ impl Sprites {
                     gl::Uniform3f(self.u_round, rounded[0], rounded[1], rounded[2]);
                     previous_round = rounded;
                 }
-                gl::Uniform1f(self.u_lava, if flow.is_some() { 1.0 } else { 0.0 });
+                gl::Uniform1f(self.u_lava, if flow.is_some() { if self.light_ui { 2.0 } else { 1.0 } } else { 0.0 });
                 if let Some(centres) = flow {
                     for (location, c) in self.u_flow.iter().zip(centres) {
                         gl::Uniform4f(*location, c[0], c[1], c[2], c[3]);
