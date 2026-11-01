@@ -307,12 +307,12 @@ impl Frontend {
             .iter()
             .map(|i| {
                 let f = icon_face(*i, HUD_ICON_PX, HUD_INK);
-                compositor.create_texture(f.w, f.h, &f.rgba)
+                compositor.create_ui_texture(f.w, f.h, &f.rgba)
             })
             .collect();
         self.session.app_mut().set_icon_faces(icons);
         let alert = icon_face(Icon::Alert, ALERT_PX, ALERT_INK);
-        let alert = compositor.create_texture(alert.w, alert.h, &alert.rgba);
+        let alert = compositor.create_ui_texture(alert.w, alert.h, &alert.rgba);
         self.session.app_mut().set_alert_face(alert);
         let legend = legend_faces(compositor, &LEGEND);
         self.session.app_mut().set_legend_faces(legend);
@@ -323,29 +323,29 @@ impl Frontend {
                     true => slot_ui::pad_hint_face(label),
                     false => hint_face(key, label),
                 };
-                compositor.create_texture(f.w, f.h, &f.rgba)
+                compositor.create_ui_texture(f.w, f.h, &f.rgba)
             })
             .collect();
         self.session.app_mut().set_shot_hint_faces(shot_hints);
         let tick = slot_ui::tick_cap_face();
         let tick = (
-            compositor.create_texture(tick.w, tick.h, &tick.rgba),
+            compositor.create_ui_texture(tick.w, tick.h, &tick.rgba),
             tick.w,
             tick.h,
         );
         self.session.app_mut().set_shot_tick_face(tick);
         let hint = set_clock_hint_face();
-        self.clocks.hint = Some(compositor.create_texture(hint.w, hint.h, &hint.rgba));
+        self.clocks.hint = Some(compositor.create_ui_texture(hint.w, hint.h, &hint.rgba));
         let back = slot_ui::prompt_legends(slot_ui::HUD_INK,"Back","Save").into_iter().next().unwrap();
-        let tex = compositor.create_texture(back.w, back.h, &back.rgba);
+        let tex = compositor.create_ui_texture(back.w, back.h, &back.rgba);
         self.session.app_mut().set_clock_back_face((tex, back.w));
         let removal = slot_ui::favorite_remove_face();
-        let tex = compositor.create_texture(removal.w, removal.h, &removal.rgba);
+        let tex = compositor.create_ui_texture(removal.w, removal.h, &removal.rgba);
         self.session
             .app_mut()
             .set_favorite_remove_face(tex, removal.w, removal.h);
         let removal = slot_ui::kid_remove_face();
-        let tex = compositor.create_texture(removal.w, removal.h, &removal.rgba);
+        let tex = compositor.create_ui_texture(removal.w, removal.h, &removal.rgba);
         self.session.app_mut().set_kid_remove_face(tex, removal.w, removal.h);
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture(star.w, star.h, &star.rgba);
@@ -354,9 +354,9 @@ impl Frontend {
         let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
         let smiley=slot_ui::kid_status_face();
-        self.session.app_mut().kid_status_icon=Some(compositor.create_texture(smiley.w,smiley.h,&smiley.rgba));
-        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::icon_face(icon,32.0,[246,244,239]);(compositor.create_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
-        let hints=slot_ui::quick_controls_legends().into_iter().map(|f|(compositor.create_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
+        self.session.app_mut().kid_status_icon=Some(compositor.create_ui_texture(smiley.w,smiley.h,&smiley.rgba));
+        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::icon_face(icon,32.0,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+        let hints=slot_ui::quick_controls_legends().into_iter().map(|f|(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
         self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
@@ -384,8 +384,8 @@ impl Frontend {
         let dark_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
         let light_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
         let bolt = [
-            compositor.create_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
-            compositor.create_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
+            compositor.create_ui_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
+            compositor.create_ui_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
         self.look = Some(ShelfLook {
             slot,
@@ -468,15 +468,14 @@ impl Frontend {
     fn place_ui_faces(&mut self, compositor: &mut Compositor, faces: UiFaces) {
         let mut cart = |f: CartFace| compositor.create_texture(f.w, f.h, &f.rgba);
         let link_badges = faces.link_badges.into_iter().map(&mut cart).collect();
-        let toasts = faces.toasts.into_iter().map(&mut cart).collect();
         let sockets = faces.sockets.into_iter().map(&mut cart).collect();
         let chips = faces.chips.into_iter().map(&mut cart).collect();
         let blank = cart(faces.blank_chip);
         let shadow = cart(faces.chip_shadow);
-        let mut up = |f: UndoFace| (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h);
+        let power_switch = ShellColour::FINISHES.map(|colour|slot_ui::power_switch_faces_for(colour).map(|f|compositor.create_texture(f.w,f.h,&f.rgba)));
+        let toasts=faces.toasts.into_iter().map(|f|compositor.create_ui_texture(f.w,f.h,&f.rgba)).collect();
+        let mut up = |f: UndoFace| (compositor.create_ui_texture(f.w, f.h, &f.rgba), f.w, f.h);
         let lines = faces.shutdown.into_iter().map(&mut up).collect();
-        let power_switch = ShellColour::FINISHES
-            .map(|colour| slot_ui::power_switch_faces_for(colour).map(|face| up(face).0));
         let repair = faces.repair.into_iter().map(&mut up).collect();
         let reset = faces.reset.into_iter().map(&mut up).collect();
         let delete = faces.delete.into_iter().map(&mut up).collect();
@@ -660,6 +659,7 @@ impl Frontend {
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
         let light = self.session.app().light();
+        compositor.set_light_ui(light);
         if self.mute_icon_key != Some(light) {
             let face = |ink| {
                 let f = slot_ui::status_icon_face(Icon::VolumeMuted, ink);
@@ -719,7 +719,7 @@ impl Frontend {
             .app()
             .bluetooth
             .as_ref()
-            .is_some_and(|m| m.busy()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.busy());
+            .is_some_and(|m| m.show_progress()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.show_progress());
         if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
             self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
             self.spinner_frames=None;
@@ -1077,7 +1077,7 @@ fn legend_faces(compositor: &mut Compositor, legend: &[(&str, &str)]) -> Vec<Tex
         .iter()
         .map(|(key, label)| {
             let f = hint_face(key, label);
-            compositor.create_texture(f.w, f.h, &f.rgba)
+            compositor.create_ui_texture(f.w, f.h, &f.rgba)
         })
         .collect()
 }
@@ -1423,7 +1423,7 @@ fn sync_binding_faces(app: &mut App, compositor: &mut Compositor) {
                 Some(bare) => slot_ui::quick_binding_face(bare, lit,true),
                 None => slot_ui::quick_binding_face(&text, lit,false),
             };
-            (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
+            (compositor.create_ui_texture(f.w, f.h, &f.rgba), f.w, f.h)
         });
         app.add_binding_face(text, faces);
     }
@@ -1645,11 +1645,11 @@ fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace)
         version: build.version,
         model: &crate::baseos::var("BASEOS_MODEL").unwrap_or_default(),
     });
-    let id = upload(compositor, &mut state.tex, face);
+    let id = upload_rgba(compositor, &mut state.tex, face.w,face.h,&face.rgba);
     app.set_sticker_face(id);
     if app.about_heading_needed() {
         let heading=slot_ui::quick_heading_face("About");
-        let tex=compositor.create_texture(heading.w,heading.h,&heading.rgba);
+        let tex=compositor.create_ui_texture(heading.w,heading.h,&heading.rgba);
         app.set_about_heading((tex,heading.w,heading.h));
     }
 }
@@ -1713,7 +1713,7 @@ fn sync_core_picker(
 }
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {
-    upload_rgba(compositor, slot, face.w, face.h, &face.rgba)
+    match *slot {Some(id)=>{compositor.update_ui_texture(id,face.w,face.h,&face.rgba);id},None=>{let id=compositor.create_ui_texture(face.w,face.h,&face.rgba);*slot=Some(id);id}}
 }
 
 fn upload_rgba(
@@ -1745,7 +1745,7 @@ fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(
         let w=x1-x0;let mut rgba=vec![];
         for yy in y..y+h {let a=((yy*face.w+x0)*4)as usize;rgba.extend_from_slice(&face.rgba[a..a+(w*4)as usize]);}
         let tex=if let Some((_,t))=cache.iter().find(|(f,_)|f.w==w&&f.h==h&&f.rgba==rgba){*t}
-            else{let t=gpu.create_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t));t};
+            else{let t=gpu.create_ui_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t));t};
         parts.push(vec![Draw::Tex{x:x0 as f32,y:y as f32,w:w as f32,h:h as f32,tex,alpha:1.0}]);
     }
     let tex=upload(gpu,body,face);let title=parts.remove(0);let hints=parts.into_iter().flatten().collect();updates.push((tex,title,hints));tex

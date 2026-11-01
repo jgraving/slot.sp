@@ -100,3 +100,7 @@ Shortcuts and carousel bindings accept single buttons or two-button combinations
 ---
 
 [Playing & saving](PLAYING.md) · [Day & night](NIGHT-DISPLAY.md) · [Kid mode](KID-MODE.md)
+
+## Gentle vibration
+
+**General → UI vibration** adds a tiny, low-strength tap when you move between menu items or change a setting. **Charging vibration** gives a short double tap when you plug in power. Either can be switched off independently of game rumble. These options appear only when the handheld has a supported motor.

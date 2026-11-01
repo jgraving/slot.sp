@@ -40,6 +40,7 @@ pub struct Session {
     fast: bool,
     motor: u16,
     pulse: Option<(Millis, u16)>,
+    feedback:crate::haptics::Feedback,
     prefetch: Prefetch,
     reloading: bool,
     driven: bool,
@@ -72,6 +73,7 @@ impl Session {
             fast: false,
             motor: 0,
             pulse: None,
+            feedback:Default::default(),
             prefetch: Prefetch::default(),
             reloading: false,
             driven: false,
@@ -326,8 +328,14 @@ impl Session {
             Action::FfStop => self.fast = false,
             _ => {}
         }
+        let before=self.app.ui_feedback_key();
         let menu = self.overlaid();
         self.bridge_link(|app| app.apply(action));
+        let after=self.app.ui_feedback_key();
+        if before!=after && (before.is_some()||after.is_some()) && self.app.ui_vibration_enabled()
+            && matches!(action,Action::QuickMenu|Action::GameMenu|Action::GbaDown(_)) {
+            self.feedback.request(crate::haptics::Kind::Ui,self.app.now());
+        }
         if matches!(
             action,
             Action::VolumeUp | Action::VolumeDown | Action::MuteToggle
@@ -381,11 +389,11 @@ impl Session {
                     if let Some(menu) = &mut self.app.bluetooth {
                         // A deliberate user action already in progress wins.
                         if !menu.busy() {
-                            menu.select_usb(device.route);
+                            menu.select_usb_automatically(device.route);
                         }
                     } else {
                         let mut worker = crate::bluetooth::Manager::new(self.root.clone(), false);
-                        worker.select_usb(device.route);
+                        worker.select_usb_automatically(device.route);
                         self.usb_switch = Some(worker);
                     }
                 }
@@ -495,6 +503,7 @@ impl Session {
             }
         }
         if let Some(sfx) = self.app.take_sfx() {
+            if sfx==Sfx::Charging && self.app.charging_vibration_enabled() {self.feedback.request(crate::haptics::Kind::Charging,self.app.now());}
             self.play_sfx(sfx);
         }
         self.sync_core();
@@ -541,12 +550,12 @@ impl Session {
     }
 
     fn sync_rumble(&mut self) {
+        if !self.app.supports_haptics() || matches!(self.app.phase(),Phase::Doze{..}) || self.app.shutting_down() {
+            self.pulse=None;self.feedback.clear();return self.rumble(0);
+        }
         let asked = match &self.emu {
             Some(emu) if self.playing() && self.app.rumble_enabled() => emu.rumble().strength(),
-            _ => {
-                self.pulse = None;
-                return self.rumble(0);
-            }
+            _ => {self.pulse=None;0}
         };
         let now = self.app.now();
         let want = match (asked, self.pulse) {
@@ -568,7 +577,9 @@ impl Session {
                 asked
             }
         };
-        self.rumble(want);
+        let ui=self.feedback.strength(now,self.app.ui_vibration_enabled(),self.app.charging_vibration_enabled());
+        if want>=ui {self.rumble(want);}
+        else if self.motor!=ui {self.motor=ui;self.app.set_feedback_rumble(ui,self.feedback.remaining(now));}
     }
 
     fn sync_ff_hud(&mut self) {

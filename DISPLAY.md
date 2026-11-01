@@ -24,7 +24,7 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → Theme** changes the light or dark appearance.
+The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses pale cards and dark text across settings, status, prompts and feedback.
 
 ![The four SP colors](previews/rgsp-shell-finishes.png)
 
@@ -34,7 +34,7 @@ Open **Menu → General**:
 
 | Setting | What to choose |
 | :--- | :--- |
-| **Wallpaper** | Flowing Gradient, Static Gradient, a blurred background, None, Random, or one of your own images. |
+| **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
 | **Wallpaper Tint** | Darken a custom or random background so the games stand out. |
 | **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |

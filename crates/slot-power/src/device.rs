@@ -261,6 +261,7 @@ struct Motor {
     name: String,
     id: i16,
     running: bool,
+    strength:u16,
 }
 
 #[cfg(unix)]
@@ -361,10 +362,10 @@ fn close_on_exec() {
     }
 }
 
-fn upload(node: &fs::File, id: i16) -> Option<i16> {
+fn upload(node: &fs::File, id: i16, strength:u16, length:u16) -> Option<i16> {
     #[cfg(not(unix))]
     {
-        let _ = (node, id);
+        let _ = (node, id,strength,length);
         None
     }
     #[cfg(unix)]
@@ -374,11 +375,11 @@ fn upload(node: &fs::File, id: i16) -> Option<i16> {
             id,
             direction: 0,
             trigger: FfTrigger::default(),
-            replay: FfReplay::default(),
+            replay: FfReplay{length,delay:0},
             _align: 0,
             rumble: FfRumble {
-                strong: u16::MAX,
-                weak: u16::MAX,
+                strong: strength,
+                weak: strength,
             },
             _tail: [0; 28],
         };
@@ -402,7 +403,7 @@ impl Motor {
             .open(Path::new(DEV_INPUT).join(&name))
             .map_err(|e| eprintln!("slot: rumble {name}: {e}"))
             .ok()?;
-        let Some(id) = upload(&node, -1) else {
+        let Some(id) = upload(&node, -1,u16::MAX,0) else {
             eprintln!("slot: rumble {name}: {}", std::io::Error::last_os_error());
             return None;
         };
@@ -411,18 +412,15 @@ impl Motor {
             name,
             id,
             running: false,
+            strength:0,
         })
     }
 
-    fn play(&mut self, on: bool) {
+    fn play(&mut self, on: bool,strength:u16,length:u16) {
         if on {
-            match upload(&self.node, self.id).or_else(|| upload(&self.node, -1)) {
+            match upload(&self.node, self.id,strength,length).or_else(|| upload(&self.node, -1,strength,length)) {
                 Some(id) => self.id = id,
-                None => eprintln!(
-                    "slot: rumble {}: {}",
-                    self.name,
-                    std::io::Error::last_os_error()
-                ),
+                None => {eprintln!("slot: rumble {}: {}",self.name,std::io::Error::last_os_error());return;},
             }
         }
         let ev = FfEvent {
@@ -436,7 +434,7 @@ impl Motor {
             std::slice::from_raw_parts(&ev as *const FfEvent as *const u8, size_of::<FfEvent>())
         };
         match (&self.node).write_all(bytes) {
-            Ok(()) => self.running = on,
+            Ok(()) => {self.running = on;self.strength=if on{strength}else{0};},
             Err(e) => eprintln!("slot: rumble: {e}"),
         }
     }
@@ -445,7 +443,7 @@ impl Motor {
 impl Drop for Motor {
     fn drop(&mut self) {
         if self.running {
-            self.play(false);
+            self.play(false,0,0);
         }
     }
 }
@@ -762,13 +760,18 @@ impl Platform for DevicePlatform {
         }
     }
 
+    fn supports_rumble(&self) -> bool { self.motor.is_some() }
+
+    fn set_rumble_for(&mut self,strength:u16,duration:Duration) {
+        if let Some(motor)=&mut self.motor {motor.play(strength>0,strength,duration.as_millis().min(u16::MAX as u128)as u16);}
+    }
+
     fn set_rumble(&mut self, strength: u16) {
         let Some(motor) = &mut self.motor else {
             return;
         };
-        if let Some(on) = motor_change(strength, motor.running) {
-            motor.play(on);
-        }
+        if let Some(on) = motor_change(strength, motor.running) {motor.play(on,strength,0);}
+        else if strength>0 && motor.strength!=strength {motor.play(true,strength,0);}
     }
 }
 

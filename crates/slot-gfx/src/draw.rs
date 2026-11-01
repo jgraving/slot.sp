@@ -63,6 +63,8 @@ pub struct Sprites {
     prog: gl::types::GLuint,
     white: gl::types::GLuint,
     textures: Vec<gl::types::GLuint>,
+    ui_textures:std::collections::BTreeMap<usize,(u32,u32,Vec<u8>)>,
+    light_ui:bool,
     u_rect: gl::types::GLint,
     u_colour: gl::types::GLint,
     u_turn: gl::types::GLint,
@@ -102,6 +104,8 @@ impl Sprites {
             prog,
             white,
             textures: Vec::new(),
+            ui_textures:Default::default(),
+            light_ui:false,
             u_rect,
             u_colour,
             u_turn,
@@ -122,6 +126,20 @@ impl Sprites {
 
     pub fn create_texture(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
         self.push(w, h, rgba, gl::LINEAR)
+    }
+
+    pub fn create_ui_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {
+        let pixels=if self.light_ui {crate::ui_palette::light_texture(rgba)}else{rgba.to_vec()};
+        let id=self.create_texture(w,h,&pixels);self.ui_textures.insert(id.0,(w,h,rgba.to_vec()));id
+    }
+    pub fn update_ui_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]) {
+        let pixels=if self.light_ui {crate::ui_palette::light_texture(rgba)}else{rgba.to_vec()};
+        self.update_texture(id,w,h,&pixels);self.ui_textures.insert(id.0,(w,h,rgba.to_vec()));
+    }
+    pub fn set_light_ui(&mut self,light:bool){
+        if self.light_ui==light {return;}self.light_ui=light;
+        let updates:Vec<_>=self.ui_textures.iter().map(|(&id,(w,h,rgba))|(TexId(id),*w,*h,if light {crate::ui_palette::light_texture(rgba)}else{rgba.clone()})).collect();
+        for (id,w,h,rgba) in updates {self.update_texture(id,w,h,&rgba);}
     }
 
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
@@ -176,14 +194,14 @@ impl Sprites {
             let whole = [0.0, 0.0, 1.0, 1.0];
             let mut flow = None;
             let mut rounded = [0.0; 3];
-            let (x, y, w, h, tex, colour, turn, uv) = match *item {
+            let (x, y, w, h, tex, mut colour, turn, uv) = match *item {
                 Draw::Lava { w, h, phase } => {
                     flow = Some(crate::lava::lava_centres(phase));
                     (0.0, 0.0, w, h, self.white, [1.0; 4], 0.0, whole)
                 },
                 Draw::RoundRect { x, y, w, h, radius, colour } => {
                     rounded = [w, h, radius.max(0.01).min(w.min(h) * 0.5)];
-                    (x, y, w, h, self.white, colour, 0.0, whole)
+                    (x-1.0, y-1.0, w+2.0, h+2.0, self.white, colour, 0.0, whole)
                 },
                 Draw::Rect { x, y, w, h, colour } => (x, y, w, h, self.white, colour, 0.0, whole),
                 Draw::Tex {
@@ -223,6 +241,7 @@ impl Sprites {
                 },
                 Draw::Game | Draw::Shot { .. } | Draw::Capture => continue,
             };
+            if self.light_ui && matches!(item,Draw::RoundRect{..}) {colour=if colour[..3]==[0.0,0.0,0.0] {[0.96,0.975,0.97,colour[3]]}else{crate::ui_palette::light_colour(colour)};}
             let (cos, sin) = if turn == 0.0 {
                 (1.0, 0.0)
             } else {

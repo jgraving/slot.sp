@@ -231,6 +231,8 @@ fn a_card_from_before_the_settings_keeps_all_its_values() {
             clock_12h: false,
             carousel_wheel: true,
             utc_offset_min: -300,
+            ui_vibration:true,
+            charging_vibration:true,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
             ff_sound: false,

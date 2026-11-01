@@ -11,7 +11,7 @@ pub fn switch_style(t: f32) -> ([f32; 4], f32, f32) {
     (
         std::array::from_fn(|i| SWITCH_OFF[i] + (crate::expressive::ACCENT[i] - SWITCH_OFF[i]) * t),
         5.0 + 28.0 * t,
-        19.0 + 3.0 * t,
+        20.0 + 2.0 * t,
     )
 }
 pub fn draw_switch(out: &mut Vec<Draw>, x: f32, y: f32, t: f32, alpha: f32) {

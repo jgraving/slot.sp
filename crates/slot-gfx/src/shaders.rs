@@ -141,7 +141,7 @@ vec2 eddy(vec2 p, vec4 flow) {
 }
 void main() {
     if (u_round.z > 0.0) {
-        vec2 q = abs((v_uv - 0.5) * u_round.xy) - u_round.xy * 0.5 + u_round.z;
+        vec2 q = abs((v_uv - 0.5) * (u_round.xy + vec2(2.0))) - u_round.xy * 0.5 + u_round.z;
         float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_round.z;
         FRAG_COLOR = vec4(u_colour.rgb, u_colour.a * (1.0 - smoothstep(-0.7, 0.7, d)));
     } else if (u_lava < 0.5) {

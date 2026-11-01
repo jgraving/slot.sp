@@ -155,6 +155,10 @@ impl Compositor {
         self.sprites.create_texture(w, h, rgba)
     }
 
+    pub fn create_ui_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {self.sprites.create_ui_texture(w,h,rgba)}
+    pub fn update_ui_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]){self.sprites.update_ui_texture(id,w,h,rgba);}
+    pub fn set_light_ui(&mut self,light:bool){self.sprites.set_light_ui(light);}
+
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
         self.sprites.create_texture_nearest(w, h, rgba)
     }

@@ -1183,7 +1183,8 @@ impl App {
 
     pub fn in_game_hidden(&self) -> Vec<QuickRow> {
         let no_bezel = self.playing_platform() == Platform::Gba && !self.framed_panel();
-        let mut hidden = vec![QuickRow::Theme];
+        let mut hidden = vec![];
+        if !self.supports_haptics() {hidden.extend([QuickRow::UiVibration,QuickRow::ChargingVibration]);}
         if self.hidden_rows().contains(&QuickRow::WallpaperTint){hidden.push(QuickRow::WallpaperTint);}
         if !self.palette_live {
             hidden.push(QuickRow::Palette);
@@ -1349,6 +1350,8 @@ impl App {
             QuickRow::GbShader => Some(shader_value(self.state.shader_gb)),
             QuickRow::GbcShader => Some(shader_value(self.state.shader_gbc)),
             QuickRow::Rumble => Some(QuickValue::flag(self.state.rumble)),
+            QuickRow::UiVibration => Some(QuickValue::flag(self.state.ui_vibration)),
+            QuickRow::ChargingVibration => Some(QuickValue::flag(self.state.charging_vibration)),
             QuickRow::LeftStick => Some(QuickValue::flag(self.state.left_stick_dpad)),
             QuickRow::AutoLoad => Some(QuickValue::flag(self.state.auto_load)),
             QuickRow::EjectSave => Some(QuickValue::flag(self.state.eject_save)),
@@ -1567,6 +1570,7 @@ impl App {
 
     pub fn resolved_wallpaper(&self) -> WallpaperPick {
         match &self.state.wallpaper {
+            WallpaperPick::Blur => WallpaperPick::Default,
             WallpaperPick::File(name) if !self.wallpaper_files().iter().any(|n| n == name) => {
                 WallpaperPick::Default
             }
@@ -1600,7 +1604,6 @@ impl App {
             WallpaperPick::Random,
             WallpaperPick::Default,
             WallpaperPick::Static,
-            WallpaperPick::Blur,
         ];
         choices.extend(self.wallpaper_files().into_iter().map(WallpaperPick::File));
         let key = self.resolved_wallpaper().key();
@@ -1665,6 +1668,7 @@ impl App {
                 colour: [0.0, 0.0, 0.0, alpha],
             });
         }
+        if self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
     }
 
     fn own_wallpaper_shown(&self) -> bool {
@@ -1792,7 +1796,8 @@ impl App {
             self.state.wallpaper,
             WallpaperPick::File(_) | WallpaperPick::Random
         );
-        let mut hidden = vec![QuickRow::Theme];
+        let mut hidden = vec![];
+        if !self.supports_haptics() {hidden.extend([QuickRow::UiVibration,QuickRow::ChargingVibration]);}
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -2587,6 +2592,19 @@ impl App {
         if let Some(power) = &mut self.power {
             power.set_rumble(strength);
         }
+    }
+
+    pub fn set_feedback_rumble(&mut self,strength:u16,duration:u16){if let Some(power)=&mut self.power {power.set_rumble_for(strength,std::time::Duration::from_millis(duration as u64));}}
+
+    pub fn supports_haptics(&self) -> bool { self.power.as_ref().is_some_and(|p|p.supports_rumble()) }
+    pub fn ui_vibration_enabled(&self)->bool {self.state.ui_vibration}
+    pub fn charging_vibration_enabled(&self)->bool {self.state.charging_vibration}
+
+    pub fn ui_feedback_key(&self)->Option<String> {
+        if let Some(m)=&self.kid_menu {return (!m.entering_code()).then(||format!("kid:{}:{:?}",m.page_key(),m.focus_info()));}
+        if let Some(m)=&self.bluetooth {return Some(format!("sound:{}:{}",m.page_key(),m.selected));}
+        if let Some(m)=&self.display_schedule {return Some(format!("schedule:{}:{:?}",m.page_key(),m.focus_info()));}
+        self.quick_menu().or(self.in_game_menu()).map(|row|format!("{row:?}:{:?}",self.quick_value(row)))
     }
 
     pub fn rumble_enabled(&self) -> bool {
@@ -3385,6 +3403,8 @@ impl App {
             | QuickRow::GbcShader
             | QuickRow::GbPalette
             | QuickRow::Rumble
+            | QuickRow::UiVibration
+            | QuickRow::ChargingVibration
             | QuickRow::ShellColour
             | QuickRow::LeftStick
             | QuickRow::Theme
@@ -3592,6 +3612,8 @@ impl App {
                 s.shader_gbc = to;
             }
             QuickRow::Rumble => s.rumble = !s.rumble,
+            QuickRow::UiVibration => s.ui_vibration = !s.ui_vibration,
+            QuickRow::ChargingVibration => s.charging_vibration = !s.charging_vibration,
             QuickRow::LeftStick => s.left_stick_dpad = !s.left_stick_dpad,
             QuickRow::AutoLoad => s.auto_load = !s.auto_load,
             QuickRow::EjectSave => s.eject_save = !s.eject_save,
@@ -5342,14 +5364,17 @@ impl App {
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_custom_focus(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>){
+        let begin=out.len();
+        if frame.suppress_focus {return;}
         match key {
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
             1000..=1999|2000|2002|2011|2012|3000|3001=>{
-                let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+frame.page_shift*(self.canvas().w-112.0);
-                slot_ui::expressive::rounded(out,x,frame.focus_y,width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
+                let width=self.canvas().w-168.0;let x=self.canvas().centred(width);
+                slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
         }
+        slot_ui::clip_menu_body(out,begin,self.canvas());
     }
     fn draw_outgoing_menu(&self, over_game: bool, out: &mut Vec<Draw>) {
         if let Some(previous)=self.menu_motion.outgoing_row() {
@@ -5370,6 +5395,7 @@ impl App {
     fn draw_cached_overlay(&self, tex: TexId, out: &mut Vec<Draw>) {
         let begin=out.len();
         let over_game=matches!(self.phase,Phase::Playing{..});
+        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let mut frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
         frame.entry=1.0;
@@ -5396,6 +5422,7 @@ impl App {
             self.draw_menu_shelf(out);
         }
         let begin=out.len();
+        if over_game && self.light() {out.push(Draw::Rect{x:0.0,y:0.0,w:self.canvas().w,h:self.canvas().h,colour:[0.96,0.98,0.97,0.90]});}
         if over_game {
             let hidden = self.in_game_hidden();
             let frame = self.menu_motion.frame(row, &hidden);

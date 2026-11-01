@@ -8,6 +8,7 @@ pub struct SimPlatform {
     offset: i64,
     stopped: Option<i64>,
     motor: Motor,
+    supports_rumble: bool,
     relinks: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }
 
@@ -22,6 +23,7 @@ impl SimPlatform {
             offset: 0,
             stopped: None,
             motor: Motor::default(),
+            supports_rumble: true,
             relinks: std::sync::Arc::default(),
         }
     }
@@ -34,6 +36,8 @@ impl SimPlatform {
     pub fn relinks(&self) -> std::sync::Arc<std::sync::atomic::AtomicUsize> {
         self.relinks.clone()
     }
+
+    pub fn without_rumble(mut self) -> Self { self.supports_rumble=false; self }
 
     pub fn motor(&self) -> Motor {
         self.motor.clone()
@@ -91,8 +95,10 @@ impl Platform for SimPlatform {
         true
     }
 
+    fn supports_rumble(&self) -> bool { self.supports_rumble }
+
     fn set_rumble(&mut self, strength: u16) {
-        self.motor.set(strength);
+        if self.supports_rumble { self.motor.set(strength); }
     }
 }
 
