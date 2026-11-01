@@ -9,7 +9,8 @@ site_dir = "public"
 
 nav = [
   { "Home" = "index.md" },
-  { "Install" = ["installing.md", "updating.md"] },
+  { "Install" = "installing.md" },
+  { "Update" = "updating.md" },
   { "Guide" = [
     { "All guides" = "features/guide.md" },
     { "Buttons & shortcuts" = "features/controls.md" },
@@ -29,8 +30,8 @@ nav = [
   { "About" = ["questions.md", "credits.md", "ai.md", "impressum.md", "datenschutz.md"] },
 ]
 
-extra_css = ["assets/device.css", "assets/slot.css"]
-extra_javascript = ["assets/slot.js"]
+extra_css = ["assets/device.css", "assets/slot.css", "assets/navigation.css"]
+extra_javascript = ["assets/navigation.js", "assets/slot.js"]
 
 [project.extra]
 homepage_media_revision = "prepared"

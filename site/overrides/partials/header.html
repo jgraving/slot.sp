@@ -1,14 +1,14 @@
-{% import "partials/tabs-item.html" as item with context %}
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
     <label class="md-header__button md-icon" for="__drawer" aria-label="{{ lang.t('nav') }}">
       {% set icon = config.theme.icon.menu or "material/menu" %}
       {% include ".icons/" ~ icon ~ ".svg" %}
     </label>
-    <a class="mast-mark" href="{{ nav.homepage.url | url }}">{{ config.site_name }}</a>
+    <a class="mast-mark" href="{{ nav.homepage.url | url }}"><img src="{{ 'assets/wordmark.png' | url }}" width="82" height="25" alt="slot.sp"></a>
     <ul class="mast-tabs">
       {% for nav_item in nav.items[1:] %}
-        {{ item.render(nav_item) }}
+        {% set destination = nav_item.children[0] if nav_item.children else nav_item %}
+        <li class="mast-item"><a class="mast-link" href="{{ destination.url | url }}"{% if nav_item.active %} aria-current="{{ 'page' if page and page.url == destination.url else 'true' }}"{% endif %}>{{ nav_item.title }}</a></li>
       {% endfor %}
     </ul>
     <div class="mast-end">

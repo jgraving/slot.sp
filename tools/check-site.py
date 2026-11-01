@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 import re
 from PIL import Image
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlsplit, urljoin
 
 ROOT = Path(__file__).resolve().parents[1] / 'site/public'
 ORIGIN = 'jakegraving.com'
@@ -68,6 +68,26 @@ assert 'Your games.' in home and 'features/kid-mode/' in home
 assert not re.search(r'game\s*boy', home, re.I), 'Keep third-party system names out of homepage text'
 assert 'BrandonKowalski/slot/releases' not in home
 assert 'fonts.googleapis.com' not in home, 'Typeface must be self-hosted'
+# Check destinations on every page, including guides and the separately built app.
+class HeaderLinks(HTMLParser):
+    def __init__(self, html):
+        super().__init__(); self.header = False; self.anchor = None; self.links = {}; self.feed(html)
+    def handle_starttag(self, tag, attributes):
+        attrs = dict(attributes)
+        if tag == 'header': self.header = True
+        if self.header and tag == 'a': self.anchor = [attrs.get('href', ''), '']
+    def handle_data(self, text):
+        if self.anchor is not None: self.anchor[1] += text
+    def handle_endtag(self, tag):
+        if tag == 'a' and self.anchor is not None:
+            href, label = self.anchor; self.links[label.strip()] = href; self.anchor = None
+        if tag == 'header': self.header = False
+for source in [ROOT/'index.html', ROOT/'installing/index.html', ROOT/'updating/index.html', ROOT/'features/guide/index.html', ROOT/'features/bluetooth/index.html', ROOT/'studio/index.html']:
+    links = HeaderLinks(source.read_text()).links
+    for label, destination in [('Install', 'installing/'), ('Update', 'updating/'), ('Guide', 'features/guide/')]:
+        base_url = 'https://' + ORIGIN + BASE + str(source.relative_to(ROOT))
+        assert urlsplit(urljoin(base_url, links[label])).path == BASE + destination, (source, label, links)
+
 assert not (ROOT / 'CNAME').exists(), 'Do not publish the upstream custom domain'
 studio_pin = json.loads((ROOT.parent / 'studio.json').read_text())
 studio_info = json.loads((ROOT / 'studio/build-info.json').read_text())

@@ -1,8 +1,8 @@
 {
   "source_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
-  "capture_source_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
+  "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
   "ui_release_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41336982747",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41352825060",
   "capture": "previews/site_refresh.rs",
   "rendering": "Production Frontend and native desktop GL compositor; deterministic software fixtures with repository sample label artwork, synthetic game headers and mock-core gameplay; not photographs or hardware test results.",
   "dimensions": [
@@ -243,13 +243,6 @@
       "ui_source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e"
     },
     {
-      "path": "previews/current/dark/sound.png",
-      "bytes": 94342,
-      "sha256": "b43b4238d29500b1b9a5aa3bbc1f1a5cf70f93ab4c128009c0a615ff78a8abe3",
-      "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
-      "ui_source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e"
-    },
-    {
       "path": "previews/current/light/about.png",
       "bytes": 189286,
       "sha256": "9570aae285290037a2a5aa658c392c6a428e9fac23d74beb01efc67d35dfae8d",
@@ -481,18 +474,53 @@
       "ui_source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e"
     },
     {
+      "path": "previews/current/dark/sound.png",
+      "bytes": 229135,
+      "sha256": "0bce83d025eb3518f7f915fb3f144d422c1353f4c116d9d04c1d81d6ba531e1a",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
+    },
+    {
+      "path": "previews/current/dark/sound-pair.png",
+      "bytes": 187415,
+      "sha256": "1f2236bc7e85668e256460df0f854ea3eccc79e7907fe7c77e255c8e7d6b3cf7",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
+    },
+    {
+      "path": "previews/current/dark/sound-options.png",
+      "bytes": 231836,
+      "sha256": "ba2ecbe59f2146487ec4d1781148b7db8716b12511ec46bc5db7d411fa6ecf4c",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
+    },
+    {
       "path": "previews/current/light/sound.png",
-      "bytes": 77707,
-      "sha256": "6f4b5abd677b2580abb25fc5e6d6eeb08e2896095cebe4b71f2df1ec5a3395e2",
-      "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
-      "ui_source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e"
+      "bytes": 187647,
+      "sha256": "e82eb07e019775ae7497c655de405c0e9db81d46d7fdf8bd594fa911422d83e0",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
+    },
+    {
+      "path": "previews/current/light/sound-pair.png",
+      "bytes": 145424,
+      "sha256": "9d411a1a4ab170f5f4bec6109e65c1614f436a5a448e7d6be1a2ffc4a5934920",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
+    },
+    {
+      "path": "previews/current/light/sound-options.png",
+      "bytes": 190391,
+      "sha256": "93112955ab79f49bb920cc79af3cd45eef68ae288e29136d446f2b1da67a4135",
+      "capture_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+      "ui_source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a"
     }
   ],
   "base_capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
   "refresh_scenes": [
-    "screenshots",
-    "screenshots-full",
-    "screenshots-zoom",
-    "screenshots-select"
-  ]
+    "sound",
+    "sound-pair",
+    "sound-options"
+  ],
+  "audio_fixture": "Bluetooth-capable handheld, enabled radio and a synthetic saved Headphones device. Production Frontend/compositor; no physical hardware pairing."
 }
