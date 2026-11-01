@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const root=path.resolve(__dirname,'../site/public');
+const root=path.resolve(__dirname,'../public');
 const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
 const origin='https://jakegraving.com/slot.sp/';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
@@ -17,7 +17,18 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       if(!file.startsWith(root+path.sep)&&file!==root)return route.fulfill({status:403});
       if(fs.existsSync(file)&&fs.statSync(file).isDirectory())file=path.join(file,'index.html');
       if(!fs.existsSync(file))return route.fulfill({status:404});
-      await route.fulfill({path:file,contentType:mime[path.extname(file)]||'application/octet-stream'});
+      const contentType=mime[path.extname(file)]||'application/octet-stream';
+      // Media seeking needs the same byte-range semantics as GitHub Pages.
+      if(path.extname(file)==='.mp4') {
+        const bytes=fs.readFileSync(file),range=route.request().headers().range;
+        const match=range?.match(/^bytes=(\d+)-(\d*)$/);
+        if(match) {
+          const start=Number(match[1]),end=Math.min(match[2]?Number(match[2]):bytes.length-1,bytes.length-1);
+          return route.fulfill({status:206,body:bytes.subarray(start,end+1),contentType,headers:{'accept-ranges':'bytes','content-range':`bytes ${start}-${end}/${bytes.length}`,'content-length':String(end-start+1)}});
+        }
+        return route.fulfill({body:bytes,contentType,headers:{'accept-ranges':'bytes','content-length':String(bytes.length)}});
+      }
+      await route.fulfill({path:file,contentType});
     });return page;
   }
   try {

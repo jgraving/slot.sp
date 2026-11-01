@@ -71,8 +71,8 @@ export function mountSP(stage, video) {
     ctx.putImageData(pixels,0,0);
   });
   grain.colorSpace=T.NoColorSpace; grain.wrapS=grain.wrapT=T.RepeatWrapping; grain.repeat.set(.12,.12);
-  const shell=material({color:0xaeb4b8,metalness:.62,roughness:.42,bumpMap:grain,bumpScale:.028,clearcoat:.14,clearcoatRoughness:.42,envMapIntensity:1.0});
-  const edge=material({color:0xa1a8ae,metalness:.5,roughness:.4,bumpMap:grain,bumpScale:.02});
+  const shell=material({color:0xaeb4b8,metalness:.46,roughness:.44,bumpMap:grain,bumpScale:.004,clearcoat:.08,clearcoatRoughness:.42,envMapIntensity:.7});
+  const edge=material({color:0xa1a8ae,metalness:.5,roughness:.4,bumpMap:grain,bumpScale:.004});
   const button=material({color:0x686f71,metalness:.12,roughness:.48,clearcoat:.1});
   const rubber=material({color:0x8b9295,metalness:0,roughness:.8});
   const dark=material({color:0x161b20,metalness:.12,roughness:.63});
@@ -187,13 +187,13 @@ export function mountSP(stage, video) {
 
   // The photographed glass is 4:3. The existing 3:2 native capture is contained,
   // so neither cartridge proportions nor button hints are stretched to fit it.
-  slab(lid,81,76,5.7,3.8,.75,edge,0,40.9,-.2);
-  slab(lid,80.9,75.9,.20,3.8,.04,seam,0,40.9,-.1);
+  slab(lid,81,76,5.1,3.8,.75,edge,0,40.9,-1.12);
+  slab(lid,80.9,75.9,.20,3.8,.04,seam,0,40.9,-1.01);
   const lidFace=rr(79.8,74.8,3.0,0,40.9);
   lidFace.holes.push(rr(74.8,57.7,1.3,0,42,T.Path));
   const lidSkin=mesh(extrusion(lidFace,1.15,.24),shell,lid,0,0,-.91);
   lidSkin.receiveShadow=false;
-  slab(lid,75.1,58.1,.8,1.6,.2,bezel,0,42,-.45);
+  slab(lid,75.1,58.1,.8,1.6,.2,bezel,0,42,-.18);
   // A machined lip around the glazing catches a thin highlight.
   const surround=rr(75.6,58.6,1.6,0,42);surround.holes.push(rr(74.3,57.3,1.1,0,42,T.Path));
   mesh(extrusion(surround,.34,.11),chrome,lid,0,0,-.23);
@@ -205,7 +205,7 @@ export function mountSP(stage, video) {
     disc(lid,1.75,.14,seam,x,y,.13);disc(lid,1.48,.25,rubber,x,y,.27);
   }
   // Rear lid badge, visible when folded.
-  const back=new T.Group();back.position.set(0,40.9,-6.0);back.rotation.y=Math.PI;lid.add(back);
+  const back=new T.Group();back.position.set(0,40.9,-6.32);back.rotation.y=Math.PI;lid.add(back);
   slab(back,16.6,3.6,.24,1.8,.1,chrome,0,29,.12);
   slab(back,15.7,2.85,.1,1.4,.03,seam,0,29,.22);
   engraving('ANBERNIC',back,0,29,.3,14,2,'#c8cdd0');
@@ -255,7 +255,7 @@ export function mountSP(stage, video) {
   const observer=new MutationObserver(loadPoster);observer.observe(video,{attributes:true,attributeFilter:['poster']});
 
   const palettes={
-    platinum:[0xaeb4b8,0x8d959a,0x686f71,.62],
+    platinum:[0xaeb4b8,0x8d959a,0x686f71,.46],
     graphite:[0x353c44,0x242a31,0x3f454d,.38],
     'pearl blue':[0x9ebdcd,0x7699ae,0xa6b7c1,.4],
     'pearl pink':[0xd8acbb,0xb57f93,0xb8a9b0,.4],

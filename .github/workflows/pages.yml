@@ -12,7 +12,6 @@ on:
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
       - 'tools/check-site-navigation.cjs'
-      - 'tools/check-sp-model.cjs'
       - '.github/workflows/pages.yml'
   push:
     branches: [main]
@@ -26,7 +25,6 @@ on:
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
       - 'tools/check-site-navigation.cjs'
-      - 'tools/check-sp-model.cjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -57,7 +55,7 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/model-browser/node_modules
         run: |
           npm install --prefix "$RUNNER_TEMP/model-browser" playwright@1.62.1
-          node tools/check-sp-model.cjs "$RUNNER_TEMP/sp-model-review"
+          node site/scripts/check-sp-model.cjs "$RUNNER_TEMP/sp-model-review"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
