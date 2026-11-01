@@ -1,0 +1,400 @@
+{
+  "source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
+  "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
+  "ui_release_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41327784758",
+  "capture": "previews/site_refresh.rs",
+  "rendering": "Production Frontend and native desktop GL compositor; deterministic software fixtures with repository sample label artwork, synthetic game headers and mock-core gameplay; not photographs or hardware test results.",
+  "dimensions": [
+    720,
+    480
+  ],
+  "fps": 60,
+  "files": [
+    {
+      "path": "previews/current/dark/about.png",
+      "bytes": 205952,
+      "sha256": "9fea34f6f342739d12e6368bea4cd9d17564f0721586afd4b39bffd34d5292b0"
+    },
+    {
+      "path": "previews/current/dark/approved.png",
+      "bytes": 295479,
+      "sha256": "1b23e7ecbc629d0e9a35379ccd8707c9abbcdf0e8f73479e41dac93273fc63f5"
+    },
+    {
+      "path": "previews/current/dark/boot.mp4",
+      "bytes": 82558,
+      "sha256": "b803c2c019c474d2593224f6a15ec6457aa140a95d0e8679d48aacdac55a3336"
+    },
+    {
+      "path": "previews/current/dark/boot.png",
+      "bytes": 15546,
+      "sha256": "31fd3a95d4517d377862ee784f2a24f073f514b0af037e5defe995cc65c64b87"
+    },
+    {
+      "path": "previews/current/dark/buttons-shortcuts.png",
+      "bytes": 107462,
+      "sha256": "c3cd8c9839681b2ca25ca3480e061e0f3eb1f7d2c6cf358f9445d161d9f54d8a"
+    },
+    {
+      "path": "previews/current/dark/carousel.mp4",
+      "bytes": 580311,
+      "sha256": "48017d81f675608a6b5f33e46d7aa72e9fe713ee7d2df043ded5743aa783d551"
+    },
+    {
+      "path": "previews/current/dark/carousel.png",
+      "bytes": 295479,
+      "sha256": "1b23e7ecbc629d0e9a35379ccd8707c9abbcdf0e8f73479e41dac93273fc63f5"
+    },
+    {
+      "path": "previews/current/dark/charging.mp4",
+      "bytes": 39614,
+      "sha256": "635c6f9e741f56ca468e4887f6fb353ad7af2e4eb194716f353b95bc1526b110"
+    },
+    {
+      "path": "previews/current/dark/charging.png",
+      "bytes": 96930,
+      "sha256": "b1827d54099c4d481ec6cf4b109c641852b47fa5b610fce5736bcaef198fd1da"
+    },
+    {
+      "path": "previews/current/dark/controls.png",
+      "bytes": 87235,
+      "sha256": "6257c8f02a2258003219b30c229dbc538f8cfbc4a9e36845922b9389dba8e189"
+    },
+    {
+      "path": "previews/current/dark/core-picker.png",
+      "bytes": 265871,
+      "sha256": "fb7c0f5bd4635e9c20a717564e785af3d7e53ea646611b4f9b7b7abc7bcfd795"
+    },
+    {
+      "path": "previews/current/dark/favorites.png",
+      "bytes": 301278,
+      "sha256": "134d978f63f0bda86d326bfa7e0f8d759ae937fd0d16e8860edadd56b1743bb2"
+    },
+    {
+      "path": "previews/current/dark/general.png",
+      "bytes": 96865,
+      "sha256": "6a3c8e71aa3f87398b4341d7da7de285682f9b2a7705b6047ffd5b9e04c86401"
+    },
+    {
+      "path": "previews/current/dark/in-game-menu.png",
+      "bytes": 109094,
+      "sha256": "c687a07a999a58ab8d25540b0d752c9d7f70e5143356c5c67d4557a94d727a78"
+    },
+    {
+      "path": "previews/current/dark/in-game-settings.png",
+      "bytes": 100508,
+      "sha256": "0aed91f360c1f9bc01a0b4fc3812b69adc5cc81771ea72722ff7d2c375f2e59a"
+    },
+    {
+      "path": "previews/current/dark/kid-menu.png",
+      "bytes": 90833,
+      "sha256": "f36256f9dfb70b19bef87f2e482c551acc287d661fd6d2cabf346c80e4cc5685"
+    },
+    {
+      "path": "previews/current/dark/kid-warning.png",
+      "bytes": 57048,
+      "sha256": "cb1f494c16075211b0888bdd895a2c662f8ca2c545990620c31840522b3520d3"
+    },
+    {
+      "path": "previews/current/dark/link-host.png",
+      "bytes": 98249,
+      "sha256": "36c3faa091ff9861a583b1d35e71eb4ff3f8aa0081b160d33e56a1a850c3a041"
+    },
+    {
+      "path": "previews/current/dark/link-join.png",
+      "bytes": 99181,
+      "sha256": "23a5f99bf264b6bc1980d98c50979f2c2b094d5804f4c111584c178980e93ce4"
+    },
+    {
+      "path": "previews/current/dark/parent-code.mp4",
+      "bytes": 92164,
+      "sha256": "7cecc93be9b09655d59103ce8da6f8174444fcd3441d042be7f87991351732cd"
+    },
+    {
+      "path": "previews/current/dark/parent-code.png",
+      "bytes": 77455,
+      "sha256": "c363e72afad728eb37bf9e9416c2ceb0513db10c7f8d86004bed0700ad16a7c3"
+    },
+    {
+      "path": "previews/current/dark/parent-settings.png",
+      "bytes": 91680,
+      "sha256": "acdd82af6882238bf3e594cfbe84f7ab8aa9e6a7909eda6b3e634170dea0b0ed"
+    },
+    {
+      "path": "previews/current/dark/parent-time.png",
+      "bytes": 75870,
+      "sha256": "4cac3204e184f9b8524ef0e7e86b6dd67d216ccfafd35b26968697feab2755fd"
+    },
+    {
+      "path": "previews/current/dark/power.png",
+      "bytes": 91345,
+      "sha256": "0251b76a2e9232893a89131147b7b4dfa798d35f12410da24e685fc0f5e06b80"
+    },
+    {
+      "path": "previews/current/dark/recents.png",
+      "bytes": 307320,
+      "sha256": "88c25067a5609995201e0055b47ac184728f0a3c3d9498dca6fa69e7bdf0268e"
+    },
+    {
+      "path": "previews/current/dark/save-states.png",
+      "bytes": 189502,
+      "sha256": "e3a4ff40ca14447858dab6146d00d73d4e5f262cdc989e4d16ad2e4e4de6152b"
+    },
+    {
+      "path": "previews/current/dark/screen.png",
+      "bytes": 98561,
+      "sha256": "4f3b77c127a6b9bd7bb41e9b454dd1a9cf146f629b8f5ef3573123c3a86992bc"
+    },
+    {
+      "path": "previews/current/dark/screenshots.png",
+      "bytes": 137240,
+      "sha256": "4363f5dc3856042af0d986272a3feaaa0aa6489a5854be0cb5a08ad15a5b86dc"
+    },
+    {
+      "path": "previews/current/dark/settings.mp4",
+      "bytes": 165371,
+      "sha256": "f3ad83243adb6196556342f00db92d8dedae81e2e5a08e679f1947783656528d"
+    },
+    {
+      "path": "previews/current/dark/settings.png",
+      "bytes": 94902,
+      "sha256": "a7aeb413c6be0dd71eb7af5216930846893091376e17cf0c6b47077fc862129a"
+    },
+    {
+      "path": "previews/current/dark/sound.png",
+      "bytes": 94342,
+      "sha256": "b43b4238d29500b1b9a5aa3bbc1f1a5cf70f93ab4c128009c0a615ff78a8abe3"
+    },
+    {
+      "path": "previews/current/light/about.png",
+      "bytes": 189286,
+      "sha256": "9570aae285290037a2a5aa658c392c6a428e9fac23d74beb01efc67d35dfae8d"
+    },
+    {
+      "path": "previews/current/light/approved.png",
+      "bytes": 278486,
+      "sha256": "223f52000ed6aa037df3490f4f40e38929c761b418c3894800adece083e0ccc1"
+    },
+    {
+      "path": "previews/current/light/boot.gif",
+      "bytes": 831453,
+      "sha256": "3890422b91c89df4fc1bec6da5fc939c86707fa16f829fcbc835bea8f47daaa5"
+    },
+    {
+      "path": "previews/current/light/boot.mp4",
+      "bytes": 80015,
+      "sha256": "b92136a80e10d639e18bae9ee6432cc2ae6fbead638b0d6047f88845c24aebf9"
+    },
+    {
+      "path": "previews/current/light/boot.png",
+      "bytes": 15546,
+      "sha256": "31fd3a95d4517d377862ee784f2a24f073f514b0af037e5defe995cc65c64b87"
+    },
+    {
+      "path": "previews/current/light/buttons-shortcuts.png",
+      "bytes": 91039,
+      "sha256": "21a5693b554bb62530aa797121079d7323ef3e9a32b61d7571d9d3802d10b8aa"
+    },
+    {
+      "path": "previews/current/light/carousel.mp4",
+      "bytes": 554355,
+      "sha256": "adde28fe23087745df02a724934fc2fc6ecce51085758d2a93f491080b9e585c"
+    },
+    {
+      "path": "previews/current/light/carousel.png",
+      "bytes": 278486,
+      "sha256": "223f52000ed6aa037df3490f4f40e38929c761b418c3894800adece083e0ccc1"
+    },
+    {
+      "path": "previews/current/light/charging.gif",
+      "bytes": 790967,
+      "sha256": "11c46cad8ef179cea6da69942fd7204ce0e927b47ba8a0cb0ba107be4216c241"
+    },
+    {
+      "path": "previews/current/light/charging.mp4",
+      "bytes": 35870,
+      "sha256": "074c63b9f6ca48e399e02162de789b19f8f91e779c38fa5417ee24d6dca1ee54"
+    },
+    {
+      "path": "previews/current/light/charging.png",
+      "bytes": 75752,
+      "sha256": "2be02edd39a8e1ab8c1b0a3817a8229d930de222fdb0bd5e4f70ec8ca52dde19"
+    },
+    {
+      "path": "previews/current/light/controls.png",
+      "bytes": 69558,
+      "sha256": "dfad6c2fedc87a9c990620e75ffe957cc7eaaeb0ff99a2cd61b23769650f8d4d"
+    },
+    {
+      "path": "previews/current/light/core-picker.png",
+      "bytes": 240552,
+      "sha256": "e32debe04fd20971c6b4847bbd1a798a6dcacc1bea050acdf7c70ba2ae704c10"
+    },
+    {
+      "path": "previews/current/light/favorites.png",
+      "bytes": 279279,
+      "sha256": "a46f27082a0f17c5f9410a8b11f53d83e1969a9554c246d4f4fe1f64cef91d56"
+    },
+    {
+      "path": "previews/current/light/general.png",
+      "bytes": 79714,
+      "sha256": "7b0c0eb77b26a4358f53b1e6abde4c5ca2ff8882759133246b6f8f61ce43d2eb"
+    },
+    {
+      "path": "previews/current/light/in-game-menu.png",
+      "bytes": 103444,
+      "sha256": "002d109547dd216997747385502bb4866068e0e0a55754c7dfe934ab981ca556"
+    },
+    {
+      "path": "previews/current/light/in-game-settings.png",
+      "bytes": 96766,
+      "sha256": "40526a9a99a3c0145dbfa3ca8f78d1e44fd20b1e23f9b85ac932b6f5ae513f74"
+    },
+    {
+      "path": "previews/current/light/kid-menu.png",
+      "bytes": 74332,
+      "sha256": "12bcfd3f44cedd4edc8bfd1e737eeda52f7ed232177a48e8c7cee5fa4afe3cbb"
+    },
+    {
+      "path": "previews/current/light/kid-warning.png",
+      "bytes": 52773,
+      "sha256": "431c34a73a22246ee66c04177eab4cb463d22b49a1b51783c868e0721af4b143"
+    },
+    {
+      "path": "previews/current/light/parent-code.gif",
+      "bytes": 951649,
+      "sha256": "5c7a97e9efbe493d50591e36d0d7da60599e369b8aa86523b91082765ef6a51e"
+    },
+    {
+      "path": "previews/current/light/parent-code.mp4",
+      "bytes": 85338,
+      "sha256": "a761b52d6acfba8cda01c5fcd0d07135f59edc3abcfbe3139c58e4add6887e86"
+    },
+    {
+      "path": "previews/current/light/parent-code.png",
+      "bytes": 57157,
+      "sha256": "9e63585ceb6cbb92b7625f1a70f8880fbbce1efa929960ccc98cddcfdde23157"
+    },
+    {
+      "path": "previews/current/light/parent-settings.png",
+      "bytes": 71745,
+      "sha256": "5015c97631c404c881e0a4dd0d5bdb916923f08e7bb306d03cd694914746510b"
+    },
+    {
+      "path": "previews/current/light/parent-time.png",
+      "bytes": 55407,
+      "sha256": "a21211f101466dd82636937f4d4543c737ab73475d7e0fd8c1a8874d0c5b2c8d"
+    },
+    {
+      "path": "previews/current/light/power.png",
+      "bytes": 74764,
+      "sha256": "cc58c7a7568b9bb205110191a66aa5469449911dd01275a73dd44677e97516c8"
+    },
+    {
+      "path": "previews/current/light/recents.png",
+      "bytes": 286008,
+      "sha256": "69929409aa417050e8ad56a89bc973f1936286762f3fbefd2a8e1ed73d878b5d"
+    },
+    {
+      "path": "previews/current/light/screen.png",
+      "bytes": 81870,
+      "sha256": "236a4785ef7dc0380976de6b453ad3bae312f132a765ca93d44eb7ed6269033b"
+    },
+    {
+      "path": "previews/current/light/settings.mp4",
+      "bytes": 158325,
+      "sha256": "f5e63306dfbe3b9289e7819850842dcb66f1cc289ec135665cc650bde00546f2"
+    },
+    {
+      "path": "previews/current/light/settings.png",
+      "bytes": 77237,
+      "sha256": "f27164955e26058d0352df2adbd201a188fd7b22fe361a3cdb856216a797d6c7"
+    },
+    {
+      "path": "previews/current/light/sound.png",
+      "bytes": 77707,
+      "sha256": "6f4b5abd677b2580abb25fc5e6d6eeb08e2896095cebe4b71f2df1ec5a3395e2"
+    },
+    {
+      "path": "previews/homepage/hero-dark-graphite.mp4",
+      "bytes": 658825,
+      "sha256": "92a485e5dd9e965eec16021b463b9bca11d5438e3e2bef39a3a93798323b4475"
+    },
+    {
+      "path": "previews/homepage/hero-dark-graphite.png",
+      "bytes": 295487,
+      "sha256": "2a26ec30ad2185b06d55cfcad0eec223a0e5018d5bad2d48813a0db5eb949978"
+    },
+    {
+      "path": "previews/homepage/hero-dark-pearl_blue.mp4",
+      "bytes": 660149,
+      "sha256": "698ed56b81ea9b6806b709bb0d1b34dee462c8276e380294684ab684709bc53f"
+    },
+    {
+      "path": "previews/homepage/hero-dark-pearl_blue.png",
+      "bytes": 295738,
+      "sha256": "93cb623380bbc2189110164c4596d745bff761fbdcbfa0c4112d49af9177f4bf"
+    },
+    {
+      "path": "previews/homepage/hero-dark-pearl_pink.mp4",
+      "bytes": 652493,
+      "sha256": "1240ab2f06cc2a3c8a4e1a451bd76e26a8a0c47b6da718f993cb91164d32e223"
+    },
+    {
+      "path": "previews/homepage/hero-dark-pearl_pink.png",
+      "bytes": 295760,
+      "sha256": "8e62080de71c0322e71cfba4ccb704e95d62d72d3a67ce1192e7f1f785c8dac2"
+    },
+    {
+      "path": "previews/homepage/hero-dark-platinum.mp4",
+      "bytes": 663127,
+      "sha256": "ec1811c4f24ebf1122d202a4e40e5f53d9eead9c78c3f0f663cf15203932b267"
+    },
+    {
+      "path": "previews/homepage/hero-dark-platinum.png",
+      "bytes": 295743,
+      "sha256": "efa321bf11639e5071ba2fefcb4b2a5a6cd83ef7373fa0085a0a6537355e2825"
+    },
+    {
+      "path": "previews/homepage/hero-light-graphite.mp4",
+      "bytes": 618144,
+      "sha256": "ed4d6aeebbb90da4201ee0e785a134513a16e4f64ce8d0869acc8e792839279e"
+    },
+    {
+      "path": "previews/homepage/hero-light-graphite.png",
+      "bytes": 279958,
+      "sha256": "a928a0a721230aefc496e24823520a6c1b5ec7f45f51d0279c6f156133280792"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_blue.mp4",
+      "bytes": 620991,
+      "sha256": "78376c02258a4eaec5267cab54a058b4e02df4f1d44d959dfc150aa8993b2b3c"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_blue.png",
+      "bytes": 279836,
+      "sha256": "15ce74e02b51233da4521f162077c6a2f9fa70c3156194dfd4df9ebd04b686cc"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_pink.mp4",
+      "bytes": 618103,
+      "sha256": "361a5bfe1e4eee6e123ca49e04cc7111a9addfe1ae23c676ac0fe1fd1885c42a"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_pink.png",
+      "bytes": 279737,
+      "sha256": "26e1e5d28e67de5748584c99880434db94d13f2c00d0deb39f921d59bd1946f9"
+    },
+    {
+      "path": "previews/homepage/hero-light-platinum.mp4",
+      "bytes": 619350,
+      "sha256": "45e2bf3a2ebaf93e5938e3aa446a4fd5167dd409c5d7be24550769c50c56ea61"
+    },
+    {
+      "path": "previews/homepage/hero-light-platinum.png",
+      "bytes": 279781,
+      "sha256": "fda09aa7a7111cff6fc21c3ce0e4aa9d9004f3d28d7bfe8fb53ed91972faf7c0"
+    }
+  ]
+}

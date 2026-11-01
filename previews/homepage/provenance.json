@@ -1,51 +1,95 @@
 {
-  "source_commit": "7ba51a99aea52b8052971c12b8b62f35ff0526f0",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/40316984776",
+  "source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
+  "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
+  "ui_release_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41327784758",
+  "capture": "previews/site_refresh.rs",
+  "rendering": "Production Frontend and native desktop GL compositor; deterministic software fixtures with repository sample label artwork, synthetic game headers and mock-core gameplay; not photographs or hardware test results.",
+  "dimensions": [
+    720,
+    480
+  ],
+  "fps": 60,
   "files": [
     {
-      "path": "previews/homepage/hero-graphite.mp4",
-      "bytes": 1183191,
-      "sha256": "9a77ea81c9e7c227e1b01289c092b29aaa627ea2993f647bdac9bd3ec44aaead"
+      "path": "previews/homepage/hero-dark-graphite.mp4",
+      "bytes": 658825,
+      "sha256": "92a485e5dd9e965eec16021b463b9bca11d5438e3e2bef39a3a93798323b4475"
     },
     {
-      "path": "previews/homepage/hero-graphite.png",
-      "bytes": 481005,
-      "sha256": "beac91915feecb8066e62133271adc7cdacf1460f3101d9cd8e2bc688acddf79"
+      "path": "previews/homepage/hero-dark-graphite.png",
+      "bytes": 295487,
+      "sha256": "2a26ec30ad2185b06d55cfcad0eec223a0e5018d5bad2d48813a0db5eb949978"
     },
     {
-      "path": "previews/homepage/hero-platinum.mp4",
-      "bytes": 1185899,
-      "sha256": "2cefad4eeda860281169be18014076fa110499cac313ccd90d74df0e709296df"
+      "path": "previews/homepage/hero-dark-pearl_blue.mp4",
+      "bytes": 660149,
+      "sha256": "698ed56b81ea9b6806b709bb0d1b34dee462c8276e380294684ab684709bc53f"
     },
     {
-      "path": "previews/homepage/hero-platinum.png",
-      "bytes": 481292,
-      "sha256": "b63d6f4a0acb6d598cc5483c2e5e678ad570b9c835dc3d9c5cc05155d5e98efb"
+      "path": "previews/homepage/hero-dark-pearl_blue.png",
+      "bytes": 295738,
+      "sha256": "93cb623380bbc2189110164c4596d745bff761fbdcbfa0c4112d49af9177f4bf"
     },
     {
-      "path": "previews/homepage/hero-pearl_blue.mp4",
-      "bytes": 1182278,
-      "sha256": "e681fd0e916fd888c2685f99783c45ff5d640d287ed671a773c4186ccb42e4e8"
+      "path": "previews/homepage/hero-dark-pearl_pink.mp4",
+      "bytes": 652493,
+      "sha256": "1240ab2f06cc2a3c8a4e1a451bd76e26a8a0c47b6da718f993cb91164d32e223"
     },
     {
-      "path": "previews/homepage/hero-pearl_blue.png",
-      "bytes": 481292,
-      "sha256": "4f7cdaff2bd26ffe285620e038a1a56575bec5ae287000d179bb7e0fbc3b6cdd"
+      "path": "previews/homepage/hero-dark-pearl_pink.png",
+      "bytes": 295760,
+      "sha256": "8e62080de71c0322e71cfba4ccb704e95d62d72d3a67ce1192e7f1f785c8dac2"
     },
     {
-      "path": "previews/homepage/hero-pearl_pink.mp4",
-      "bytes": 1188611,
-      "sha256": "2886929a43b23502e46b91e90de73bc0b6fe42ba4e861f8a411c74526c89c2b7"
+      "path": "previews/homepage/hero-dark-platinum.mp4",
+      "bytes": 663127,
+      "sha256": "ec1811c4f24ebf1122d202a4e40e5f53d9eead9c78c3f0f663cf15203932b267"
     },
     {
-      "path": "previews/homepage/hero-pearl_pink.png",
-      "bytes": 481011,
-      "sha256": "9702a3696d895466de3fdeae5c3ba4a0be249a14bc5e5562c2d6f4f1f2cd3753"
+      "path": "previews/homepage/hero-dark-platinum.png",
+      "bytes": 295743,
+      "sha256": "efa321bf11639e5071ba2fefcb4b2a5a6cd83ef7373fa0085a0a6537355e2825"
     },
     {
-      "path": "previews/homepage/readme-hero.gif",
-      "bytes": 8793072,
-      "sha256": "b185a5f3581adf3d340ea2e70ad72b17a38b72a1f35d16bef3d866d5b6415d4a"
+      "path": "previews/homepage/hero-light-graphite.mp4",
+      "bytes": 618144,
+      "sha256": "ed4d6aeebbb90da4201ee0e785a134513a16e4f64ce8d0869acc8e792839279e"
+    },
+    {
+      "path": "previews/homepage/hero-light-graphite.png",
+      "bytes": 279958,
+      "sha256": "a928a0a721230aefc496e24823520a6c1b5ec7f45f51d0279c6f156133280792"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_blue.mp4",
+      "bytes": 620991,
+      "sha256": "78376c02258a4eaec5267cab54a058b4e02df4f1d44d959dfc150aa8993b2b3c"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_blue.png",
+      "bytes": 279836,
+      "sha256": "15ce74e02b51233da4521f162077c6a2f9fa70c3156194dfd4df9ebd04b686cc"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_pink.mp4",
+      "bytes": 618103,
+      "sha256": "361a5bfe1e4eee6e123ca49e04cc7111a9addfe1ae23c676ac0fe1fd1885c42a"
+    },
+    {
+      "path": "previews/homepage/hero-light-pearl_pink.png",
+      "bytes": 279737,
+      "sha256": "26e1e5d28e67de5748584c99880434db94d13f2c00d0deb39f921d59bd1946f9"
+    },
+    {
+      "path": "previews/homepage/hero-light-platinum.mp4",
+      "bytes": 619350,
+      "sha256": "45e2bf3a2ebaf93e5938e3aa446a4fd5167dd409c5d7be24550769c50c56ea61"
+    },
+    {
+      "path": "previews/homepage/hero-light-platinum.png",
+      "bytes": 279781,
+      "sha256": "fda09aa7a7111cff6fc21c3ce0e4aa9d9004f3d28d7bfe8fb53ed91972faf7c0"
     }
   ]
 }
