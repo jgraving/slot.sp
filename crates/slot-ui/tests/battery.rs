@@ -5,15 +5,15 @@ fn pixel(f:&slot_ui::UndoFace,x:u32,y:u32)->[u8;4]{f.rgba[((y*f.w+x)*4)as usize.
 #[test]
 fn native_battery_has_a_capsule_and_visible_level_at_every_percentage(){
     let mut fills=vec![];
-    for n in [0,10,50,82,100]{let f=status_battery_face(at(n,Charge::Discharging));assert_eq!((f.w,f.h),(GAUGE_W as u32,GAUGE_H as u32));assert_eq!(pixel(&f,0,0)[3],0);let width=(0..54).filter(|&x|pixel(&f,x,4)[0]>200).count();fills.push(width);}
+    for n in [0,10,50,82,100]{let f=status_battery_face(at(n,Charge::Discharging));assert_eq!((f.w,f.h),(GAUGE_W as u32,GAUGE_H as u32));assert_eq!(pixel(&f,0,0)[3],0);let width=(0..70).filter(|&x|pixel(&f,x,4)[0]>200).count();fills.push(width);}
     assert!(fills.windows(2).all(|p|p[0]<p[1]));
 }
 #[test]
 fn battery_state_colours_and_bolt_are_part_of_the_same_native_asset(){
     let regular=status_battery_face(at(82,Charge::Discharging));let charging=status_battery_face(at(82,Charge::Charging));let low=status_battery_face(at(20,Charge::Discharging));
     let g=pixel(&charging,10,4);assert!(g[1]>g[0]);let red=pixel(&low,4,10);assert!(red[0]>red[1]);
-    assert!((58..70).any(|x|(0..26).any(|y|pixel(&charging,x,y)[3]>200)));
-    assert!((58..70).all(|x|(0..26).all(|y|pixel(&regular,x,y)[3]==0)));
+    assert_ne!(regular.rgba,charging.rgba);
+    for percent in [0,7,10,99,100] {for light in [false,true] {let f=slot_ui::status_battery_face_on(at(percent,Charge::Charging),light);for y in 0..f.h {for x in 0..f.w {assert_eq!(pixel(&f,x,y)[3],pixel(&regular,x,y)[3],"bolt escaped capsule at {percent}%");}}}}
 }
 #[test]
 fn time_is_left_and_the_icon_cluster_and_battery_are_right_without_overlap(){

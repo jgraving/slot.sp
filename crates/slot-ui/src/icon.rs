@@ -74,95 +74,35 @@ impl Icon {
     }
 }
 
-const HALO: [u8; 3] = [0x08, 0x08, 0x0a];
-pub const HALO_PX: u32 = 1;
+pub const GLYPH_PAD_PX: u32 = 1;
 
 pub const WARNING_INK: [u8; 3] = [0xff, 0xb8, 0x2e];
 
-pub fn haloed(cov: &[u8], cw: u32, ch: u32, colour: [u8; 3]) -> CartFace {
-    haloed_with(cov, cw, ch, |_, _| colour)
+/// Flat ink and the font's original alpha ramp. Keep the shared padding without
+/// expanding the silhouette or baking a contrasting colour into its edges.
+pub fn coverage_face(cov: &[u8], cw: u32, ch: u32, colour: [u8; 3]) -> CartFace {
+    coverage_face_with(cov, cw, ch, |_, _| colour)
 }
 
-pub fn haloed_with(
-    cov: &[u8],
-    cw: u32,
-    ch: u32,
+pub fn coverage_face_with(
+    cov: &[u8], cw: u32, ch: u32,
     colour_at: impl Fn(isize, isize) -> [u8; 3],
 ) -> CartFace {
-    let pad = HALO_PX as usize;
-    let (cw, ch) = (cw as usize, ch as usize);
-    let (w, h) = (cw + 2 * pad, ch + 2 * pad);
-    let at = |x: isize, y: isize| -> u8 {
-        if x < 0 || y < 0 || x >= cw as isize || y >= ch as isize {
-            0
-        } else {
-            cov[y as usize * cw + x as usize]
-        }
-    };
-
-    let mut rgba = Vec::with_capacity(w * h * 4);
-    for y in 0..h {
-        for x in 0..w {
-            let (gx, gy) = (x as isize - pad as isize, y as isize - pad as isize);
-            let ink = at(gx, gy);
-            let mut halo = 0u8;
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    halo = halo.max(at(gx + dx, gy + dy));
-                }
-            }
-            if ink > 0 {
-                let colour = colour_at(gx, gy);
-                let a = ink as u32;
-                let inv = 255 - a;
-                let mix = |c: u8, s: u8| ((c as u32 * a + s as u32 * inv) / 255) as u8;
-                rgba.extend_from_slice(&[
-                    mix(colour[0], HALO[0]),
-                    mix(colour[1], HALO[1]),
-                    mix(colour[2], HALO[2]),
-                    ink.max(halo),
-                ]);
-            } else {
-                rgba.extend_from_slice(&[HALO[0], HALO[1], HALO[2], halo]);
-            }
-        }
-    }
-    CartFace {
-        rgba,
-        w: w as u32,
-        h: h as u32,
-    }
+    let (w,h)=(cw+2*GLYPH_PAD_PX,ch+2*GLYPH_PAD_PX);
+    let mut rgba=vec![0;(w*h*4)as usize];
+    for y in 0..ch {for x in 0..cw {
+        let i=(((y+GLYPH_PAD_PX)*w+x+GLYPH_PAD_PX)*4)as usize;
+        rgba[i..i+3].copy_from_slice(&colour_at(x as isize,y as isize));
+        rgba[i+3]=cov[(y*cw+x)as usize];
+    }}
+    CartFace{rgba,w,h}
 }
 
 pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
     let Some(r) = raster(icon, px) else {
-        return CartFace {
-            rgba: Vec::new(),
-            w: 0,
-            h: 0,
-        };
+        return CartFace { rgba: Vec::new(), w: 0, h: 0 };
     };
-    if matches!(
-        icon,
-        Icon::Bluetooth | Icon::BluetoothMuted | Icon::HeadphonesMuted | Icon::Usb | Icon::UsbMuted
-    ) {
-        // Keep the common icon box, but no black halo on these fine strokes.
-        let (w, h) = (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX);
-        let mut rgba = vec![0; (w * h * 4) as usize];
-        for y in 0..r.h {
-            for x in 0..r.w {
-                let at = (((y + HALO_PX) * w + x + HALO_PX) * 4) as usize;
-                rgba[at..at + 4].copy_from_slice(&[
-                    colour[0],
-                    colour[1],
-                    colour[2],
-                    r.cov[(y * r.w + x) as usize],
-                ]);
-            }
-        }
-        return CartFace { rgba, w, h };
-    }
-    haloed(&r.cov, r.w, r.h, colour)
+    coverage_face(&r.cov, r.w, r.h, colour)
 }
 
 pub const STATUS_ICON_SIZE:u32=24;
@@ -206,7 +146,7 @@ pub fn control_icon_face(icon:Icon,size:u32,ink:[u8;3])->CartFace {
 
 pub fn icon_box(px: f32) -> (u32, u32) {
     match raster(Icon::Volume, px) {
-        Some(r) => (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX),
+        Some(r) => (r.w + 2 * GLYPH_PAD_PX, r.h + 2 * GLYPH_PAD_PX),
         None => (0, 0),
     }
 }
@@ -329,7 +269,7 @@ pub fn badge_face(badge: Badge, px: f32, colour: [u8; 3]) -> CartFace {
             out[(dy as u32 * f.w + dx as u32) as usize] = cov[gy * m.width + gx];
         }
     }
-    haloed(&out, f.w, f.h, colour)
+    coverage_face(&out, f.w, f.h, colour)
 }
 
 struct Raster {
@@ -464,7 +404,7 @@ fn muted_audio_raster(icon: Icon, px: f32) -> Option<Raster> {
 
 pub(crate) fn glyph_box(icon: Icon, px: f32) -> (u32, u32) {
     raster(icon, px)
-        .map(|r| (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX))
+        .map(|r| (r.w + 2 * GLYPH_PAD_PX, r.h + 2 * GLYPH_PAD_PX))
         .unwrap_or((0, 0))
 }
 

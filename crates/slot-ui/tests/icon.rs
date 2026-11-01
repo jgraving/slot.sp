@@ -87,16 +87,13 @@ fn a_bigger_size_gives_a_bigger_face() {
 }
 
 #[test]
-fn icons_carry_a_halo_so_they_read_without_a_plate() {
-    let f = icon_face(Icon::FastForward, 18.0, [255, 255, 255]);
-    let opaque = |p: &[u8]| p[3] > 128;
-    let dark = f.rgba.chunks(4).filter(|p| opaque(p) && p[0] < 60).count();
-    let light = f.rgba.chunks(4).filter(|p| opaque(p) && p[0] > 200).count();
-    assert!(dark > 8, "no halo, only {dark} dark pixels");
-    assert!(
-        light > 8,
-        "the glyph itself is gone, only {light} light pixels"
-    );
+fn icons_keep_flat_ink_and_smooth_alpha_without_an_outline() {
+    for icon in Icon::ALL {
+        let f=icon_face(icon,18.0,[240,230,220]);
+        assert!(f.rgba.chunks_exact(4).any(|p|p[3]>0&&p[3]<255));
+        for p in f.rgba.chunks_exact(4).filter(|p|p[3]>0) {assert_eq!(&p[..3],&[240,230,220],"{icon:?} has an outline or mixed edge ink");}
+        assert!(f.rgba[..f.w as usize*4].chunks_exact(4).all(|p|p[3]==0));
+    }
 }
 
 #[test]
@@ -109,7 +106,7 @@ fn a_new_icon_does_not_resize_the_box_the_others_share() {
 }
 
 #[test]
-fn icon_box_accounts_for_the_halo() {
+fn icon_box_accounts_for_the_padding() {
     let (bw, bh) = icon_box(18.0);
     let f = icon_face(Icon::Volume, 18.0, [255, 255, 255]);
     assert_eq!((bw, bh), (f.w, f.h));

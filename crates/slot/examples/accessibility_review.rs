@@ -104,7 +104,7 @@ fn main(){
     for light in [false,true] {
         a.g.set_light_ui(light);let mut out=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:if light {slot_gfx::ui_palette::BACKDROP}else{[0.04,0.06,0.08,1.0]}}];
         for (row,charge) in [slot_power::Charge::Discharging,slot_power::Charge::Charging].into_iter().enumerate() {
-            for (i,percent) in [0,10,50,82,100].into_iter().enumerate() {
+            for (i,percent) in [0,7,10,99,100].into_iter().enumerate() {
                 let face=slot_ui::status_battery_face_on(slot_power::Battery{percent,charge},light);
                 let tex=a.g.create_texture(face.w,face.h,&face.rgba);
                 out.push(Draw::Tex{x:64.0+i as f32*102.0,y:60.0+row as f32*50.0,w:face.w as f32,h:face.h as f32,tex,alpha:1.0});
@@ -118,6 +118,22 @@ fn main(){
             for d in &mut hud_out[start..] {match d {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y+=70.0+i as f32*80.0,_=>{}}}
         }
         a.g.begin_frame();a.g.draw_list(&hud_out);a.capture(if light{"light-hud-controls"}else{"dark-hud-controls"});
+        // Actual transient notifications, including Bluetooth connect/disconnect,
+        // pass through the UI palette using their untouched alpha ramps.
+        let toasts:Vec<_>=slot_ui::Toast::all().into_iter().map(|toast|{let f=slot_ui::toast_face(toast);a.g.create_ui_texture(f.w,f.h,&f.rgba)}).collect();
+        for (page,messages) in [
+            [slot_ui::Toast::BluetoothConnected,slot_ui::Toast::BluetoothDisconnected,slot_ui::Toast::UsbConnected,slot_ui::Toast::UsbDisconnected],
+            [slot_ui::Toast::StateSaved,slot_ui::Toast::StateLoaded,slot_ui::Toast::ShotCaptured,slot_ui::Toast::ShotFailed],
+        ].into_iter().enumerate() {
+            let mut notices=vec![hud_out[0]];
+            for (row,toast) in messages.into_iter().enumerate() {
+                let mut hud=slot_ui::Hud::new();hud.set_toasts(toasts.clone());hud.toast(toast,0);
+                let start=notices.len();hud.draw(a.f.app().canvas(),300,&mut notices);
+                let (_,base,_,_)=slot_ui::toast_rect(a.f.app().canvas(),toast);
+                for draw in &mut notices[start..] {match draw {Draw::RoundRect{y,..}|Draw::Tex{y,..}=>*y+=60.0+row as f32*90.0-base,_=>{}}}
+            }
+            a.g.begin_frame();a.g.draw_list(&notices);a.capture(&format!("{}-notifications-{page}",if light{"light"}else{"dark"}));
+        }
         let message="Charging: 57%";let face=slot_ui::settings_notice_face_on(message,a.f.app().canvas(),light);let tex=a.g.create_texture(face.w,face.h,&face.rgba);
         let mut n=slot_ui::SettingsNotice::default();n.observe(Some((1,message.into())),0);n.draw_on(a.f.app().canvas(),Some((tex,face.w,face.h)),1200,light,&mut out);
         a.g.begin_frame();a.g.draw_list(&out);a.capture(if light{"light-controls-contrast"}else{"dark-controls-contrast"});

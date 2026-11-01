@@ -2,7 +2,7 @@ use slot_gfx::{Canvas, OUT_H};
 use slot_store::GbColors;
 
 use crate::hud::HUD_INK;
-use crate::icon::{haloed, haloed_with, icon_coverage, Icon, HALO_PX, WARNING_INK};
+use crate::icon::{coverage_face, coverage_face_with, icon_coverage, Icon, GLYPH_PAD_PX, WARNING_INK};
 use crate::text;
 use crate::{CartFace, QuickRow};
 
@@ -248,7 +248,7 @@ pub fn toast_rect(canvas: Canvas, toast: Toast) -> (f32, f32, f32, f32) {
 
 pub fn toast_box(toast: Toast) -> (u32, u32) {
     let s = setting(toast);
-    (s.w + 2 * HALO_PX, s.h + detail_h(toast) + 2 * HALO_PX)
+    (s.w + 2 * GLYPH_PAD_PX, s.h + detail_h(toast) + 2 * GLYPH_PAD_PX)
 }
 
 fn detail_h(toast: Toast) -> u32 {
@@ -281,9 +281,9 @@ pub fn toast_face(toast: Toast) -> CartFace {
         cov.extend(text::coverage(s.w, DETAIL_H, &layout));
     }
     if tinted.is_empty() || toast.icon() != Some(Icon::Alert) {
-        return haloed(&cov, s.w, s.h + detail_h(toast), HUD_INK);
+        return coverage_face(&cov, s.w, s.h + detail_h(toast), HUD_INK);
     }
-    haloed_with(&cov, s.w, s.h + detail_h(toast), |x, _| {
+    coverage_face_with(&cov, s.w, s.h + detail_h(toast), |x, _| {
         match tinted.contains(&(x as u32)) {
             true => WARNING_INK,
             false => HUD_INK,

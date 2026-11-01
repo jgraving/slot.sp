@@ -1,5 +1,5 @@
 use crate::bitmaps::ButtonLegend;
-use crate::icon::haloed;
+use crate::icon::coverage_face;
 use crate::plate::blit;
 use crate::{ease, text, Canvas, CartFace, Draw, Placed, TexId};
 
@@ -20,7 +20,7 @@ fn removal_face(key: ButtonLegend) -> CartFace {
     let font = text::label_font().expect("bundled label font");
     let layout = text::fit(font, "Again to remove", 400.0, 1, 32.0, 32.0);
     let tw = text::line_width(font, &layout.lines[0], layout.px, layout.tracking).ceil() as u32;
-    let label = haloed(&text::coverage(tw, bh, &layout), tw, bh, [246, 244, 239]);
+    let label = coverage_face(&text::coverage(tw, bh, &layout), tw, bh, [246, 244, 239]);
     let (w, h) = (bw + 12 + label.w, label.h);
     let mut rgba = vec![0; (w * h * 4) as usize];
     blit(&mut rgba, w, &button.rgba, bw, bh, 0, (h - bh) / 2);

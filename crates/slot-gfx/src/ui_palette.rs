@@ -119,15 +119,11 @@ pub fn header_contrast(rgba:&[u8],w:u32,h:u32)->[bool;3] {
         count>0&&luma/count as f32>0.24
     })
 }
-/// Preserve the alpha ramp and add a quiet opposing outline for busy artwork.
+/// Choose clean backdrop ink without changing the original glyph coverage.
 pub fn backdrop_text(rgba:&[u8],w:u32,h:u32,dark:bool)->Vec<u8> {
-    let mut out=rgba.to_vec();let ink=if dark {INK}else{[246,244,239]};let edge=if dark {[250,249,245]}else{[12,18,22]};
-    for y in 0..h {for x in 0..w {
-        let i=((y*w+x)*4)as usize;let a=rgba[i+3]as f32/255.0;let mut neighbor=0;
-        for yy in y.saturating_sub(1)..=(y+1).min(h-1) {for xx in x.saturating_sub(1)..=(x+1).min(w-1) {neighbor=neighbor.max(rgba[((yy*w+xx)*4+3)as usize]);}}
-        let border=neighbor as f32/255.0*0.60*(1.0-a);let total=a+border;
-        if total>0.0 {for c in 0..3 {out[i+c]=((ink[c]as f32*a+edge[c]as f32*border)/total).round()as u8;}out[i+3]=(total*255.0).round()as u8;}
-    }}
+    debug_assert_eq!(rgba.len(),(w*h*4)as usize);
+    let mut out=rgba.to_vec();let ink=if dark {INK}else{[246,244,239]};
+    for p in out.chunks_exact_mut(4) {if p[3]>0 {p[..3].copy_from_slice(&ink);}}
     out
 }
 
@@ -143,6 +139,6 @@ mod backdrop_tests {
     #[test]
     fn header_text_retains_intermediate_alpha_in_both_contrast_palettes() {
         let pixels=[0,0,0,0,246,244,239,64,246,244,239,128,246,244,239,255,0,0,0,0];
-        for light in [false,true] {let p=backdrop_text(&pixels,5,1,light);assert!(p[3]>0);assert!(p[7]<p[11]&&p[11]<p[15]);assert_eq!(p[15],255);}
+        for light in [false,true] {let p=backdrop_text(&pixels,5,1,light);for (before,after) in pixels.chunks_exact(4).zip(p.chunks_exact(4)) {assert_eq!(before[3],after[3],"adaptive ink added an outline");if after[3]>0 {assert_eq!(&after[..3],if light{&INK}else{&[246,244,239]});}}}
     }
 }
