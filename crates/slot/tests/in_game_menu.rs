@@ -100,12 +100,12 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     ];
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::UiVibration, QuickRow::ChargingVibration, QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
     a.set_palette_live(true);
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::UiVibration, QuickRow::ChargingVibration, QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
 }
 
@@ -820,4 +820,44 @@ fn about_and_clock_return_to_the_same_paused_game_without_powering_it_down() {
         press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{cart}if cart=="Emerald"));assert_eq!(a.in_game_menu(),Some(row));
         press(&mut a,Btn::B);assert_eq!(a.in_game_menu(),Some(if row==QuickRow::DateTime{QuickRow::General}else{QuickRow::Settings}));
     }
+}
+
+fn slot_y(a:&App,id:TexId)->f32 {
+    let mut out=vec![];a.draw(&mut out);
+    let ys:Vec<_>=out.iter().filter_map(|d|match d {Draw::Tex{tex,y,..}|Draw::Part{tex,y,..} if *tex==id=>Some(*y),_=>None}).collect();
+    assert!(!ys.is_empty(),"hardware strip disappeared");
+    assert!(ys.iter().all(|y|(*y-ys[0]).abs()<0.01),"a second strip bypassed the slide: {ys:?}");
+    ys[0]
+}
+
+#[test]
+fn production_menu_hardware_slides_up_and_keeps_its_depth_order() {
+    let (_d,mut a)=playing();menu_faces(&mut a);paint_carts(&mut a);frames(&mut a,40);
+    let back=TexId::from_raw(8000);let front=TexId::from_raw(8001);a.set_slot_faces(back,front);
+    a.apply(Action::QuickMenu);frames(&mut a,13);
+    let first=slot_y(&a,front);frames(&mut a,3);let middle=slot_y(&a,front);frames(&mut a,40);let end=slot_y(&a,front);
+    assert!(first>middle+1.0&&middle>end+1.0,"slot popped in: {first}, {middle}, {end}");
+    assert!((end-(OUT_H as f32-MOUTH_H)).abs()<0.1);
+    a.apply(Action::QuickMenu);frames(&mut a,4);assert!(slot_y(&a,front)>end+1.0);
+}
+
+#[test]
+fn hold_menu_exit_slides_the_slot_up_on_native_and_framed_panels() {
+    for panel in [(640,480),(720,720)] {
+        let (_d,mut a)=playing();a.set_panel(panel);menu_faces(&mut a);paint_carts(&mut a);frames(&mut a,40);
+        let front=TexId::from_raw(8001);a.set_slot_faces(TexId::from_raw(8000),front);
+        a.apply(Action::Eject);assert!(matches!(a.phase(),Phase::Ejecting{..}));
+        let first=slot_y(&a,front);frames(&mut a,4);let middle=slot_y(&a,front);frames(&mut a,20);let end=slot_y(&a,front);
+        assert!(first>middle+1.0&&middle>end+1.0,"exit slot popped in on {panel:?}: {first}, {middle}, {end}");
+    }
+}
+
+#[test]
+fn about_from_in_game_settings_keeps_the_game_behind_the_card() {
+    let (_d,mut a)=playing();a.set_game_ready(true);menu_faces(&mut a);frames(&mut a,40);
+    go_to(&mut a,QuickRow::About);frames(&mut a,40);press(&mut a,Btn::A);frames(&mut a,40);
+    assert!(matches!(a.phase(),Phase::About));let mut out=vec![];a.draw(&mut out);
+    assert!(matches!(out.first(),Some(Draw::Game)),"About replaced the game backdrop: {:?}",out.first());
+    assert!(!out.iter().any(|d|matches!(d,Draw::Lava{..})),"launcher wallpaper leaked into About");
+    press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{..}));assert_eq!(a.in_game_menu(),Some(QuickRow::About));
 }

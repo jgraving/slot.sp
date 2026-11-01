@@ -14,6 +14,18 @@ fn main(){
         fn settle(&mut self){for _ in 0..40{self.frame(vec![]);}}
         fn capture(&mut self,name:&str){let mut e=png::Encoder::new(std::fs::File::create(self.dir.join(format!("{name}.png"))).unwrap(),self.width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&self.g.read_frame()).unwrap();}
         fn save(&mut self,name:&str){self.settle();self.capture(name);}
+        fn exit_review(&mut self,name:&str){
+            self.tap(Btn::B);let mut moved=false;
+            for i in 0..42 {
+                self.frame(vec![]);if [0,1,2,5,9,20,41].contains(&i){self.capture(&format!("{name}-exit-{i:02}"));}
+                let mut out=vec![];self.f.app().draw(&mut out);
+                for d in out {if let Draw::RoundRect{x,y,w,h,colour,..}=d {if colour==slot_ui::expressive::SELECTED&&(h-slot_ui::expressive::ROW_H).abs()<0.1 {
+                    assert!(x>=55.9&&x+w<=self.width as f32-55.9&&y>=55.9&&y+h<=366.1,"outgoing focus escaped card");
+                    moved|=x>85.0;
+                }}}
+            }
+            assert!(moved,"{name} selector stayed still during exit");
+        }
         fn nav(&mut self,to:QuickRow){for _ in 0..40{let at=self.f.app().quick_menu().unwrap();if at==to{return;}assert_eq!(at.page(),to.page());let b=if at.page()==QuickRow::MAIN{let a=at.position(&[]);let b=to.position(&[]);if a%4<b%4{Btn::Right}else if a%4>b%4{Btn::Left}else{Btn::Down}}else{Btn::Down};self.tap(b);}panic!("missing {to:?}");}
     }
     let dir=std::path::PathBuf::from(std::env::args().nth(1).unwrap());std::fs::create_dir_all(&dir).unwrap();
@@ -38,11 +50,10 @@ fn main(){
     g.set_light_ui(false);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut g);f.render(&mut g,(width,480));let mut a=Review{f,g,now:0,dir,width};
     a.save("dark-carousel");a.tap(Btn::Menu);a.save("dark-grid");a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Theme);a.save("dark-theme-row");a.tap(Btn::Right);assert!(a.f.app().light());a.save("light-theme-row");
-    a.nav(QuickRow::UiVibration);a.save("light-vibration");a.tap(Btn::Left);a.nav(QuickRow::ChargingVibration);a.tap(Btn::Left);a.save("light-vibration-off");
-    let saved=slot_store::read_slot_state(&root);assert!(saved.appearance.light());assert!(!saved.ui_vibration&&!saved.charging_vibration);
+    assert!(slot_store::read_slot_state(&root).appearance.light());
     a.tap(Btn::B);a.save("light-grid");a.nav(QuickRow::Bluetooth);a.tap(Btn::A);
     for i in 0..42 {a.frame(vec![]);if [0,1,2,5,9,20,41].contains(&i){a.capture(&format!("sound-entry-{i:02}"));}let mut out=vec![];a.f.app().draw(&mut out);for d in out{if let Draw::RoundRect{x,y,w,h,colour,..}=d{if colour==slot_ui::expressive::SELECTED{assert!(x>=55.9&&x+w<=width as f32-55.9&&y>=55.9&&y+h<=366.1,"focus escaped card: {x},{y},{w},{h}");if (h-slot_ui::expressive::ROW_H).abs()<0.1 {assert!((x+w/2.0-width as f32/2.0).abs()<0.1&& (w-(width as f32-168.0)).abs()<0.1,"submenu focus slid in horizontally");}}}}}
-    a.save("light-sound");a.tap(Btn::B);a.nav(QuickRow::Kids);a.tap(Btn::A);a.save("light-parent-settings");a.tap(Btn::Down);a.tap(Btn::A);a.tap(Btn::L1);a.tap(Btn::R1);a.tap(Btn::L2);a.save("light-parent-code");a.tap(Btn::Menu);a.tap(Btn::B);
+    a.save("light-sound");a.exit_review("sound");a.nav(QuickRow::Kids);a.tap(Btn::A);a.save("light-parent-settings");a.exit_review("parent");a.nav(QuickRow::Kids);a.tap(Btn::A);a.settle();a.tap(Btn::Down);a.tap(Btn::A);a.tap(Btn::L1);a.tap(Btn::R1);a.tap(Btn::L2);a.save("light-parent-code");a.tap(Btn::Menu);a.tap(Btn::B);
     assert!(matches!(a.f.app().phase(),Phase::Shelf));a.save("light-carousel");a.tap(Btn::Menu);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Theme);a.tap(Btn::Left);assert!(!a.f.app().light());a.save("dark-restored");
     a.g.set_light_ui(true);let badge=slot_ui::kid_time_meter(3600,3600);let tex=a.g.create_ui_texture(badge.w,badge.h,&badge.rgba);a.g.begin_frame();a.g.draw_list(&[Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.90,0.93,0.93,1.0]},Draw::Tex{x:(width-badge.w)as f32/2.0,y:190.0,w:badge.w as f32,h:badge.h as f32,tex,alpha:1.0}]);a.capture("light-time-badge");a.g.set_light_ui(false);
     // Fractional positions exposed the cropped off-state thumb. Check the

@@ -36,6 +36,24 @@ impl BootMotion {
             out.push(Draw::RoundRect{x:canvas.centred(w),y:cy-h/2.0,w,h,radius:h/2.0,colour:[246.0/255.0,247.0/255.0,242.0/255.0,merge*fade]});
         }
     }
+    pub fn compose(&self,ms:u64,canvas:Canvas,slot:Option<(TexId,TexId)>,out:&mut Vec<Draw>) {
+        if ms>=BOOT_MS {return;}
+        // Remove the scene's original bay before composing it at its final depth.
+        // Drawing a second translucent copy would change the plastic's shading.
+        if let Some((back,front))=slot {
+            out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
+        }
+        self.draw(ms,canvas,out);
+        // Reveal the bay with the scene, then let it occlude the descending mark.
+        let reveal=smooth((ms as f32-220.0)/430.0);
+        if reveal==0.0 {return;}
+        let begin=out.len();slot_ui::draw_empty_slot(canvas,slot,out);
+        for draw in &mut out[begin..] {match draw {
+            Draw::Tex{alpha,..}|Draw::Part{alpha,..}=>*alpha*=reveal,
+            Draw::Rect{colour,..}|Draw::RoundRect{colour,..}=>colour[3]*=reveal,
+            _=>{}
+        }}
+    }
     pub fn release(self,c:&mut Compositor){c.update_texture(self.tex,1,1,&[0,0,0,0]);}
 }
 

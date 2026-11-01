@@ -600,24 +600,15 @@ impl Frontend {
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
         self.session.app_mut().set_panel(window);
         compositor.fit(window);
-        self.compose(compositor);
-        if let Some((brand, started)) = &mut self.boot_intro {
-            let elapsed = started
-                .get_or_insert_with(Instant::now)
-                .elapsed()
-                .as_millis() as u64;
-            // Never cover automatic game resume, and never hold up the emulator loop.
-            if !self.boot_intro_cancelled
-                && elapsed < crate::boot_motion::BOOT_MS
-                && matches!(self.session.app().phase(), crate::app::Phase::Shelf)
-            {
-                let mut intro = Vec::with_capacity(2);
-                brand.draw(elapsed, slot_gfx::Canvas::of(window), &mut intro);
-                compositor.draw_list(&intro);
-            } else if let Some((brand, _)) = self.boot_intro.take() {
-                brand.release(compositor);
-            }
-        }
+        if let Some((brand,started))=self.boot_intro.take() {
+            let started=started.unwrap_or_else(Instant::now);
+            let elapsed=started.elapsed().as_millis() as u64;
+            if !self.boot_intro_cancelled && elapsed<crate::boot_motion::BOOT_MS
+                && matches!(self.session.app().phase(),crate::app::Phase::Shelf) {
+                self.compose_boot_frame(compositor,&brand,elapsed);
+                self.boot_intro=Some((brand,Some(started)));
+            } else {brand.release(compositor);self.compose(compositor);}
+        } else {self.compose(compositor);}
         compositor.end_frame(window);
     }
 
@@ -658,6 +649,14 @@ impl Frontend {
     }
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
+        self.compose_scene(compositor,None);
+    }
+
+    pub fn compose_boot_frame(&mut self,compositor:&mut Compositor,motion:&crate::boot_motion::BootMotion,ms:u64) {
+        self.compose_scene(compositor,Some((motion,ms)));
+    }
+
+    fn compose_scene(&mut self,compositor:&mut Compositor,intro:Option<(&crate::boot_motion::BootMotion,u64)>) {
         let light = self.session.app().light();
         compositor.set_light_ui(light);
         if self.mute_icon_key != Some(light) {
@@ -885,6 +884,7 @@ impl Frontend {
         }
         let notice_canvas=slot_ui::Canvas{h:canvas.h-44.0*app.kid_meter_presence(),..canvas};
         self.settings_notice.draw(notice_canvas,self.settings_notice_face,now,&mut self.draws);
+        if let Some((motion,ms))=intro {app.compose_boot_intro(motion,ms,&mut self.draws);}
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);

@@ -115,18 +115,16 @@ pub enum QuickRow {
     DisplaySchedule,
     ClockFormat,
     CarouselMotion,
-    UiVibration,
-    ChargingVibration,
 }
 
 impl QuickRow {
     pub fn toggle(self) -> bool {
         matches!(self, Self::FastForwardSound | Self::Rumble | Self::AutoLoad | Self::EjectSave
             | Self::Turbo | Self::Rewind | Self::BootAnimation | Self::CarouselSounds
-            | Self::UiVibration | Self::ChargingVibration | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
+            | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 106] = [
+    pub const ALL: [QuickRow; 104] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -231,8 +229,6 @@ impl QuickRow {
         QuickRow::DisplaySchedule,
         QuickRow::ClockFormat,
         QuickRow::CarouselMotion,
-        QuickRow::UiVibration,
-        QuickRow::ChargingVibration,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -253,7 +249,7 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 14] = [
+    pub const GENERAL: [QuickRow; 12] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
@@ -263,8 +259,6 @@ impl QuickRow {
         QuickRow::FavoriteSort,
         QuickRow::BootAnimation,
         QuickRow::CarouselSounds,
-        QuickRow::UiVibration,
-        QuickRow::ChargingVibration,
         QuickRow::CarouselMotion,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
@@ -421,7 +415,7 @@ impl QuickRow {
             | QuickRow::ShowTitles
             | QuickRow::FavoriteSort
             | QuickRow::BootAnimation
-            | QuickRow::CarouselSounds | QuickRow::UiVibration | QuickRow::ChargingVibration => &QuickRow::GENERAL,
+            | QuickRow::CarouselSounds => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -572,8 +566,6 @@ impl QuickRow {
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
             QuickRow::Theme => "UI theme",
-            QuickRow::UiVibration => "UI vibration",
-            QuickRow::ChargingVibration => "Charging vibration",
             QuickRow::ShellColour => "Shell Color",
             QuickRow::Wallpaper => "Wallpaper",
             QuickRow::Recents => "Recents",

@@ -220,8 +220,6 @@ pub struct SlotState {
     pub carousel_wheel: bool,
     pub utc_offset_min: i16,
     pub rumble: bool,
-    pub ui_vibration: bool,
-    pub charging_vibration: bool,
     pub ff_speed: u8,
     pub ff_sound: bool,
     pub colour_correction_gba: bool,
@@ -375,8 +373,6 @@ impl Default for SlotState {
             carousel_wheel: true,
             utc_offset_min: 0,
             rumble: true,
-            ui_vibration: true,
-            charging_vibration: true,
             ff_speed: FF_SPEED_DEFAULT,
             ff_sound: false,
             colour_correction_gba: false,
@@ -499,7 +495,6 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     ));
     text.push_str(&format!("shader_gbc={}\n", s.shader_gbc.name()));
     text.push_str(&format!("shell_colour={}\n", s.shell_colour.key()));
-    text.push_str(&format!("ui_vibration={}\ncharging_vibration={}\n",s.ui_vibration as u8,s.charging_vibration as u8));
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
@@ -549,8 +544,6 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut carousel_wheel = true;
     let mut utc_offset_min = None;
     let mut rumble = None;
-    let mut ui_vibration = None;
-    let mut charging_vibration = None;
     let mut ff_speed = None;
     let mut ff_sound = None;
     let mut colour_correction = None;
@@ -612,8 +605,6 @@ fn parse(text: &str) -> Option<SlotState> {
             "clock_set" => clock_set = Some(level(value, 1)? == 1),
             "utc_offset_min" => utc_offset_min = Some(offset(value)?),
             "rumble" => rumble = flag(value),
-            "ui_vibration" => ui_vibration = flag(value),
-            "charging_vibration" => charging_vibration = flag(value),
             "ff_speed" => ff_speed = ff_speed_value(value),
             "ff_sound" => ff_sound = flag(value),
             "colour_correction" => colour_correction = flag(value),
@@ -670,8 +661,6 @@ fn parse(text: &str) -> Option<SlotState> {
         carousel_wheel,
         utc_offset_min: utc_offset_min?,
         rumble: rumble.unwrap_or(fallback.rumble),
-        ui_vibration: ui_vibration.unwrap_or(fallback.ui_vibration),
-        charging_vibration: charging_vibration.unwrap_or(fallback.charging_vibration),
         ff_speed: ff_speed.unwrap_or(fallback.ff_speed),
         ff_sound: ff_sound.unwrap_or(fallback.ff_sound),
         colour_correction_gba: colour_correction_gba

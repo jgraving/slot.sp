@@ -55,10 +55,6 @@ impl Power {
         self.platform.set_led(state)
     }
 
-    pub fn set_rumble_for(&mut self,strength:u16,duration:Duration){self.platform.set_rumble_for(strength,duration);}
-
-    pub fn supports_rumble(&self) -> bool { self.platform.supports_rumble() }
-
     pub fn set_rumble(&mut self, strength: u16) {
         self.platform.set_rumble(strength);
     }

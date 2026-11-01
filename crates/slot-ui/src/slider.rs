@@ -57,9 +57,9 @@ pub fn draw_menu_sliders(
         begin,
         [
             crate::expressive::MENU_INSET,
-            40.0,
+            crate::expressive::CARD_TOP,
             canvas.w - crate::expressive::MENU_INSET,
-            378.0,
+            crate::expressive::CARD_BOTTOM,
         ],
     );
 }

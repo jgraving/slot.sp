@@ -64,8 +64,6 @@ pub trait Platform: Send {
     fn now(&self) -> i64;
     fn set_clock(&mut self, secs: i64);
     fn set_rumble(&mut self, strength: u16);
-    fn supports_rumble(&self) -> bool { false }
-    fn set_rumble_for(&mut self,strength:u16,_duration:Duration) {self.set_rumble(strength); }
 
     fn supports_deep_sleep(&self) -> bool {
         false
