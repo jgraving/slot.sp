@@ -196,3 +196,6 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 @media(max-width:960px){.sp-preview .sp-stage{height:560px;max-width:450px}}
 @media(max-width:540px){.sp-preview .sp-stage{height:440px;max-width:340px}.sp-stage.model-ready>.hardware-button{width:28px;height:28px}.sp-preview .preview-controls{gap:16px 14px}.sp-preview .preview-toggle{min-width:150px;padding-inline:14px}.finish-picker{gap:12px}}
 @media(prefers-reduced-motion:reduce){.sp-model-canvas{scroll-behavior:auto}}
+
+/* Keep the texture source painted for browser media scheduling, beneath WebGL. */
+.sp-stage.model-ready>.hero-screen{position:absolute;left:50%;top:50%;width:1px;height:1px;opacity:.001;visibility:visible;z-index:0;pointer-events:none}

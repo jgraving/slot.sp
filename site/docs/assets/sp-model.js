@@ -27,6 +27,7 @@ export function mountSP(stage, video) {
   lid.position.set(0, 0, 1.0);
   product.add(lid);
   const controls = new Map();
+  const etchMaterials = [];
   const disposables = new Set();
   const track = value => { disposables.add(value); return value; };
   const material = settings => track(new T.MeshPhysicalMaterial(settings));
@@ -112,7 +113,9 @@ export function mountSP(stage, video) {
       ctx.fillStyle='rgba(255,255,255,.38)';ctx.fillText(text,cw/2+1.5,ch/2+2.5);
       ctx.fillStyle=color;ctx.fillText(text,cw/2,ch/2);
     });
-    return mesh(new T.PlaneGeometry(w,h),track(new T.MeshBasicMaterial({map,transparent:true,depthWrite:false,toneMapped:false})),parent,x,y,z);
+    const ink=track(new T.MeshBasicMaterial({map,transparent:true,depthWrite:false,toneMapped:false}));
+    if(color==='#42494d')etchMaterials.push(ink);
+    return mesh(new T.PlaneGeometry(w,h),ink,parent,x,y,z);
   }
 
   // Two separately bevelled mouldings with a fine, continuous parting seam.
@@ -133,16 +136,16 @@ export function mountSP(stage, video) {
   mesh(extrusion(face,.18,0),shell,product,0,0,-.18);
   for(const [x,y,r] of wells) {
     disc(product,r-.15,.25,shell,x,y,-1.4);
-    ring(product,[[r-.95,-1.4],[r-.85,-1.25],[r-.25,-.2],[r,.02]],shell,x,y);
-    ring(product,[[r-.97,-1.45],[r-.95,-1.38]],seam,x,y);
+    ring(product,[[r,.02],[r-.25,-.2],[r-.85,-1.25],[r-.95,-1.4]],shell,x,y);
+    ring(product,[[r-.95,-1.38],[r-.97,-1.45]],seam,x,y);
   }
   for(const [x,y] of speaker)disc(product,.265,.1,dark,x,y,-.13);
 
   function roundButton(x,y,r,label,action) {
     disc(product,r+.25,.18,dark,x,y,-1.2);
     const group=new T.Group(); group.position.set(x,y,-.85);product.add(group);
-    ring(group,[[0,0],[r-.3,0],[r,.2],[r,.85],[r-.17,1.12],[r-.48,1.25],[0,1.3]],button,0,0);
-    if(label)engraving(label,group,0,0,1.34,r*1.18,r*1.18);
+    ring(group,[[0,0],[r-.3,0],[r,.2],[r,.85],[r-.17,1.12],[r-.48,1.25],[r*.6,1.48],[0,1.55]],button,0,0);
+    if(label)engraving(label,group,0,0,1.59,r*1.18,r*1.18);
     if(action)controls.set(action,group);
     return group;
   }
@@ -167,7 +170,7 @@ export function mountSP(stage, video) {
   const dpad=mesh(extrusion(cross,2.7,.38),button,product,-21,-32.5,-1.1);
   disc(product,1.5,.04,material({color:0x82898d,roughness:.75}),-21,-32.5,1.25);
   for(const [action,x]of [['left',-28],['right',-14]]) {
-    const anchor=new T.Object3D();anchor.position.set(x,-32.5,1.8);product.add(anchor);controls.set(action,anchor);
+    const anchor=new T.Object3D();anchor.position.set(x,-32.5,1.8);product.add(anchor);anchor.userData.pressPart=dpad;controls.set(action,anchor);
   }
 
   // Hinge barrel: narrow end caps, two long knuckles and visible joint gaps.
@@ -188,7 +191,8 @@ export function mountSP(stage, video) {
   slab(lid,80.9,75.9,.20,3.8,.04,seam,0,40.9,-.1);
   const lidFace=rr(79.8,74.8,3.0,0,40.9);
   lidFace.holes.push(rr(74.8,57.7,1.3,0,42,T.Path));
-  mesh(extrusion(lidFace,1.15,.24),shell,lid,0,0,-.91);
+  const lidSkin=mesh(extrusion(lidFace,1.15,.24),shell,lid,0,0,-.91);
+  lidSkin.receiveShadow=false;
   slab(lid,75.1,58.1,.8,1.6,.2,bezel,0,42,-.45);
   // A machined lip around the glazing catches a thin highlight.
   const surround=rr(75.6,58.6,1.6,0,42);surround.holes.push(rr(74.3,57.3,1.1,0,42,T.Path));
@@ -258,7 +262,8 @@ export function mountSP(stage, video) {
     gold:[0xcfad67,0xa78039,0xbd9d5c,.65]
   };
   function finish(name) {
-    const p=palettes[name]||palettes.platinum;shell.color.setHex(p[0]);edge.color.setHex(p[1]);button.color.setHex(p[2]);shell.metalness=p[3];rubber.color.setHex(p[1]);wake();
+    const p=palettes[name]||palettes.platinum;shell.color.setHex(p[0]);edge.color.setHex(p[1]);button.color.setHex(p[2]);shell.metalness=p[3];rubber.color.setHex(p[1]);
+    const ink=name==='graphite'?6:1;etchMaterials.forEach(mat=>mat.color.setRGB(ink,ink,ink));wake();
   }
   const onFinish=event=>finish(event.detail);
   stage.addEventListener('sp:finish',onFinish);
@@ -269,6 +274,7 @@ export function mountSP(stage, video) {
   let pressUntil=0,pressed=null;
   const hardware=[...stage.querySelectorAll('[data-hardware]')];
   const fallback=stage.querySelector('.device');
+  const videoParent=video.parentElement,videoNext=video.nextSibling;
   const originals=hardware.map(element=>({element,parent:element.parentElement,next:element.nextSibling}));
   const fold=stage.closest('.sp-preview').querySelector('.model-fold');
   function foldLid() {
@@ -346,9 +352,10 @@ export function mountSP(stage, video) {
   stage.addEventListener('keydown',keydown);
   function press(event) {
     const element=event.target.closest('[data-hardware]');if(!element)return;
-    const part=controls.get(element.dataset.hardware);
+    const anchor=controls.get(element.dataset.hardware);
+    const part=anchor?.userData.pressPart || anchor;
     if(pressed){pressed.position.z+=.45;pressed=null;}
-    if(part?.isGroup){pressed=part;part.position.z-=.45;pressUntil=performance.now()+140;}
+    if(part?.isGroup || part?.isMesh){pressed=part;part.position.z-=.45;pressUntil=performance.now()+140;}
     wake();
   }
   stage.addEventListener('click',press);
@@ -364,6 +371,7 @@ export function mountSP(stage, video) {
     document.removeEventListener('visibilitychange',wake);reduced.removeEventListener('change',wake);
     stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('click',press);fold.removeEventListener('click',foldLid);
     for(const {element,parent,next}of originals){parent.insertBefore(element,next?.parentElement===parent?next:null);element.removeAttribute('style');element.hidden=false;}
+    videoParent.insertBefore(video,videoNext?.parentElement===videoParent?videoNext:null);
     stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('aria-label');
     canvas.remove();poster?.dispose();for(const item of disposables)item.dispose();renderer.dispose();
   }
@@ -373,10 +381,10 @@ export function mountSP(stage, video) {
     product.rotation.set(pitch,yaw,roll);lid.rotation.x=hinge;
     const {width,height}=stage.getBoundingClientRect();renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
     renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
-    stage.append(canvas,...hardware);stage.classList.add('model-ready');stage.dataset.lid='open';
+    stage.append(canvas,video,...hardware);stage.classList.add('model-ready');stage.dataset.lid='open';
     stage.tabIndex=0;stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to turn. Home resets the view.');
     resizeObserver.observe(stage);visibilityObserver.observe(stage);loadPoster();resize();
-    finish(document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum');
+    finish(fallback.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
   } catch(error) { cleanup();throw error; }
   return cleanup;
 }

@@ -39,12 +39,20 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
         const hit=await control.evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;});
         assert(hit,`${width}: ${name} obscured`);
       }
+      // Keep media diagnostics in the artifact when a browser rejects playback.
+      await page.evaluate(()=>{
+        const v=document.getElementById('hero-preview');window.mediaTrace=[];
+        for(const type of ['loadstart','loadedmetadata','loadeddata','play','playing','pause','seeking','seeked','timeupdate','error'])v.addEventListener(type,()=>window.mediaTrace.push({type,time:v.currentTime,paused:v.paused,hidden:document.hidden}));
+        const play=v.play.bind(v);v.play=()=>play().catch(error=>{window.mediaTrace.push({type:'play-rejected',message:error.message});throw error;});
+        document.querySelector('[data-hardware=insert]').addEventListener('click',()=>window.mediaTrace.push({type:'A-click'}));
+      });
       // Screen actions remain the native clip, and stop at their recorded endpoint.
       await page.getByRole('button',{name:'A: insert cartridge preview',exact:true}).click();
       try {
         await page.waitForFunction(()=>{const v=document.getElementById('hero-preview');return v.paused && Math.abs(v.currentTime-1.1)<.08;},{},{timeout:15000});
       } catch(error) {
-        fs.writeFileSync(path.join(out,'video-failure.json'),JSON.stringify(await page.evaluate(()=>{const v=document.getElementById('hero-preview');return {paused:v.paused,time:v.currentTime,ready:v.readyState,error:v.error?.message,src:v.currentSrc,duration:v.duration};}),null,2));
+        fs.writeFileSync(path.join(out,'video-failure.json'),JSON.stringify(await page.evaluate(()=>{const v=document.getElementById('hero-preview');return {paused:v.paused,time:v.currentTime,ready:v.readyState,error:v.error?.message,src:v.currentSrc,duration:v.duration,muted:v.muted,trace:window.mediaTrace,lid:document.querySelector('.sp-stage').dataset.lid,visibility:getComputedStyle(v).visibility};}),null,2));
+        fs.writeFileSync(path.join(out,'browser-errors.json'),JSON.stringify(errors,null,2));
         await stage.screenshot({path:path.join(out,'video-failure.png')});throw error;
       }
       await page.getByRole('button',{name:'Graphite',exact:true}).click();
