@@ -37,7 +37,7 @@ The menu theme and display presets are separate. **General → UI theme** select
 
 ### Can I change settings during a game?
 
-Yes. Tap MENU, then choose Settings. The same settings grid opens over the game picture. In kid mode, it opens the shorter kid settings menu. See the [settings reference](features/settings.md).
+Yes. Tap MENU, then choose Settings. The same settings grid opens over the game screen. In kid mode, it opens the shorter kid settings menu. See the [settings reference](features/settings.md).
 
 ### Can I use Bluetooth headphones?
 

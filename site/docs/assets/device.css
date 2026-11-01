@@ -32,7 +32,7 @@
 .pose-hero.no-lid-anim .dv-lid{animation:none}
 .pose-hero .dv-lid{
   transform:rotateX(-22deg);
-  animation:lid-open 1.5s cubic-bezier(.3,.86,.36,1) .4s backwards;
+  animation:lid-open 680ms var(--motion-spatial) .1s backwards;
 }
 @keyframes lid-open{from{transform:rotateX(-178deg)}to{transform:rotateX(-22deg)}}
 

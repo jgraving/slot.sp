@@ -17,6 +17,28 @@
     return icon;
   }
   function init() {
+    const tabs = document.querySelector('.mast-tabs');
+    if (tabs) {
+      const active = tabs.querySelector('.md-tabs__item--active a');
+      let hovered = null;
+      function placeTab() {
+        const focused = tabs.contains(document.activeElement) ? document.activeElement.closest('a') : null;
+        const target = hovered || focused || active;
+        tabs.style.setProperty('--nav-visible', target ? '1' : '0');
+        if (!target) return;
+        const bounds = tabs.getBoundingClientRect();
+        const rect = target.getBoundingClientRect();
+        tabs.style.setProperty('--nav-x', `${rect.left - bounds.left}px`);
+        tabs.style.setProperty('--nav-w', `${rect.width}px`);
+      }
+      tabs.addEventListener('pointerover', event => { hovered = event.target.closest('a'); placeTab(); });
+      tabs.addEventListener('pointerleave', () => { hovered = null; placeTab(); });
+      tabs.addEventListener('focusin', placeTab);
+      tabs.addEventListener('focusout', () => requestAnimationFrame(placeTab));
+      new ResizeObserver(placeTab).observe(tabs);
+      placeTab();
+      requestAnimationFrame(() => tabs.setAttribute('data-motion-ready', ''));
+    }
     document.querySelectorAll('.md-sidebar--primary a.md-nav__link').forEach(link => {
       const topic = new URL(link.href).pathname.split('/').filter(Boolean).at(-1);
       if (topics[topic]) {
@@ -36,6 +58,7 @@
     };
     document.querySelectorAll('[data-shell]').forEach(button => {
       button.addEventListener('click', () => {
+        document.querySelector('.device')?.classList.remove('secret-finish');
         const values = finishes[button.dataset.shell];
         ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,values[i]));
         document.querySelectorAll('[data-shell]').forEach(other => other.setAttribute('aria-pressed',String(other === button)));
@@ -52,10 +75,13 @@
     let finish = 'platinum';
     let request = 0;
     let position = 0;
+    let segment = null;
+    let segmentFrame = null;
     const media = new URL(preview.dataset.media, document.baseURI);
     function changePreview(button) {
       const next = button.dataset.shell.replaceAll(' ', '_');
       if (next === finish) return;
+      segment = null;
       finish = next;
       if (preview.readyState > 0) position = preview.currentTime;
       const current = ++request;
@@ -81,7 +107,84 @@
     }
     preview.addEventListener('play',state);
     preview.addEventListener('pause',state);
-    toggle.addEventListener('click',() => { wanted = !wanted; sync(); state(); });
+    toggle.addEventListener('click',() => { segment = null; wanted = !wanted; sync(); state(); });
+    // Use the existing native clip, including the slot's real occlusion.
+    // These controls scrub a preview; no game or emulation runs in the page.
+    function playSegment(start, end) {
+      const current = ++request;
+      function begin() {
+        if (current !== request) return;
+        if (segmentFrame !== null) preview.cancelVideoFrameCallback(segmentFrame);
+        segmentFrame = null;
+        preview.currentTime = Math.min(start, preview.duration - .01);
+        segment = end;
+        wanted = end > start;
+        sync();
+        state();
+        if (wanted) watchSegment();
+      }
+      if (preview.readyState > 0) begin();
+      else {
+        preview.addEventListener('loadedmetadata', begin, {once:true});
+        preview.load();
+      }
+    }
+    function stopAtSegment(time) {
+      if (segment === null || time < segment) return false;
+      const end = segment;
+      segment = null;
+      preview.pause();
+      preview.currentTime = end;
+      wanted = false;
+      state();
+      return true;
+    }
+    function watchSegment() {
+      if (segmentFrame !== null || segment === null || !preview.requestVideoFrameCallback) return;
+      segmentFrame = preview.requestVideoFrameCallback((now, frame) => {
+        segmentFrame = null;
+        if (!stopAtSegment(frame.mediaTime) && !preview.paused) watchSegment();
+      });
+    }
+    preview.addEventListener('playing', watchSegment);
+    preview.addEventListener('timeupdate', () => {
+      if (!preview.requestVideoFrameCallback) stopAtSegment(preview.currentTime);
+    });
+    document.querySelectorAll('[data-hardware]').forEach(button => {
+      button.addEventListener('click', () => {
+        switch (button.dataset.hardware) {
+          case 'insert': playSegment(.45, 1.10); break;
+          case 'eject': playSegment(1.12, 3.0); break;
+          case 'boot': playSegment(7.4, 9.25); break;
+          case 'left': playSegment(5.15, 7.38); break;
+          case 'right': playSegment(3.02, 5.13); break;
+        }
+      });
+    });
+    // A small, opt-in old-console secret. Normal typing and shortcuts are untouched.
+    const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let codeIndex = 0;
+    let lastKey = 0;
+    let noticeTimer;
+    document.addEventListener('keydown', event => {
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey ||
+          event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
+      if (performance.now() - lastKey > 3000) codeIndex = 0;
+      lastKey = performance.now();
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      codeIndex = key === code[codeIndex] ? codeIndex + 1 : (key === code[0] ? 1 : 0);
+      if (codeIndex !== code.length) return;
+      codeIndex = 0;
+      document.querySelector('.device').classList.add('secret-finish');
+      const gold = ['#f2dfaa','#d3ad60','#92713c','#e5cf95','#fff1c9','rgba(57,39,18,.56)'];
+      ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,gold[i]));
+      document.querySelectorAll('[data-shell]').forEach(button => button.setAttribute('aria-pressed','false'));
+      const notice = document.querySelector('.secret-notice');
+      notice.replaceChildren(topicIcon('kid-mode', 'secret-icon'), document.createTextNode('You found the gold shell.'));
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => notice.replaceChildren(), 4000);
+      playSegment(7.4, 9.25);
+    });
     reduced.addEventListener('change',() => { if (reduced.matches) { wanted = false; sync(); state(); } });
     new IntersectionObserver(entries => { visible = entries[0].isIntersecting; sync(); },{threshold:.1}).observe(preview);
     document.addEventListener('visibilitychange',sync);
