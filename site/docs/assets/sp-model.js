@@ -209,7 +209,8 @@ export function mountSP(stage, video) {
   const back=new T.Group();back.position.set(0,40.9,-6.32);back.rotation.y=Math.PI;lid.add(back);
   slab(back,16.6,3.6,.24,1.8,.1,chrome,0,29,.12);
   slab(back,15.7,2.85,.1,1.4,.03,seam,0,29,.22);
-  engraving('ANBERNIC',back,0,29,.3,14,2,'#c8cdd0');
+  // The rear is flipped around both axes when shut; keep the badge upright.
+  engraving('ANBERNIC',back,0,29,.3,14,2,'#c8cdd0').rotation.z=Math.PI;
 
   // Indicators wrap around the right edge, as in the video.
   const green=material({color:0xa1d67b,emissive:0x75bc45,emissiveIntensity:.6,roughness:.38});
