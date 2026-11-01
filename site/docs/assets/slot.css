@@ -82,7 +82,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 .features-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px 24px;margin-bottom:24px}
 .md-typeset .features-heading h2{margin:0}
 .md-typeset .feature-guide{display:flex;align-items:center;min-height:44px;font-size:16px;font-weight:550}
-.md-typeset .feature-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 20px;list-style:none;margin:0 -16px 16px;padding:0}
+.md-typeset ul.feature-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 20px;list-style:none;margin:0 -16px 16px;padding:0}
 .md-typeset .feature-list li{margin:0;padding:0}
 .md-typeset .feature-list a{display:flex;align-items:flex-start;gap:16px;height:100%;padding:20px 16px;border-radius:22px;text-decoration:none;color:var(--ink);transition:background-color 180ms var(--motion-effects),border-radius 420ms var(--motion-spatial)}
 .md-typeset .feature-list a>span{display:grid;gap:8px;min-width:0}
@@ -121,12 +121,12 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
  .md-header__inner.md-grid{grid-template-columns:auto 1fr auto;padding:0 20px;gap:12px}
  .md-header__inner>label[for=__drawer]{display:block;margin:0}.mast-tabs{display:none}
  .intro{grid-template-columns:1fr;gap:48px;padding-top:56px;max-width:720px;margin:auto}
- .intro-text{max-width:40ch}.sp-stage{--dw:280px;margin-bottom:40px}.md-typeset .feature-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
+ .intro-text{max-width:40ch}.sp-stage{--dw:280px;margin-bottom:40px}.md-typeset ul.feature-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
 }
 @media(max-width:540px){
  .home{padding:0 24px}.intro{padding:48px 0;gap:40px}.intro-text{font-size:17px}
  .md-typeset .site-button{padding-inline:20px}
- .md-typeset .feature-list{grid-template-columns:1fr;gap:0}.features,.studio-note{padding:28px 0}
+ .md-typeset ul.feature-list{grid-template-columns:1fr;gap:0}.features,.studio-note{padding:28px 0}
  .foot-base{padding:24px 20px}.foot-pager{padding:20px}
  .sp-stage{--dw:min(240px,64vw);margin-bottom:48px}.pose-hero{transform:perspective(calc(var(--dw) * 2.5)) rotateZ(7deg) rotateX(6deg) rotateY(-18deg)}
  .studio-note{align-items:start;gap:18px}.md-typeset .studio-art .feature-icon{width:56px;height:56px}.studio-note p{font-size:16px}
