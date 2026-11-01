@@ -79,7 +79,7 @@ fn charging_chip_uses_one_filled_surface_and_readable_native_ink() {
     let mut notice=SettingsNotice::default();
     notice.observe(Some((1,"Charging: 100%".into())),0);
     let mut out=vec![];notice.draw(canvas,Some((TexId::from_raw(1),face.w,face.h)),500,&mut out);
-    assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{..})).count(),2);
+    assert_eq!(out.iter().filter(|d|matches!(d,Draw::RoundRect{colour,..} if colour[3]==1.0)).count(),2);
     assert!(out.iter().any(|d|matches!(d,Draw::RoundRect{colour,..}if colour[1]>colour[0]&&colour[3]==1.0)));
 }
 
@@ -115,4 +115,29 @@ fn charging_pulses_the_whole_pill_then_settles_without_restarting_on_a_battery_p
     notice.observe(None,3000);
     notice.observe(Some((2,"Charging: 58%".into())),3100);
     assert!(bounds(&notice,3450).2>face.w as f32*1.02,"a new connection should pulse again");
+}
+
+#[test]
+fn charging_energy_flows_towards_the_bolt_then_settles_inside_the_pill() {
+    let canvas=Canvas::FRAMED;
+    for light in [false,true] {
+        let face=slot_ui::settings_notice_face_on("Charging: 57%",canvas,light);
+        let texture=Some((TexId::from_raw(1),face.w,face.h));
+        let mut notice=SettingsNotice::default();notice.observe(Some((1,"Charging: 57%".into())),0);
+        let mut previous=1.0;
+        for now in [220,320,420,520] {
+            let mut out=vec![];notice.draw_on(canvas,texture,now,light,&mut out);
+            let Draw::RoundRect{x,y,w,h,..}=out[0] else {panic!("missing capsule")};
+            let energy:Vec<_>=out.iter().filter_map(|d|match *d {Draw::RoundRect{x:xx,y:yy,w:ww,h:hh,colour,..}if colour[..3]==[1.0;3]=>Some((xx,yy,ww,hh,colour[3])),_=>None}).collect();
+            assert!(!energy.is_empty());assert!(energy.len()<=8,"too many glow quads");
+            let position=(energy[0].0+energy[0].2/2.0-x)/w;
+            assert!(position<previous,"energy moved away from the bolt");previous=position;
+            for (xx,yy,ww,hh,a) in energy {assert!(xx>=x&&yy>=y&&xx+ww<=x+w&&yy+hh<=y+h);assert!(a>0.0&&a<0.02);}
+            assert_eq!(out.iter().filter(|d|matches!(d,Draw::Tex{alpha:1.0,..})).count(),1,"keep one clean text layer");
+        }
+        for now in [1200,1800] {
+            let mut out=vec![];notice.draw_on(canvas,texture,now,light,&mut out);
+            assert!(!out.iter().any(|d|matches!(d,Draw::RoundRect{colour,..}if colour[..3]==[1.0;3])),"energy should settle");
+        }
+    }
 }

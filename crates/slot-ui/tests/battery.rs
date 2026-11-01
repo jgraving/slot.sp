@@ -28,13 +28,14 @@ fn time_is_left_and_the_icon_cluster_and_battery_are_right_without_overlap(){
 }
 
 #[test]
-fn light_battery_has_distinct_readable_ink_and_a_visible_empty_outline(){
+fn light_battery_has_smooth_readable_ink_and_a_flat_borderless_capsule(){
     use slot_ui::status_battery_face_on;
     for charge in [Charge::Charging,Charge::Full,Charge::Discharging] {
         for percent in [0,10,50,82,100] {
             let f=status_battery_face_on(at(percent,charge),true);
             assert_eq!(pixel(&f,0,0)[3],0);
-            assert!(pixel(&f,0,13)[..3].iter().all(|&v|v<160),"empty battery edge vanished");
+            let edge=pixel(&f,0,13);let inside=pixel(&f,2,13);
+            assert_eq!(&edge[..3],&inside[..3],"a separate outline remains on the capsule");
             let colours:std::collections::BTreeSet<_>=f.rgba.chunks_exact(4).filter(|p|p[3]>240).map(|p|[p[0],p[1],p[2]]).collect();
             assert!(colours.len()>20,"percentage lost its antialiased text edges");
             assert!(colours.iter().any(|p|p.iter().all(|&v|v<130)));
