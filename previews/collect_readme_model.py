@@ -22,11 +22,13 @@ with Image.open(gif) as animation:
     animation.seek(0)
     assert 'transparency' not in animation.info
     assert gif.stat().st_size < 20_000_000, 'README hero should remain reasonably sized'
+# A new URL prevents GitHub from retaining the previous square-ended image.
+gif = gif.rename(target / 'hero-rounded.gif')
 with Image.open(root / 'model-frames/0000.png') as first:
-    first.convert('RGB').resize(size, Image.Resampling.LANCZOS).save(target / 'hero.png')
+    first.convert('RGB').resize(size, Image.Resampling.LANCZOS).save(target / 'hero-rounded.png')
 meta.update(source_commit=os.environ['GITHUB_SHA'],
             run_url=f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}',
             files=[dict(path=f'previews/readme-model/{p.name}', bytes=p.stat().st_size,
-                        sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in [gif, target / 'hero.png']])
+                        sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in [gif, target / 'hero-rounded.png']])
 (target / 'provenance.json').write_text(json.dumps(meta, indent=2) + '\n')
 print('Collected illustrated README hero and matching poster:', size)
