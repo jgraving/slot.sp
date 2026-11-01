@@ -2,7 +2,7 @@
 
 [← Overview](README.md) · [All guides](GUIDE.md)
 
-Save a bright daytime setting and a dimmer, warmer nighttime setting. Switch between them without adjusting both controls each time.
+Save separate brightness and screen warmth settings for day and night. Switch with a shortcut, or set times for the handheld to switch automatically.
 
 ## Switch presets
 
@@ -28,6 +28,21 @@ Each adjustment saves to the preset you are using.
 Keep both buttons held to adjust continuously after a short pause. Release either button to stop; a quick tap still changes one step.
 
 The setting is named **Color temp** in both Screen and Night mode. Neutral preserves the original picture; increasing it adds a warmer tint, up to Warm 100%. In Screen it adjusts the active day or night preset. Inside Night mode it adjusts the saved night preset, applying immediately when night mode is active. The night preset starts at **22% brightness** and Warm 100%; the day preset starts with your existing display settings.
+
+## Switch automatically
+
+First set the clock in **Menu → General → Date & Time**. Then open **Menu → Screen → Night mode** from the carousel.
+
+| Setting | What it does |
+| :--- | :--- |
+| **Automatic** | Turn scheduled switching on or off. It is off by default. |
+| **Day begins** | Set when the saved day brightness and warmth take effect. |
+| **Night begins** | Set when the saved night brightness and warmth take effect. |
+| **Color temp** | Change the saved night warmth. It applies immediately if the night preset is active. |
+
+Use Left/Right on a start time to change it by 15 minutes. Press A to edit Hours and Minutes separately. Day and night need different start times. Times follow the device clock and your chosen 12-hour or 24-hour format.
+
+The shortcut still works while Automatic is on. Your manual choice lasts until the next scheduled change, including across sleep and restart. Changing the clock or schedule clears that manual override.
 
 ## Change the shortcut
 

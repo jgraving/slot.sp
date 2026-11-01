@@ -1,7 +1,7 @@
 [project]
 site_url = "https://jakegraving.com/slot.sp/"
 site_name = "slot.sp"
-site_description = "Your games. SP style. A game launcher by Jake Graving for Anbernic handhelds, with light and dark themes, floating settings cards, kid mode and Bluetooth audio."
+site_description = "Browse games as cartridges on Anbernic handhelds. Save and resume, use kid mode, connect headphones, and choose light or dark menus."
 repo_url = "https://github.com/jgraving/slot.sp"
 repo_name = "jgraving/slot.sp"
 docs_dir = "docs"

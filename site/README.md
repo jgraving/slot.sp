@@ -54,6 +54,11 @@ The README uses the same Platinum light-theme clip inside the website's illustra
 
 - Give installation, the guide and Studio a clear place in navigation. Keep one maintained guide per topic; preserve superseded URLs with redirects.
 - Use the actual interface beside the steps it explains. Give clips play controls and keep them quiet until requested.
-- Name the feature and say what it does. Avoid slogans, repeated download sections and lists of vague benefits.
+- Name each feature and explain what someone can do with it. Use the actual menu labels for steps. Explain terms such as save state or bezel when they first appear.
+- Keep all existing feature topics represented. Add missing features to the existing summary and link to their guides; use the guides for detailed steps and screenshots.
+- Use short, factual sentences and descriptive links. Remove vague praise, repetitive claims, rhetorical contrasts and filler. Keep necessary detail even when it makes a page longer.
+- Keep actions and navigation familiar. Do not add decorative buttons, arrows, badges, card grids or screenshot sections to make the page seem new.
 - Keep the SP illustration and recognizable feature icons. Use the same symbols in the homepage and guide navigation so topics are easy to distinguish. Favor readable labels and space over extra small captions.
-- Preserve the established site colors, typography, layout and concise feature copy. Update OS screenshots, animations and guide content without redesigning the website or adding homepage screenshot sections.
+- Preserve the established colors, typography, page structure and illustrated SP. Update descriptions, guides and OS captures within that design.
+
+Writing references: [NN/G: concise, scannable and objective writing](https://www.nngroup.com/articles/concise-scannable-and-objective-how-to-write-for-the-web/), [NN/G: descriptive links](https://www.nngroup.com/articles/writing-links/), and [GOV.UK: clear language](https://guidance.publishing.service.gov.uk/writing-to-gov-uk-standards/writing-guidelines/clear-language/). [Wikipedia’s AI-writing observations](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) identify patterns to review, not proof of authorship. Judge wording by accuracy and usefulness; punctuation alone is not a reason to rewrite it.

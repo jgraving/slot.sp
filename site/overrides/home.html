@@ -10,10 +10,10 @@
       <p class="intro-text">A game launcher for Anbernic handhelds, inspired by the SP.</p>
       <p>Choose a cartridge, press A and play.</p>
       <nav class="setup-choices" aria-label="Get slot.sp">
-        <a class="setup-choice" href="{{ 'installing/' | url }}">{{ icon('getting-started') }}<span><strong>New to slot?</strong><span>Install BaseOS and slot.sp on your SD card.</span><b>Start a new installation <span aria-hidden="true">→</span></b></span></a>
-        <a class="setup-choice" href="{{ 'updating/' | url }}">{{ icon('storage') }}<span><strong>Already using slot?</strong><span>Update to slot.sp by replacing the System files. Keep your games, saves and settings.</span><b>Update your installation <span aria-hidden="true">→</span></b></span></a>
+        <a class="setup-choice" href="{{ 'installing/' | url }}">{{ icon('getting-started') }}<span><strong>New installation</strong><span>Install BaseOS, then copy slot.sp and its starting folders onto your SD card.</span><b>Installation guide</b></span></a>
+        <a class="setup-choice" href="{{ 'updating/' | url }}">{{ icon('storage') }}<span><strong>Update slot.sp</strong><span>Replace the System files. Keep your games, saves, artwork and settings.</span><b>Update guide</b></span></a>
       </nav>
-      <a class="intro-guide" href="{{ 'features/guide/' | url }}">Explore the user guide <span aria-hidden="true">→</span></a>
+      <a class="intro-guide" href="{{ 'features/guide/' | url }}">User guide</a>
     </div>
     <figure class="sp-preview" aria-label="slot.sp on an illustrated RG SP">
       <div class="sp-stage">
@@ -46,26 +46,29 @@
   <section class="features" aria-labelledby="features-title">
     <div class="features-heading">
       <h2 id="features-title">What’s in slot.sp</h2>
-      <a class="feature-guide" href="{{ 'features/guide/' | url }}">{{ icon('guide') }}User guide <span aria-hidden="true">→</span></a>
+      <a class="feature-guide" href="{{ 'features/guide/' | url }}">{{ icon('guide') }}User guide</a>
     </div>
     <dl>
-      <div><dt><a href="{{ 'features/kid-mode/' | url }}">{{ icon('kid-mode') }}Kid mode</a></dt><dd>Approve games, set time and volume limits, and give kids a simple menu with time reminders.</dd></div>
-      <div><dt><a href="{{ 'features/playing/' | url }}">{{ icon('playing') }}Save &amp; resume</a></dt><dd>Pick up where you left off. Browse save states, undo a save or load, rewind, or fast-forward.</dd></div>
-      <div><dt><a href="{{ 'features/bluetooth/' | url }}">{{ icon('bluetooth') }}Audio &amp; headphones</a></dt><dd>Bluetooth, USB, headphones or speaker, with saved volumes and a Volume on disconnect setting.</dd></div>
-      <div><dt><a href="{{ 'features/display/' | url }}">{{ icon('display') }}SP colors &amp; backgrounds</a></dt><dd>Choose four SP colors, light or dark UI, still or flowing backgrounds, and screen effects for each system.</dd></div>
-      <div><dt><a href="{{ 'features/night-display/' | url }}">{{ icon('night-display') }}Day &amp; night</a></dt><dd>Save your brightness and warmth settings, then switch between them with a shortcut.</dd></div>
-      <div><dt><a href="{{ 'features/library/' | url }}">{{ icon('library') }}Your game collection</a></dt><dd>Keep Favorites and Recents together. Add your own labels and cartridge colors.</dd></div>
-      <div><dt><a href="{{ 'features/link-play/' | url }}">{{ icon('link-play') }}Link play</a></dt><dd>Connect two nearby devices over local Wi-Fi for multiplayer games and trading.</dd></div>
-      <div><dt><a href="{{ 'features/screenshots/' | url }}">{{ icon('screenshots') }}Screenshots</a></dt><dd>Capture game screens, browse your gallery and copy pictures from your SD card.</dd></div>
-      <div><dt><a href="{{ 'features/power-options/' | url }}">{{ icon('power-options') }}Sleep &amp; power</a></dt><dd>Choose what closing the lid does, how the handheld sleeps and when it shuts down.</dd></div>
+      <div><dt><a href="{{ 'features/kid-mode/' | url }}">{{ icon('kid-mode') }}Kid mode</a></dt><dd>Approve games, set a daily allowance, session timer or bedtime, and cap the volume. A four-button parent code protects the settings.</dd></div>
+      <div><dt><a href="{{ 'features/playing/' | url }}">{{ icon('playing') }}Save &amp; resume</a></dt><dd>Resume where you stopped. Save snapshots of a game and undo a save or load. Use rewind, fast-forward or rapid-fire turbo buttons.</dd></div>
+      <div><dt><a href="{{ 'features/bluetooth/' | url }}">{{ icon('bluetooth') }}Audio &amp; headphones</a></dt><dd>Use Bluetooth, USB audio, wired headphones or the speaker. Each remembers its volume. Choose the volume after a disconnect and optionally pause the game.</dd></div>
+      <div><dt><a href="{{ 'features/display/' | url }}">{{ icon('display') }}Themes &amp; backgrounds</a></dt><dd>Choose Light or Dark, four SP colors, a still or flowing gradient, or your own wallpaper. Status text and button hints adapt to the background.</dd></div>
+      <div><dt><a href="{{ 'features/night-display/' | url }}">{{ icon('night-display') }}Day &amp; night</a></dt><dd>Save separate brightness and screen warmth settings for day and night. Switch with a shortcut or schedule the changes for set times.</dd></div>
+      <div><dt><a href="{{ 'features/library/' | url }}">{{ icon('library') }}Your game collection</a></dt><dd>Browse by system, Favorites or your ten most recent games. Sort Favorites by name, total playtime or last played. Add your own labels and cartridge colors.</dd></div>
+      <div><dt><a href="{{ 'features/link-play/' | url }}">{{ icon('link-play') }}Link play</a></dt><dd>Connect two nearby handhelds over local Wi-Fi for supported multiplayer games and trading. One hosts and the other joins; no router is needed.</dd></div>
+      <div><dt><a href="{{ 'features/screenshots/' | url }}">{{ icon('screenshots') }}Screenshots</a></dt><dd>Capture a game screen with a shortcut. Browse and zoom pictures, delete one or several, and copy the PNG files from your card.</dd></div>
+      <div><dt><a href="{{ 'features/power-options/' | url }}">{{ icon('power-options') }}Sleep &amp; power</a></dt><dd>Choose light sleep, deep sleep or power off when you close the lid. Set a shutdown timer for sleep, with your game saved first. Choose a 12- or 24-hour clock.</dd></div>
+      <div><dt><a href="{{ 'features/settings/' | url }}">{{ icon('settings') }}Settings during play</a></dt><dd>Open the same settings menu from the carousel or during a game. Change sound, screen and control settings while the game stays visible behind the card.</dd></div>
+      <div><dt><a href="{{ 'features/controls/' | url }}">{{ icon('controls') }}Buttons &amp; shortcuts</a></dt><dd>Change game buttons, carousel controls and shortcut combinations. On-screen hints use your chosen buttons, and an on-device reference shows the controls.</dd></div>
+      <div><dt><a href="{{ 'features/display/' | url }}#the-game-picture">{{ icon('display') }}Game picture</a></dt><dd>Choose screen effects, color correction and borders for each system, plus palettes for monochrome games. Games that support stretching remember your picture-size choice.</dd></div>
     </dl>
   </section>
   <section class="studio-note" aria-labelledby="studio-title">
     <div class="studio-art" aria-hidden="true">{{ icon('cart-studio') }}</div>
     <div><h2 id="studio-title">Cart Studio</h2>
-      <p>Edit game labels and cartridge colors in your browser. Preview each cartridge, then save to your SD card or download a ZIP.</p>
-      <aside class="privacy-box" aria-label="Your privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6z"/><path d="m8 12 3 3 5-6"/></svg><div><strong>Your files stay on your device</strong><p>Studio edits your games and labels in your browser. Nothing is uploaded. Save your changes to your SD card or download a ZIP when you’re ready.</p><p class="privacy-detail">Only game information and artwork are downloaded from the internet.</p></div></aside>
-      <div class="studio-links"><a href="{{ 'studio/' | url }}">Open Cart Studio →</a><a href="{{ 'features/cart-studio/' | url }}">Studio guide</a></div>
+      <p>Find labels and logos, choose cartridge colors and finishes, and edit one game or a whole selection. Save to your SD card or download a ZIP.</p>
+      <aside class="privacy-box" aria-label="Your privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6z"/><path d="m8 12 3 3 5-6"/></svg><div><strong>Your files stay on your device</strong><p>Studio works in your browser. Your game files, labels and edits are never uploaded. Save your changes before closing the tab.</p><p class="privacy-detail">Only game information and artwork are downloaded from the internet.</p></div></aside>
+      <div class="studio-links"><a href="{{ 'studio/' | url }}">Open Cart Studio</a><a href="{{ 'features/cart-studio/' | url }}">Studio guide</a></div>
     </div>
   </section>
 </div>

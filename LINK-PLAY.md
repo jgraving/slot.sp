@@ -4,7 +4,7 @@
 
 [Connect](#host--join) · [Emulator choice](#choose-the-link-mode) · [Disconnect](#finish-a-session)
 
-Connect two nearby devices running slot for multiplayer games or trading. One device hosts a local Wi-Fi network and the other joins it. A separate Wi-Fi router is not needed.
+Connect two nearby handhelds running slot.sp for supported multiplayer games or trading. One device hosts a local Wi-Fi network and the other joins it. A separate Wi-Fi router is not needed.
 
 ## Host & join
 

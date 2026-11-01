@@ -4,7 +4,7 @@
 
 [Carousel](#on-the-carousel) · [In game](#in-game) · [Display & volume](#display--volume) · [Remapping](#change-a-button)
 
-These are the default controls. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
+Use these default controls, or change them under **Device controls**. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
 
 Use the D-pad to move between tiles in the main settings grid. Press **A** to expand a tile into its settings card and **B** to return.
 
@@ -57,6 +57,10 @@ To confirm removal of a favorite or kid approval, release the button and press i
 
 Hold a brightness or warmth shortcut to keep adjusting it, just like volume. Release either button to stop. Remapped shortcuts work the same way.
 
+## Game rumble
+
+On supported handhelds, **Gameplay → Rumble** controls vibration requested by a game.
+
 ## In menus
 
 | Button | Action |
@@ -100,5 +104,3 @@ Shortcuts and carousel bindings accept single buttons or two-button combinations
 ---
 
 [Playing & saving](PLAYING.md) · [Day & night](NIGHT-DISPLAY.md) · [Kid mode](KID-MODE.md)
-
-Game rumble is controlled separately in **Gameplay → Rumble**, on supported devices.

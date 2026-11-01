@@ -42,9 +42,9 @@ The animated power switch follows your selected SP color. Power settings are rem
 
 ## Connecting power
 
-Connecting a charger briefly shows the battery percentage in a charging pill. Two soft pulses travel toward the lightning bolt, then settle. The status battery keeps its charging bolt inside the capsule. A soft connection tone plays when you plug in power; finding an already-connected charger at startup is silent.
+Connecting a charger briefly shows the battery percentage with two small animated pulses. A tone confirms the connection. The lightning bolt stays inside the battery indicator at the top of the screen while charging. Starting the handheld with a charger already connected does not play the tone.
 
-![The charging notification draws in two soft energy pulses](previews/current/light/charging.gif)
+![The charging notification shows the battery percentage with two pulses](previews/current/light/charging.gif)
 
 ## Set the clock
 

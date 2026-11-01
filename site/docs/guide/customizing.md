@@ -1,10 +1,10 @@
 # Customization
 
+Add your own cartridge labels, colors, wallpapers and game borders. [Cart Studio](../features/cart-studio.md) provides a browser editor for labels and cartridge appearance; the sections below describe the files on the card.
+
 ## Cart labels
 
-Drop a `.png` into the `Labels/{Platform}` folder with the same name as the ROM. 
-
-e.g. `Labels/GBA/Metroid Fusion.png` goes with `Games/GBA/Metroid Fusion.gba`.
+Put a PNG in the matching `Labels/GBA`, `Labels/GB` or `Labels/GBC` folder. Give it the same name as the game: `Labels/GBA/Metroid Fusion.png` goes with `Games/GBA/Metroid Fusion.gba`.
 
 | Cart | Shape | Suggested size |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ e.g. `Labels/GBA/Metroid Fusion.png` goes with `Games/GBA/Metroid Fusion.gba`.
 | Game Boy | 1.12:1 | 1024×914 |
 | Game Boy Color | 1.12:1 | 1024×914 |
 
-slot.sp will cache labels on the next boot after adding labels.
+Restart slot.sp after adding labels.
 
 Use [Cart Studio](https://jakegraving.com/slot.sp/studio/) to find artwork, design labels and choose cartridge colors. The [Studio guide](../features/cart-studio.md) covers card access and ZIP export.
 
@@ -26,7 +26,7 @@ To pick your own, add a line to `Labels/cart_shell.txt`:
 Metroid Fusion = auto 6a3fa0 solid
 ```
 
-That's the game's file name, then three words:
+Start with the game’s filename without its extension, followed by three settings:
 
 1. **Shape**: `auto`, `notched` or `rounded`. Only matters for Game Boy carts. `auto` uses the notched cart for original Game Boy games and the rounded one for Color-only games.
 2. **Color**: six hex digits, no `#`.
@@ -36,9 +36,7 @@ Keep all three options lowercase. A line slot.sp can't read is skipped.
 
 ## Wallpapers
 
-Drop a `.png` into `Wallpapers/` and pick it under Wallpaper in Settings → General. 
-
-Random picks one at boot.
+Put a PNG in `Wallpapers/` and choose it in **Menu → General → Wallpaper**. **Random** picks one of these images at startup.
 
 | Device | Suggested Size |
 | --- | --- |
@@ -47,13 +45,13 @@ Random picks one at boot.
 
 Other sizes are scaled to fill the screen and cropped from the center. 
 
-If your wallpaper is too bright, the Wallpaper Tint setting can adjust its contrast a bit to make everything easier to read.
+The clock, status icons and button hints adapt their colors to the wallpaper. **Wallpaper Tint** darkens the image in Dark mode or lightens it in Light mode. See [Appearance & screen](../features/display.md#backgrounds-animation) for the built-in gradients and UI themes.
 
 ## Bezels
 
-Drop a `.png` into `Bezels/GBA/`, `Bezels/GBC/` or `Bezels/GB/` and pick it under Bezel in that system's Screen settings.
+Put a PNG in `Bezels/GBA/`, `Bezels/GBC/` or `Bezels/GB/` and select it under **Screen → [system] → Bezel**.
 
-The bezel is drawn over the game, so leave a transparent hole where the game goes:
+A bezel is the border around the game picture. Leave the game area transparent so it remains visible:
 
 | Device | Bezel size | Game area |
 | --- | --- | --- |
@@ -65,7 +63,7 @@ GBA bezels only show on the 640×480 devices, where the game is 640×427 at 0, 2
 
 ## Boot logo
 
-Put a `.bmp` at `Config/bootlogo.bmp`. slot.sp hands it to the device when it boots, so you'll see it the next time you power on.
+Put a BMP at `Config/bootlogo.bmp` to replace the still image shown when the device powers on. The separate **General → Boot Animation** setting controls the moving slot.sp logo that follows.
 
 slot.sp copies the file as it is, without resizing it, so make it the same size and format as the logo your device already shows.
 
@@ -73,10 +71,10 @@ Delete `Config/bootlogo.bmp` to go back to the slot.sp logo.
 
 ## BIOS
 
-slot.sp doesn't need any BIOS files. If you have your own, drop them into `BIOS/` and you'll get the real boot animation when a game starts.
+BIOS files contain the original console’s startup software. They are optional. If you have your own copies, put them in `BIOS/` to use the original startup sequence:
 
 - `gba_bios.bin`
 - `gbc_bios.bin`
 - `gb_bios.bin`
 
-If you link with mGBA, both devices need the same BIOS setup. See [Linking Up](../features/link-play.md).
+If you link with mGBA, both devices need the same BIOS setup. See [Link play](../features/link-play.md).
