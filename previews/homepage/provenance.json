@@ -1,8 +1,8 @@
 {
-  "source_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
-  "capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
-  "ui_release_commit": "4b3c6f2bdf387e74b3ffd67ff1f81630318c853e",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41327784758",
+  "source_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
+  "capture_source_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
+  "ui_release_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41336982747",
   "capture": "previews/site_refresh.rs",
   "rendering": "Production Frontend and native desktop GL compositor; deterministic software fixtures with repository sample label artwork, synthetic game headers and mock-core gameplay; not photographs or hardware test results.",
   "dimensions": [
@@ -13,8 +13,8 @@
   "files": [
     {
       "path": "previews/homepage/hero-dark-graphite.mp4",
-      "bytes": 658825,
-      "sha256": "92a485e5dd9e965eec16021b463b9bca11d5438e3e2bef39a3a93798323b4475"
+      "bytes": 656815,
+      "sha256": "a8313d4200124bd985e28ef8c14bfa59a29024f8ec48f3f804486f089cc1fe8f"
     },
     {
       "path": "previews/homepage/hero-dark-graphite.png",
@@ -23,8 +23,8 @@
     },
     {
       "path": "previews/homepage/hero-dark-pearl_blue.mp4",
-      "bytes": 660149,
-      "sha256": "698ed56b81ea9b6806b709bb0d1b34dee462c8276e380294684ab684709bc53f"
+      "bytes": 659703,
+      "sha256": "50544c93ae3bede4850038a754c8ad888517da25fe7efe2a2d0d00d345aa901e"
     },
     {
       "path": "previews/homepage/hero-dark-pearl_blue.png",
@@ -33,8 +33,8 @@
     },
     {
       "path": "previews/homepage/hero-dark-pearl_pink.mp4",
-      "bytes": 652493,
-      "sha256": "1240ab2f06cc2a3c8a4e1a451bd76e26a8a0c47b6da718f993cb91164d32e223"
+      "bytes": 671057,
+      "sha256": "3bb871fd649c06e603f4255c73b1950185a6524f52ece3eb206291a176182848"
     },
     {
       "path": "previews/homepage/hero-dark-pearl_pink.png",
@@ -43,8 +43,8 @@
     },
     {
       "path": "previews/homepage/hero-dark-platinum.mp4",
-      "bytes": 663127,
-      "sha256": "ec1811c4f24ebf1122d202a4e40e5f53d9eead9c78c3f0f663cf15203932b267"
+      "bytes": 665136,
+      "sha256": "f199e612abfc495d08f02c6959556c059ea36bae478528b3ee77cdb5ecf34681"
     },
     {
       "path": "previews/homepage/hero-dark-platinum.png",
@@ -53,8 +53,8 @@
     },
     {
       "path": "previews/homepage/hero-light-graphite.mp4",
-      "bytes": 618144,
-      "sha256": "ed4d6aeebbb90da4201ee0e785a134513a16e4f64ce8d0869acc8e792839279e"
+      "bytes": 617343,
+      "sha256": "2fb7d69136aeffb294778763ca22fdf326f02e587f6165e06b390bc10563e7bb"
     },
     {
       "path": "previews/homepage/hero-light-graphite.png",
@@ -63,8 +63,8 @@
     },
     {
       "path": "previews/homepage/hero-light-pearl_blue.mp4",
-      "bytes": 620991,
-      "sha256": "78376c02258a4eaec5267cab54a058b4e02df4f1d44d959dfc150aa8993b2b3c"
+      "bytes": 622652,
+      "sha256": "94e233c160ea7e92107f0c19c0793c9a2267a56a0197d87deb53e52538bb8721"
     },
     {
       "path": "previews/homepage/hero-light-pearl_blue.png",
@@ -73,8 +73,8 @@
     },
     {
       "path": "previews/homepage/hero-light-pearl_pink.mp4",
-      "bytes": 618103,
-      "sha256": "361a5bfe1e4eee6e123ca49e04cc7111a9addfe1ae23c676ac0fe1fd1885c42a"
+      "bytes": 623129,
+      "sha256": "97341290e2adfa624ecaf36ec9568750c1185ff6382fa56fb859f691b119ecab"
     },
     {
       "path": "previews/homepage/hero-light-pearl_pink.png",
@@ -83,13 +83,172 @@
     },
     {
       "path": "previews/homepage/hero-light-platinum.mp4",
-      "bytes": 619350,
-      "sha256": "45e2bf3a2ebaf93e5938e3aa446a4fd5167dd409c5d7be24550769c50c56ea61"
+      "bytes": 619676,
+      "sha256": "7d00e6e64a1d1fccb88b441098e8f4618257ad2efe7c9c1cfaaccf80e88a165a"
     },
     {
       "path": "previews/homepage/hero-light-platinum.png",
       "bytes": 279781,
       "sha256": "fda09aa7a7111cff6fc21c3ce0e4aa9d9004f3d28d7bfe8fb53ed91972faf7c0"
+    }
+  ],
+  "base_capture_source_commit": "c37457f710d273731b4e5847e55cd46ca4d71143",
+  "refresh_scenes": [
+    "screenshots",
+    "screenshots-full",
+    "screenshots-zoom",
+    "screenshots-select"
+  ],
+  "sequence": [
+    "insert",
+    "eject",
+    "browse",
+    "boot"
+  ],
+  "timelines": [
+    {
+      "theme": "dark",
+      "finish": "graphite",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "dark",
+      "finish": "platinum",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "dark",
+      "finish": "pearl_blue",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "dark",
+      "finish": "pearl_pink",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "light",
+      "finish": "graphite",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "light",
+      "finish": "platinum",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "light",
+      "finish": "pearl_blue",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
+    },
+    {
+      "theme": "light",
+      "finish": "pearl_pink",
+      "fps": 60,
+      "frames": 479,
+      "insert_frame": 48,
+      "visible_insertion_frames": 35,
+      "exit_frame": 85,
+      "visible_game_frames": 0,
+      "omitted_test_pattern": true,
+      "assertions": [
+        "inserting",
+        "seated",
+        "playing",
+        "ejecting",
+        "shelf"
+      ]
     }
   ]
 }
