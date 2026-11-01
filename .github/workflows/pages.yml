@@ -12,6 +12,7 @@ on:
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
       - 'tools/check-site-navigation.cjs'
+      - 'tools/check-sp-model.cjs'
       - '.github/workflows/pages.yml'
   push:
     branches: [main]
@@ -25,6 +26,7 @@ on:
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
       - 'tools/check-site-navigation.cjs'
+      - 'tools/check-sp-model.cjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -36,6 +38,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  model:
+    name: Check 3D handheld preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Prepare homepage
+        run: |
+          python -m pip install --disable-pip-version-check zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0
+          python tools/prepare-site.py
+          zensical build --clean --strict -f site/zensical.build.toml
+      - name: Check the model and capture desktop and mobile views
+        env:
+          NODE_PATH: ${{ runner.temp }}/model-browser/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/model-browser" playwright@1.62.1
+          node tools/check-sp-model.cjs "$RUNNER_TEMP/sp-model-review"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sp-model-review
+          retention-days: 3
+          path: ${{ runner.temp }}/sp-model-review
+          if-no-files-found: ignore
+
   build:
     name: Build and check website
     runs-on: ubuntu-latest
@@ -122,7 +152,7 @@ jobs:
 
   deploy:
     name: Publish website
-    needs: build
+    needs: [build, model]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == 'jgraving/slot.sp' || vars.ENABLE_PAGES == 'true')
     runs-on: ubuntu-latest
     permissions:

@@ -113,9 +113,14 @@ def main():
     config = config.replace('ui_media_revision = \"prepared\"', f'ui_media_revision = \"{current_revision}\"')
     config = config.replace('homepage_media_revision = "prepared"',
                             f'homepage_media_revision = "{revision}"')
-    for relative in ['assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/navigation.js', 'assets/slot.js']:
+    model_name = None
+    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/navigation.js', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()
+        if source.name == 'sp-model.js':
+            content = content.replace("'./vendor/", "'../vendor/")
+        elif source.name == 'slot.js':
+            content = content.replace("'sp-model.js'", f"'generated/{model_name}'")
         if source.suffix == '.css':
             # Generated CSS is one directory deeper than the original file.
             def parent_url(match):
@@ -128,6 +133,8 @@ def main():
             content = re.sub(r'url\(([^)]+)\)', parent_url, content)
         digest = hashlib.sha256(content.encode()).hexdigest()[:12]
         name = f'{source.stem}.{digest}{source.suffix}'
+        if source.name == 'sp-model.js':
+            model_name = name
         (generated / name).write_text(content)
         config = config.replace('"' + relative + '"', '"assets/generated/' + name + '"')
     (ROOT / 'site/zensical.build.toml').write_text(config)

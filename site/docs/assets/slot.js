@@ -41,14 +41,16 @@
         ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,values[i]));
         document.querySelectorAll('[data-shell]').forEach(other => other.setAttribute('aria-pressed',String(other === button)));
         changePreview(button);
+        document.querySelector('.sp-stage')?.dispatchEvent(new CustomEvent('sp:finish',{detail:button.dataset.shell}));
       });
     });
 
     const preview = document.getElementById('hero-preview');
+    const stage = document.querySelector('.sp-stage');
     const toggle = document.querySelector('.preview-toggle');
     if (!preview || !toggle) return;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    let wanted = !reduced.matches;
+    let wanted = !reduced.matches && !navigator.connection?.saveData;
     let visible = true;
     let finish = 'platinum';
     let request = 0;
@@ -76,7 +78,7 @@
       state();
     }
     function sync() {
-      if (wanted && visible && !document.hidden) preview.play().catch(() => {});
+      if (wanted && visible && !document.hidden && stage?.dataset.lid !== 'closed') preview.play().catch(() => {});
       else preview.pause();
     }
     function state() {
@@ -157,6 +159,7 @@
       const gold = ['#f2dfaa','#d3ad60','#92713c','#e5cf95','#fff1c9','rgba(57,39,18,.56)'];
       ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,gold[i]));
       document.querySelectorAll('[data-shell]').forEach(button => button.setAttribute('aria-pressed','false'));
+      stage?.dispatchEvent(new CustomEvent('sp:finish',{detail:'gold'}));
       const notice = document.querySelector('.secret-notice');
       notice.replaceChildren(topicIcon('kid-mode', 'secret-icon'), document.createTextNode('You found the gold shell.'));
       clearTimeout(noticeTimer);
@@ -164,7 +167,20 @@
       playSegment(7.4, 9.25);
     });
     reduced.addEventListener('change',() => { if (reduced.matches) { wanted = false; sync(); state(); } });
-    new IntersectionObserver(entries => { visible = entries[0].isIntersecting; sync(); },{threshold:.1}).observe(preview);
+    new IntersectionObserver(entries => { visible = entries[0].isIntersecting; sync(); },{threshold:.1}).observe(stage || preview);
+    stage?.addEventListener('sp:lid',sync);
+    // Load the self-hosted renderer only on the homepage, when it is in view.
+    // The SVG and video remain usable if WebGL or the optional module fails.
+    if (stage && !navigator.connection?.saveData) {
+      const modelObserver = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        modelObserver.disconnect();
+        import(new URL('sp-model.js',assets).href)
+          .then(({mountSP}) => mountSP(stage,preview))
+          .catch(error => console.warn('3D preview unavailable; using the illustrated preview.',error));
+      },{rootMargin:'100px'});
+      modelObserver.observe(stage);
+    }
     document.addEventListener('visibilitychange',sync);
     state();
   }
