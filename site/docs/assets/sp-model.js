@@ -10,7 +10,7 @@ export function mountSP(stage, video) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = .95;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.shadowMap.autoUpdate = false;
@@ -48,12 +48,12 @@ export function mountSP(stage, video) {
   scene.environment = environment.texture;
   pmrem.dispose();
   studio.traverse(object => { object.geometry?.dispose(); object.material?.dispose(); });
-  scene.add(new T.HemisphereLight(0xf4f7ff,0x616775,2.1));
-  const key = new T.DirectionalLight(0xfff9ee,3.4); key.position.set(-80,140,220); scene.add(key);
+  scene.add(new T.HemisphereLight(0xf4f7ff,0x616775,.85));
+  const key = new T.DirectionalLight(0xfff9ee,2.6); key.position.set(-80,140,220); scene.add(key);
   key.castShadow=true;key.shadow.mapSize.set(1024,1024);
   Object.assign(key.shadow.camera,{left:-105,right:105,top:115,bottom:-110,near:50,far:500});
   key.shadow.normalBias=.12;key.shadow.bias=-.0001;
-  const rim = new T.DirectionalLight(0xddeaff,1.4); rim.position.set(140,40,-60); scene.add(rim);
+  const rim = new T.DirectionalLight(0xddeaff,1.1); rim.position.set(140,40,-60); scene.add(rim);
 
   function textureCanvas(width,height,paint) {
     const c=document.createElement('canvas'); c.width=width; c.height=height;
@@ -70,13 +70,13 @@ export function mountSP(stage, video) {
     ctx.putImageData(pixels,0,0);
   });
   grain.colorSpace=T.NoColorSpace; grain.wrapS=grain.wrapT=T.RepeatWrapping; grain.repeat.set(.12,.12);
-  const shell=material({color:0xb7bdc2,metalness:.62,roughness:.38,bumpMap:grain,bumpScale:.028,clearcoat:.14,clearcoatRoughness:.42,envMapIntensity:1.0});
+  const shell=material({color:0xaeb4b8,metalness:.62,roughness:.42,bumpMap:grain,bumpScale:.028,clearcoat:.14,clearcoatRoughness:.42,envMapIntensity:1.0});
   const edge=material({color:0xa1a8ae,metalness:.5,roughness:.4,bumpMap:grain,bumpScale:.02});
-  const button=material({color:0x8d9496,metalness:.18,roughness:.43,clearcoat:.1});
+  const button=material({color:0x686f71,metalness:.12,roughness:.48,clearcoat:.1});
   const rubber=material({color:0x8b9295,metalness:0,roughness:.8});
   const dark=material({color:0x161b20,metalness:.12,roughness:.63});
   const seam=material({color:0x5d656d,metalness:.32,roughness:.6});
-  const bezel=material({color:0x10151a,metalness:.22,roughness:.23,clearcoat:.5});
+  const bezel=track(new T.MeshBasicMaterial({color:0x080b10,toneMapped:false}));
   const chrome=material({color:0xaab0b5,metalness:.8,roughness:.27});
 
   function rr(w,h,r,cx=0,cy=0,Type=T.Shape) {
@@ -106,8 +106,9 @@ export function mountSP(stage, video) {
     return mesh(g,mat,parent,x,y,0);
   }
   function engraving(text,parent,x,y,z,w,h,color='#42494d') {
-    const map=textureCanvas(512,192,(ctx,cw,ch) => {
-      ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`500 ${text.length>4?73:108}px Arial, sans-serif`;
+    const single=text.length===1;
+    const map=textureCanvas(single?256:512,single?256:128,(ctx,cw,ch) => {
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`500 ${single?176:98}px Arial, sans-serif`;
       ctx.fillStyle='rgba(255,255,255,.38)';ctx.fillText(text,cw/2+1.5,ch/2+2.5);
       ctx.fillStyle=color;ctx.fillText(text,cw/2,ch/2);
     });
@@ -120,19 +121,22 @@ export function mountSP(stage, video) {
   const face=rr(80.6,81.3,4.0,0,-43.5);
   const wells=[[-21,-32.5,14.0],[21,-32.5,14.0],[0,-15.5,3.5],[-5.4,-76,3.2],[5.4,-76,3.2]];
   wells.forEach(([x,y,r])=>circleHole(face,x,y,r));
+  // The perforated skin has a square bore; a bevel wider than these holes
+  // would fold their walls across each other. Keep its outer moulding separate.
+  mesh(extrusion(face.clone(),5.85,.65),shell,product,0,0,-5.35);
   const speaker=[];
   for(let row=-2;row<=2;row++)for(let col=-2;col<=2;col++) {
     if(Math.abs(row)+Math.abs(col)>3)continue;
     const x=col*2.8, y=-59.5+row*2.8, r=.27;
     speaker.push([x,y]);circleHole(face,x,y,r);
   }
-  mesh(extrusion(face,6,.65),shell,product,0,0,-5.35);
+  mesh(extrusion(face,.18,0),shell,product,0,0,-.18);
   for(const [x,y,r] of wells) {
     disc(product,r-.15,.25,shell,x,y,-1.4);
     ring(product,[[r-.95,-1.4],[r-.85,-1.25],[r-.25,-.2],[r,.02]],shell,x,y);
     ring(product,[[r-.97,-1.45],[r-.95,-1.38]],seam,x,y);
   }
-  for(const [x,y] of speaker)disc(product,.265,.1,dark,x,y,-1.0);
+  for(const [x,y] of speaker)disc(product,.265,.1,dark,x,y,-.13);
 
   function roundButton(x,y,r,label,action) {
     disc(product,r+.25,.18,dark,x,y,-1.2);
@@ -236,14 +240,18 @@ export function mountSP(stage, video) {
       updateScreen();wake();
     },undefined,()=>{ /* The HTML fallback keeps its own poster. */ });
   }
+  // Request texture upload explicitly: a visually hidden video may not receive
+  // requestVideoFrameCallback even though its playback clock advances.
   function updateScreen() {
+    if(video.readyState>=2)videoTexture.needsUpdate=true;
     const map=video.readyState>=2 ? videoTexture : poster;
     if(map && screenMat.map!==map){screenMat.map=map;screenMat.color.setHex(0xffffff);screenMat.needsUpdate=true;}
+    if(map)stage.dataset.screenReady='true';
   }
   const observer=new MutationObserver(loadPoster);observer.observe(video,{attributes:true,attributeFilter:['poster']});
 
   const palettes={
-    platinum:[0xb7bdc2,0xa1a8ae,0x8d9496,.62],
+    platinum:[0xaeb4b8,0x8d959a,0x686f71,.62],
     graphite:[0x353c44,0x242a31,0x3f454d,.38],
     'pearl blue':[0x9ebdcd,0x7699ae,0xa6b7c1,.4],
     'pearl pink':[0xd8acbb,0xb57f93,0xb8a9b0,.4],
@@ -257,7 +265,7 @@ export function mountSP(stage, video) {
 
   let yaw=-.32,pitch=.08,roll=-.10,targetYaw=yaw,targetPitch=pitch;
   let closed=false,hinge=-.31,targetHinge=hinge;
-  let pointer=null,lastFrame=0,frame=0,visible=true,disposed=false;
+  let pointer=null,lastFrame=0,lastRendered=0,frame=0,visible=true,disposed=false;
   let pressUntil=0,pressed=null;
   const hardware=[...stage.querySelectorAll('[data-hardware]')];
   const fallback=stage.querySelector('.device');
@@ -291,6 +299,7 @@ export function mountSP(stage, video) {
   function wake() { if(!disposed && visible && !document.hidden && !frame)frame=requestAnimationFrame(draw); }
   function draw(now) {
     frame=0;if(disposed||!visible||document.hidden)return;
+    if(now-lastRendered<1000/30){wake();return;}lastRendered=now;
     const dt=Math.min((now-lastFrame)/1000,.05)||.016;lastFrame=now;
     const ease=reduced.matches?1:1-Math.exp(-12*dt);
     yaw+=(targetYaw-yaw)*ease;pitch+=(targetPitch-pitch)*ease;hinge+=(targetHinge-hinge)*ease;
@@ -355,7 +364,7 @@ export function mountSP(stage, video) {
     document.removeEventListener('visibilitychange',wake);reduced.removeEventListener('change',wake);
     stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('click',press);fold.removeEventListener('click',foldLid);
     for(const {element,parent,next}of originals){parent.insertBefore(element,next?.parentElement===parent?next:null);element.removeAttribute('style');element.hidden=false;}
-    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('aria-label');
+    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('aria-label');
     canvas.remove();poster?.dispose();for(const item of disposables)item.dispose();renderer.dispose();
   }
   // Commit only after the first complete render. Failure leaves the original

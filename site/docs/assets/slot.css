@@ -181,9 +181,9 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 /* The 3D preview occupies the same homepage column as the original handheld. */
 .sp-preview .sp-stage{width:100%;max-width:470px;height:600px;aspect-ratio:auto;margin:0 auto 12px}
 .sp-preview .sp-stage>.device{width:var(--dw);margin:auto}
-.sp-model-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
+.sp-model-canvas{position:absolute;z-index:2;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:pan-y}
 .sp-stage.is-dragging .sp-model-canvas{cursor:grabbing}
-.sp-stage.model-ready>.device{visibility:hidden;pointer-events:none}
+.sp-stage.model-ready>.device{opacity:0;visibility:hidden;pointer-events:none}
 .sp-stage.model-ready>.hardware-button{z-index:3;width:32px;height:32px;transform:none}
 .sp-stage.model-ready>.hardware-button[hidden]{display:none}
 .sp-stage:focus-visible{outline:1px solid var(--teal);outline-offset:0;border-radius:32px}

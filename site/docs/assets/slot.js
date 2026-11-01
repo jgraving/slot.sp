@@ -128,7 +128,8 @@
     }
     preview.addEventListener('playing', watchSegment);
     preview.addEventListener('timeupdate', () => {
-      if (!preview.requestVideoFrameCallback) stopAtSegment(preview.currentTime);
+      // Hidden DOM video can stop delivering frame callbacks while its texture plays.
+      stopAtSegment(preview.currentTime);
     });
     document.querySelectorAll('[data-hardware]').forEach(button => {
       button.addEventListener('click', () => {

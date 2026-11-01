@@ -53,6 +53,8 @@ const server = http.createServer((req, res) => {
     const page = await browser.newPage({ viewport: { width: 1000, height: 720 }, deviceScaleFactor: 1 });
     await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'networkidle' });
     await page.locator('.hero-screen').evaluate(img => img.decode());
+    await page.locator('.readme-brand img').evaluate(img => img.decode());
+    await page.evaluate(() => document.fonts.ready);
     const duration = native.duration;
     if (!(duration > 5 && duration < 20)) throw Error(`Unexpected source clip: ${duration}s`);
     const bounds = await page.locator('.dv-front, .dv-deck').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { x:r.x, y:r.y, right:r.right, bottom:r.bottom }; }));
@@ -67,7 +69,7 @@ const server = http.createServer((req, res) => {
       }, i);
       await page.screenshot({ path: path.join(output, 'model-frames', `${String(i).padStart(4, '0')}.png`) });
     }
-    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, browser_version: browser.version(), logo_sha256: crypto.createHash('sha256').update(fs.readFileSync(logoPath)).digest('hex'), native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
+    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, browser_version: browser.version(), logo_sha256: crypto.createHash('sha256').update(fs.readFileSync(logoPath)).digest('hex'), logo_font_sha256: crypto.createHash('sha256').update(fs.readFileSync(path.join(repo, 'crates/slot-ui/assets/fonts/display.ttf'))).digest('hex'), logo_font_profile: 'display', native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
     console.log(`Captured ${frames} frames of the website SP model with native playback`);
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

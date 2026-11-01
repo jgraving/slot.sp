@@ -4,7 +4,7 @@
       {% set icon = config.theme.icon.menu or "material/menu" %}
       {% include ".icons/" ~ icon ~ ".svg" %}
     </label>
-    <a class="mast-mark" href="{{ nav.homepage.url | url }}"><img src="{{ 'assets/wordmark.png' | url }}" width="82" height="25" alt="slot.sp"></a>
+    <a class="mast-mark" href="{{ nav.homepage.url | url }}"><img src="{{ config.extra.wordmark_asset | default('assets/wordmark.png', true) | url }}" width="82" height="25" alt="slot.sp"></a>
     <ul class="mast-tabs">
       {% for nav_item in nav.items[1:] %}
         {% set destination = nav_item.children[0] if nav_item.children else nav_item %}
