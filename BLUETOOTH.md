@@ -17,7 +17,7 @@ Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** du
 
 The status and volume icons show the current audio output. A manual output choice stays selected until another USB attachment or restart.
 
-![Sound settings with Bluetooth enabled, headphones selected and the disconnect volume at zero](previews/guide/sound.png)
+![Sound settings in the current interface; available outputs depend on the hardware](previews/current/light/sound.png)
 
 ## Pair Bluetooth headphones
 
@@ -33,9 +33,9 @@ Saved headphones appear by name on the main Sound screen. Select a device and pr
 
 Select **Internal speaker** or **Wired headphones** to return to local audio. This also stops automatic reconnect to the Bluetooth device.
 
-The **Bluetooth** switch is the first row in Sound. Green means on; gray means off. Press <kbd>A</kbd> or use <kbd>Left</kbd> / <kbd>Right</kbd> to change it. Turning it off keeps your saved pairings. The choice is remembered.
+The **Bluetooth** switch appears below Volume on supported handhelds. Green means on; gray means off. Press <kbd>A</kbd> or use <kbd>Left</kbd> / <kbd>Right</kbd> to change it. Turning it off keeps your saved pairings. The choice is remembered.
 
-If an operation fails, Sound shows **Error**, restarts Bluetooth and tries the operation once more.
+A failed operation shows a short cause and next step in a bottom notification pill. Use the Sound menu to retry or choose another output. A radio operation may restart Bluetooth and retry once; an unavailable headphone connection does not always restart the radio. Opening Sound refreshes device information quietly. The progress spinner appears for actions such as scanning or changing outputs.
 
 ### Forget a device
 
@@ -51,11 +51,11 @@ Highlight the saved device, press <kbd>Y</kbd>, release it and press <kbd>Y</kbd
 
 The speaker, wired headphones, Bluetooth and USB each remember their own volume and mute state. USB audio starts at **20%**.
 
-A speaker-with-X icon stays at the top of the carousel and menus while the active output is muted or its volume is zero. It appears beside the Bluetooth or headphones indicator, so both the connection and mute state remain visible.
+A speaker-with-a-slash icon stays at the top of the carousel and menus while the active output is muted or its volume is zero. It appears beside the Bluetooth or headphones indicator, so both the connection and mute state remain visible.
 
 Headphones with their own volume controls may also need those controls adjusted. Use the handheld's volume indicator to set slot.sp's level.
 
-In kid mode, volume stays within the parent's [volume limit](KID-MODE.md#time--volume-limits). The kid menu also has a Volume row.
+In kid mode, volume stays within the parent's [volume limit](KID-MODE.md#time--volume-limits). Open **Sound** in the kid menu to adjust Volume.
 
 ## Volume on disconnect
 

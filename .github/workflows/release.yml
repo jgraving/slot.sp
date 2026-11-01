@@ -7,6 +7,12 @@ on:
     paths-ignore:
       - '**.md'
       - 'previews/**'
+      - 'site/**'
+      - 'tools/prepare-site.py'
+      - 'tools/assemble-studio.py'
+      - 'tools/check-site.py'
+      - 'tools/capture-readme-model.cjs'
+      - '.github/workflows/current-website-media.yml'
       - '.github/resources/**'
       - '.github/FUNDING.yml'
       - '.github/workflows/pages.yml'

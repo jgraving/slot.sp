@@ -8,7 +8,7 @@ Save a bright daytime setting and a dimmer, warmer nighttime setting. Switch bet
 
 Hold <kbd>SELECT</kbd> and press <kbd>X</kbd>. This works on the carousel and during a game, with the default controls outside kid mode.
 
-slot.sp remembers the active preset when you restart.
+slot.sp remembers the active preset when you restart. These brightness and warmth presets are independent of **General → UI theme**: switching Day/Night does not switch the Light/Dark appearance.
 
 ## Set up each preset
 
@@ -27,11 +27,11 @@ Each adjustment saves to the preset you are using.
 
 Keep both buttons held to adjust continuously after a short pause. Release either button to stop; a quick tap still changes one step.
 
-The setting is named **Color temp** in both Screen and Night mode. Neutral preserves the original picture; increasing it adds a warmer tint, up to Warm 100%. In Screen it adjusts the active day or night preset. Inside Night mode it adjusts the saved night preset, applying immediately when night mode is active. The night preset starts at brightness **2** and Warm 100%; the day preset starts with your existing display settings.
+The setting is named **Color temp** in both Screen and Night mode. Neutral preserves the original picture; increasing it adds a warmer tint, up to Warm 100%. In Screen it adjusts the active day or night preset. Inside Night mode it adjusts the saved night preset, applying immediately when night mode is active. The night preset starts at **22% brightness** and Warm 100%; the day preset starts with your existing display settings.
 
 ## Change the shortcut
 
-Open **Menu → Controls → Shortcuts → Night mode**, press <kbd>A</kbd> and record your preferred combination. Restoring the page's defaults brings back <kbd>SELECT</kbd> + <kbd>X</kbd>.
+Open **Menu → Device controls → Shortcuts → Night mode**, press <kbd>A</kbd> and record your preferred combination. Restoring the page's defaults brings back <kbd>SELECT</kbd> + <kbd>X</kbd>.
 
 <details>
 <summary><strong>Where the presets are saved</strong></summary>

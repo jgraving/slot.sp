@@ -25,7 +25,7 @@ The output is `site/public/`. The preparation step:
 
 - Turns the root feature guides into website pages, adapting relative links and heading anchors.
 - Creates `site/zensical.build.toml` with content-hashed CSS and JavaScript URLs. The source configuration stays in `site/zensical.toml`; build the generated configuration after preparing the site.
-- Copies reviewed native H.264 clips and PNG screenshots, verifying their recorded SHA-256 hashes. GitHub uses the corresponding GIFs; the website uses videos with play controls.
+- Copies the reviewed current native captures in both themes, verifying their recorded SHA-256 hashes. GitHub uses a few compact GIFs; the website uses H.264 videos with play controls. Each capture set is served under its source revision to avoid stale media after updates.
 - Builds a self-hosted Google Sans Flex WOFF2 from the source pinned in the UI font manifest, verifying its SHA-256 first. Its license is included with the website font.
 
 `site/studio.json` pins the revision of `jgraving/slot-cart-studio` published under `/slot.sp/studio/`. The assembly step checks that source revision and its renderer pin, includes the app license, and records both in `studio/build-info.json`. Update the pin after merging a tested change in the Studio repository.
@@ -42,11 +42,13 @@ Checks cover the strict documentation build, local page links and anchors, CSS a
 
 ## Captures
 
-The **Capture documentation media** workflow on `docs/media-refresh` builds the production UI and recorder, runs the relevant native regressions, and exports the README clips and guide screenshots. The `documentation-media` artifact contains the media, provenance and prepared Git blob entries. Review the images before committing those objects with the GitHub integration. The workflow does not create a commit or move a branch.
+The **Capture current website media** workflow on `docs/website-ui-refresh` runs `previews/site_refresh.rs` through the production Frontend/compositor, then `previews/collect_site_refresh.py`. It records both UI themes, settings and parental controls, software gameplay examples, charging, startup motion, and eight matching theme/finish hero clips. The fixture uses repository label artwork and synthetic games, never a playable ROM. Gallery, save-state and link examples use Dark mode: their legacy Light controls still need a separate app contrast fix. Low-contrast Light captures are excluded rather than recolored.
 
-`previews/media-provenance.json` records the source commit, Actions run, file sizes and hashes. Menu examples use explicit sample settings. These are software-rendered examples, not photographs or hardware test results.
+`previews/current/provenance.json` records the capture source, UI release, rendering method, sample data, byte sizes and SHA-256 hashes. `previews/homepage/provenance.json` tracks the eight hero variants. The `current-website-media` artifact contains media and prepared Git blob entries for review; capture itself never creates a commit or moves a branch.
 
-The **Capture homepage previews** workflow records the production frontend browsing all five fixture cartridges and renders the glass logo sequence in all four SP finishes. `previews/compose_homepage.py` joins them with transitions back into the carousel. The README uses the same Platinum sequence playing inside the website’s SP model. `tools/capture-readme-model.cjs` captures the shared model markup, CSS perspective and native clip, with a matching reduced-motion poster. The homepage capture workflow regenerates this illustrated hero alongside the screen clips; the **Capture illustrated README hero** workflow can refresh it independently on `docs/readme-model`. `previews/homepage/provenance.json` records the clips, posters and GIF. The homepage picker switches both the illustrated handheld and the native preview, preserving playback position and the visitor's play/pause choice. It downloads each alternative clip only when selected. Reduced motion keeps a still poster until playback is requested.
+The homepage's Light/Dark picker switches both the site palette and the native previews. The header theme control is available throughout the guides; the choice stays in this browser. Four SP finishes retain the illustrated handheld, with synchronized native clips and a matching reduced-motion poster. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
+
+The README uses the same Platinum light-theme clip inside the website's illustrated SP. `tools/capture-readme-model.cjs` and `previews/collect_readme_model.py` preserve a matching poster and record provenance. The prior capture scripts remain available for specialist asset work; the website publishes only the current reviewed manifest.
 
 ## Layout and copy
 
@@ -54,4 +56,4 @@ The **Capture homepage previews** workflow records the production frontend brows
 - Use the actual interface beside the steps it explains. Give clips play controls and keep them quiet until requested.
 - Name the feature and say what it does. Avoid slogans, repeated download sections and lists of vague benefits.
 - Keep the SP illustration and recognizable feature icons. Use the same symbols in the homepage and guide navigation so topics are easy to distinguish. Favor readable labels and space over extra small captions.
-- Use teal for links and actions, with Google Sans Flex for both the site and device UI.
+- Use the UI’s warm light and deep dark palettes, rounded floating surfaces and green/teal actions. Keep Google Sans Flex across the site and device UI, and preserve visible keyboard focus.

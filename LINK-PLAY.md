@@ -22,7 +22,7 @@ Keep the devices close together. Starting Host before Join gives the second play
 | <kbd>B</kbd> | Go back. |
 | <kbd>SELECT</kbd>, when offered | Switch cable / wireless-adapter mode. |
 
-![The Host and Join controls on the link screen](previews/readme-link.gif)
+![Host controls in the current link setup screen, shown in Dark mode](previews/current/dark/link-host.png)
 
 ## Choose the link mode
 

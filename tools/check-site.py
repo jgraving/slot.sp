@@ -23,6 +23,10 @@ class Page(HTMLParser):
         attrs = dict(attributes)
         if attrs.get('id'):
             self.ids.add(attrs['id'])
+        for candidate in attrs.get('srcset','').split(','):
+            if candidate.strip():self.links.append((tag,candidate.strip().split()[0]))
+        for link in re.findall(r'url\([\"\']?([^\)\"\']+)',attrs.get('style','')):
+            self.links.append((tag,link))
         for key in ('href', 'src', 'poster', 'data-src'):
             if attrs.get(key):
                 self.links.append((tag, attrs[key]))
@@ -74,14 +78,25 @@ assert studio_info['assets_base'] == f"assets/{studio_info['source_commit'][:12]
 assert (ROOT / 'studio' / studio_info['assets_base'] / 'pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
 hero_durations = []
-hero_revision = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())['source_commit'][:12]
-for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
-    stem = ROOT / f'media/fork/homepage/{hero_revision}/hero-{finish}'
-    with Image.open(stem.with_suffix('.png')) as poster:
-        assert poster.size == (720, 480), stem
-    with av.open(str(stem.with_suffix('.mp4'))) as clip:
-        hero_durations.append(clip.duration)
-assert len(set(hero_durations)) == 1, 'Color previews must share the same timeline'
+hero_manifest = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())
+hero_revision = hero_manifest.get('capture_source_commit',hero_manifest['source_commit'])[:12]
+for theme in ['dark','light']:
+    for finish in ['graphite','platinum','pearl_blue','pearl_pink']:
+        stem=ROOT/f'media/fork/homepage/{hero_revision}/hero-{theme}-{finish}'
+        with Image.open(stem.with_suffix('.png')) as poster:assert poster.size==(720,480),stem
+        with av.open(str(stem.with_suffix('.mp4'))) as clip:hero_durations.append(clip.duration)
+assert len(set(hero_durations))==1,'Theme and finish previews must share a timeline'
+current=json.loads((ROOT/'media/fork/current/provenance.json').read_text())
+revision=current.get('capture_source_commit',current['source_commit'])[:12]
+for theme in ['dark','light']:
+    for scene in ['carousel','settings','general','screen','sound','parent-settings','parent-code','kid-menu','in-game-menu','in-game-settings','charging','boot','power','controls','about','screenshots','save-states','buttons-shortcuts','kid-warning','core-picker','approved','favorites','link-host','link-join']:
+        if theme=='light' and scene in ['screenshots','save-states','link-host','link-join']:continue
+        path=ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png'
+        with Image.open(path) as image:assert image.size==(720,480),path
+    for scene in ['boot','settings','parent-code','charging','carousel']:
+        assert (ROOT/f'media/fork/current/{revision}/{theme}/{scene}.mp4').is_file(),scene
+assert 'site-theme-toggle' in home and 'data-theme-picture' in home
+assert 'data-ui-theme="light"' in home and 'data-ui-theme="dark"' in home
 for video in (ROOT / 'media/fork').rglob('*.mp4'):
     with av.open(str(video)) as container:
         assert container.duration and container.duration > 0, video

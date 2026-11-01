@@ -65,11 +65,14 @@ Use the on-device menus to change settings. These files are listed for backups a
 | `selected_core.txt`                             | Which emulator each GBA game uses                  |
 | `video_mode.txt`                                | Which Game Boy games you've stretched              |
 | `cart_shell.txt`                                | Cart colors, see [Customization](customizing.md). A `Labels/cart_shell.txt` overrides it |
-| `bootlogo.bmp`                                  | Your boot logo, if you've made one                 |
+| `bootlogo.bmp` | Your custom startup still image. |
+| `display.txt` | Day/night brightness and warmth presets and schedule. |
+| `power.txt` | Sleep, lid and power settings. |
+| `sound.conf` | Volume on disconnect and Pause on disconnect. |
+| `play-history.txt` | Recorded play time and launch history. |
+| `kids/` | Kid-mode approvals, limits, usage and the plain-text parent-code recovery file. |
 
-If you ever want slot.sp back to how it came, delete `Config/`.
-
-You'll have to set the clock again on the next boot.
+To reset settings, shut down and back up `Config/` before removing it. Removing this folder also resets button mappings, Favorites, clock settings and parental controls. You will need to set the clock again at the next boot.
 
 ## Updating
 

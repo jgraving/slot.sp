@@ -1,7 +1,7 @@
 [project]
 site_url = "https://jakegraving.com/slot.sp/"
 site_name = "slot.sp"
-site_description = "Your games. SP style. A game launcher by Jake Graving for Anbernic handhelds, with four SP colors, kid mode and Bluetooth audio."
+site_description = "Your games. SP style. A game launcher by Jake Graving for Anbernic handhelds, with light and dark themes, floating settings cards, kid mode and Bluetooth audio."
 repo_url = "https://github.com/jgraving/slot.sp"
 repo_name = "jgraving/slot.sp"
 docs_dir = "docs"
@@ -23,7 +23,7 @@ nav = [
     { "Sleep & power" = "features/power-options.md" },
     { "Link play" = "features/link-play.md" },
     { "Cart Studio guide" = "features/cart-studio.md" },
-    { "Reference" = ["guide/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
+    { "Reference" = ["features/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
   ] },
   { "Cart Studio" = "https://jakegraving.com/slot.sp/studio/" },
   { "About" = ["questions.md", "credits.md", "ai.md", "impressum.md", "datenschutz.md"] },
@@ -34,6 +34,7 @@ extra_javascript = ["assets/slot.js"]
 
 [project.extra]
 homepage_media_revision = "prepared"
+ui_media_revision = "prepared"
 
 [project.theme]
 custom_dir = "overrides"
