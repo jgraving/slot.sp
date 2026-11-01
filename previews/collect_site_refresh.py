@@ -45,6 +45,7 @@ for theme in ['dark','light']:
   timeline=json.loads((source/'hero-timeline.json').read_text())
   assert timeline['fps']==60 and timeline['visible_insertion_frames']>=24, f'Hero omitted insertion: {source}'
   assert timeline['assertions']==['inserting','seated','playing','ejecting','shelf'], f'Hero did not finish launch/ejection: {source}'
+  assert timeline['visible_game_frames']==0 and timeline['omitted_test_pattern'] is True, f'Hero exposed the synthetic game screen: {source}'
   timelines.append(dict(theme=theme,finish=finish,**timeline))
   a=source/'hero-native.mp4';b=source/'hero-boot.mp4';target=homepage/f'hero-{theme}-{finish}.mp4';fade=.3;la=duration(a);lb=duration(b)
   # Join real carousel and production boot, then crossfade back into the initial
@@ -84,7 +85,7 @@ if previous is not None:
   else:entry.update(capture_source_commit=capture_source,ui_source_commit=source)
  manifest.update(base_capture_source_commit=previous.get('capture_source_commit',previous['source_commit']),refresh_scenes=gallery)
 (current/'provenance.json').write_text(json.dumps({**manifest,'files':current_files},indent=2)+'\n')
-(homepage/'provenance.json').write_text(json.dumps({**manifest,'sequence':['insert','play','eject','browse','boot'],'timelines':timelines,'files':[f for f in files if f['path'].startswith('previews/homepage/')]},indent=2)+'\n')
+(homepage/'provenance.json').write_text(json.dumps({**manifest,'sequence':['insert','eject','browse','boot'],'timelines':timelines,'files':[f for f in files if f['path'].startswith('previews/homepage/')]},indent=2)+'\n')
 size=sum(f['bytes'] for f in files)
 assert size<25*1024*1024,f'Media budget exceeded: {size/1024/1024:.1f}MiB'
 print(f'Collected {len(files)} files ({size/1024/1024:.1f} MiB) from {source}')

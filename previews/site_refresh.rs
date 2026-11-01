@@ -54,24 +54,34 @@ impl Capture{
   // show the carousel and logo, not the cartridge entering its physical bay.
   let insert_at=self.clip.as_ref().unwrap().frames;
   self.tap(Btn::A);assert!(matches!(self.f.app().phase(),Phase::Inserting{..}),"hero did not begin cartridge insertion");
-  let mut inserting=0;
-  for frame in 0..96 {
+  let mut inserting=0;let mut visible_game_frames=0;
+  for frame in 0..35 {
    self.frame(vec![]);
    if matches!(self.f.app().phase(),Phase::Inserting{..}) {inserting+=1;}
+   if self.f.app().game_visible() {visible_game_frames+=1;}
    match frame {7=>self.shot("hero-insert-early"),17=>self.shot("hero-insert-middle"),32=>{assert!(self.f.app().seat()>0.95,"hero cartridge never seated");self.shot("hero-insert-seated");},_=>{}}
   }
   assert!(inserting>=24,"hero skipped the visible insertion");
+  // The fixture uses a synthetic game, not commercial gameplay. Keep the real
+  // insertion, then omit the test screen while the app launches and exits.
+  let clip=self.clip.take().expect("hero recording");self.wait(96-35);
   assert!(matches!(self.f.app().phase(),Phase::Playing{..}),"hero game did not launch");self.shot("hero-playing");
   // The hold-to-exit gesture raises the slot, then ejects the same cartridge.
-  let exit_at=self.clip.as_ref().unwrap().frames;
+  let exit_at=clip.frames;
   self.frame(vec![RawEvent::Down(Btn::Menu)]);self.wait(65);
-  assert!(matches!(self.f.app().phase(),Phase::Ejecting{..}),"hero did not enter ejection");self.shot("hero-ejecting");
-  self.frame(vec![RawEvent::Up(Btn::Menu)]);self.wait(90);
+  assert!(matches!(self.f.app().phase(),Phase::Ejecting{..}),"hero did not enter ejection");
+  self.frame(vec![RawEvent::Up(Btn::Menu)]);
+  for _ in 0..120 {if self.f.app().screen_power()<=0.0 {break;}self.frame(vec![]);}
+  assert!(self.f.app().screen_power()<=0.0,"hero test screen did not close");
+  assert!(matches!(self.f.app().phase(),Phase::Ejecting{..}),"hero skipped ejection while hiding the test screen");
+  self.shot("hero-ejecting");self.clip=Some(clip);
+  for _ in 0..90 {self.frame(vec![]);if self.f.app().game_visible(){visible_game_frames+=1;}}
   assert!(matches!(self.f.app().phase(),Phase::Shelf),"hero did not return to carousel");self.wait(24);
   // Launch is the first demonstration, followed by browsing the collection.
   for _ in 0..4{self.tap(Btn::Right);self.wait(30);}for _ in 0..4{self.tap(Btn::Left);self.wait(30);}self.wait(24);
+  assert_eq!(visible_game_frames,0,"hero included the synthetic game screen");
   let frames=self.clip.as_ref().unwrap().frames;
-  fs::write(self.out.join("hero-timeline.json"),format!("{{\"fps\":60,\"frames\":{frames},\"insert_frame\":{insert_at},\"visible_insertion_frames\":{inserting},\"exit_frame\":{exit_at},\"assertions\":[\"inserting\",\"seated\",\"playing\",\"ejecting\",\"shelf\"]}}\n")).unwrap();self.cut();
+  fs::write(self.out.join("hero-timeline.json"),format!("{{\"fps\":60,\"frames\":{frames},\"insert_frame\":{insert_at},\"visible_insertion_frames\":{inserting},\"exit_frame\":{exit_at},\"visible_game_frames\":{visible_game_frames},\"omitted_test_pattern\":true,\"assertions\":[\"inserting\",\"seated\",\"playing\",\"ejecting\",\"shelf\"]}}\n")).unwrap();self.cut();
   // Native boot composition retains the physical slot's occlusion and current
   // spring timing. Its completed launcher pose becomes the return to the loop.
   self.boot("hero-boot");

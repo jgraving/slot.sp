@@ -29,7 +29,7 @@ Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. The Scre
 | Open picture | <kbd>B</kbd> | Return to thumbnails. |
 | Thumbnails | <kbd>B</kbd> | Return to the pause menu, with Screenshots selected. |
 
-![A screenshot at 2× zoom, with Zoom Out, Pan and Zoom hints](previews/current/light/screenshots-zoom.png)
+![A screenshot at 2× zoom, with Zoom out, Pan and Zoom hints](previews/current/light/screenshots-zoom.png)
 
 ## Select & delete
 

@@ -362,10 +362,10 @@ fn zoomed_shows_the_position_box_not_the_count() {
 fn the_zoomed_legend_drops_zoom_at_four() {
     let mut v = full(720, 480);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Zoom Out", "Pan", "Zoom"]);
+    assert_eq!(labels(&v), ["Zoom out", "Pan", "Zoom"]);
     v.zoom_in(C720);
     v.zoom_in(C720);
-    assert_eq!(labels(&v), ["Zoom Out", "Pan"]);
+    assert_eq!(labels(&v), ["Zoom out", "Pan"]);
 }
 
 #[test]

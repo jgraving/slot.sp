@@ -46,7 +46,7 @@ The **Capture current website media** workflow on `docs/website-ui-refresh` runs
 
 `previews/current/provenance.json` records the capture source, UI release, rendering method, sample data, byte sizes and SHA-256 hashes. `previews/homepage/provenance.json` tracks the eight hero variants. The `current-website-media` artifact contains media and prepared Git blob entries for review; capture itself never creates a commit or moves a branch.
 
-The homepage retains its established dark styling, concise feature summary and illustrated handheld. Its four SP finishes use current dark-theme native clips showing a real insertion, launch, ejection and return to the carousel, plus a matching reduced-motion poster. Updated screenshots and controlled animations illustrate the guide pages. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
+The homepage retains its established dark styling, concise feature summary and illustrated handheld. Its four SP finishes use current dark-theme native clips showing a real insertion, ejection and return to the carousel, plus a matching reduced-motion poster. Updated screenshots and controlled animations illustrate the guide pages. Alternative hero clips load only when selected, while off-screen playback pauses. Guide videos remain under the visitor's control.
 
 The README uses the same Platinum light-theme clip inside the website's illustrated SP. `tools/capture-readme-model.cjs` and `previews/collect_readme_model.py` preserve a matching poster and record provenance. The prior capture scripts remain available for specialist asset work; the website publishes only the current reviewed manifest.
 

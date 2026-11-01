@@ -99,8 +99,8 @@ assert 'site-theme-toggle' not in home and 'ui-theme-picker' not in home
 assert 'detail-pair' not in home and 'motion-section' not in home
 assert home.count('<video') == 1, 'Keep homepage media inside the illustrated SP preview'
 assert f'hero-dark-platinum.mp4' in home
-assert hero_manifest['sequence']==['insert','play','eject','browse','boot']
-assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 for t in hero_manifest['timelines'])
+assert hero_manifest['sequence']==['insert','eject','browse','boot']
+assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 and t['visible_game_frames']==0 and t['omitted_test_pattern'] for t in hero_manifest['timelines'])
 for theme in ['dark','light']:
     for scene in ['screenshots-full','screenshots-zoom','screenshots-select']:
         with Image.open(ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png') as image:assert image.size==(720,480)

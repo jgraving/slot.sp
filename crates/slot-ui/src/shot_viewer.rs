@@ -17,7 +17,7 @@ pub const SHOT_HINTS: [(&str, &str); 10] = [
     ("Y", "Delete"),
     ("A", "Zoom"),
     (PAN_KEY, "Pan"),
-    ("B", "Zoom Out"),
+    ("B", "Zoom out"),
     ("SELECT", "Select"),
     ("A", "Tick"),
     ("B", "Done"),
