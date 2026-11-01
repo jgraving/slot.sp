@@ -90,7 +90,7 @@ current=json.loads((ROOT/'media/fork/current/provenance.json').read_text())
 revision=current.get('capture_source_commit',current['source_commit'])[:12]
 for theme in ['dark','light']:
     for scene in ['carousel','settings','general','screen','sound','parent-settings','parent-code','kid-menu','in-game-menu','in-game-settings','charging','boot','power','controls','about','screenshots','save-states','buttons-shortcuts','kid-warning','core-picker','approved','favorites','link-host','link-join']:
-        if theme=='light' and scene in ['screenshots','save-states','link-host','link-join']:continue
+        if theme=='light' and scene in ['save-states','link-host','link-join']:continue
         path=ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png'
         with Image.open(path) as image:assert image.size==(720,480),path
     for scene in ['boot','settings','parent-code','charging','carousel']:
@@ -99,6 +99,11 @@ assert 'site-theme-toggle' not in home and 'ui-theme-picker' not in home
 assert 'detail-pair' not in home and 'motion-section' not in home
 assert home.count('<video') == 1, 'Keep homepage media inside the illustrated SP preview'
 assert f'hero-dark-platinum.mp4' in home
+assert hero_manifest['sequence']==['insert','play','eject','browse','boot']
+assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 for t in hero_manifest['timelines'])
+for theme in ['dark','light']:
+    for scene in ['screenshots-full','screenshots-zoom','screenshots-select']:
+        with Image.open(ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png') as image:assert image.size==(720,480)
 for video in (ROOT / 'media/fork').rglob('*.mp4'):
     with av.open(str(video)) as container:
         assert container.duration and container.duration > 0, video

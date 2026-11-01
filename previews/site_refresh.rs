@@ -49,7 +49,29 @@ impl Capture{
  fn nav(&mut self,to:QuickRow){for _ in 0..45{let at=self.f.app().quick_menu().expect("quick menu");if at==to{return;}assert_eq!(at.page(),to.page(),"cannot navigate {at:?} to {to:?}");let key=if at.page()==QuickRow::MAIN{let a=at.position(&[]);let b=to.position(&[]);if a%4<b%4{Btn::Right}else if a%4>b%4{Btn::Left}else{Btn::Down}}else{Btn::Down};self.tap(key);}panic!("missing menu row {to:?}");}
  fn hero(&mut self){
   self.shot("hero");self.rec("hero-native");self.wait(48);
-  for _ in 0..4{self.tap(Btn::Right);self.wait(46);}for _ in 0..4{self.tap(Btn::Left);self.wait(46);}self.wait(48);self.cut();
+  // Record the real launch gesture and every frame of the production slot
+  // transition. The earlier website loop never pressed A, so it could only
+  // show the carousel and logo, not the cartridge entering its physical bay.
+  let insert_at=self.clip.as_ref().unwrap().frames;
+  self.tap(Btn::A);assert!(matches!(self.f.app().phase(),Phase::Inserting{..}),"hero did not begin cartridge insertion");
+  let mut inserting=0;
+  for frame in 0..96 {
+   self.frame(vec![]);
+   if matches!(self.f.app().phase(),Phase::Inserting{..}) {inserting+=1;}
+   match frame {7=>self.shot("hero-insert-early"),17=>self.shot("hero-insert-middle"),32=>{assert!(self.f.app().seat()>0.95,"hero cartridge never seated");self.shot("hero-insert-seated");},_=>{}}
+  }
+  assert!(inserting>=24,"hero skipped the visible insertion");
+  assert!(matches!(self.f.app().phase(),Phase::Playing{..}),"hero game did not launch");self.shot("hero-playing");
+  // The hold-to-exit gesture raises the slot, then ejects the same cartridge.
+  let exit_at=self.clip.as_ref().unwrap().frames;
+  self.frame(vec![RawEvent::Down(Btn::Menu)]);self.wait(65);
+  assert!(matches!(self.f.app().phase(),Phase::Ejecting{..}),"hero did not enter ejection");self.shot("hero-ejecting");
+  self.frame(vec![RawEvent::Up(Btn::Menu)]);self.wait(90);
+  assert!(matches!(self.f.app().phase(),Phase::Shelf),"hero did not return to carousel");self.wait(24);
+  // Launch is the first demonstration, followed by browsing the collection.
+  for _ in 0..4{self.tap(Btn::Right);self.wait(30);}for _ in 0..4{self.tap(Btn::Left);self.wait(30);}self.wait(24);
+  let frames=self.clip.as_ref().unwrap().frames;
+  fs::write(self.out.join("hero-timeline.json"),format!("{{\"fps\":60,\"frames\":{frames},\"insert_frame\":{insert_at},\"visible_insertion_frames\":{inserting},\"exit_frame\":{exit_at},\"assertions\":[\"inserting\",\"seated\",\"playing\",\"ejecting\",\"shelf\"]}}\n")).unwrap();self.cut();
   // Native boot composition retains the physical slot's occlusion and current
   // spring timing. Its completed launcher pose becomes the return to the loop.
   self.boot("hero-boot");
@@ -73,7 +95,11 @@ impl Capture{
   while slot_store::ShotDir::new(&root,slot_store::Platform::Gba,"Emerald").list().unwrap().len()<6 {assert!(std::time::Instant::now()<deadline,"fixture screenshots were not written");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}
   assert!(!slot_store::StateRing::new(&root,slot_store::Platform::Gba,slot_store::Core::Mgba,"Emerald").list().unwrap().is_empty(),"fixture save state was not written");
   self.nav_play(QuickRow::States);self.tap(Btn::A);self.wait(100);assert!(matches!(self.f.app().phase(),Phase::Polaroids{..}));self.shot("save-states");self.close_menus();
-  self.nav_play(QuickRow::Screenshots);self.tap(Btn::A);self.wait(60);assert!(self.f.app().shot_viewer().is_some());let expected=self.f.app().shot_viewer().unwrap().thumb_order(self.f.app().canvas()).len();let deadline=std::time::Instant::now()+std::time::Duration::from_secs(12);while self.f.gallery_textures()<expected{assert!(std::time::Instant::now()<deadline,"gallery thumbnails did not finish");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}self.wait(10);self.shot("screenshots");self.close_menus();
+  self.nav_play(QuickRow::Screenshots);self.tap(Btn::A);self.wait(60);assert!(self.f.app().shot_viewer().is_some());let expected=self.f.app().shot_viewer().unwrap().thumb_order(self.f.app().canvas()).len();let deadline=std::time::Instant::now()+std::time::Duration::from_secs(12);while self.f.gallery_textures()<expected{assert!(std::time::Instant::now()<deadline,"gallery thumbnails did not finish");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}self.wait(10);self.shot("screenshots");
+  self.tap(Btn::Select);self.tap(Btn::A);self.tap(Btn::Right);self.tap(Btn::A);self.save("screenshots-select");self.tap(Btn::B);
+  self.tap(Btn::A);let deadline=std::time::Instant::now()+std::time::Duration::from_secs(12);
+  while !self.f.app().shot_viewer().unwrap().has_face(){assert!(std::time::Instant::now()<deadline,"full screenshot did not load");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}
+  self.save("screenshots-full");self.tap(Btn::A);self.save("screenshots-zoom");self.close_menus();
   self.chord(Btn::Select,Btn::Menu);self.wait(90);assert!(self.f.app().game_menu_open());self.shot("link-host");self.tap(Btn::Right);self.save("link-join");self.tap(Btn::B);
  }
  fn kid_warning(&mut self){if matches!(self.f.app().phase(),Phase::Shelf){self.tap(Btn::A);self.wait(180);}assert!(matches!(self.f.app().phase(),Phase::Playing{..}),"kid game did not open");self.wait(60);self.frame+=75*60*FPS;self.f.advance_at(&mut Input(vec![]),self.frame*1000/FPS,75.0*60.0);self.f.compose(&mut self.g);assert!(self.f.app().kid_menu.as_ref().is_some_and(|m|m.time_warning()),"time milestone did not pause for a reminder");self.save("kid-warning");}
@@ -106,7 +132,7 @@ fn fixture(root:&Path,light:bool,finish:ShellColour,playing:bool,kid:bool){
 }
 fn main(){
  let out=PathBuf::from(std::env::args().nth(1).expect("capture output root"));fs::create_dir_all(&out).unwrap();
- let mode=std::env::args().nth(2).unwrap_or_else(||"all".into());assert!(["all","docs","hero","special"].contains(&mode.as_str()),"capture mode");
+ let mode=std::env::args().nth(2).unwrap_or_else(||"all".into());assert!(["all","docs","hero","special","hero-gallery"].contains(&mode.as_str()),"capture mode");
  let surface=egl_surface::HeadlessSurface::new().unwrap();
  for light in [false,true]{let theme=if light{"light"}else{"dark"};
   if mode=="all"||mode=="docs"{let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-docs")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,false,false);c.settings(light);drop(c);
@@ -114,7 +140,8 @@ fn main(){
    let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-game")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,true,false);assert!(matches!(c.f.app().phase(),Phase::Playing{..}));c.tap(Btn::Menu);c.save("in-game-menu");c.nav_play(QuickRow::Settings);c.tap(Btn::A);c.save("in-game-settings");drop(c);
   }
   if mode=="all"||mode=="special" {let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-special-shelf")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,false,false);c.shelf_specials();drop(c);let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-special-game")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,true,false);c.game_specials();drop(c);let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-kid-warning")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,true,true);c.kid_warning();drop(c);}
-  if mode=="all"||mode=="hero"{for finish in ShellColour::FINISHES{let key=finish.key().replace(' ',"_");let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-{key}")),&out.join(format!("raw/homepage/{theme}-{key}")),light,finish,false,false);c.hero();}}
+  if mode=="hero-gallery" {let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-gallery")),&out.join(format!("raw/current/{theme}")),light,ShellColour::Platinum,true,false);c.game_specials();drop(c);}
+  if mode=="all"||mode=="hero"||mode=="hero-gallery"{for finish in ShellColour::FINISHES{let key=finish.key().replace(' ',"_");let mut c=Capture::new(&surface,&out.join(format!("cards/{theme}-{key}")),&out.join(format!("raw/homepage/{theme}-{key}")),light,finish,false,false);c.hero();}}
  }
  fs::write(out.join(format!("capture-{mode}-complete.txt")),"Native website media capture completed\n").unwrap();
 }

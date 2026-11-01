@@ -548,7 +548,7 @@ pub struct App {
     has_shots: bool,
     shot_viewer: Option<ShotViewer>,
     delete_shot_faces: Vec<(TexId, u32, u32)>,
-    shot_hint_faces: Vec<TexId>,
+    shot_hint_faces: Vec<(TexId,u32)>,
     shot_opens: u64,
     shot_tick_face: Option<(TexId, u32, u32)>,
     delete_shot_text: Option<[(TexId, u32, u32); 2]>,
@@ -5107,12 +5107,13 @@ impl App {
             Phase::Playing { .. } => self.push_game(out),
             Phase::Polaroids { .. } if self.shot_viewer.is_some() => {
                 if let Some(v) = &self.shot_viewer {
-                    v.draw(
+                    v.draw_on(
                         self.canvas(),
                         self.battery,
                         self.battery_percent,
                         self.hud_bolt,
                         self.shelf_clock,
+                        self.light(),
                         out,
                     );
                 }
@@ -7220,7 +7221,7 @@ impl App {
         })
     }
 
-    pub fn set_shot_hint_faces(&mut self, faces: Vec<TexId>) {
+    pub fn set_shot_hint_faces(&mut self, faces: Vec<(TexId,u32)>) {
         self.shot_hint_faces = faces;
         self.push_hint_faces();
     }

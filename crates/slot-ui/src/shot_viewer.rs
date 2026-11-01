@@ -7,27 +7,28 @@ use crate::hud::PLATE_H;
 use std::path::Path;
 
 use crate::plate::{hint_row, Hint, HINT_H};
-use crate::polaroids::{draw_album_chrome, AlbumChrome, Polaroids};
+use crate::polaroids::Polaroids;
 
 pub const PAN_KEY: &str = "PAN";
 
-pub const SHOT_HINTS: [(&str, &str); 9] = [
+pub const SHOT_HINTS: [(&str, &str); 10] = [
     ("A", "View"),
     ("B", "Back"),
     ("Y", "Delete"),
     ("A", "Zoom"),
     (PAN_KEY, "Pan"),
     ("B", "Zoom Out"),
-    ("SELECT", "Multi"),
+    ("SELECT", "Select"),
     ("A", "Tick"),
     ("B", "Done"),
+    (PAN_KEY, "Move"),
 ];
 
-const GRID_LEGEND: [usize; 4] = [0, 1, 2, 6];
-const PICK_LEGEND: [usize; 3] = [7, 2, 8];
-const FULL_LEGEND: [usize; 3] = [3, 1, 2];
-const ZOOM_LEGEND: [usize; 2] = [3, 5];
-const ZOOM_MAX_LEGEND: [usize; 1] = [5];
+const GRID_LEGEND: [usize; 5] = [1, 9, 0, 2, 6];
+const PICK_LEGEND: [usize; 4] = [8, 9, 7, 2];
+const FULL_LEGEND: [usize; 4] = [1, 9, 3, 2];
+const ZOOM_LEGEND: [usize; 3] = [5, 4, 3];
+const ZOOM_MAX_LEGEND: [usize; 2] = [5, 4];
 
 pub const GRID_COLS: usize = 3;
 pub const GRID_GAP: f32 = 16.0;
@@ -79,7 +80,7 @@ pub struct ShotViewer {
     tick_face: Option<(TexId, u32, u32)>,
     count: Option<(TexId, u32)>,
     title: Option<TexId>,
-    hint_faces: Vec<TexId>,
+    hint_faces: Vec<(TexId,u32)>,
 }
 
 impl ShotViewer {
@@ -339,8 +340,8 @@ impl ShotViewer {
         self.title = face;
     }
 
-    pub fn set_hint_faces(&mut self, faces: Vec<TexId>) {
-        self.hint_faces = faces;
+    pub fn set_hint_faces(&mut self, faces: Vec<(TexId,u32)>) {
+        self.hint_faces=faces;
     }
 
     pub fn legend(&self) -> Vec<usize> {
@@ -474,42 +475,28 @@ impl ShotViewer {
         clock: Printed,
         out: &mut Vec<Draw>,
     ) {
-        out.push(Draw::Rect {
-            x: 0.0,
-            y: 0.0,
-            w: canvas.w,
-            h: canvas.h,
-            colour: [0.0, 0.0, 0.0, 1.0],
-        });
-        match self.mode() {
-            ShotMode::Grid => self.draw_grid(canvas, out),
-            _ => self.draw_shot(canvas, out),
-        }
-        let hints = self.hints();
-        let faces: Vec<TexId> = self
-            .legend()
-            .iter()
-            .filter_map(|&i| self.hint_faces.get(i).copied())
-            .collect();
-        draw_album_chrome(
-            canvas,
-            AlbumChrome {
-                title: self.title,
-                hints: &hints,
-                hint_faces: &faces,
-                ways_out: hints.len(),
-                dots: None,
-            },
-            battery,
-            battery_percent,
-            bolt,
-            clock,
-            out,
-        );
-        self.draw_corner(canvas, out);
+        self.draw_on(canvas,battery,battery_percent,bolt,clock,false,out);
     }
 
-    fn draw_grid(&self, canvas: Canvas, out: &mut Vec<Draw>) {
+    pub fn draw_on(&self,canvas:Canvas,battery:Option<Battery>,battery_percent:Printed,bolt:Option<TexId>,clock:Printed,light:bool,out:&mut Vec<Draw>) {
+        let background=if light {[232.0/255.0,227.0/255.0,216.0/255.0,1.0]}else{[0.045,0.06,0.07,1.0]};
+        let surface=if light {[0.96,0.975,0.97,0.98]}else{[0.07,0.09,0.10,0.98]};
+        out.push(Draw::Rect{x:0.0,y:0.0,w:canvas.w,h:canvas.h,colour:background});
+        match self.mode() {ShotMode::Grid=>self.draw_grid(canvas,light,out),_=>self.draw_shot(canvas,out)}
+        for y in [0.0,canvas.h-PLATE_H] {out.push(Draw::Rect{x:0.0,y,w:canvas.w,h:PLATE_H,colour:surface});}
+        if let Some(tex)=self.title {out.push(Draw::Tex{x:canvas.centred(crate::TITLE_W as f32),y:(PLATE_H-crate::TITLE_H as f32)/2.0,w:crate::TITLE_W as f32,h:crate::TITLE_H as f32,tex,alpha:1.0});}
+        crate::draw_status(canvas,battery,battery_percent,bolt,clock,if light {[28,42,49]}else{crate::HUD_INK},out);
+        let hints:Vec<_>=self.legend().iter().filter_map(|&i|self.hint_faces.get(i).copied()).collect();
+        let total=hints.iter().map(|(_,w)|*w as f32).sum::<f32>()+10.0*hints.len().saturating_sub(1)as f32;
+        let reserved=if self.mode()==ShotMode::Zoomed {SPOT_W}else{self.count.map_or(0.0,|(_,w)|w as f32)};
+        let available=(canvas.w-2.0*EDGE-reserved-16.0).max(1.0);
+        let scale=if total>0.0 {(available/total).min(1.0)}else{1.0};
+        let h=crate::MENU_HINT_H as f32*scale;let y=canvas.h-PLATE_H+(PLATE_H-h)/2.0;let mut x=EDGE;
+        for (tex,w) in hints {let w=w as f32*scale;out.push(Draw::Tex{x,y,w,h,tex,alpha:1.0});x+=w+10.0*scale;}
+        self.draw_corner(canvas,light,out);
+    }
+
+    fn draw_grid(&self, canvas: Canvas, light:bool, out: &mut Vec<Draw>) {
         let (cw, ch) = grid_cell(canvas);
         for (i, thumb) in self.thumbs.iter().enumerate().skip(self.top_row * GRID_COLS) {
             let (row, col) = (i / GRID_COLS - self.top_row, i % GRID_COLS);
@@ -532,7 +519,7 @@ impl ShotViewer {
                 });
             }
             if i == self.index {
-                outline(x, y, cw, ch, out);
+                outline(x, y, cw, ch, if light {[0.05,0.43,0.38,1.0]}else{WHITE}, out);
             }
         }
     }
@@ -555,7 +542,7 @@ impl ShotViewer {
         }
     }
 
-    fn draw_corner(&self, canvas: Canvas, out: &mut Vec<Draw>) {
+    fn draw_corner(&self, canvas: Canvas, light:bool, out: &mut Vec<Draw>) {
         let plate = canvas.h - PLATE_H;
         if self.mode() != ShotMode::Zoomed {
             if let Some((tex, w)) = self.count {
@@ -579,14 +566,14 @@ impl ShotViewer {
             y,
             w: SPOT_W,
             h: SPOT_H,
-            colour: SPOT_BACK,
+            colour: if light {[0.15,0.27,0.29,0.20]}else{SPOT_BACK},
         });
         out.push(Draw::Rect {
             x: x + fx * SPOT_W,
             y: y + fy * SPOT_H,
             w: fw * SPOT_W,
             h: fh * SPOT_H,
-            colour: SPOT_VIEW,
+            colour: if light {[0.05,0.43,0.38,1.0]}else{SPOT_VIEW},
         });
     }
 }
@@ -604,14 +591,14 @@ fn fit_into((tex, w, h): (TexId, u32, u32), (x, y, cw, ch): (f32, f32, f32, f32)
     });
 }
 
-fn outline(x: f32, y: f32, w: f32, h: f32, out: &mut Vec<Draw>) {
+fn outline(x: f32, y: f32, w: f32, h: f32, colour:[f32;4], out: &mut Vec<Draw>) {
     let o = OUTLINE + OUTLINE_GAP;
     let rect = |x, y, w, h| Draw::Rect {
         x,
         y,
         w,
         h,
-        colour: WHITE,
+        colour,
     };
     out.extend([
         rect(x - o, y - o, w + 2.0 * o, OUTLINE),
