@@ -18,7 +18,8 @@ if (start < 0 || end < 0) throw Error('Website model markup not found');
 const model = home.slice(start, end).replace(/<video[\s\S]*?<\/video>/,
   '<img class="hero-screen screen-box" src="/native-frames/0000.png" alt="">');
 const defs = fs.readFileSync(path.join(repo, 'site/overrides/partials/device.svg'), 'utf8');
-const logo = fs.readFileSync(path.join(repo, 'assets/slot-sp-logo.svg'), 'utf8').replace('viewBox="0 0 800 200"', 'viewBox="140 40 520 120"');
+const logoPath = path.join(repo, 'site/docs/assets/wordmark.png');
+const logo = `<img src="data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}" alt="slot.sp">`;
 const html = `<!doctype html><html><head><meta charset="utf-8">
 <link rel="stylesheet" href="/site/docs/assets/device.css">
 <link rel="stylesheet" href="/site/docs/assets/slot.css">
@@ -26,7 +27,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 *,*::before,*::after{animation:none!important;transition:none!important;box-sizing:border-box}
 @font-face{font-family:ReadmeSans;src:url('/crates/slot-ui/assets/fonts/display.ttf') format('truetype')}
 .readme-brand{position:absolute;left:58px;top:50%;transform:translateY(-50%);width:400px}
-.readme-brand svg g{fill:#1c2a31}.readme-brand svg{display:block;width:390px;height:90px;margin-left:-10px}
+.readme-brand img{display:block;width:365px;height:auto;filter:brightness(0) saturate(100%) invert(12%) sepia(15%) saturate(1000%) hue-rotate(155deg)}
 .readme-brand p{margin:18px 0 0;font:34px/1.3 ReadmeSans,sans-serif;letter-spacing:-.025em;color:#1c2a31}
 .readme-brand p span{color:#0b6e61}
 .readme-model{position:absolute;left:520px;top:0;width:480px;height:720px}
@@ -66,7 +67,7 @@ const server = http.createServer((req, res) => {
       }, i);
       await page.screenshot({ path: path.join(output, 'model-frames', `${String(i).padStart(4, '0')}.png`) });
     }
-    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, browser_version: browser.version(), native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
+    fs.writeFileSync(path.join(output, 'model-capture.json'), JSON.stringify({ frames, frame_ms:80, duration, bounds, browser_version: browser.version(), logo_sha256: crypto.createHash('sha256').update(fs.readFileSync(logoPath)).digest('hex'), native_sha256: crypto.createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex') }, null, 2));
     console.log(`Captured ${frames} frames of the website SP model with native playback`);
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

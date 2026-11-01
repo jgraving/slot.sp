@@ -17,28 +17,6 @@
     return icon;
   }
   function init() {
-    const tabs = document.querySelector('.mast-tabs');
-    if (tabs) {
-      const active = tabs.querySelector('.md-tabs__item--active a');
-      let hovered = null;
-      function placeTab() {
-        const focused = tabs.contains(document.activeElement) ? document.activeElement.closest('a') : null;
-        const target = hovered || focused || active;
-        tabs.style.setProperty('--nav-visible', target ? '1' : '0');
-        if (!target) return;
-        const bounds = tabs.getBoundingClientRect();
-        const rect = target.getBoundingClientRect();
-        tabs.style.setProperty('--nav-x', `${rect.left - bounds.left}px`);
-        tabs.style.setProperty('--nav-w', `${rect.width}px`);
-      }
-      tabs.addEventListener('pointerover', event => { hovered = event.target.closest('a'); placeTab(); });
-      tabs.addEventListener('pointerleave', () => { hovered = null; placeTab(); });
-      tabs.addEventListener('focusin', placeTab);
-      tabs.addEventListener('focusout', () => requestAnimationFrame(placeTab));
-      new ResizeObserver(placeTab).observe(tabs);
-      placeTab();
-      requestAnimationFrame(() => tabs.setAttribute('data-motion-ready', ''));
-    }
     document.querySelectorAll('.md-sidebar--primary a.md-nav__link').forEach(link => {
       const topic = new URL(link.href).pathname.split('/').filter(Boolean).at(-1);
       if (topics[topic]) {

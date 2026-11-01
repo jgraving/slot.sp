@@ -26,8 +26,11 @@ script.write_text(text)
 # Studio CSS previously lived one directory below the website's font assets.
 for css in bundle.glob('*.css'):
     css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))
+# Both repositories must ship exactly the same navigation behavior and palette.
+for name in ['navigation.js', 'navigation.css', 'wordmark.png']:
+    assert (source / 'web' / name).read_bytes() == (ROOT / 'site/docs/assets' / name).read_bytes(), f'Shared website asset differs: {name}'
 html = (source / 'web/index.html').read_text()
-for name in ['studio.js', 'studio.css', 'slot-sp.css']:
+for name in ['studio.js', 'studio.css', 'slot-sp.css', 'navigation.js', 'navigation.css', 'wordmark.png']:
     html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
 html = html.replace('<div class="foot-meta">', '<div class="foot-meta"><p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p>')
 (target / 'index.html').write_text(html)

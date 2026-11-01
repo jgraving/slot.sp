@@ -113,7 +113,7 @@ def main():
     config = config.replace('ui_media_revision = \"prepared\"', f'ui_media_revision = \"{current_revision}\"')
     config = config.replace('homepage_media_revision = "prepared"',
                             f'homepage_media_revision = "{revision}"')
-    for relative in ['assets/device.css', 'assets/slot.css', 'assets/slot.js']:
+    for relative in ['assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/navigation.js', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()
         if source.suffix == '.css':

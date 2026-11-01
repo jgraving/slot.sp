@@ -19,7 +19,7 @@ Open **Menu → Sound** from the carousel, or **Menu → Settings → Sound** du
 
 The status and volume icons show the current audio output. A manual output choice stays selected until another USB attachment or restart.
 
-![Sound settings in the current interface; available outputs depend on the hardware](previews/current/light/sound.png)
+![Sound settings with Bluetooth enabled and a saved pair of headphones](previews/current/light/sound.png)
 
 ## Pair Bluetooth headphones
 
@@ -28,6 +28,8 @@ The status and volume icons show the current audio output. A manual output choic
 3. Choose **Scan for devices**.
 4. Select your headphones with the D-pad and press <kbd>A</kbd>.
 5. Once connected, adjust the volume with the handheld's volume buttons.
+
+![Bluetooth pairing screen with Scan for devices and example headphones](previews/current/light/sound-pair.png)
 
 Saved headphones appear by name on the main Sound screen. Select a device and press <kbd>A</kbd> to reconnect. The selected Bluetooth device reconnects automatically at startup and after a connection is lost while the handheld is awake.
 
@@ -79,6 +81,8 @@ If wired headphones are plugged in when Bluetooth disconnects, the chosen level 
 Turn on **Sound → Pause on disconnect** to pause when the active headphones or USB audio device disconnects. It is off by default. Reconnecting does not resume the game: choose Resume yourself. Kid mode opens the kid menu.
 
 Intentional output changes do not trigger this pause, and link play keeps running so the other player is not interrupted. The separate **Volume on disconnect** setting still applies. Both choices are saved in `Config/sound.conf`.
+
+![Sound settings scrolled to Volume on disconnect and Pause on disconnect](previews/current/light/sound-options.png)
 
 <details>
 <summary><strong>Sound menu buttons</strong></summary>

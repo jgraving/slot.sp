@@ -17,19 +17,20 @@
     }
   ],
   "browser_version": "156.0.8078.47",
+  "logo_sha256": "aeebf7fc989ae802c9628bf3689926b49c6872296a156c626cf36711a30d4fff",
   "native_sha256": "7d00e6e64a1d1fccb88b441098e8f4618257ad2efe7c9c1cfaaccf80e88a165a",
-  "source_commit": "096ca9d8b296fabf319c19fd765240f7af601fc3",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41336982747",
+  "source_commit": "0fc3fed00ee3701cd4284ccc528aca7ffd8f995a",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41352825060",
   "files": [
     {
       "path": "previews/readme-model/hero.gif",
-      "bytes": 2886727,
-      "sha256": "ea96392b26524b04b31c9c097dab475c7fe5ff4b765b7a579a9058ad72b5a32b"
+      "bytes": 2290398,
+      "sha256": "e0d364b0eab208312a6bde39ce67f3cb88b4aef38b67f882687a15a7b2a756d0"
     },
     {
       "path": "previews/readme-model/hero.png",
-      "bytes": 246407,
-      "sha256": "ba652aa656831a6c8c383ab4d9e77bd4f3a6910f9277bb73901527eb1ad85f44"
+      "bytes": 201644,
+      "sha256": "3fa3d6a1ef9e3622c62414f242c677f813f2d0ac894f771c12f88e1ff8a8a34c"
     }
   ]
 }
