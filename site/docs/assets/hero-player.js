@@ -21,6 +21,7 @@ export function createHero(video, canvas, {media, reduced, onState}) {
     canvas.dataset.cart=String(wrap(selected));
     canvas.dataset.target=String(wrap(target));
     canvas.dataset.paused=String(paused||!active);
+    canvas.dataset.failed=String(failed);
     canvas.setAttribute('aria-label',`${timeline?.carts[wrap(selected)]||'Cartridge'}${seated?' in the slot':' selected'}`);
     onState({moving,paused,active,failed});
   }
@@ -98,9 +99,9 @@ export function createHero(video, canvas, {media, reduced, onState}) {
       });
       if(current!==operation||disposed)return;
       clip.ready=true;lastTime=-1;resume();
-    } catch {
+    } catch(error) {
       // Static endpoints keep every control functional if decoding is unavailable.
-      if(current===operation){failed=true;finish(current);}
+      if(current===operation){console.warn('Native action playback unavailable.',error);failed=true;finish(current);}
     }
   }
   function pump() {

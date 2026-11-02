@@ -121,7 +121,8 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
     for(const width of [1366,390,320]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
       page.on('pageerror',e=>errors.push(e.message));
-      page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+      page.on('console',m=>{if(m.type()==='error')errors.push(m.text()+' '+m.location().url);if(m.type()==='warning')console.log('Browser warning:',m.text());});
+      page.on('response',r=>{if(r.status()>=400)console.log('Failed response:',r.status(),r.url());});
       page.on('request',r=>requests.push(r.url()));
       let release;
       const held=new Promise(resolve=>release=resolve);
@@ -138,6 +139,11 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
       release();
       await inspectMotionFrame(page,`${width}-opening-edges`,8/30);
       await page.locator('[data-pose=open]').waitFor();
+      await page.waitForFunction(()=>{
+        const v=document.getElementById('hero-preview');
+        return !v.paused&&v.currentTime>0&&document.getElementById('hero-screen').dataset.state==='boot';
+      },{},{timeout:10000});
+      assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false','Native boot must actually play');
       await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
       stable(before,await boxes(page),`${width}: first opening`);
       assert(await page.locator('.model-opening').evaluate(v=>v.currentTime>.9&&!v.error),'The rendered opening must play');
