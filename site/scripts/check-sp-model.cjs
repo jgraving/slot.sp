@@ -40,6 +40,8 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     await video.evaluate(async(v,time)=>{v.pause();await new Promise(resolve=>{v.addEventListener('seeked',resolve,{once:true});v.currentTime=time;});},time);
     await page.waitForFunction(()=>getComputedStyle(document.querySelector('.model-opening')).opacity==='1');
     const outer=await stage.boundingBox(),frame=await video.boundingBox();
+    const expected=await stage.evaluate(el=>Math.min(parseFloat(getComputedStyle(el).maxWidth),parseFloat(getComputedStyle(el.closest('.intro')).gridTemplateColumns.split(' ').at(-1))));
+    assert(Math.abs(outer.width-expected)<1,`${label}: preview should fill its available column`);
     for(const key of ['x','y','width','height'])assert(Math.abs(outer[key]-frame[key])<.5,`${label}: the whole video must fit the stage`);
     const file=path.join(out,`${label}.png`);await stage.screenshot({path:file});
     execFileSync('python',['-c',`from PIL import Image,ImageChops
