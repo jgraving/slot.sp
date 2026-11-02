@@ -151,7 +151,7 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .model-poster{background-size:100% 100%;background-repeat:no-repeat}
 /* H.264 slightly shifts the baked navy backdrop. Fade only its empty margins
    into the page so the video never exposes a rectangular edge. */
-.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;z-index:4;mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(transparent,#000 4%,#000 94%,transparent);mask-composite:intersect}
+.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;z-index:4;mask-image:linear-gradient(90deg,transparent,#000 1%,#000 99%,transparent),linear-gradient(transparent,#000 4%,#000 94%,transparent);mask-composite:intersect}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
 .sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:var(--fallback-screen,scale(0));opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
 .sp-stage[data-ready=true][data-pose=open] .hero-screen{opacity:1}
