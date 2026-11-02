@@ -96,3 +96,18 @@ the lockfile through PNG; it is now a direct dependency. No emulator inputs chan
 Regression coverage includes multi-chunk saves, `.srm` imports, unchanged files,
 normal writes after an import, malformed headers, unsupported compression,
 truncated streams, checksum errors, excessive sizes and overwrite refusal.
+
+
+## 2026-11-02: mGBA Game Boy LCD-enable fix
+
+Integrated BrandonKowalski/slot `c7a79b9a52e67b07bd911596365ac91b8780816b`
+by Brandon T. Kowalski as a separate emulator bug-fix review. Keep mGBA's first
+Game Boy frame blank after LCD enable, matching hardware behavior and fixing
+reported screen flashes (upstream issue #169). The patch only raises a lower
+frameskip counter to one at that transition; it does not change the core pin,
+GBA rendering, frontend pacing or user settings.
+
+The existing mGBA build stamp includes every patch hash, so this change forces
+a rebuild. Release packaging includes the patch and its provenance as before.
+Native ARM64 build, device regressions, binary and source-material checks run
+on the integration branch. Final Game Boy display behavior needs handheld review.
