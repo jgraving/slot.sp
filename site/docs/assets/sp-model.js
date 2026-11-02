@@ -317,8 +317,11 @@ export function mountSP(stage, video, options={}) {
   for(const [x,label,inner]of [[-35.7,'L1',false],[-24.3,'L2',true],[24.3,'R2',true],[35.7,'R1',false]]) {
     const width=inner?8.2:10.5,height=inner?6.5:8.0,depth=inner?6.4:8.7;
     const y=inner?4.0:3.25,top=inner?1.8:1.2;
-    // A narrow recessed reveal follows the cap, without a raised pedestal.
-    slab(rear,width+.45,height+.35,depth+.3,inner?.85:1.6,.18,dark,x,y,top-.28);
+    // An open collar, not a larger solid box: a surrounding solid would cover
+    // the cap's back and side walls when the handheld is turned around.
+    const reveal=rr(width+.3,height+.3,inner?1:1.65,x,y);
+    reveal.holes.push(rr(width-.25,height-.25,inner?.6:1.3,x,y,T.Path));
+    mesh(extrusion(reveal,.16,.025),dark,rear,0,0,top-.3);
     const cap=new T.Group();cap.position.set(x,y,top);rear.add(cap);
     slab(cap,width,height,depth,inner?.8:1.5,.28,button,0,0,0);
     engraving(label,cap,0,0,.055,4.1,2.7);
@@ -535,13 +538,14 @@ export function mountSP(stage, video, options={}) {
   }catch(error){cleanup();throw error;}
   if(options.capture) {
     visible=false;cancelAnimationFrame(frame);frame=0;observer.disconnect();resizeObserver.disconnect();visibilityObserver.disconnect();
-    let capturedAngle=null;
+    let capturedPose='';
     cleanup.captureFrame=async({lidAngle=150,color='platinum',source=null,viewYaw=defaultYaw,viewPitch=defaultPitch}={})=>{
       finish(color);setLid(lidAngle);hinge=targetHinge;
       if(source){const texture=await new T.TextureLoader().loadAsync(source);texture.colorSpace=T.SRGBColorSpace;poster?.dispose();poster=texture;}
       screenMat.map=source?poster:null;screenMat.color.setHex(source?0xffffff:0x080b10);screenMat.needsUpdate=true;
       product.rotation.set(viewPitch,viewYaw,roll);lid.rotation.x=hinge;product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
-      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);capturedAngle=lidAngle;
+      const nextPose=`${lidAngle}:${viewYaw}:${viewPitch}`;
+      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=capturedPose!==nextPose;renderer.render(scene,camera);capturedPose=nextPose;
       const {width,height}=stage.getBoundingClientRect();
       const point=object=>{object.getWorldPosition(project);project.project(camera);return {x:(project.x*.5+.5)*width,y:(-.5*project.y+.5)*height};};
       const screenQuad=[[-36.15,24.1],[36.15,24.1],[36.15,-24.1],[-36.15,-24.1]].map(([x,y])=>{
