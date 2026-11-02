@@ -273,6 +273,7 @@ fn the_values_read_as_the_menu_prints_them() {
             "Neutral", "Warm 11%", "Warm 22%", "Warm 33%", "Warm 44%",
             "Warm 55%", "Warm 66%", "Warm 77%", "Warm 88%", "Warm 100%",
             "12-hour", "24-hour", "Classic", "Wheel",
+            "Actual", "Stretch", "Fit", "Integer",
         ]
     );
     assert_eq!(QuickValue::flag(true), QuickValue::On);
@@ -371,7 +372,7 @@ fn the_in_game_pages_hold_their_rows_in_order() {
         [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots]
     );
     assert_eq!(QuickRow::SETTINGS,[QuickRow::PlayScreen,QuickRow::PlaySound,QuickRow::PlayGameplay,QuickRow::PlayControls,QuickRow::PlayReference]);
-    assert_eq!(QuickRow::PLAY_SCREEN,[QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::Bezel,QuickRow::Palette,QuickRow::ColourCorrection]);
+    assert_eq!(QuickRow::PLAY_SCREEN,[QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::Bezel,QuickRow::Palette,QuickRow::ColourCorrection,QuickRow::Scaling]);
     for row in QuickRow::PLAY {
         assert_eq!(row.parent_in_game(), None, "{row:?}");
     }
@@ -431,16 +432,16 @@ fn in_game_rows_read_as_the_menu_shows_them() {
 }
 
 #[test]
-fn a_hidden_palette_and_bezel_leave_four_screen_rows(){let hidden=[QuickRow::Palette,QuickRow::Bezel];assert_eq!(QuickRow::Shader.shown(&hidden),vec![QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::ColourCorrection]);assert_eq!(QuickRow::PlayBlueLight.down(&hidden),QuickRow::Shader);}
+fn a_hidden_palette_and_bezel_leave_five_screen_rows(){let hidden=[QuickRow::Palette,QuickRow::Bezel];assert_eq!(QuickRow::Shader.shown(&hidden),vec![QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::ColourCorrection,QuickRow::Scaling]);assert_eq!(QuickRow::PlayBlueLight.down(&hidden),QuickRow::Shader);}
 
 #[test]
 fn the_in_game_screen_page_shows_five_rows_and_scrolls_the_rest() {
-    assert_eq!(slot_ui::quick_window(QuickRow::PlayBrightness,&[]),(0,5));assert_eq!(slot_ui::quick_window(QuickRow::ColourCorrection,&[]),(1,5));assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,4));
+    assert_eq!(slot_ui::quick_window(QuickRow::PlayBrightness,&[]),(0,5));assert_eq!(slot_ui::quick_window(QuickRow::ColourCorrection,&[]),(2,5));assert_eq!(slot_ui::quick_window(QuickRow::PlayBlueLight,&[QuickRow::Palette,QuickRow::Bezel]),(0,5));
 }
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*5.0/6.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
+    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*5.0/7.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
 }
 
 #[test]

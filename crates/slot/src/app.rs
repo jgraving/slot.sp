@@ -1308,6 +1308,7 @@ impl App {
 
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
         match row {
+            QuickRow::Scaling => Some(match self.video_mode { VideoMode::Actual=>QuickValue::Actual, VideoMode::Stretch=>QuickValue::Stretch, VideoMode::Fit=>QuickValue::Fit, VideoMode::Integer=>QuickValue::Integer }),
             QuickRow::Power | QuickRow::SleepNow | QuickRow::ShutDown => None,
             QuickRow::LidClose => Some(
                 [
@@ -1540,7 +1541,7 @@ impl App {
     }
 
     pub fn sp_frame(&self) -> bool {
-        self.resolved_bezel(self.playing_platform()) == BezelPick::Ags102
+        !matches!(self.video_mode, VideoMode::Fit | VideoMode::Integer) && self.resolved_bezel(self.playing_platform()) == BezelPick::Ags102
     }
 
     pub fn set_game_bezel(&mut self, tex: Option<TexId>) {
@@ -1548,7 +1549,7 @@ impl App {
     }
 
     pub fn shown_game_bezel(&self) -> Option<TexId> {
-        if self.video_mode == VideoMode::Stretch {
+        if self.video_mode != VideoMode::Actual {
             return None;
         }
         self.game_bezel
@@ -2087,6 +2088,9 @@ impl App {
         self.video_mode = mode;
     }
 
+    pub fn game_destination(&self) -> Option<[f32;4]> {
+        self.video_mode.destination(self.playing_platform(), if self.panel.0==0 || self.panel.1==0 {(OUT_W,OUT_H)} else {self.panel})
+    }
     pub fn source_rect(&self) -> [f32; 4] {
         video_mode::source_rect(self.platform, self.video_mode)
     }
@@ -3140,12 +3144,12 @@ impl App {
                 Action::GbaDown(Btn::L1)
                     if self.slot_owns_the_shoulders() && !self.bound_to_game(Btn::L1) =>
                 {
-                    self.set_picture(VideoMode::Stretch)
+                    self.set_picture(self.video_mode.step(false))
                 }
                 Action::GbaDown(Btn::R1)
                     if self.slot_owns_the_shoulders() && !self.bound_to_game(Btn::R1) =>
                 {
-                    self.set_picture(VideoMode::Actual)
+                    self.set_picture(self.video_mode.step(true))
                 }
                 Action::Eject => self.eject(),
                 Action::GameMenu => self.game_menu_shortcut(),
@@ -3377,7 +3381,8 @@ impl App {
                     self.phase = Phase::QuickMenu { row };
                 }
             }
-            QuickRow::Brightness
+            QuickRow::Scaling
+            | QuickRow::Brightness
             | QuickRow::BlueLight
             | QuickRow::PlayBrightness
             | QuickRow::PlayBlueLight
@@ -3456,6 +3461,7 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        if row == QuickRow::Scaling { self.set_picture(self.video_mode.step(right)); return; }
         if matches!(row, QuickRow::LidClose | QuickRow::SleepTimeout) {
             if row == QuickRow::LidClose {
                 self.power_settings.lid_close =
@@ -3628,6 +3634,7 @@ impl App {
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
+            | QuickRow::Scaling
             | QuickRow::Reference
             | QuickRow::PlayReference
             | QuickRow::Screen
