@@ -33,7 +33,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
       const animations=window.__fallbackAnimations=document.getAnimations().filter(a=>a.animationName==='slot-fallback-in');
       if(sessionStorage.getItem('slot-test-live-film')!=='1')animations.forEach(a=>{a.pause();a.currentTime=32;});
       const content=document.querySelector('.md-container,body>.wrap'),style=getComputedStyle(content);
-      window.__fallbackMotion={ready:true,direction:document.documentElement.dataset.pageDirection,x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),count:animations.length};
+      window.__fallbackMotion={ready:true,direction:document.documentElement.dataset.pageDirection,x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),count:animations.length,headingY:document.querySelector('h1').getBoundingClientRect().y,clientWidth:document.documentElement.clientWidth};
      });
     };
     addEventListener('DOMContentLoaded',capture);
@@ -99,6 +99,12 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
   await page.screenshot({path:path.join(out,label+'.png')});
   if(!film)await page.evaluate(()=>window.__fallbackAnimations.forEach(a=>{a.currentTime=0;a.play();}));
   await page.waitForFunction(()=>document.documentElement.dataset.pageTransition!=='active');
+  if(route==='studio/'){
+   await page.locator('#startup').waitFor({state:'hidden'});
+   const settled=await page.evaluate(()=>({headingY:document.querySelector('h1').getBoundingClientRect().y,clientWidth:document.documentElement.clientWidth}));
+   assert(Math.abs(settled.headingY-sample.headingY)<1,label+': loading must not move the Studio hero: '+JSON.stringify({before:sample.headingY,after:settled.headingY}));
+   assert.equal(settled.clientWidth,sample.clientWidth,label+': scrollbar space stays stable');
+  }
   if(recording){
    await page.evaluate(()=>sessionStorage.removeItem('slot-test-live-film'));
    await recording.cdp.send('Page.stopScreencast');await recording.cdp.detach();
