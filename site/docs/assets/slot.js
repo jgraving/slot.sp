@@ -54,56 +54,114 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     let wanted = !reduced.matches && !navigator.connection?.saveData;
     stage.dataset.opening=String(wanted);
-    let visible = true;
+    let visible = false;
     let finish = 'platinum';
     let request = 0;
     let position = 0;
     let segment = null;
     let segmentFrame = null;
     const media = new URL(preview.dataset.media, document.baseURI);
-    const modelMedia=new URL(stage.dataset.renderMedia,document.baseURI);
-    const still=stage.querySelector('.model-poster img');
-    const motion=stage.querySelector('.model-opening');
-    let shell='platinum',projection=null,fallbackStarted=false;
-    const resizeFallback=new ResizeObserver(()=>stage.style.setProperty('--fallback-scale',String(stage.clientHeight/600)));
-    resizeFallback.observe(stage);
-    function updateStill(open=false) {
-      const color=shell.replaceAll(' ','_');
-      still.src=new URL(`${color}-${open?'open':'closed'}.png`,modelMedia).href;
-      stage.querySelector('.model-poster source').srcset=new URL(`${color}-open.png`,modelMedia).href;
-      still.alt=`${shell} RG SP with metallic paint`;
+    const modelMedia = new URL(stage.dataset.renderMedia, document.baseURI);
+    const still = stage.querySelector('.model-poster img');
+    const picture = still.parentElement;
+    const motion = stage.querySelector('.model-opening');
+    const fold = document.querySelector('.model-fold');
+    const canAnimate = () => !reduced.matches && !navigator.connection?.saveData;
+    let shell = 'platinum', ready = false, introPending = canAnimate();
+    let pose = introPending ? 'closed' : 'open', motionTarget = null, motionRequest = 0, posterRequest = 0;
+    const busy = () => pose === 'opening' || pose === 'closing';
+    const colorToken = () => shell.replaceAll(' ', '_');
+    const asset = name => new URL(name, modelMedia).href;
+    async function updateStill(open, fade = false) {
+      const current = ++posterRequest, previous = still.currentSrc;
+      const url = asset(`${colorToken()}-${open ? 'open' : 'closed'}.png`);
+      still.src = url;
+      picture.querySelector('source').srcset = url;
+      still.alt = `${shell} RG SP with metallic paint`;
+      try { await still.decode(); } catch { /* Keep the previous painted image on a failed request. */ }
+      if (current !== posterRequest) return;
+      if (fade && canAnimate() && previous && previous !== url) {
+        picture.style.backgroundImage = `url(${JSON.stringify(previous)})`;
+        const change = still.animate([{opacity:0},{opacity:1}], {duration:200,easing:'cubic-bezier(.2,0,0,1)'});
+        change.finished.then(() => { if (current === posterRequest) picture.style.backgroundImage = ''; }).catch(() => {});
+      }
     }
-    function revealFallback() {
-      motion.pause();stage.classList.remove('fallback-opening');stage.dataset.opening='false';updateStill(true);sync();
+    function setPose(next) {
+      pose = next;
+      stage.dataset.pose = next;
+      stage.dataset.opening = String(busy());
+      stage.dataset.lid = next === 'closed' || next === 'closing' ? 'closed' : 'open';
+      stage.dataset.lidAngle = stage.dataset.lid === 'closed' ? '0' : '150';
+      fold.disabled = !ready || busy();
+      const closed = next === 'closed';
+      fold.setAttribute('aria-label', closed ? 'Open lid' : 'Close lid');
+      fold.setAttribute('aria-expanded', String(!closed));
+      fold.setAttribute('aria-pressed', String(closed));
+      fold.title = closed ? 'Open lid' : 'Close lid';
+      stage.querySelectorAll('[data-hardware]').forEach(button => { button.hidden = !ready || next !== 'open'; });
+      sync();
+      state();
     }
-    async function startFallback(animate=true) {
-      if(fallbackStarted)return;fallbackStarted=true;
-      stage.dataset.renderMode='recorded';
+    async function finishMotion(current = motionRequest) {
+      if (current !== motionRequest || !motionTarget) return;
+      motion.pause();
+      const target = motionTarget;
+      let color;
+      do { color = shell; await updateStill(target === 'open'); }
+      while (color !== shell && current === motionRequest);
+      if (current !== motionRequest) return;
+      motionTarget = null;
+      setPose(target);
+    }
+    async function flipLid(open, animate = true) {
+      introPending = false;
+      const current = ++motionRequest;
+      motion.pause();
+      motionTarget = open ? 'open' : 'closed';
+      if (!animate || !canAnimate()) { await finishMotion(current); return; }
+      motion.poster = asset(`${colorToken()}-${open ? 'closed' : 'open'}.png`);
+      motion.src = asset(`${colorToken()}-${open ? 'opening' : 'closing'}.mp4`);
+      motion.load();
+      setPose(open ? 'opening' : 'closing');
+      if (visible && !document.hidden) motion.play().catch(() => finishMotion(current));
+    }
+    motion.addEventListener('ended', () => finishMotion());
+    motion.addEventListener('error', () => finishMotion());
+    fold.addEventListener('click', () => flipLid(pose === 'closed'));
+    stage.addEventListener('sp:finish', event => {
+      shell = event.detail;
+      stage.dataset.finish = shell;
+      if (!busy()) updateStill(pose === 'open', true);
+    });
+    async function prepareModel() {
       try {
-        projection??=await fetch(new URL('projection.json',modelMedia)).then(response=>{if(!response.ok)throw Error('Projection unavailable');return response.json();});
-        const [p0,p1,p2,p3]=projection.screenQuad;
+        const response = await fetch(asset('projection.json'));
+        if (!response.ok) throw Error('Model projection unavailable');
+        const projection = await response.json();
+        const [p0,p1,p2,p3] = projection.screenQuad;
         const dx1=p1.x-p2.x,dx2=p3.x-p2.x,dx3=p0.x-p1.x+p2.x-p3.x;
         const dy1=p1.y-p2.y,dy2=p3.y-p2.y,dy3=p0.y-p1.y+p2.y-p3.y,den=dx1*dy2-dx2*dy1;
         const g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
-        const m=[(p1.x-p0.x+g*p1.x)/720,(p1.y-p0.y+g*p1.y)/720,0,g/720,(p3.x-p0.x+h*p3.x)/480,(p3.y-p0.y+h*p3.y)/480,0,h/480,0,0,1,0,p0.x,p0.y,0,1];
-        stage.style.setProperty('--fallback-screen',`matrix3d(${m.join(',')})`);
-        for(const button of stage.querySelectorAll('[data-hardware]')) {
-          const point=projection.controls[button.dataset.hardware];button.style.left=point.x+'px';button.style.top=point.y+'px';
-        }
-        stage.classList.add('fallback-ready');
-        if(animate&&!reduced.matches&&!navigator.connection?.saveData) {
-          stage.classList.add('fallback-opening');stage.dataset.opening='true';
-          motion.poster=new URL(`${shell.replaceAll(' ','_')}-closed.png`,modelMedia).href;
-          updateStill(true);
-          motion.src=new URL(`${shell.replaceAll(' ','_')}-opening.mp4`,modelMedia).href;
-          motion.addEventListener('ended',revealFallback,{once:true});motion.addEventListener('error',revealFallback,{once:true});
-          if(visible&&!document.hidden)motion.play().catch(revealFallback);
-        } else revealFallback();
-      } catch(error) {updateStill(true);stage.dataset.opening='false';console.warn('Recorded model preview unavailable.',error);}
+        const matrix=[(p1.x-p0.x+g*p1.x)/720,(p1.y-p0.y+g*p1.y)/720,0,g/720,(p3.x-p0.x+h*p3.x)/480,(p3.y-p0.y+h*p3.y)/480,0,h/480,0,0,1,0,p0.x,p0.y,0,1];
+        stage.style.setProperty('--fallback-screen', `matrix3d(${matrix.join(',')})`);
+        stage.querySelectorAll('[data-hardware]').forEach(button => {
+          const point = projection.controls[button.dataset.hardware];
+          button.style.left = point.x + 'px'; button.style.top = point.y + 'px';
+        });
+        ready = true;
+        stage.dataset.ready = 'true';
+        stage.dataset.finish = shell;
+        setPose(pose);
+        if (introPending && visible) flipLid(true); else sync();
+      } catch (error) {
+        introPending = false;
+        updateStill(true);
+        setPose('open');
+        console.warn('Handheld controls unavailable.', error);
+      }
     }
-    stage.addEventListener('sp:finish',event=>{shell=event.detail;updateStill(stage.classList.contains('fallback-ready'));if(stage.classList.contains('fallback-opening'))revealFallback();});
-    stage.addEventListener('sp:fallback',()=>{fallbackStarted=false;startFallback(false);});
-    if(reduced.matches||navigator.connection?.saveData)updateStill(true);
+    updateStill(pose === 'open');
+    setPose(pose);
     function changePreview(button) {
       const next = button.dataset.shell.replaceAll(' ', '_');
       if (next === finish) return;
@@ -124,19 +182,21 @@
       state();
     }
     function sync() {
-      if(stage.classList.contains('fallback-opening')) {
-        if(visible&&!document.hidden)motion.play().catch(revealFallback);else motion.pause();
+      if (busy()) {
+        const current = motionRequest;
+        if (visible && !document.hidden) motion.play().catch(() => finishMotion(current)); else motion.pause();
       }
-      if (wanted && visible && !document.hidden && stage?.dataset.lid !== 'closed' && stage?.dataset.opening !== 'true') preview.play().catch(() => {});
+      if (wanted && visible && !document.hidden && pose === 'open' && ready) preview.play().catch(() => {});
       else preview.pause();
     }
     function state() {
-      toggle.setAttribute('aria-pressed', String(wanted));
-      toggle.querySelector('span').textContent = wanted ? 'Pause preview' : 'Play preview';
+      const playing = wanted && pose === 'open';
+      toggle.setAttribute('aria-pressed', String(playing));
+      toggle.querySelector('span').textContent = playing ? 'Pause preview' : 'Play preview';
     }
     preview.addEventListener('play',state);
     preview.addEventListener('pause',state);
-    toggle.addEventListener('click',() => { segment = null; wanted = !wanted; sync(); state(); });
+    toggle.addEventListener('click',() => { segment = null; wanted = pose === 'open' ? !wanted : true; if (pose === 'closed' && ready) flipLid(true); sync(); state(); });
     // Use the existing native clip, including the slot's real occlusion.
     // These controls scrub a preview; no game or emulation runs in the page.
     function playSegment(start, end) {
@@ -217,21 +277,18 @@
       noticeTimer = setTimeout(() => notice.replaceChildren(), 4000);
       playSegment(7.4, 9.25);
     });
-    reduced.addEventListener('change',() => { if (reduced.matches) { wanted = false; if(stage.classList.contains('fallback-opening'))revealFallback(); sync(); state(); } });
-    new IntersectionObserver(entries => { visible = entries[0].isIntersecting; sync(); },{threshold:.1}).observe(stage || preview);
-    stage?.addEventListener('sp:lid',sync);
-    // Load the self-hosted renderer only on the homepage, when it is in view.
-    // A recorded render of this same model covers loading and WebGL failure.
-    if (stage && !navigator.connection?.saveData) {
-      const modelObserver = new IntersectionObserver(entries => {
-        if (!entries.some(entry => entry.isIntersecting)) return;
-        modelObserver.disconnect();
-        import(new URL('sp-model.js',assets).href)
-          .then(({mountSP}) => mountSP(stage,preview))
-          .catch(error => {console.warn('Interactive 3D unavailable; using its recorded render.',error);startFallback();});
-      },{rootMargin:'100px'});
-      modelObserver.observe(stage);
-    } else startFallback(false);
+    reduced.addEventListener('change', () => {
+      if (reduced.matches) {
+        wanted = false; introPending = false;
+        if (busy()) finishMotion();
+        sync(); state();
+      }
+    });
+    new IntersectionObserver(entries => {
+      visible = entries[0].isIntersecting;
+      if (visible && ready && introPending) flipLid(true); else sync();
+    }, {threshold:.08}).observe(stage);
+    prepareModel();
     document.addEventListener('visibilitychange',sync);
     state();
     try {
