@@ -7,7 +7,7 @@ fs.mkdirSync(out,{recursive:true});
 const origin='https://jakegraving.com/slot.sp/';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
 (async()=>{
- const results=[];
+ const results=[],pixels=[];
  for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   const browser=await engine.launch(name==='chromium'?{executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']}:{});
   try{
@@ -49,22 +49,41 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
      const video=page.locator('.model-opening');
      const style=await video.evaluate(v=>({filter:getComputedStyle(v).filter,blend:getComputedStyle(v).mixBlendMode,still:getComputedStyle(document.querySelector('.model-poster')).visibility}));
      assert.equal(style.filter,'none','Never apply an SVG filter to the decoded video');
-     assert.equal(style.blend,'lighten');assert.equal(style.still,'hidden','The old lid cannot show through the playing frame');
+     assert.equal(style.blend,'normal');assert.equal(style.still,'hidden','The old lid cannot show through the playing frame');
      for(const time of [.1,.45,.8]){
       await video.evaluate(async(v,time)=>{
        v.pause();await new Promise(resolve=>{v.addEventListener('seeked',resolve,{once:true});v.currentTime=time;});
       },time);
       const file=path.join(out,`${name}-${finish.replaceAll(' ','-')}-${direction}-${time}.png`);
       await page.locator('.sp-stage').screenshot({path:file});
-      execFileSync('python3',['-c',`from PIL import Image
-import sys
+      const reference=await video.evaluate(v=>{
+       const frame=document.createElement('canvas');frame.width=v.videoWidth;frame.height=v.videoHeight;
+       frame.getContext('2d',{alpha:false}).drawImage(v,0,0);
+       return frame.toDataURL('image/png').split(',')[1];
+      });
+      const raw=path.join(out,'decoded-reference.png');fs.writeFileSync(raw,Buffer.from(reference,'base64'));
+      const sample=JSON.parse(execFileSync('python3',['-c',`from PIL import Image,ImageFilter
+import sys,json,statistics
 im=Image.open(sys.argv[1]).convert('RGB');w,h=im.size;expected=(14,20,35)
 points=[(x,y) for x in [1,w-2] for y in [1,h//4,h//2,3*h//4,h-2]]
 points += [(x,y) for y in [1,h-2] for x in [w//4,w//2,3*w//4]]
 for point in points:
  actual=im.getpixel(point)
  assert max(abs(a-b) for a,b in zip(actual,expected))<=2, ('Visible video rectangle',point,actual,expected,sys.argv[1])
-`,file]);
+reference=Image.open(sys.argv[2]).convert('RGB').resize((w,h),Image.Resampling.LANCZOS)
+lo=reference.filter(ImageFilter.MinFilter(3));hi=reference.filter(ImageFilter.MaxFilter(3))
+errors=[]
+for y in range(12,h-12,3):
+ for x in range(12,w-12,3):
+  r,g,b=reference.getpixel((x,y))
+  if r<18 and g<19 and b<28 and max(a-b for a,b in zip(hi.getpixel((x,y)),lo.getpixel((x,y))))<6:
+   errors.append(max(abs(a-b) for a,b in zip(im.getpixel((x,y)),(r,g,b))))
+assert len(errors)>50, ('Need actual dark housing/screen/shadow samples',len(errors),sys.argv[1])
+error=statistics.median(errors)
+assert error<=4, ('Model became transparent or recolored',error,len(errors),sys.argv[1])
+print(json.dumps({'opaqueSamples':len(errors),'medianRGBError':error}))
+`,file,raw],{encoding:'utf8'}));
+      pixels.push({engine:name,finish,direction,time,...sample});
      }
      await video.evaluate(v=>{v.currentTime=v.duration-.03;v.play();});
      await page.locator(`[data-pose=${direction==='opening'?'open':'closed'}]`).waitFor();
@@ -76,5 +95,6 @@ for point in points:
   }finally{await browser.close();}
  }
  fs.writeFileSync(path.join(out,'video-checks.json'),JSON.stringify(results,null,2));
- console.log('PASS: 48 composited opening/closing frames, all four finishes including saved Pearl Blue, Chromium and WebKit');
+ fs.writeFileSync(path.join(out,'opaque-pixels.json'),JSON.stringify(pixels,null,2));
+ console.log('PASS: 48 opaque opening/closing frames compared with their decoded pixels; all four finishes, Chromium and WebKit');
 })().catch(error=>{console.error(error);process.exitCode=1;});

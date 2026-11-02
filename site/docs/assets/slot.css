@@ -149,10 +149,10 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-render-fallback{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;border:0;border-radius:0;aspect-ratio:4/5;object-fit:fill}
 .model-poster{background-size:100% 100%;background-repeat:no-repeat}
-.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;mix-blend-mode:lighten}
-/* H.264's navy matte decodes slightly below the page color. Native blending
-   removes it without an SVG video filter or per-frame pixel processing.
-   Hide the still while blending so its closed lid cannot ghost through. */
+.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;
+ mask-image:linear-gradient(to right,transparent,#000 8px,#000 calc(100% - 8px),transparent),linear-gradient(to bottom,transparent,#000 8px,#000 calc(100% - 8px),transparent);mask-composite:intersect}
+/* Keep every model pixel opaque. Only the empty eight-pixel outer margin is
+   feathered; blending dark housing against the page destroys its shading. */
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-poster{visibility:hidden}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
 .md-typeset .sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:scale(var(--model-scale,1)) var(--fallback-screen);opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}

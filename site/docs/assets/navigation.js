@@ -12,7 +12,8 @@
     links.forEach(link => link.classList.add('selector-link'));
     root.prepend(surface);
     const names = ['x','y','width','height'];
-    let hovered = null, frame = 0, last = 0, current = null, target = null;
+    let hovered = null, frame = 0, last = 0, current = null, target = null, bridging = false;
+    const headerBridge = !key && !!root.closest('header');
     const velocity = Object.fromEntries(names.map(name => [name,0]));
     const visible = link => link && link.getBoundingClientRect().height > 0;
     function paint() {
@@ -61,10 +62,28 @@
       else if (!frame) frame = requestAnimationFrame(step);
     }
     function remember() {
+      if (headerBridge && document.documentElement.dataset.pageMotion === 'fallback') {
+        try { sessionStorage.setItem('slot-header-bridge-v2', JSON.stringify({
+          url:location.href,at:Date.now(),viewport:innerWidth,rootWidth:root.clientWidth,rect:current,opacity:Number(surface.style.opacity)
+        })); } catch {}
+      }
       if (!key || !current || surface.style.opacity !== '1') return;
       try { sessionStorage.setItem(key, JSON.stringify(current)); } catch {}
     }
+    function restoreBridge() {
+      if (!headerBridge || reduced.matches || document.documentElement.dataset.pageFallback !== 'incoming') return;
+      try {
+        const previous = JSON.parse(sessionStorage.getItem('slot-header-bridge-v2'));
+        if (!previous || previous.url === location.href || Date.now()-previous.at > 30000 ||
+            Math.abs(previous.viewport-innerWidth)>1 || Math.abs(previous.rootWidth-root.clientWidth)>1) return;
+        if (previous.rect && names.every(name => Number.isFinite(previous.rect[name])) &&
+            previous.rect.width>0 && previous.rect.height>0) snap(previous.rect);
+        surface.style.opacity=String(previous.opacity);
+        bridging=true;
+      } catch {}
+    }
     place(true);
+    restoreBridge();
     if (!reduced.matches && key) {
       try {
         const previous = JSON.parse(sessionStorage.getItem(key));
@@ -72,7 +91,7 @@
       } catch {}
     }
     root.setAttribute('data-selector-ready', '');
-    if (key) place();
+    if (key || bridging) requestAnimationFrame(() => place());
     root.addEventListener('pointerover', event => { hovered = links.find(link => link.contains(event.target)) || null; place(); });
     root.addEventListener('pointerleave', () => { hovered = null; place(); });
     root.addEventListener('focusin', () => place());
@@ -80,13 +99,17 @@
     root.addEventListener('click', remember);
     addEventListener('pagehide', () => { remember(); stop(); });
     addEventListener('pageswap', stop);
+    document.addEventListener('slot:page-leaving', () => { remember(); stop(); });
+    document.addEventListener('slot:page-ready', () => { bridging=false; });
     // The native shared element takes over from the outgoing spring's exact
     // visible position. The incoming capture must already be at its destination.
-    addEventListener('pagereveal', () => { hovered = null; place(true); });
-    addEventListener('pageshow', () => { hovered = null; place(true); });
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => place(true)).observe(root);
+    addEventListener('pagereveal', () => {
+      if (document.documentElement.dataset.pageMotion === 'native') { hovered = null; place(true); }
+    });
+    addEventListener('pageshow', () => { hovered = null; restoreBridge(); place(!bridging); });
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => place(!bridging)).observe(root);
     else addEventListener('resize', () => place(true));
-    document.fonts?.ready.then(() => place(true));
+    document.fonts?.ready.then(() => place(!bridging));
     reduced.addEventListener('change', () => place(true));
   }
   function start() {
