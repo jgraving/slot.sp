@@ -2,9 +2,21 @@
 (() => {
   const root = document.documentElement;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  function section(url) {
+    if (!url) return null;
+    const path = new URL(url).pathname.replace(/^\/slot\.sp\/?/, '').split('/')[0];
+    if (!path) return 0;
+    if (path === 'installing') return 1;
+    if (path === 'updating') return 2;
+    if (path === 'features' || path === 'guide') return 3;
+    if (path === 'studio') return 4;
+    return 5;
+  }
   function direction(activation) {
-    root.dataset.pageDirection = activation?.navigationType === 'traverse' &&
-      activation.entry?.index < activation.from?.index ? 'back' : 'forward';
+    const from = section(activation?.from?.url), to = section(activation?.entry?.url);
+    const backwards = from !== null && to !== null && from !== to ? to < from :
+      activation?.navigationType === 'traverse' && activation.entry?.index < activation.from?.index;
+    root.dataset.pageDirection = backwards ? 'back' : 'forward';
   }
   addEventListener('pageswap', event => {
     direction(event.activation);

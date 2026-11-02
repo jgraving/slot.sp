@@ -2,7 +2,7 @@
 :root{--page:#0e1423;--surface:#171d20;--selected:#334f52;--ink:#f5f9f7;--muted:#c2d6d4;--rule:#35494d;--teal:#54c2b8;--purple:#c3b2ef;--motion-spatial:cubic-bezier(.2,.8,.2,1);--motion-effects:cubic-bezier(.2,0,0,1)}
 :where(.slot-selector){position:relative;isolation:isolate}
 .slot-selector>.selector-surface{position:absolute;z-index:-1;left:0;top:0;width:var(--selector-width,0px);height:var(--selector-height,0px);translate:var(--selector-x,0px) var(--selector-y,0px);border-radius:24px;background:var(--selected);opacity:0;pointer-events:none}
-.slot-selector[data-selector-ready]>.selector-surface{transition:translate 420ms var(--motion-spatial),width 420ms var(--motion-spatial),height 420ms var(--motion-spatial),opacity 180ms var(--motion-effects)}
+.slot-selector[data-selector-ready]>.selector-surface{transition:opacity 180ms var(--motion-effects);will-change:translate,width,height}
 .slot-selector a.selector-link{text-decoration:none;font-variation-settings:"ROND" 25;transition:color 180ms var(--motion-effects)}
 /* Theme hover fills yield to the single moving surface. */
 .slot-selector[data-selector-ready] a.selector-link{background:transparent!important}

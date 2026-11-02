@@ -1,4 +1,4 @@
-/* Shared by the website and Cart Studio: one interruptible spatial selector. */
+/* Website and bundled Studio share a velocity-preserving navigation spring. */
 (() => {
   function init(root, selector, key) {
     if (!root || root.classList.contains('slot-selector')) return;
@@ -11,47 +11,83 @@
     root.classList.add('slot-selector');
     links.forEach(link => link.classList.add('selector-link'));
     root.prepend(surface);
-    let hovered = null;
+    const names = ['x','y','width','height'];
+    let hovered = null, frame = 0, last = 0, current = null, target = null;
+    const velocity = Object.fromEntries(names.map(name => [name,0]));
     const visible = link => link && link.getBoundingClientRect().height > 0;
-    function geometry(rect) {
-      for (const name of ['x','y','width','height']) surface.style.setProperty(`--selector-${name}`, `${rect[name]}px`);
+    function paint() {
+      for (const name of names) surface.style.setProperty(`--selector-${name}`, `${current[name]}px`);
     }
-    function place() {
-      const focus = links.find(link => link.contains(document.activeElement));
+    function stop() { cancelAnimationFrame(frame); frame = 0; last = 0; }
+    function snap(next) {
+      stop(); current = {...next};
+      names.forEach(name => velocity[name] = 0);
+      paint();
+    }
+    function step(now) {
+      // M3 Expressive fast spatial: stiffness 800, damping ratio .6, mass 1.
+      // Integrate analytically; retargeting preserves current position/velocity.
+      const dt = Math.min((now - (last || now - 16.667)) / 1000, .064);
+      last = now;
+      const omega = Math.sqrt(800), damping = .6 * omega;
+      const frequency = omega * Math.sqrt(1 - .6 ** 2);
+      const decay = Math.exp(-damping * dt);
+      const cosine = Math.cos(frequency * dt), sine = Math.sin(frequency * dt);
+      let settled = true;
+      for (const name of names) {
+        const offset = current[name] - target[name], speed = velocity[name];
+        const coefficient = (speed + damping * offset) / frequency;
+        const wave = offset * cosine + coefficient * sine;
+        current[name] = target[name] + decay * wave;
+        velocity[name] = decay * (-damping * wave + frequency * (-offset * sine + coefficient * cosine));
+        if (Math.abs(current[name] - target[name]) > .05 || Math.abs(velocity[name]) > .5) settled = false;
+      }
+      paint();
+      if (settled) snap(target);
+      else frame = requestAnimationFrame(step);
+    }
+    function destination() {
+      const focus = links.find(link => link.contains(document.activeElement) && link.matches(':focus-visible'));
       const active = links.find(link => visible(link) && (link.matches('[aria-current],.md-nav__link--active') || link.closest('.md-tabs__item--active')));
-      const target = [hovered, focus, active].find(visible);
-      surface.style.opacity = target ? '1' : '0';
-      if (!target) return;
-      const box = root.getBoundingClientRect(), rect = target.getBoundingClientRect();
-      geometry({x:rect.left-box.left+root.scrollLeft,y:rect.top-box.top+root.scrollTop,width:rect.width,height:rect.height});
+      return [hovered, focus, active].find(visible);
+    }
+    function place(immediate = false) {
+      const link = destination();
+      surface.style.opacity = link ? '1' : '0';
+      if (!link) { stop(); return; }
+      const box = root.getBoundingClientRect(), rect = link.getBoundingClientRect();
+      target = {x:rect.left-box.left+root.scrollLeft,y:rect.top-box.top+root.scrollTop,width:rect.width,height:rect.height};
+      if (!current || immediate || reduced.matches) snap(target);
+      else if (!frame) frame = requestAnimationFrame(step);
     }
     function remember() {
-      if (!key || surface.style.opacity !== '1') return;
-      const box = root.getBoundingClientRect(), rect = surface.getBoundingClientRect();
-      try { sessionStorage.setItem(key, JSON.stringify({x:rect.left-box.left+root.scrollLeft,y:rect.top-box.top+root.scrollTop,width:rect.width,height:rect.height})); } catch {}
+      if (!key || !current || surface.style.opacity !== '1') return;
+      try { sessionStorage.setItem(key, JSON.stringify(current)); } catch {}
     }
-    place();
+    place(true);
     if (!reduced.matches && key) {
       try {
         const previous = JSON.parse(sessionStorage.getItem(key));
-        if (previous && Object.values(previous).every(Number.isFinite) && previous.width > 0 && previous.height > 0 && previous.x >= 0 && previous.y >= 0 && previous.x+previous.width <= root.clientWidth+2 && previous.y+previous.height <= root.scrollHeight+2) geometry(previous);
+        if (previous && names.every(name => Number.isFinite(previous[name])) && previous.width > 0 && previous.height > 0 && previous.x >= 0 && previous.y >= 0 && previous.x+previous.width <= root.clientWidth+2 && previous.y+previous.height <= root.scrollHeight+2) snap(previous);
       } catch {}
     }
-    requestAnimationFrame(() => {
-      root.setAttribute('data-selector-ready', '');
-      requestAnimationFrame(place);
-    });
+    root.setAttribute('data-selector-ready', '');
+    if (key) place();
     root.addEventListener('pointerover', event => { hovered = links.find(link => link.contains(event.target)) || null; place(); });
     root.addEventListener('pointerleave', () => { hovered = null; place(); });
-    root.addEventListener('focusin', place);
-    root.addEventListener('focusout', () => requestAnimationFrame(place));
+    root.addEventListener('focusin', () => place());
+    root.addEventListener('focusout', () => requestAnimationFrame(() => place()));
     root.addEventListener('click', remember);
-    window.addEventListener('pagehide', remember);
-    window.addEventListener('pageshow', place);
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(place).observe(root);
-    else window.addEventListener('resize', place);
-    document.fonts?.ready.then(place);
-    reduced.addEventListener('change', place);
+    addEventListener('pagehide', () => { remember(); stop(); });
+    addEventListener('pageswap', stop);
+    // The native shared element takes over from the outgoing spring's exact
+    // visible position. The incoming capture must already be at its destination.
+    addEventListener('pagereveal', () => { hovered = null; place(true); });
+    addEventListener('pageshow', () => { hovered = null; place(true); });
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => place(true)).observe(root);
+    else addEventListener('resize', () => place(true));
+    document.fonts?.ready.then(() => place(true));
+    reduced.addEventListener('change', () => place(true));
   }
   function start() {
     const header = document.querySelector('.md-header,.mast');
@@ -63,9 +99,9 @@
       };
       measure();
       if (typeof ResizeObserver !== 'undefined') new ResizeObserver(measure).observe(header);
-      else window.addEventListener('resize', measure);
+      else addEventListener('resize', measure);
     }
-    init(document.querySelector('.mast-tabs,.mast-links'), 'a.mast-link,a.md-tabs__link', 'slot-header-selector');
+    init(document.querySelector('.mast-tabs,.mast-links'), 'a.mast-link,a.md-tabs__link');
     init(document.querySelector('.md-sidebar--primary .md-nav--primary'), 'a.md-nav__link[href]', 'slot-guide-selector');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});

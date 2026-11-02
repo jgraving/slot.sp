@@ -1,6 +1,5 @@
 {% extends "main.html" %}
 {% macro icon(name) -%}<img class="feature-icon" src="{{ ('assets/icons/' ~ name ~ '.svg') | url }}" width="48" height="48" alt="" aria-hidden="true">{%- endmacro %}
-{% block extrahead %}{{ super() }}<link rel="preload" href="{{ 'assets/fonts/google-sans-flex.woff2' | url }}" as="font" type="font/woff2" crossorigin>{% endblock %}
 {% block content %}
 {% set model_media = 'media/fork/sp-model/' ~ config.extra.sp_model_revision ~ '/' %}
 {% set hero_media = 'media/fork/homepage/' ~ config.extra.homepage_media_revision ~ '/' %}
@@ -17,7 +16,6 @@
       </nav>
     </div>
     <figure class="sp-preview" aria-label="slot.sp on an RG SP">
-      <svg class="motion-filters" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="sp-video-matte" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="linear" slope="1" intercept="0"/><feFuncG type="linear" slope="1" intercept="0"/><feFuncB type="linear" slope="1" intercept="0"/></feComponentTransfer></filter></defs></svg>
       <div id="sp-handheld" class="sp-stage" data-render-media="{{ model_media | url }}" data-pose="closed">
         <div class="sp-render-fallback">
           <picture class="model-poster">
