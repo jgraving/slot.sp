@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
+const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../public');
 const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
@@ -33,6 +34,25 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
   }
   const boxes=page=>page.evaluate(()=>Object.fromEntries(['.intro-wordmark','.intro h1','.sp-stage','.preview-controls','.model-hint','.features'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return [selector,{x:r.x,y:r.y+scrollY,width:r.width,height:r.height}];})));
   function stable(before,after,label){for(const selector of Object.keys(before))for(const property of ['x','y','width','height'])assert(Math.abs(before[selector][property]-after[selector][property])<1,`${label}: ${selector} ${property} shifted`);}
+  async function inspectMotionFrame(page,label,time) {
+    await page.locator('.sp-stage[data-motion-ready=true]').waitFor();
+    const video=page.locator('.model-opening'),stage=page.locator('.sp-stage');
+    await video.evaluate(async(v,time)=>{v.pause();await new Promise(resolve=>{v.addEventListener('seeked',resolve,{once:true});v.currentTime=time;});},time);
+    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.model-opening')).opacity==='1');
+    const outer=await stage.boundingBox(),frame=await video.boundingBox();
+    for(const key of ['x','y','width','height'])assert(Math.abs(outer[key]-frame[key])<.5,`${label}: the whole video must fit the stage`);
+    const file=path.join(out,`${label}.png`);await stage.screenshot({path:file});
+    execFileSync('python',['-c',`from PIL import Image,ImageChops
+import sys
+im=Image.open(sys.argv[1]).convert('RGB');target=(14,20,35)
+for p in [(2,2),(im.width-3,2),(2,im.height-3),(im.width-3,im.height-3)]:
+ assert max(abs(a-b) for a,b in zip(im.getpixel(p),target))<=1, ('Visible video matte',p,im.getpixel(p))
+r,g,b=ImageChops.difference(im,Image.new('RGB',im.size,target)).split()
+box=ImageChops.lighter(ImageChops.lighter(r,g),b).point(lambda v:255 if v>30 else 0).getbbox()
+assert box and box[0]>1 and box[1]>1 and box[2]<im.width-1 and box[3]<im.height-1, ('Clipped model',box,im.size)
+print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{stdio:'inherit'});
+    await video.evaluate(v=>v.play());
+  }
   try {
     for(const width of [1366,390,320]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
@@ -50,6 +70,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       const before=await boxes(page);
       if(width===1366)await page.screenshot({path:path.join(out,'first-load.png')});
       release();
+      await inspectMotionFrame(page,`${width}-opening-edges`,8/30);
       await page.locator('[data-pose=open]').waitFor();
       await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
       stable(before,await boxes(page),`${width}: first opening`);
@@ -60,6 +81,8 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await page.mouse.move(box.x+12,box.y+80);await page.mouse.down();await page.mouse.move(box.x+box.width-12,box.y+120,{steps:8});await page.mouse.up();
       assert.equal(await stage.getAttribute('data-pose'),'open','Dragging must leave the fixed view alone');
       await page.getByRole('button',{name:'Close lid',exact:true}).click();
+      await page.locator('[data-pose=closing]').waitFor();
+      await inspectMotionFrame(page,`${width}-closing-edges`,24/30);
       await page.locator('[data-pose=closed]').waitFor();
       assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Closed lid pauses the native screen');
       assert(!(await page.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible()));
