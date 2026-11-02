@@ -49,6 +49,11 @@ const server=http.createServer((req,res)=>{
     await page.screenshot({path:path.join(output,`${name}-${pose}.png`),omitBackground:true});
    }
    await page.evaluate(()=>{document.documentElement.style.background='#0e1423';document.body.style.background='#0e1423';});
+   fs.mkdirSync(path.join(output,'review'),{recursive:true});
+   for(const [view,viewYaw,viewPitch] of [['rear',Math.PI+.28,-.30],['shoulders',Math.PI+.28,-.9],['side',-1.5,-.15]]) {
+    await page.evaluate(args=>window.captureSP.captureFrame(args),{color,lidAngle:150,viewYaw,viewPitch});
+    await page.screenshot({path:path.join(output,'review',`${name}-${view}.png`)});
+   }
    console.log('Captured 3D opening and posters:',color);
   }
   fs.writeFileSync(path.join(output,'projection.json'),JSON.stringify(projection,null,2));

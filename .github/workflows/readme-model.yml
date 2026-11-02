@@ -43,6 +43,7 @@ jobs:
             /tmp/slot-readme-model/publish/**
             /tmp/slot-readme-model/media-entries.json
             /tmp/slot-readme-model/model-capture.json
+            /tmp/slot-readme-model/review/**
             /tmp/slot-readme-model/model-frames/0000.png
             /tmp/slot-readme-model/model-frames/0060.png
             /tmp/slot-readme-model/model-frames/0120.png

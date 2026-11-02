@@ -200,12 +200,12 @@ export function mountSP(stage, video, options={}) {
     if(action)controls.set(action,group);
     return group;
   }
-  roundButton(21,-24.3,3.85,'X');
-  roundButton(12.8,-32.5,3.85,'Y');
-  roundButton(29.2,-32.5,3.85,'A','insert');
-  roundButton(21,-40.7,3.85,'B','eject');
-  roundButton(0,-15.5,2.25,'M','boot');
-  roundButton(-5.4,-72.5,2.6,''); roundButton(5.4,-72.5,2.6,'');
+  roundButton(21,-24.3,3.85,'X','x');
+  roundButton(12.8,-32.5,3.85,'Y','y');
+  roundButton(29.2,-32.5,3.85,'A','a');
+  roundButton(21,-40.7,3.85,'B','b');
+  roundButton(0,-15.5,2.25,'M','menu');
+  roundButton(-5.4,-72.5,2.6,'','select'); roundButton(5.4,-72.5,2.6,'','start');
   engraving('SELECT',product,-5.4,-65.8,.1,8,2.1);
   engraving('START',product,5.4,-65.8,.1,7.1,2.1);
   const cross=new T.Shape();
@@ -220,8 +220,8 @@ export function mountSP(stage, video, options={}) {
   });cross.closePath();
   const dpad=mesh(extrusion(cross,2.7,.38),button,product,-21,-32.5,-1.1);
   disc(product,1.5,.04,button,-21,-32.5,1.25);
-  for(const [action,x]of [['left',-28],['right',-14]]) {
-    const anchor=new T.Object3D();anchor.position.set(x,-32.5,1.8);product.add(anchor);anchor.userData.pressPart=dpad;controls.set(action,anchor);
+  for(const [action,x,y]of [['left',-28,-32.5],['right',-14,-32.5],['up',-21,-25.5],['down',-21,-39.5]]) {
+    const anchor=new T.Object3D();anchor.position.set(x,y,1.8);product.add(anchor);anchor.userData.pressPart=dpad;controls.set(action,anchor);
   }
 
   // Five knuckles follow the asymmetric joints in Anbernic's orthographic view.
@@ -310,13 +310,19 @@ export function mountSP(stage, video, options={}) {
     slab(rear,w-2.5,.5,.1,.16,.03,seam,x,.1,.21);
     engraving(label,rear,x,3.45,.22,label==='HD'?4:10,1.75);
   }
-  // L1/R1 wrap around the corners. L2/R2 sit higher and slightly inset.
-  for(const [x,label,high]of [[-36,'L1',false],[-24,'L2',true],[24,'R2',true],[36,'R1',false]]) {
-    // Recessed mounting pockets and long skirts bury the caps in the shell.
-    slab(rear,high?9.2:10.4,high?7.8:8.8,4.2,1.8,.4,shell,x,3,.9);
-    slab(rear,high?7.8:8.7,high?6.3:7.2,2.6,1.2,.2,dark,x,3,1.02);
-    slab(rear,high?7.2:8.1,high?5.8:6.6,high?5.4:4.5,1,.3,button,x,3,high?2.5:1.6);
-    engraving(label,rear,x,3,high?2.55:1.65,3.7,2.8);
+  // Official rear/side views: four caps on the same rear edge, not posts.
+  // L1/R1 wrap over the rounded outer corners and down the back moulding;
+  // the narrower L2/R2 caps sit 0.6 mm higher, with shorter inset skirts.
+  // Both skirts reach inside the chassis, hiding their lower mounting ends.
+  for(const [x,label,inner]of [[-35.7,'L1',false],[-24.3,'L2',true],[24.3,'R2',true],[35.7,'R1',false]]) {
+    const width=inner?8.2:10.5,height=inner?6.5:8.0,depth=inner?6.4:8.7;
+    const y=inner?4.0:3.25,top=inner?1.8:1.2;
+    // A narrow recessed reveal follows the cap, without a raised pedestal.
+    slab(rear,width+.45,height+.35,depth+.3,inner?.85:1.6,.18,dark,x,y,top-.28);
+    const cap=new T.Group();cap.position.set(x,y,top);rear.add(cap);
+    slab(cap,width,height,depth,inner?.8:1.5,.28,button,0,0,0);
+    engraving(label,cap,0,0,.055,4.1,2.7);
+    cap.userData.shoulder=true;controls.set(label.toLowerCase(),cap);
   }
   const front=surface(0,-79.03,-8.2,Math.PI/2);
   disc(front,2.65,.18,edge,0,0,.12);disc(front,2.05,.16,dark,0,0,.26);
@@ -336,25 +342,28 @@ export function mountSP(stage, video, options={}) {
   const shadow=mesh(new T.PlaneGeometry(125,25),track(new T.MeshBasicMaterial({map:shadowMap,transparent:true,depthWrite:false})),scene,4,-91,-25);
 
   let poster, posterRequest=0;
-  const videoTexture=track(new T.VideoTexture(video));videoTexture.colorSpace=T.SRGBColorSpace;
+  const screenCanvas=options.screenCanvas;
+  const screenTexture=track(screenCanvas?new T.CanvasTexture(screenCanvas):new T.VideoTexture(video));
+  screenTexture.colorSpace=T.SRGBColorSpace;
+  screenTexture.generateMipmaps=false;screenTexture.minFilter=T.LinearFilter;
   function loadPoster() {
+    if(screenCanvas||!video.poster)return;
     const id=++posterRequest;
     new T.TextureLoader().load(video.poster,texture=>{
       if(id!==posterRequest){texture.dispose();return;}
-      poster?.dispose();poster=texture;texture.colorSpace=T.SRGBColorSpace;
-      updateScreen();wake();
-    },undefined,()=>{ /* The HTML fallback keeps its own poster. */ });
+      poster?.dispose();poster=texture;texture.colorSpace=T.SRGBColorSpace;updateScreen();wake();
+    });
   }
-  // Request texture upload explicitly: a visually hidden video may not receive
-  // requestVideoFrameCallback even though its playback clock advances.
   function updateScreen() {
-    if(video.readyState>=2)videoTexture.needsUpdate=true;
-    const map=video.readyState>=2 ? videoTexture : poster;
-    if(map && screenMat.map!==map){screenMat.map=map;screenMat.color.setHex(0xffffff);screenMat.needsUpdate=true;}
+    const ready=screenCanvas?screenCanvas.dataset.painted==='true':video.readyState>=2;
+    const map=ready?screenTexture:poster;
+    if(ready&&!screenCanvas)screenTexture.needsUpdate=true;
+    if(map&&screenMat.map!==map){screenMat.map=map;screenMat.color.setHex(0xffffff);screenMat.needsUpdate=true;}
     if(map)stage.dataset.screenReady='true';
   }
+  function screenFrame(){screenTexture.needsUpdate=true;wake();}
+  screenCanvas?.addEventListener('hero:frame',screenFrame);
   const observer=new MutationObserver(loadPoster);observer.observe(video,{attributes:true,attributeFilter:['poster']});
-
   const palettes={
     platinum:[0xcbd0d2,0xb7bec2,0xb9bdc0,.74],
     graphite:[0x42474b,0x31363a,0x45494d,.63],
@@ -365,98 +374,99 @@ export function mountSP(stage, video, options={}) {
   function finish(name) {
     const p=palettes[name]||palettes.platinum;shell.color.setHex(p[0]);edge.color.setHex(p[1]);button.color.setHex(p[2]);shell.metalness=edge.metalness=p[3];rubber.color.setHex(p[1]);
     seam.color.setHex(p[1]).multiplyScalar(.5);
-    const ink=name==='graphite'?2.8:1;etchMaterials.forEach(mat=>mat.color.setRGB(ink,ink,ink));
+    etchMaterials.forEach(mat=>mat.color.setScalar(name==='graphite'?2.8:1));
     stage.dataset.finish=name;wake();
   }
   const onFinish=event=>finish(event.detail);
   stage.addEventListener('sp:finish',onFinish);
 
-  const defaultAngle=150,defaultYaw=-.38,defaultPitch=-.16;
-  let opening=!reduced.matches&&!options.capture,introStart=null;
-  let yaw=defaultYaw,pitch=defaultPitch,roll=-.08,targetYaw=yaw,targetPitch=pitch;
-  // 180° is flat. The earlier negative rotation incorrectly went past flat.
-  let angle=defaultAngle,closed=false,targetHinge=T.MathUtils.degToRad(180-angle),hinge=opening?Math.PI:targetHinge;
-  let pointer=null,lastFrame=0,lastRendered=0,frame=0,visible=true,disposed=false;
-  let pressUntil=0,pressed=null;
+  const defaultAngle=150,defaultYaw=-.38,defaultPitch=-.16,roll=-.08;
+  const motionAllowed=()=>!reduced.matches&&!navigator.connection?.saveData;
+  let opening=motionAllowed()&&!options.capture,introStart=null;
+  let yaw=defaultYaw,pitch=defaultPitch,targetYaw=yaw,targetPitch=pitch;
+  let angle=defaultAngle,targetHinge=T.MathUtils.degToRad(180-angle),hinge=opening?Math.PI:targetHinge;
+  let pointer=null,lastFrame=0,lastRendered=0,frame=0,visible=true,disposed=false,active=!options.managed;
+  let pressed=null,pressUntil=0,pose='',pausedAt=0;
   const hardware=[...stage.querySelectorAll('[data-hardware]')];
   const fallback=stage.querySelector('.sp-render-fallback');
-  const videoParent=video.parentElement,videoNext=video.nextSibling;
   const originals=hardware.map(element=>({element,parent:element.parentElement,next:element.nextSibling}));
   const fold=stage.closest('.sp-preview').querySelector('.model-fold');
   const lidInput=stage.closest('.sp-preview').querySelector('.model-angle input');
   const lidOutput=stage.closest('.sp-preview').querySelector('.model-angle output');
-  function setLid(value,manual=true) {
-    if(manual&&opening){opening=false;stage.dataset.opening='false';}
-    angle=T.MathUtils.clamp(Number(value),0,180);closed=angle<12;
-    targetHinge=T.MathUtils.degToRad(180-angle);
-    hardware.forEach(element=>{element.hidden=angle<45;});
-    lidInput.value=String(angle);lidOutput.value=`${angle}°`;
-    lidInput.setAttribute('aria-valuetext',angle===180?'180 degrees, fully flat':angle===0?'Closed':`${angle} degrees`);
-    fold.setAttribute('aria-pressed',String(closed));fold.setAttribute('aria-label',closed?'Open lid':'Close lid');fold.title=closed?'Open lid':'Close lid';
-    stage.dataset.lidAngle=String(angle);
-    stage.dataset.lid=closed?'closed':'open';stage.dispatchEvent(new CustomEvent('sp:lid'));wake();
+  const project=new T.Vector3(),normal=new T.Vector3(),toCamera=new T.Vector3(),quaternion=new T.Quaternion();
+  function publishPose() {
+    const moving=Math.abs(hinge-targetHinge)>.002;
+    const next=opening?'opening':moving?(angle===0?'closing':'opening'):(angle===0?'closed':angle===180?'flat':'open');
+    stage.dataset.opening=String(opening||moving);stage.dataset.pose=next;
+    stage.dataset.lidAngle=String(angle);stage.dataset.renderedAngle=String(180-T.MathUtils.radToDeg(hinge));
+    stage.dataset.lid=angle===0?'closed':'open';
+    fold.disabled=false;
+    fold.setAttribute('aria-pressed',String(angle===0));fold.setAttribute('aria-expanded',String(angle!==0));
+    fold.setAttribute('aria-label',angle===0?'Open lid':'Close lid');fold.title=angle===0?'Open lid':'Close lid';
+    if(next!==pose){pose=next;stage.dispatchEvent(new CustomEvent('sp:lid'));}
   }
-  function foldLid(){setLid(closed?defaultAngle:0);}
+  function setLid(value,manual=true) {
+    if(manual){opening=false;introStart=null;}
+    angle=T.MathUtils.clamp(Number(value),0,180);targetHinge=T.MathUtils.degToRad(180-angle);
+    if(!motionAllowed())hinge=targetHinge;
+    if(lidInput){lidInput.value=String(angle);lidInput.setAttribute('aria-valuetext',angle===0?'Closed':`${angle} degrees`);}
+    if(lidOutput)lidOutput.value=`${angle}°`;
+    publishPose();wake();
+  }
+  function foldLid(){setLid(angle===0?defaultAngle:0);}
   function adjustLid(){setLid(lidInput.value);}
-  fold.addEventListener('click',foldLid);
-  lidInput.addEventListener('input',adjustLid);
-  const project=new T.Vector3();
-  const normal=new T.Vector3(),toCamera=new T.Vector3();
+  if(!options.managed)fold.addEventListener('click',foldLid);
+  lidInput?.addEventListener('input',adjustLid);
   function placeButtons() {
     product.updateMatrixWorld(true);
     for(const element of hardware) {
       const anchor=controls.get(element.dataset.hardware);
-      anchor.getWorldPosition(project);
-      normal.set(0,0,1).applyQuaternion(product.quaternion);toCamera.copy(camera.position).sub(project).normalize();
-      element.hidden=opening||(180-T.MathUtils.radToDeg(hinge))<45||normal.dot(toCamera)<.2;
+      if(!anchor){element.hidden=true;continue;}
+      anchor.getWorldPosition(project);anchor.getWorldQuaternion(quaternion);
+      normal.set(0,0,1).applyQuaternion(quaternion);toCamera.copy(camera.position).sub(project).normalize();
+      element.hidden=normal.dot(toCamera)<.22||(!anchor.userData.shoulder&&(opening||180-T.MathUtils.radToDeg(hinge)<45));
       project.project(camera);
-      element.style.left=`${(project.x*.5+.5)*100}%`;
-      element.style.top=`${(-project.y*.5+.5)*100}%`;
+      element.style.left=`${(project.x*.5+.5)*100}%`;element.style.top=`${(-project.y*.5+.5)*100}%`;
     }
   }
   function resize() {
     const {width,height}=stage.getBoundingClientRect();if(!width||!height)return;
-    renderer.setSize(width,height,false);camera.aspect=width/height;
-    camera.position.z=width<300?385:355;camera.updateProjectionMatrix();wake();
+    renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();wake();
   }
   const resizeObserver=new ResizeObserver(resize);
   const visibilityObserver=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(visible)wake();else{cancelAnimationFrame(frame);frame=0;}},{threshold:.01});
-  function wake() { if(!disposed && visible && !document.hidden && !frame)frame=requestAnimationFrame(draw); }
+  function wake(){if(!disposed&&visible&&!document.hidden&&!frame)frame=requestAnimationFrame(draw);}
   function draw(now) {
     frame=0;if(disposed||!visible||document.hidden)return;
-    if(now-lastRendered<1000/30){wake();return;}lastRendered=now;
-    const dt=Math.min((now-lastFrame)/1000,.05)||.016;lastFrame=now;
-    const ease=reduced.matches?1:1-Math.exp(-12*dt);
+    // Follow pointer/lid motion at display refresh; repaint idle film at 30 Hz.
     const poseChanged=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.0001;
+    if(!poseChanged&&!pressed&&now-lastRendered<1000/30){wake();return;}
+    lastRendered=now;
+    const dt=Math.min((now-lastFrame)/1000,.05)||.016;lastFrame=now;
+    const ease=motionAllowed()?1-Math.exp(-15*dt):1;
     yaw+=(targetYaw-yaw)*ease;pitch+=(targetPitch-pitch)*ease;
     if(opening) {
-      introStart??=now;const t=T.MathUtils.clamp((now-introStart-80)/900,0,1);
-      hinge=T.MathUtils.lerp(Math.PI,targetHinge,1-Math.pow(1-t,3));
-      if(t===1){opening=false;stage.dataset.opening='false';stage.dispatchEvent(new CustomEvent('sp:lid'));}
-    } else hinge+=(targetHinge-hinge)*ease;
+      if(active){introStart??=now;const t=T.MathUtils.clamp((now-introStart-80)/900,0,1);hinge=T.MathUtils.lerp(Math.PI,targetHinge,1-Math.pow(1-t,3));if(t===1)opening=false;}
+    }else if(active||!options.managed)hinge+=(targetHinge-hinge)*ease;
     product.rotation.set(pitch,yaw,roll);lid.rotation.x=hinge;
     product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
-    if(pressed && now>pressUntil){pressed.position.z+=.45;pressed=null;}
+    if(pressed&&now>pressUntil){pressed.position.z+=.45;pressed=null;}
     updateScreen();placeButtons();
-    renderer.shadowMap.needsUpdate=opening||poseChanged||!!pressed||!stage.dataset.modelReady;
-    renderer.render(scene,camera);
-    stage.dataset.modelReady='true';
-    stage.dataset.pose=opening?'opening':Math.abs(hinge-targetHinge)<.002 ? (closed?'closed':angle===180?'flat':'open') : 'moving';
-    stage.dataset.renderedAngle=String(180-T.MathUtils.radToDeg(hinge));
+    renderer.shadowMap.needsUpdate=poseChanged||!!pressed||!stage.dataset.modelReady;
+    renderer.render(scene,camera);stage.dataset.modelReady='true';publishPose();
     stage.dataset.viewYaw=String(yaw);stage.dataset.viewPitch=String(pitch);
-    const moving=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.001;
-    if(opening||moving||pressed||(!video.paused&&video.readyState>=2))wake();
+    const moving=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+(active?Math.abs(hinge-targetHinge):0)>.001;
+    if((opening&&active)||moving||pressed||(!screenCanvas&&!video.paused&&video.readyState>=2))wake();
   }
   function down(event) {
-    if(event.target.closest('button')||event.button!==0)return;
+    if(event.button!==0)return;
     pointer={id:event.pointerId,x:event.clientX,y:event.clientY,yaw:targetYaw,pitch:targetPitch};
-    canvas.setPointerCapture(event.pointerId);stage.classList.add('is-dragging');
+    canvas.setPointerCapture(event.pointerId);stage.classList.add('is-dragging');stage.focus({preventScroll:true});
   }
   function move(event) {
     if(!pointer)return;
-    const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;
-    targetYaw=pointer.yaw+dx*.007;
-    targetPitch=T.MathUtils.clamp(pointer.pitch+dy*.004,-1.1,1.1);wake();
+    targetYaw=pointer.yaw+(event.clientX-pointer.x)*.008;
+    targetPitch=T.MathUtils.clamp(pointer.pitch+(event.clientY-pointer.y)*.005,-1.05,1.05);wake();
   }
   function up(event) {
     if(!pointer)return;
@@ -464,68 +474,74 @@ export function mountSP(stage, video, options={}) {
     pointer=null;stage.classList.remove('is-dragging');
   }
   canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
-  canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
-  function reset() { targetYaw=defaultYaw;targetPitch=defaultPitch;wake(); }
+  canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('lostpointercapture',up);
+  function reset(){targetYaw=defaultYaw;targetPitch=defaultPitch;wake();}
   canvas.addEventListener('dblclick',reset);
   function keydown(event) {
     if(event.target!==stage)return;
     if(event.key==='ArrowLeft')targetYaw-=.15;
     else if(event.key==='ArrowRight')targetYaw+=.15;
-    else if(event.key==='ArrowUp')targetPitch=Math.max(-1.1,targetPitch-.1);
-    else if(event.key==='ArrowDown')targetPitch=Math.min(1.1,targetPitch+.1);
-    else if(event.key==='Home'){reset();event.preventDefault();return;}
-    else return;
-    event.preventDefault();wake();
+    else if(event.key==='ArrowUp')targetPitch=Math.max(-1.05,targetPitch-.1);
+    else if(event.key==='ArrowDown')targetPitch=Math.min(1.05,targetPitch+.1);
+    else if(event.key==='Home')reset();else return;
+    event.preventDefault();event.stopPropagation();wake();
   }
   stage.addEventListener('keydown',keydown);
   function press(event) {
     const element=event.target.closest('[data-hardware]');if(!element)return;
-    const anchor=controls.get(element.dataset.hardware);
-    const part=anchor?.userData.pressPart || anchor;
+    const anchor=controls.get(element.dataset.hardware),part=anchor?.userData.pressPart||anchor;
     if(pressed){pressed.position.z+=.45;pressed=null;}
-    if(part?.isGroup || part?.isMesh){pressed=part;part.position.z-=.45;pressUntil=performance.now()+140;}
+    if(part?.isGroup||part?.isMesh){pressed=part;part.position.z-=.45;pressUntil=performance.now()+140;}
     wake();
   }
+  stage.addEventListener('pointerdown',press);
   stage.addEventListener('click',press);
   const videoEvents=['loadeddata','play','pause','seeked','timeupdate','emptied'];
   videoEvents.forEach(name=>video.addEventListener(name,wake));
-  document.addEventListener('visibilitychange',wake);reduced.addEventListener('change',wake);
-  function fallbackOnLoss(event) {event.preventDefault();cleanup();}
+  function visibility(){lastFrame=performance.now();if(document.hidden)cancelAnimationFrame(frame),frame=0;else wake();}
+  function motionChange(){if(!motionAllowed()){opening=false;hinge=targetHinge;publishPose();}wake();}
+  document.addEventListener('visibilitychange',visibility);reduced.addEventListener('change',motionChange);
+  function fallbackOnLoss(event){event.preventDefault();cleanup();}
   canvas.addEventListener('webglcontextlost',fallbackOnLoss);
   function cleanup() {
     if(disposed)return;disposed=true;cancelAnimationFrame(frame);
     observer.disconnect();resizeObserver.disconnect();visibilityObserver.disconnect();
+    screenCanvas?.removeEventListener('hero:frame',screenFrame);
     videoEvents.forEach(name=>video.removeEventListener(name,wake));
-    document.removeEventListener('visibilitychange',wake);reduced.removeEventListener('change',wake);
-    stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('click',press);fold.removeEventListener('click',foldLid);lidInput.removeEventListener('input',adjustLid);
+    document.removeEventListener('visibilitychange',visibility);reduced.removeEventListener('change',motionChange);
+    stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('pointerdown',press);stage.removeEventListener('click',press);
+    fold.removeEventListener('click',foldLid);lidInput?.removeEventListener('input',adjustLid);
     for(const {element,parent,next}of originals){parent.insertBefore(element,next?.parentElement===parent?next:null);element.removeAttribute('style');element.hidden=false;}
-    videoParent.insertBefore(video,videoNext?.parentElement===videoParent?videoNext:null);
-    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.removeAttribute('tabindex');stage.removeAttribute('role');stage.removeAttribute('aria-label');delete stage.dataset.pose;
-    for(const key of ['lidAngle','viewYaw','viewPitch','finish'])delete stage.dataset[key];
+    stage.classList.remove('model-ready');stage.removeAttribute('tabindex');stage.removeAttribute('role');stage.removeAttribute('aria-label');
+    for(const key of ['modelReady','screenReady','viewYaw','viewPitch'])delete stage.dataset[key];
     canvas.remove();poster?.dispose();for(const item of disposables)item.dispose();renderer.dispose();
     stage.dispatchEvent(new CustomEvent('sp:fallback'));
   }
-  // Commit only after the first complete render. Failure leaves the original
-  // accessible HTML/video controls intact, including on devices without WebGL.
+  cleanup.setLid=setLid;
+  cleanup.setActive=value=>{if(active===value)return;const now=performance.now();if(value&&pausedAt&&introStart!==null)introStart+=now-pausedAt;pausedAt=value?0:now;active=value;lastFrame=now;wake();};
+  cleanup.reset=reset;
+  // Match the fallback's camera/size, then replace it atomically after one
+  // complete opaque render. The DOM never changes the reserved stage size.
   try {
+    const initial=options.finish||'platinum';finish(initial);
     product.rotation.set(pitch,yaw,roll);lid.rotation.x=hinge;
     product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
     const {width,height}=stage.getBoundingClientRect();renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
-    renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
-    stage.append(canvas,video,...hardware);stage.classList.add('model-ready');stage.dataset.opening=String(opening);setLid(defaultAngle,false);
-    stage.tabIndex=0;stage.setAttribute('role','group');stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to turn. Home resets the view.');
-    resizeObserver.observe(stage);visibilityObserver.observe(stage);if(!options.capture)loadPoster();resize();
-    finish(fallback?.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
-  } catch(error) { cleanup();throw error; }
+    updateScreen();placeButtons();renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
+    stage.append(canvas,...hardware);stage.classList.add('model-ready');stage.dataset.modelReady='true';stage.dataset.ready='true';
+    stage.tabIndex=0;stage.setAttribute('role','group');stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to rotate. Double-click or press Home to reset.');
+    canvas.title='Drag to rotate. Double-click to reset.';
+    resizeObserver.observe(stage);visibilityObserver.observe(stage);if(!options.capture)loadPoster();resize();publishPose();
+  }catch(error){cleanup();throw error;}
   if(options.capture) {
     visible=false;cancelAnimationFrame(frame);frame=0;observer.disconnect();resizeObserver.disconnect();visibilityObserver.disconnect();
     let capturedAngle=null;
-    cleanup.captureFrame=async({lidAngle=150,color='platinum',source=null}={})=>{
+    cleanup.captureFrame=async({lidAngle=150,color='platinum',source=null,viewYaw=defaultYaw,viewPitch=defaultPitch}={})=>{
       finish(color);setLid(lidAngle);hinge=targetHinge;
       if(source){const texture=await new T.TextureLoader().loadAsync(source);texture.colorSpace=T.SRGBColorSpace;poster?.dispose();poster=texture;}
       screenMat.map=source?poster:null;screenMat.color.setHex(source?0xffffff:0x080b10);screenMat.needsUpdate=true;
-      product.rotation.set(defaultPitch,defaultYaw,roll);lid.rotation.x=hinge;product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
-      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=capturedAngle!==lidAngle;renderer.render(scene,camera);capturedAngle=lidAngle;
+      product.rotation.set(viewPitch,viewYaw,roll);lid.rotation.x=hinge;product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
+      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);capturedAngle=lidAngle;
       const {width,height}=stage.getBoundingClientRect();
       const point=object=>{object.getWorldPosition(project);project.project(camera);return {x:(project.x*.5+.5)*width,y:(-.5*project.y+.5)*height};};
       const screenQuad=[[-36.15,24.1],[36.15,24.1],[36.15,-24.1],[-36.15,-24.1]].map(([x,y])=>{

@@ -8,6 +8,7 @@ export function createHero(video, canvas, {media, reduced, onState}) {
   let active=false, paused=false, clip=null, raf=0, lastTime=-1;
   let bootPending=!reduced.matches && !navigator.connection?.saveData;
   let failed=false, disposed=false, changing=false, pendingColor=null, boots=0;
+  let demo=bootPending, demoTimer=0, demoStep=0;
   const films=new Map();
   const animate=()=>!reduced.matches && !navigator.connection?.saveData;
   const wrap=index=>(index%5+5)%5;
@@ -23,9 +24,10 @@ export function createHero(video, canvas, {media, reduced, onState}) {
     canvas.dataset.paused=String(paused||!active);
     canvas.dataset.failed=String(failed);
     canvas.setAttribute('aria-label',`${timeline?.carts[wrap(selected)]||'Cartridge'}${seated?' in the slot':' selected'}`);
-    onState({moving,paused,active,failed});
+    canvas.dataset.demo=String(demo);
+    onState({moving,paused,active,failed,demo});
   }
-  function painted() {canvas.dataset.painted='true';poster.hidden=true;}
+  function painted() {canvas.dataset.painted='true';poster.hidden=true;canvas.dispatchEvent(new Event('hero:frame'));}
   function still(row) {
     if(!atlas)return;
     context.drawImage(atlas,0,row*480,720,480,0,0,720,480);painted();
@@ -111,18 +113,44 @@ export function createHero(video, canvas, {media, reduced, onState}) {
     else if(!seated&&selected!==target) {
       const step=Math.sign(target-selected);start(`${step>0?'right':'left'}-${wrap(selected)}`,selected+step);
     } else if(!seated&&wantSeated)start(`insert-${wrap(selected)}`);
-    else state();
+    else {state();scheduleDemo();}
   }
-  function input(action) {
+  function clearDemoTimer() {clearTimeout(demoTimer);demoTimer=0;}
+  function scheduleDemo() {
+    clearDemoTimer();
+    if(!demo||!animate()||!active||paused||clip||bootPending||changing||failed)return;
+    demoTimer=setTimeout(()=>{
+      demoTimer=0;
+      if(!demo||!active||paused||disposed)return;
+      // Native browsing and slot motion, with a readable pause at each stop.
+      const action=seated?'eject':demoStep++%2===0?'right':'insert';
+      input(action,false);
+    },seated?1300:1000);
+  }
+  function takeControl() {
+    if(!demo)return;
+    demo=false;clearDemoTimer();state();
+  }
+  function input(action,manual=true) {
     if(disposed)return;
+    if(manual)takeControl();
+    clearDemoTimer();
     paused=false;
     if(action==='boot') {
       if(bootPending||clip?.key==='boot')return;
       ++operation;stopFrames();clip=null;selected=target=0;seated=wantSeated=false;
       bootPending=true;still(0);
-    } else if(action==='left'||action==='right') {
-      wantSeated=false;
-      target=Math.max(selected-5,Math.min(selected+5,target+(action==='right'?1:-1)));
+    } else if(['left','right','up','down'].includes(action)) {
+      // The device's D-pad does not eject a running game. This preview has one
+      // GBA shelf; Up/Down skip to the next distinct initial, as the OS does.
+      if(seated||wantSeated)return;
+      const step=action==='right'||action==='down'?1:-1;
+      let distance=1;
+      if(action==='up'||action==='down') {
+        const initial=timeline?.carts[wrap(target)]?.[0];
+        while(distance<5&&timeline?.carts[wrap(target+step*distance)]?.[0]===initial)distance++;
+      }
+      target=Math.max(selected-5,Math.min(selected+5,target+step*distance));
     } else if(action==='insert')wantSeated=true;
     else if(action==='eject')wantSeated=false;
     state();if(clip)resume();else pump();
@@ -143,15 +171,15 @@ export function createHero(video, canvas, {media, reduced, onState}) {
     } catch {if(current===generation){failed=true;changing=false;bootPending=false;state();}}
   }
   const motionChange=()=>{
-    if(reduced.matches){bootPending=false;if(clip)finish(clip.operation);else{settled();state();pump();}}
+    if(reduced.matches){takeControl();bootPending=false;if(clip)finish(clip.operation);else{settled();state();pump();}}
   };
   reduced.addEventListener('change',motionChange);
   setColor(color);
   return {
-    input,setColor,
-    setActive(value){active=value;if(!active)stopFrames();else if(clip)resume();else pump();state();},
-    play(){if(!clip&&!bootPending){input('boot');return;}paused=false;if(clip)resume();else pump();state();},
-    toggle(){if(!clip&&!bootPending){input('boot');return;}paused=!paused;if(paused)stopFrames();else if(clip)resume();else pump();state();},
-    dispose(){disposed=true;++operation;stopFrames();reduced.removeEventListener('change',motionChange);for(const value of films.values())value.then(URL.revokeObjectURL).catch(()=>{});}
+    input,setColor,takeControl,
+    setActive(value){if(active===value)return;active=value;if(!active){clearDemoTimer();stopFrames();}else if(clip)resume();else pump();state();},
+    play(){demo=animate();paused=false;if(clip)resume();else pump();state();},
+    toggle(){if(demo&&!paused){takeControl();paused=true;stopFrames();}else{demo=animate();paused=false;if(clip)resume();else pump();}state();},
+    dispose(){disposed=true;++operation;clearDemoTimer();stopFrames();reduced.removeEventListener('change',motionChange);for(const value of films.values())value.then(URL.revokeObjectURL).catch(()=>{});}
   };
 }
