@@ -144,18 +144,18 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 }
 
 /* One fixed projection from first paint through every lid transition. */
-.md-typeset .sp-preview{margin:0;padding:0;min-width:0;max-width:none}
-.sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;overflow:visible;touch-action:pan-y}
+.md-typeset .sp-preview{width:100%;margin:0;padding:0;min-width:0;max-width:none}
+.sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;overflow:hidden;touch-action:pan-y}
+.motion-filters{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 .sp-render-fallback{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;border:0;border-radius:0;aspect-ratio:auto}
+.sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;border:0;border-radius:0;aspect-ratio:4/5;object-fit:fill}
 .model-poster{background-size:100% 100%;background-repeat:no-repeat}
-/* H.264 slightly shifts the baked navy backdrop. Fade only its empty margins
-   into the page so the video never exposes a rectangular edge. */
-.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;z-index:4;mask-image:linear-gradient(90deg,transparent,#000 1%,#000 99%,transparent),linear-gradient(transparent,#000 4%,#000 94%,transparent);mask-composite:intersect}
+.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;transition:opacity 160ms var(--motion-effects)}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
-.sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:var(--fallback-screen,scale(0));opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
+.sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:scale(var(--model-scale,1)) var(--fallback-screen);opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
 .sp-stage[data-ready=true][data-pose=open] .hero-screen{opacity:1}
-.sp-render-fallback .hardware-button{position:absolute;display:block;visibility:hidden;width:8.3333333333%;height:auto;aspect-ratio:1;transform:none;pointer-events:auto;z-index:3}
+.sp-render-fallback .hardware-button{position:absolute;display:block;visibility:hidden;width:max(24px,calc(40px * var(--model-scale,1)));height:max(24px,calc(40px * var(--model-scale,1)));transform:none;clip-path:circle(50%);pointer-events:auto;z-index:3}
+.sp-render-fallback .hardware-button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--teal);background:#54c2b81c}
 .sp-stage[data-ready=true][data-pose=open] .hardware-button{visibility:visible}
 .sp-render-fallback .hardware-button[hidden]{display:none}
 .preview-controls{display:flex;align-items:center;justify-content:center;gap:20px;min-height:74px;padding:8px 0}
@@ -194,4 +194,3 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 @media(max-width:540px){.home{padding-inline:24px}.intro{padding:36px 0 40px;gap:24px}.sp-preview .sp-stage{max-width:336px}.md-typeset .intro-wordmark{width:200px;margin-bottom:22px}.intro-text{font-size:16px}.md-typeset ul.feature-list:not([hidden]){grid-template-columns:1fr;gap:0}.features,.studio-note{padding-block:28px}.md-typeset .feature-list a{padding-block:18px}.md-typeset img.feature-icon{width:40px;height:40px}.feature-list strong{font-size:18px}.foot-base{padding:24px 20px}.foot-pager{padding:20px}.studio-note{align-items:start;gap:18px}.md-typeset .studio-art .feature-icon{width:56px;height:56px}.studio-note p{font-size:16px}.md-typeset .keys dl{grid-template-columns:1fr}.md-typeset .keys dt{border-bottom:0;padding-bottom:0}.md-typeset .keys dd{padding-top:4px}}
 @media(max-width:360px){.preview-controls{flex-direction:column;gap:12px}}
 @media(prefers-reduced-motion:reduce){.hero-screen,.model-opening,.preview-toggle,.model-fold,.model-fold svg,.finish-picker button,.md-typeset .site-button,.md-typeset .feature-list a{transition:none!important}}
-

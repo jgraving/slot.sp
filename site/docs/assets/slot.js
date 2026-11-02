@@ -66,6 +66,13 @@
     const picture = still.parentElement;
     const motion = stage.querySelector('.model-opening');
     const fold = document.querySelector('.model-fold');
+    const matteSample = document.createElement('canvas');
+    matteSample.width = matteSample.height = 1;
+    const matteContext = matteSample.getContext('2d', {willReadFrequently:true});
+    const matteChannels = ['R','G','B'].map(channel => document.querySelector(`#sp-video-matte feFunc${channel}`));
+    function fitModel() { stage.style.setProperty('--model-scale', String(stage.getBoundingClientRect().width / 480)); }
+    new ResizeObserver(fitModel).observe(stage);
+    fitModel();
     const canAnimate = () => !reduced.matches && !navigator.connection?.saveData;
     let shell = 'platinum', ready = false, introPending = canAnimate();
     let pose = introPending ? 'closed' : 'open', motionTarget = null, motionRequest = 0, posterRequest = 0;
@@ -117,7 +124,7 @@
       introPending = false;
       const current = ++motionRequest;
       motion.pause();
-      stage.dataset.motionReady = 'false';
+      delete stage.dataset.motionReady;
       motionTarget = open ? 'open' : 'closed';
       if (!animate || !canAnimate()) { await finishMotion(current); return; }
       motion.poster = asset(`${colorToken()}-${open ? 'closed' : 'open'}.png`);
@@ -126,11 +133,23 @@
       setPose(open ? 'opening' : 'closing');
       if (visible && !document.hidden) motion.play().catch(() => finishMotion(current));
     }
-    motion.addEventListener('loadeddata', () => {
-      if (busy() && motion.readyState >= 2) stage.dataset.motionReady = 'true';
-    });
     motion.addEventListener('ended', () => finishMotion());
     motion.addEventListener('error', () => finishMotion());
+    motion.addEventListener('loadeddata', () => {
+      if (!busy()) return;
+      try {
+        // H.264 can shift a flat RGB background during YUV conversion. Match
+        // the decoded frame to the page before revealing its rectangular layer.
+        matteContext.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--page').trim();
+        matteContext.fillRect(0,0,1,1);
+        const target = Array.from(matteContext.getImageData(0,0,1,1).data);
+        matteContext.drawImage(motion,0,0,1,1,0,0,1,1);
+        const source = matteContext.getImageData(0,0,1,1).data;
+        matteChannels.forEach((channel,index) => channel.setAttribute('intercept', String((target[index] - source[index]) / 255)));
+        motion.style.filter = `url(${JSON.stringify(new URL('#sp-video-matte', document.baseURI).href)})`;
+        stage.dataset.motionReady = 'true';
+      } catch { finishMotion(); }
+    });
     fold.addEventListener('click', () => flipLid(pose === 'closed'));
     stage.addEventListener('sp:finish', event => {
       shell = event.detail;
@@ -147,13 +166,7 @@
         const dy1=p1.y-p2.y,dy2=p3.y-p2.y,dy3=p0.y-p1.y+p2.y-p3.y,den=dx1*dy2-dx2*dy1;
         const g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
         const matrix=[(p1.x-p0.x+g*p1.x)/720,(p1.y-p0.y+g*p1.y)/720,0,g/720,(p3.x-p0.x+h*p3.x)/480,(p3.y-p0.y+h*p3.y)/480,0,h/480,0,0,1,0,p0.x,p0.y,0,1];
-        function fitScreen() {
-          const scale = stage.getBoundingClientRect().width / 480;
-          const fitted = matrix.map((value, index) => [0,1,4,5,12,13].includes(index) ? value * scale : value);
-          stage.style.setProperty('--fallback-screen', `matrix3d(${fitted.join(',')})`);
-        }
-        fitScreen();
-        new ResizeObserver(fitScreen).observe(stage);
+        stage.style.setProperty('--fallback-screen', `matrix3d(${matrix.join(',')})`);
         stage.querySelectorAll('[data-hardware]').forEach(button => {
           const point = projection.controls[button.dataset.hardware];
           button.style.left = (point.x / 480 * 100) + '%'; button.style.top = (point.y / 600 * 100) + '%';
@@ -312,4 +325,3 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
 })();
-
