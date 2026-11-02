@@ -187,10 +187,10 @@ fn flowing_gradient_advances_while_custom_wallpapers_remain_still() {
             app.tick_ms(now);
             let mut draws = vec![]; app.draw(&mut draws);
             let phase = draws.iter().find_map(|draw| if let Draw::Lava { phase, .. } = draw { Some(*phase) } else { None });
-            if wallpaper == WallpaperPick::Default { phases.push(phase.expect("flowing gradient is missing")); }
+            if matches!(wallpaper,WallpaperPick::Default|WallpaperPick::Blur) { phases.push(phase.expect("flowing gradient is missing")); }
             else { assert!(phase.is_none(), "a still wallpaper acquired motion"); }
         }
-        if wallpaper == WallpaperPick::Default { assert_ne!(phases[0], phases[1]); }
+        if matches!(wallpaper,WallpaperPick::Default|WallpaperPick::Blur) { assert_ne!(phases[0], phases[1]); }
     }
 }
 
@@ -219,11 +219,11 @@ fn flowing_gradient_is_already_moving_under_the_outgoing_game() {
             out.clear();
             app.draw(&mut out);
             let phase = out.iter().find_map(|d| match d { Draw::Lava { phase, .. } => Some(*phase), _ => None });
-            if wallpaper == WallpaperPick::Default { phases.push(phase.expect("gradient switched to static during game exit")); }
+            if matches!(wallpaper,WallpaperPick::Default|WallpaperPick::Blur) { phases.push(phase.expect("gradient switched to static during game exit")); }
             else { assert!(phase.is_none()); }
             app.update(0.016);
         }
-        if wallpaper == WallpaperPick::Default { assert_ne!(phases[0], phases[7]); }
+        if matches!(wallpaper,WallpaperPick::Default|WallpaperPick::Blur) { assert_ne!(phases[0], phases[7]); }
         for _ in 0..120 { app.update(0.016); }
         assert!(matches!(app.phase(), Phase::Shelf));
         out.clear();app.draw(&mut out);

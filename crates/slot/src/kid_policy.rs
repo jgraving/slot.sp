@@ -110,7 +110,7 @@ impl Policy {
             || !(0..=2).contains(&nums[1])
             || !(5..=240).contains(&nums[2])
             || !(0..1440).contains(&nums[3])
-            || (nums.len() >= 10 && !(10..=80).contains(&nums[9]))
+            || (nums.len() >= 10 && !(0..=100).contains(&nums[9]))
             || (nums.len() == 12 && (!(0..=31).contains(&nums[10]) || !(0..=86_400).contains(&nums[11])))
             || nums[5] < 0
             || nums[6] < 0

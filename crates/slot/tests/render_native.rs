@@ -366,7 +366,10 @@ fn every_shortcut_row_keeps_its_label_clear_of_its_binding_on_a_4_by_3_panel() {
         f.advance(&mut input);
     };
     tap(&mut f, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut f, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut f, Btn::Down);
     }
     tap(&mut f, Btn::A);

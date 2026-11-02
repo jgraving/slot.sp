@@ -30,6 +30,13 @@ fn height_scale(h: f32) -> f32 {
     }
 }
 
+// Invisible wheel: the selected cartridge rests at its crown. Map travel to
+// angle so the same spring drives both axes, including reversals and overshoot.
+const WHEEL_RADIUS: f32 = 900.0;
+fn wheel_drop(x: f32) -> f32 {
+    WHEEL_RADIUS-(WHEEL_RADIUS*WHEEL_RADIUS-x*x).max(0.0).sqrt()
+}
+
 const SIDE_SCALE: f32 = 0.78;
 const SIDE_ALPHA: f32 = 1.0;
 
@@ -42,7 +49,10 @@ pub fn rest_y(h: f32) -> f32 {
 pub fn foot_y(h: f32) -> f32 {
     rest_y(h) + h * height_scale(h)
 }
-const OMEGA: f32 = 16.0;
+// An expressive spatial spring, tuned for the weight of the large cartridges.
+// Keep velocity when retargeting so quick taps and reversals carry momentum.
+const STIFFNESS: f32 = 380.0;
+const DAMPING: f32 = 0.72;
 const PART: f32 = 100.0;
 
 const SLOTS: i32 = 3;
@@ -62,6 +72,7 @@ pub struct Shelf {
     pub carts: Vec<Cart>,
     pub index: usize,
     pub scroll: f32,
+    pub wheel: bool,
     faces: Vec<Option<TexId>>,
     interiors: Vec<Option<TexId>>,
     shadow: Option<TexId>,
@@ -95,6 +106,7 @@ impl Shelf {
             carts,
             index: 0,
             scroll: 0.0,
+            wheel: true,
             shadow: None,
             gb_shadow: None,
             gbc_shadow: None,
@@ -474,9 +486,39 @@ impl Shelf {
     }
 
     pub fn update(&mut self, dt: f32) {
-        let accel = -2.0 * OMEGA * self.vel - OMEGA * OMEGA * (self.scroll - self.scroll_target());
-        self.vel += accel * dt;
-        self.scroll += self.vel * dt;
+        if !dt.is_finite() || dt <= 0.0 {
+            return;
+        }
+        let target = self.scroll_target();
+        let x = self.scroll - target;
+        let omega = STIFFNESS.sqrt();
+        // Holding a direction should flow forward, including during the initial
+        // repeat delay. Release restores the small overshoot and springy settle.
+        let (x, vel) = if self.held.is_some() {
+            let b = self.vel + omega * x;
+            let dt = dt.min(1.0);
+            let decay = (-omega * dt).exp();
+            ((x + b * dt) * decay, (self.vel - omega * b * dt) * decay)
+        } else {
+            let decay_rate = DAMPING * omega;
+            let frequency = omega * (1.0 - DAMPING * DAMPING).sqrt();
+            let dt = dt.min(1.0);
+            let (sin, cos) = (frequency * dt).sin_cos();
+            let decay = (-decay_rate * dt).exp();
+            (
+                (x * cos + (self.vel + decay_rate * x) / frequency * sin) * decay,
+                (self.vel * cos - (decay_rate * self.vel + STIFFNESS * x) / frequency * sin) * decay,
+            )
+        };
+        // Solve the spring directly: dropped frames cannot destabilise it and
+        // 30/60/120 Hz all describe the same motion. Stop below a visible pixel.
+        if x.abs() < 0.0001 && vel.abs() < 0.001 {
+            self.scroll = target;
+            self.vel = 0.0;
+        } else {
+            self.scroll = target + x;
+            self.vel = vel;
+        }
     }
 
     pub fn draw(
@@ -583,7 +625,8 @@ impl Shelf {
                 continue;
             }
             let x = x + shake;
-            let y0 = foot_y(ch as f32) - h0;
+            let full_h=ch as f32*shelf_scale(cart.platform);
+            let y0=rest_y(ch as f32)+(full_h-h0)/2.0+if self.wheel {wheel_drop(centre-canvas.w/2.0)}else{0.0};
             let y = y0 + (-h - 12.0 - y0) * depart;
             if alpha < 1.0 {
                 let backing = match self.shell(i) {

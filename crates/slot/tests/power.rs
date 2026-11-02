@@ -135,9 +135,42 @@ fn the_backlight_follows_brightness_from_boot() {
     let mut a = boot(d.path());
     let (power, step) = panel(d.path(), Duration::from_secs(60));
     a.set_power(power);
-    assert_eq!(step.load(Ordering::Relaxed), 3);
-    a.apply(Action::BrightnessUp);
     assert_eq!(step.load(Ordering::Relaxed), 4);
+    a.apply(Action::BrightnessUp);
+    assert_eq!(step.load(Ordering::Relaxed), 5);
+    for _ in 0..12 {
+        a.apply(Action::BrightnessDown);
+    }
+    assert_eq!(a.brightness(), 0);
+    assert_eq!(
+        step.load(Ordering::Relaxed),
+        1,
+        "the lowest brightness turned the panel off"
+    );
+}
+
+#[test]
+fn a_zero_brightness_night_preset_stays_lit_except_during_sleep() {
+    let d = tmp_root_with_carts(&["Emerald"]);
+    slot::display_settings::DisplaySettings {
+        day: (7, 0),
+        bedtime: (0, 9),
+        ..Default::default()
+    }
+    .save(d.path())
+    .unwrap();
+    let mut a = boot(d.path());
+    let (power, step) = panel(d.path(), Duration::from_secs(60));
+    a.set_power(power);
+    a.apply(Action::NightToggle);
+    assert_eq!(a.brightness(), 0);
+    assert_eq!(step.load(Ordering::Relaxed), 1);
+    a.apply(Action::LidClose);
+    assert_eq!(step.load(Ordering::Relaxed), 0);
+    a.apply(Action::LidOpen);
+    assert_eq!(step.load(Ordering::Relaxed), 1);
+    a.apply(Action::NightToggle);
+    assert_eq!(step.load(Ordering::Relaxed), 8);
 }
 
 #[test]

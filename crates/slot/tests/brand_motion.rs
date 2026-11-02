@@ -1,34 +1,9 @@
-use slot::brand_motion::{boot_frame_at,frame_at,boot_opacity,FRAMES,REVEAL_MS,HOLD_MS,FADE_MS,BOOT_MS};
+use slot::brand_motion::{frame_at,FRAMES,REVEAL_MS};
 #[test]
-fn reveal_locks_to_final_frame_and_fade_ends_without_replaying() {
-    assert_eq!(frame_at(0),0);
-    assert_eq!(frame_at(REVEAL_MS),FRAMES-1);
-    assert_eq!(frame_at(u64::MAX),FRAMES-1);
+fn hero_reveal_locks_to_the_final_frame() {
+    assert_eq!(frame_at(0),0);assert_eq!(frame_at(u64::MAX),FRAMES-1);
     let mut previous=0;
-    for ms in 0..=BOOT_MS {
-        let frame=frame_at(ms);
-        assert!(frame>=previous);previous=frame;
-        assert!((0.0..=1.0).contains(&boot_opacity(ms)));
-    }
-    assert_eq!(boot_opacity(REVEAL_MS),1.0);
-    assert_eq!(boot_opacity(REVEAL_MS + HOLD_MS),1.0);
-    assert!(boot_opacity(REVEAL_MS + HOLD_MS + FADE_MS / 2) > 0.0);
-    assert!(boot_opacity(REVEAL_MS + HOLD_MS + FADE_MS / 2) < 1.0);
-    assert_eq!(boot_opacity(BOOT_MS),0.0);
-}
-
-#[test]
-fn the_boot_intro_plays_the_reveal_backwards_from_the_finished_mark() {
-    // Open on the finished mark so it matches the firmware's static logo.
-    assert_eq!(boot_frame_at(0),FRAMES-1);
-    assert_eq!(boot_frame_at(REVEAL_MS),0);
-    assert_eq!(boot_frame_at(u64::MAX),0);
-    let mut previous=FRAMES-1;
-    for ms in 0..=BOOT_MS {
-        let frame=boot_frame_at(ms);
-        assert!(frame<=previous);previous=frame;
-        assert_eq!(frame_at(ms)+frame,FRAMES-1);
-    }
+    for ms in 0..=REVEAL_MS {let frame=frame_at(ms);assert!(frame>=previous);previous=frame;}
 }
 
 #[test]

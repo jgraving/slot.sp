@@ -1,0 +1,46 @@
+//! Review the boot handoff over the real launcher and verify both endpoints.
+#[cfg(target_os="linux")]
+#[path="../../slot-ui/examples/support/mod.rs"] mod support;
+#[cfg(target_os="linux")]
+fn main(){
+    use slot::{frontend::Frontend,boot_motion::{BootMotion,BOOT_MS}};
+    use slot_gfx::Compositor;
+    let dir=std::path::PathBuf::from(std::env::args().nth(1).unwrap());std::fs::create_dir_all(&dir).unwrap();
+    let width:u32=std::env::args().nth(3).and_then(|s|s.parse().ok()).unwrap_or(640);
+    let root=dir.join("card");slot::root::ensure(&root);
+    slot_store::write_slot_state(&root,&slot_store::SlotState{clock_set:true,..Default::default()}).unwrap();
+    for name in ["Aurora","Borealis","Celeste"] {std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")),[0;256]).unwrap();}
+    let surface=support::Egl::new(std::env::args().nth(2).as_deref()!=Some("gl"));
+    let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut g);
+    f.render(&mut g,(width,480));
+    let motion=BootMotion::upload(&mut g).unwrap();
+    let firmware=slot::bootlogo::decode(include_bytes!("../../../card/System/bootlogo.bmp")).unwrap();
+    let firmware=slot::bootlogo::compose(&firmware,(width as usize,480)).unwrap();
+    for frame in 0..=(BOOT_MS*60).div_ceil(1000)+2 {
+        let ms=frame*1000/60;f.compose(&mut g);let normal=g.read_frame();
+        f.compose_boot_frame(&mut g,&motion,ms);let pixels=g.read_frame();
+        if ms<=33 {for (rgba,rgb) in pixels.chunks_exact(4).zip(&firmware.rgb) {assert_eq!(&rgba[..3],rgb,"boot handoff must open on the exact firmware logo");}}
+        if (760..BOOT_MS).contains(&ms) {
+            let bay=((480-slot_ui::MOUTH_H as u32)*width*4)as usize;
+            assert!(pixels[bay..]==normal[bay..],"the boot mark painted over the hardware bay at {ms} ms");
+        }
+        if ms>=BOOT_MS {assert_eq!(pixels,normal,"the final overlay must leave the normal launcher unchanged");}
+        let mut e=png::Encoder::new(std::fs::File::create(dir.join(format!("boot-{frame:03}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&pixels).unwrap();
+    }
+    motion.release(&mut g);
+    // Exercise the handheld's asynchronous startup path too. The first render
+    // must finish on the exact firmware frame, and input must still dismiss it.
+    {
+        use slot_input::{InputSource,RawEvent,Btn,Millis};
+        struct Press;impl InputSource for Press {fn poll(&mut self,_:Millis)->Vec<RawEvent>{vec![RawEvent::Down(Btn::Menu)]}}
+        let mut startup=Frontend::boot(Box::new(slot_power::SimPlatform::at(root)));
+        startup.upload_boot_faces(&mut g);startup.enable_boot_intro(&mut g);startup.render(&mut g,(width,480));
+        let pixels=g.read_frame();
+        for (rgba,rgb) in pixels.chunks_exact(4).zip(&firmware.rgb) {assert_eq!(&rgba[..3],rgb,"asynchronous startup skipped the firmware frame");}
+        startup.advance_at(&mut Press,17,1.0/60.0);startup.render(&mut g,(width,480));
+        assert_ne!(g.read_frame(),pixels,"input did not dismiss the boot intro");
+    }
+    std::fs::write(dir.join("review-complete.txt"),b"Complete native boot review\n").unwrap();
+}
+#[cfg(not(target_os="linux"))] fn main(){}

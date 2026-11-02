@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="previews/readme-model/hero.png">
-  <img src="previews/readme-model/hero.gif" width="820" alt="slot.sp: Your games. SP style. An SP model displays the carousel and glass logo animation.">
+  <source media="(prefers-reduced-motion: reduce)" srcset="previews/readme-model/hero-3d.png">
+  <img src="previews/readme-model/hero-3d.gif" width="820" alt="slot.sp: Your games. SP style. A metallic 3D RG SP flips open to the current light interface: a cartridge enters the slot, ejects and returns to the carousel.">
 </picture>
 
 **[Website & guide](https://jakegraving.com/slot.sp/)** · **[New installation](https://jakegraving.com/slot.sp/installing/)** · **[Update](https://jakegraving.com/slot.sp/updating/)** · **[Cart Studio](https://jakegraving.com/slot.sp/studio/)**
@@ -11,7 +11,7 @@
 
 **slot.sp** is a game launcher for Anbernic handhelds, inspired by the SP. Browse your games as cartridges, press **A** and play.
 
-🎨 Four SP colors · 🙂 Kid mode with time limits · 🎧 Bluetooth & USB audio · 🌗 Day/night presets · 💾 Save & resume · ⭐ Favorites & Recents
+🎨 Four SP colors · 🙂 Kid mode with time limits · 🎧 Bluetooth & USB audio · 🌗 Light & dark themes · Scheduled day/night presets · 💾 Save & resume · ⭐ Favorites sorting & Recents · 🕹️ Remappable buttons
 
 **[Explore the features and controls →](https://jakegraving.com/slot.sp/features/guide/)**
 

@@ -74,100 +74,79 @@ impl Icon {
     }
 }
 
-const HALO: [u8; 3] = [0x08, 0x08, 0x0a];
-pub const HALO_PX: u32 = 1;
+pub const GLYPH_PAD_PX: u32 = 1;
 
 pub const WARNING_INK: [u8; 3] = [0xff, 0xb8, 0x2e];
 
-pub fn haloed(cov: &[u8], cw: u32, ch: u32, colour: [u8; 3]) -> CartFace {
-    haloed_with(cov, cw, ch, |_, _| colour)
+/// Flat ink and the font's original alpha ramp. Keep the shared padding without
+/// expanding the silhouette or baking a contrasting colour into its edges.
+pub fn coverage_face(cov: &[u8], cw: u32, ch: u32, colour: [u8; 3]) -> CartFace {
+    coverage_face_with(cov, cw, ch, |_, _| colour)
 }
 
-pub fn haloed_with(
-    cov: &[u8],
-    cw: u32,
-    ch: u32,
+pub fn coverage_face_with(
+    cov: &[u8], cw: u32, ch: u32,
     colour_at: impl Fn(isize, isize) -> [u8; 3],
 ) -> CartFace {
-    let pad = HALO_PX as usize;
-    let (cw, ch) = (cw as usize, ch as usize);
-    let (w, h) = (cw + 2 * pad, ch + 2 * pad);
-    let at = |x: isize, y: isize| -> u8 {
-        if x < 0 || y < 0 || x >= cw as isize || y >= ch as isize {
-            0
-        } else {
-            cov[y as usize * cw + x as usize]
-        }
-    };
-
-    let mut rgba = Vec::with_capacity(w * h * 4);
-    for y in 0..h {
-        for x in 0..w {
-            let (gx, gy) = (x as isize - pad as isize, y as isize - pad as isize);
-            let ink = at(gx, gy);
-            let mut halo = 0u8;
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    halo = halo.max(at(gx + dx, gy + dy));
-                }
-            }
-            if ink > 0 {
-                let colour = colour_at(gx, gy);
-                let a = ink as u32;
-                let inv = 255 - a;
-                let mix = |c: u8, s: u8| ((c as u32 * a + s as u32 * inv) / 255) as u8;
-                rgba.extend_from_slice(&[
-                    mix(colour[0], HALO[0]),
-                    mix(colour[1], HALO[1]),
-                    mix(colour[2], HALO[2]),
-                    ink.max(halo),
-                ]);
-            } else {
-                rgba.extend_from_slice(&[HALO[0], HALO[1], HALO[2], halo]);
-            }
-        }
-    }
-    CartFace {
-        rgba,
-        w: w as u32,
-        h: h as u32,
-    }
+    let (w,h)=(cw+2*GLYPH_PAD_PX,ch+2*GLYPH_PAD_PX);
+    let mut rgba=vec![0;(w*h*4)as usize];
+    for y in 0..ch {for x in 0..cw {
+        let i=(((y+GLYPH_PAD_PX)*w+x+GLYPH_PAD_PX)*4)as usize;
+        rgba[i..i+3].copy_from_slice(&colour_at(x as isize,y as isize));
+        rgba[i+3]=cov[(y*cw+x)as usize];
+    }}
+    CartFace{rgba,w,h}
 }
 
 pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
     let Some(r) = raster(icon, px) else {
-        return CartFace {
-            rgba: Vec::new(),
-            w: 0,
-            h: 0,
-        };
+        return CartFace { rgba: Vec::new(), w: 0, h: 0 };
     };
-    if matches!(
-        icon,
-        Icon::Bluetooth | Icon::BluetoothMuted | Icon::HeadphonesMuted | Icon::Usb | Icon::UsbMuted
-    ) {
-        // Keep the common icon box, but no black halo on these fine strokes.
-        let (w, h) = (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX);
-        let mut rgba = vec![0; (w * h * 4) as usize];
-        for y in 0..r.h {
-            for x in 0..r.w {
-                let at = (((y + HALO_PX) * w + x + HALO_PX) * 4) as usize;
-                rgba[at..at + 4].copy_from_slice(&[
-                    colour[0],
-                    colour[1],
-                    colour[2],
-                    r.cov[(y * r.w + x) as usize],
-                ]);
-            }
-        }
-        return CartFace { rgba, w, h };
-    }
-    haloed(&r.cov, r.w, r.h, colour)
+    coverage_face(&r.cov, r.w, r.h, colour)
+}
+
+pub const STATUS_ICON_SIZE:u32=24;
+pub const STATUS_ICON_PX:f32=21.0;
+// Filled speaker and a diagonal slash, shared by the status bar and volume HUD.
+const MUTED_SPEAKER: &str = r#"<path d="M3 9h3l6 6v5l-6-5H3zM12 4 8 8l4 4zM14 7.9v2.8l2.4 2.4A5 5 0 0 0 14 7.9zM14 3.2v2.1a7 7 0 0 1 4.4 9.1l1.5 1.5A9 9 0 0 0 14 3.2zM3.2 2 22 20.8 20.8 22 2 3.2z"/>"#;
+/// Flat status glyphs share the floating volume pill's native glyph size.
+pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
+    let path=match icon {
+        Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill-rule="evenodd" d="M11 1 20 9l-5 3 5 3-9 8V14l-5 5-2-2 6-5-6-5 2-2 5 5z M14 6v4l2-2z M14 14v4l2-2z"/>"#,
+        Icon::VolumeMuted|Icon::VolumeZero|Icon::Volume=>MUTED_SPEAKER,
+        Icon::Headphones|Icon::HeadphonesMuted=>r#"<path d="M3 12a9 9 0 0 1 18 0v9h-6v-9h3a6 6 0 0 0-12 0h3v9H3z"/>"#,
+        Icon::Usb|Icon::UsbMuted=>r#"<path d="m12 1 4 5h-3v7h4V9h-2V5h5v5h-2v4h-5v5a3 3 0 1 1-2 0v-3H6V9a2 2 0 1 1 2 0v5h3V6H8z"/>"#,
+        Icon::Charging=>r#"<path d="M13 1 4 14h7l-1 9L20 9h-7z"/>"#,
+        _=>return icon_face(icon,STATUS_ICON_PX,ink),
+    };
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="#{:02x}{:02x}{:02x}" transform="translate(1 1) scale(.9167)">{path}</g></svg>"##,ink[0],ink[1],ink[2]);
+    let mut rgba=crate::art::render_svg(&svg,24,24).expect("status vector");
+    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&ink);}
+    CartFace{rgba,w:24,h:24}
+}
+
+/// Flat, antialiased control symbols with a common square box and stroke weight.
+/// Floating pills provide their own surface, so these need no glyph-font halo.
+pub fn control_icon_face(icon:Icon,size:u32,ink:[u8;3])->CartFace {
+    let paths=match icon {
+        Icon::Volume=>r#"<path d="M11 5 6 9H3v6h3l5 4Z"/><path fill="none" stroke="currentColor" stroke-width="2" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>"#,
+        Icon::VolumeZero=>r#"<path d="M11 5 6 9H3v6h3l5 4Z"/>"#,
+        Icon::VolumeMuted=>MUTED_SPEAKER,
+        Icon::Brightness=>r#"<g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></g>"#,
+        Icon::BlueLight=>r#"<g fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0Zm2-6v9.5M17 6h2m-2 4h3"/></g><circle cx="12" cy="18" r="1.8"/>"#,
+        Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill="none" stroke="currentColor" stroke-width="2" d="m6 7 12 10-6 5V2l6 5L6 17"/>"#,
+        Icon::Headphones|Icon::HeadphonesMuted=>r#"<path fill="none" stroke="currentColor" stroke-width="2" d="M4 14v-2a8 8 0 0 1 16 0v2M4 12h3v8H4Zm13 0h3v8h-3Z"/>"#,
+        _=>return icon_face(icon,size as f32,ink),
+    };
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g color="#{:02x}{:02x}{:02x}" fill="currentColor" stroke-linecap="round" stroke-linejoin="round">{paths}</g></svg>"##,ink[0],ink[1],ink[2]);
+    let mut rgba=crate::art::render_svg(&svg,size,size).expect("control icon");
+    for p in rgba.chunks_exact_mut(4){p[..3].copy_from_slice(&ink);}
+    CartFace{rgba,w:size,h:size}
 }
 
 pub fn icon_box(px: f32) -> (u32, u32) {
     match raster(Icon::Volume, px) {
-        Some(r) => (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX),
+        Some(r) => (r.w + 2 * GLYPH_PAD_PX, r.h + 2 * GLYPH_PAD_PX),
         None => (0, 0),
     }
 }
@@ -290,7 +269,7 @@ pub fn badge_face(badge: Badge, px: f32, colour: [u8; 3]) -> CartFace {
             out[(dy as u32 * f.w + dx as u32) as usize] = cov[gy * m.width + gx];
         }
     }
-    haloed(&out, f.w, f.h, colour)
+    coverage_face(&out, f.w, f.h, colour)
 }
 
 struct Raster {
@@ -321,6 +300,15 @@ fn raster(icon: Icon, px: f32) -> Option<Arc<Raster>> {
 fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
     let font = symbols_font()?;
     let f = frame(font, px);
+    if icon == Icon::VolumeMuted {
+        let side=px.round().max(1.0) as u32;
+        let svg=format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="white">{MUTED_SPEAKER}</g></svg>"#);
+        let rgba=crate::art::render_svg(&svg,side,side)?;
+        let mut out=Raster{cov:vec![0;(f.w*f.h)as usize],w:f.w,h:f.h};
+        let (x0,y0)=((f.w-side)/2,(f.h-side)/2);
+        for y in 0..side {for x in 0..side {out.cov[((y+y0)*f.w+x+x0)as usize]=rgba[((y*side+x)*4+3)as usize];}}
+        return Some(out);
+    }
     if matches!(icon, Icon::BluetoothMuted | Icon::HeadphonesMuted) {
         return muted_audio_raster(icon, px);
     }
@@ -331,6 +319,12 @@ fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
         return Some(audio_raster(icon, f.w, f.h, px));
     }
 
+    font_raster(icon,px)
+}
+
+fn font_raster(icon:Icon,px:f32)->Option<Raster> {
+    let font=symbols_font()?;
+    let f=frame(font,px);
     let (m, cov) = font.rasterize(icon.glyph(), px);
     let x0 = m.xmin - f.left;
     let y0 = f.top - (m.ymin + m.height as i32);
@@ -349,10 +343,10 @@ fn rasterise(icon: Icon, px: f32) -> Option<Raster> {
     })
 }
 
-// Keep the device symbol full-size and copy the speaker's exact mute mark.
+// Legacy device-list composites retain their font's separate mute mark.
 // Call rasterise directly: the cache mutex is already held here.
 fn muted_audio_raster(icon: Icon, px: f32) -> Option<Raster> {
-    let speaker = rasterise(Icon::VolumeMuted, px)?;
+    let speaker = font_raster(Icon::VolumeMuted, px)?;
     let base = rasterise(
         if icon == Icon::BluetoothMuted {
             Icon::Bluetooth
@@ -410,7 +404,7 @@ fn muted_audio_raster(icon: Icon, px: f32) -> Option<Raster> {
 
 pub(crate) fn glyph_box(icon: Icon, px: f32) -> (u32, u32) {
     raster(icon, px)
-        .map(|r| (r.w + 2 * HALO_PX, r.h + 2 * HALO_PX))
+        .map(|r| (r.w + 2 * GLYPH_PAD_PX, r.h + 2 * GLYPH_PAD_PX))
         .unwrap_or((0, 0))
 }
 
@@ -542,7 +536,7 @@ mod mute_tests {
     #[test]
     fn mute_marks_match_speaker_without_shrinking_device_symbols() {
         for px in [20., 24., 32., 40.] {
-            let speaker = rasterise(Icon::VolumeMuted, px).unwrap();
+            let speaker = font_raster(Icon::VolumeMuted, px).unwrap();
             let mark = ink(&speaker, gap(&speaker) + 1, speaker.w).0;
             for (muted, base) in [
                 (Icon::BluetoothMuted, Icon::Bluetooth),
@@ -617,14 +611,26 @@ pub fn sound_device_icon(icon: Icon, ink: [u8; 3]) -> crate::UndoFace {
     crate::UndoFace { rgba, w, h }
 }
 
+pub(crate) const SMILEY_FEATURES: &str = r#"<circle cx="17" cy="17" r="4"/><circle cx="31" cy="17" r="4"/><path d="M12 26a12 12 0 0 0 24 0h-4a8 8 0 0 1-16 0z"/>"#;
+pub(crate) const SMILEY_PATH: &str = r#"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M17 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M31 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M12 26a12 12 0 0 0 24 0h-4a8 8 0 0 1-16 0z"/>"#;
+
 /// Gold foil approval sticker, rendered once at four times native resolution.
 pub fn kid_smiley_face() -> CartFace {
     let w = 30;
-    let svg = sticker_svg(include_str!("../assets/kid-smiley.svg"));
+    let source = include_str!("../assets/kid-smiley.svg").replace("<!-- smiley-features -->", SMILEY_FEATURES);
+    let svg = sticker_svg(&source);
     let hi = crate::art::render_svg(&svg, w * 4, w * 4).expect("embedded smiley SVG");
     CartFace {
         rgba: prefilter_star(&hi, w),
         w,
         h: w,
     }
+}
+
+/// Flat status symbol, separate from the foil approval sticker.
+pub fn kid_status_face()->CartFace {
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="#f6f4ef">{SMILEY_PATH}</g></svg>"##);
+    let mut rgba=crate::art::render_svg(&svg,24,24).expect("status smiley");
+    for pixel in rgba.chunks_exact_mut(4){pixel[..3].copy_from_slice(&crate::HUD_INK);}
+    CartFace{rgba,w:24,h:24}
 }

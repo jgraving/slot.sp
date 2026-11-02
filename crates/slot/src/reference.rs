@@ -37,11 +37,11 @@ pub fn pages(
             "Kid menu".into(),
             rows(&[
                 ("Open menu", "MENU"),
-                ("Select", "Up / Down, then A"),
+                ("Select", "D-Pad, then A"),
                 ("Volume / brightness", "Left / Right"),
                 ("Return to game", "B"),
                 ("Leave a game", "Exit game in menu"),
-                ("Adult settings", "Parent controls"),
+                ("Parent settings", "Parental controls"),
             ]),
         ));
     } else {

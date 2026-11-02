@@ -8,16 +8,16 @@ use slot_input::{InputSource, Millis};
 use slot_power::{Platform, Power};
 use slot_store::{BezelPick, Platform as Console, ShellColour, format_stamp};
 use slot_ui::{
-    ALERT_PX, BOLT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
+    ALERT_PX, CartFace, GbShell, HUD_ICON_PX, HUD_INK, Icon, LEGEND, LinkBadge,
     PowerChoice, QuickMenuFaces, QuickRow, QuickValue, RebuildScreen, StickerFields, Toast,
     UndoFace, badge_face, bezel_face, cart_shadow, chip_face, chip_shadow_face,
-    core_button_legends, date_time_text, default_game_bezel_face, delete_legends, footer_ink,
-    game_bezel_face, gb_cart_shadow, hhmm, hint_face, icon_face, link_button_legends,
+    core_button_legends, default_game_bezel_face, delete_legends, footer_ink,
+    game_bezel_face, gb_cart_shadow, hint_face, icon_face, link_button_legends,
     menu_detail_face, menu_face, photo_face, prompt_legends, quick_caret_face,
     quick_description_face, quick_label_face, quick_legend_faces, quick_pointer_face,
-    quick_value_face, quick_warning_value_face, rebuild_count_face, rebuild_title_face,
+    quick_value_face, rebuild_count_face, rebuild_title_face,
     repair_legends, set_clock_hint_face, socket_face, sticker_face, title_face, toast_face,
-    wallpaper_face, word_ink,
+    wallpaper_face,
 };
 
 use crate::app::{App, LinkRow, Phase};
@@ -35,12 +35,24 @@ const DOZE_TIMEOUT: Duration = Duration::from_secs(180);
 const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
+    menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
+    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
     bluetooth_tex: Option<TexId>,
+    bluetooth_old_tex: Option<TexId>,
+    bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
+    spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
     audio_icon_key: Option<(u8, bool)>,
+    mute_icon: Option<TexId>,
+    hud_mute_icon: Option<TexId>,
+    mute_icon_key: Option<bool>,
     bluetooth_lines: Vec<String>,
+    settings_notice: slot_ui::SettingsNotice,
+    settings_notice_tex: Option<TexId>,
+    settings_notice_face: Option<(TexId,u32,u32)>,
+    settings_notice_text: String,
     session: Session,
     start: Instant,
     last: Instant,
@@ -64,7 +76,12 @@ pub struct Frontend {
     about: AboutFace,
     quick_clock: QuickClock,
     quick_palette: QuickPalette,
+    schedule_tex: Option<TexId>,
+    schedule_old_tex: Option<TexId>,
+    schedule_page: Option<u64>,
     kid_tex: Option<TexId>,
+    kid_old_tex: Option<TexId>,
+    kid_page: Option<u64>,
     kid_lines: Vec<String>,
     wallpaper: WallpaperSync,
     game_bezel: BezelSync,
@@ -74,7 +91,7 @@ pub struct Frontend {
     link_shot_shown: bool,
     boot_intro_cancelled: bool,
     boot_intro_requested: bool,
-    boot_intro: Option<(crate::brand_motion::BrandMotion, Option<Instant>)>,
+    boot_intro: Option<(crate::boot_motion::BootMotion, Option<Instant>)>,
 }
 
 #[derive(Default)]
@@ -109,6 +126,8 @@ struct BezelSync {
 
 #[derive(Default)]
 struct WallpaperSync {
+    header_light:[bool;3],
+    footer_light:[bool;2],
     tex: Option<TexId>,
     image: Option<(String, (u32, u32))>,
     label: String,
@@ -183,12 +202,27 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
+            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
             bluetooth_tex: None,
+            bluetooth_old_tex: None,
+            bluetooth_page: None,
             bluetooth_spinner: Vec::new(),
+            spinner_frames: Some({
+                let (tx,rx)=std::sync::mpsc::channel();
+                std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
+                rx
+            }),
             audio_icon: None,
             hud_audio_icon: None,
             audio_icon_key: None,
+            mute_icon: None,
+            hud_mute_icon: None,
+            mute_icon_key: None,
             bluetooth_lines: Vec::new(),
+            settings_notice: slot_ui::SettingsNotice::default(),
+            settings_notice_tex: None,
+            settings_notice_face: None,
+            settings_notice_text: String::new(),
             session,
             start: now,
             last: now,
@@ -212,7 +246,12 @@ impl Frontend {
             about: AboutFace::default(),
             quick_clock: QuickClock::default(),
             quick_palette: QuickPalette::default(),
+            schedule_tex: None,
+            schedule_old_tex: None,
+            schedule_page: None,
             kid_tex: None,
+            kid_old_tex: None,
+            kid_page: None,
             kid_lines: Vec::new(),
             wallpaper: WallpaperSync::default(),
             game_bezel: BezelSync::default(),
@@ -269,46 +308,41 @@ impl Frontend {
         let icons = Icon::ALL
             .iter()
             .map(|i| {
-                let f = icon_face(*i, HUD_ICON_PX, HUD_INK);
-                compositor.create_texture(f.w, f.h, &f.rgba)
+                let f = match i {Icon::Volume|Icon::VolumeZero|Icon::VolumeMuted|Icon::Brightness|Icon::BlueLight|Icon::Bluetooth|Icon::BluetoothMuted|Icon::Headphones|Icon::HeadphonesMuted=>slot_ui::control_icon_face(*i,HUD_ICON_PX as u32,HUD_INK),_=>icon_face(*i, HUD_ICON_PX, HUD_INK)};
+                compositor.create_ui_texture(f.w, f.h, &f.rgba)
             })
             .collect();
         self.session.app_mut().set_icon_faces(icons);
         let alert = icon_face(Icon::Alert, ALERT_PX, ALERT_INK);
-        let alert = compositor.create_texture(alert.w, alert.h, &alert.rgba);
+        let alert = compositor.create_ui_texture(alert.w, alert.h, &alert.rgba);
         self.session.app_mut().set_alert_face(alert);
         let legend = legend_faces(compositor, &LEGEND);
         self.session.app_mut().set_legend_faces(legend);
-        let shot_hints = slot_ui::SHOT_HINTS
-            .iter()
-            .map(|&(key, label)| {
-                let f = match key == slot_ui::PAN_KEY {
-                    true => slot_ui::pad_hint_face(label),
-                    false => hint_face(key, label),
-                };
-                compositor.create_texture(f.w, f.h, &f.rgba)
-            })
-            .collect();
+        let shot_hints = slot_ui::gallery_button_legends().iter().map(|f| {
+            let tex=compositor.create_ui_texture(f.w,f.h,&f.rgba);compositor.mark_hint_texture(tex,0);(tex,f.w)
+        }).collect();
         self.session.app_mut().set_shot_hint_faces(shot_hints);
         let tick = slot_ui::tick_cap_face();
         let tick = (
-            compositor.create_texture(tick.w, tick.h, &tick.rgba),
+            compositor.create_ui_texture(tick.w, tick.h, &tick.rgba),
             tick.w,
             tick.h,
         );
         self.session.app_mut().set_shot_tick_face(tick);
         let hint = set_clock_hint_face();
-        self.clocks.hint = Some(compositor.create_texture(hint.w, hint.h, &hint.rgba));
-        let back = hint_face("B", "Back");
-        let tex = compositor.create_texture(back.w, back.h, &back.rgba);
+        let tex=compositor.create_ui_texture(hint.w,hint.h,&hint.rgba);compositor.mark_hint_texture(tex,1);
+        self.clocks.hint=Some(tex);
+        let back = slot_ui::prompt_legends(slot_ui::HUD_INK,"Back","Save").into_iter().next().unwrap();
+        let tex = compositor.create_ui_texture(back.w, back.h, &back.rgba);
+        compositor.mark_hint_texture(tex,0);
         self.session.app_mut().set_clock_back_face((tex, back.w));
         let removal = slot_ui::favorite_remove_face();
-        let tex = compositor.create_texture(removal.w, removal.h, &removal.rgba);
+        let tex = compositor.create_ui_texture(removal.w, removal.h, &removal.rgba);
         self.session
             .app_mut()
             .set_favorite_remove_face(tex, removal.w, removal.h);
         let removal = slot_ui::kid_remove_face();
-        let tex = compositor.create_texture(removal.w, removal.h, &removal.rgba);
+        let tex = compositor.create_ui_texture(removal.w, removal.h, &removal.rgba);
         self.session.app_mut().set_kid_remove_face(tex, removal.w, removal.h);
         let star = slot_ui::star_face(slot_ui::STAR_SCALE, slot_ui::STAR_INK);
         let id = compositor.create_texture(star.w, star.h, &star.rgba);
@@ -316,6 +350,11 @@ impl Frontend {
         let smiley = slot_ui::kid_smiley_face();
         let id = compositor.create_texture(smiley.w, smiley.h, &smiley.rgba);
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
+        let smiley=slot_ui::kid_status_face();
+        self.session.app_mut().kid_status_icon=Some(compositor.create_ui_texture(smiley.w,smiley.h,&smiley.rgba));
+        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::control_icon_face(icon,32,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+        let hints=slot_ui::quick_controls_legends().into_iter().enumerate().map(|(side,f)|{let tex=compositor.create_ui_texture(f.w,f.h,&f.rgba);compositor.mark_hint_texture(tex,side);(tex,f.w,f.h)}).collect();
+        self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);
@@ -339,11 +378,11 @@ impl Frontend {
                 |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
             ShellColour::FINISHES.map(|colour| slot_ui::shell_slot_faces(colour).map(&mut upload))
         };
-        let dark_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(false));
-        let light_bolt = icon_face(Icon::Charging, BOLT_PX, footer_ink(true));
+        let dark_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
+        let light_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
         let bolt = [
-            compositor.create_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
-            compositor.create_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
+            compositor.create_ui_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
+            compositor.create_ui_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
         self.look = Some(ShelfLook {
             slot,
@@ -361,10 +400,10 @@ impl Frontend {
         let Some(rgba) = slot_ui::default_background() else {
             return;
         };
-        let id = compositor.create_texture(OUT_W, OUT_H, rgba);
+        let id = compositor.create_background_texture(OUT_W, OUT_H, rgba);
         self.session.app_mut().set_ground(id);
         if let Some(rgba) = slot_ui::blur_background() {
-            let id = compositor.create_texture(OUT_W, OUT_H, rgba);
+            let id = compositor.create_background_texture(OUT_W, OUT_H, rgba);
             self.session.app_mut().set_blur(id);
         }
     }
@@ -426,15 +465,14 @@ impl Frontend {
     fn place_ui_faces(&mut self, compositor: &mut Compositor, faces: UiFaces) {
         let mut cart = |f: CartFace| compositor.create_texture(f.w, f.h, &f.rgba);
         let link_badges = faces.link_badges.into_iter().map(&mut cart).collect();
-        let toasts = faces.toasts.into_iter().map(&mut cart).collect();
         let sockets = faces.sockets.into_iter().map(&mut cart).collect();
         let chips = faces.chips.into_iter().map(&mut cart).collect();
         let blank = cart(faces.blank_chip);
         let shadow = cart(faces.chip_shadow);
-        let mut up = |f: UndoFace| (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h);
+        let power_switch = ShellColour::FINISHES.map(|colour|slot_ui::power_switch_faces_for(colour).map(|f|compositor.create_texture(f.w,f.h,&f.rgba)));
+        let toasts=faces.toasts.into_iter().map(|f|compositor.create_ui_texture(f.w,f.h,&f.rgba)).collect();
+        let mut up = |f: UndoFace| (compositor.create_ui_texture(f.w, f.h, &f.rgba), f.w, f.h);
         let lines = faces.shutdown.into_iter().map(&mut up).collect();
-        let power_switch = ShellColour::FINISHES
-            .map(|colour| slot_ui::power_switch_faces_for(colour).map(|face| up(face).0));
         let repair = faces.repair.into_iter().map(&mut up).collect();
         let reset = faces.reset.into_iter().map(&mut up).collect();
         let delete = faces.delete.into_iter().map(&mut up).collect();
@@ -444,6 +482,7 @@ impl Frontend {
             .into_iter()
             .map(|l| l.map(&mut up))
             .collect();
+        let headings:Vec<_> = faces.quick_headings.into_iter().map(|(r, f)| (r, up(f))).collect();
         let pointer = up(faces.quick_pointer);
         let values = faces
             .quick_values
@@ -488,6 +527,8 @@ impl Frontend {
             look.legend = [link_legend.clone(), link_legend_light];
             look.applied = None;
         }
+        for (_, (tex,_,_)) in &headings {compositor.mark_backdrop_texture(*tex,2);}
+        for legends in [&legend,&legend_light] {for (i,(tex,_)) in legends.iter().enumerate(){compositor.mark_hint_texture(*tex,if matches!(i,0|3|7){0}else{1});}}
         let app = self.session.app_mut();
         app.set_link_badge_faces(link_badges);
         app.set_shutdown_faces(lines);
@@ -497,6 +538,7 @@ impl Frontend {
         app.set_delete_faces(delete);
         app.set_delete_shot_faces(delete_shot);
         app.set_quick_menu_faces(QuickMenuFaces {
+            headings,
             labels,
             pointer,
             values,
@@ -541,7 +583,7 @@ impl Frontend {
             return;
         }
         self.boot_intro_requested = true;
-        // Avoid decoding/uploading the atlas when motion is disabled, input has
+        // Avoid decoding/uploading the mark when motion is disabled, input has
         // already dismissed the intro, or a game is resuming automatically.
         if !self.session.app().boot_animation_enabled()
             || self.boot_intro_cancelled
@@ -551,30 +593,22 @@ impl Frontend {
             return;
         }
         self.boot_intro =
-            crate::brand_motion::BrandMotion::upload(compositor).map(|brand| (brand, None));
+            crate::boot_motion::BootMotion::upload(compositor).map(|brand| (brand, None));
     }
 
     pub fn render(&mut self, compositor: &mut Compositor, window: (u32, u32)) {
         self.session.app_mut().set_panel(window);
         compositor.fit(window);
-        self.compose(compositor);
-        if let Some((brand, started)) = &mut self.boot_intro {
-            let elapsed = started
-                .get_or_insert_with(Instant::now)
-                .elapsed()
-                .as_millis() as u64;
-            // Never cover automatic game resume, and never hold up the emulator loop.
-            if !self.boot_intro_cancelled
-                && elapsed < crate::brand_motion::BOOT_MS
-                && matches!(self.session.app().phase(), crate::app::Phase::Shelf)
-            {
-                let mut intro = Vec::with_capacity(2);
-                brand.boot(elapsed, slot_gfx::Canvas::of(window), &mut intro);
-                compositor.draw_list(&intro);
-            } else if let Some((brand, _)) = self.boot_intro.take() {
-                brand.release(compositor);
-            }
-        }
+        if let Some((brand,started))=self.boot_intro.take() {
+            let elapsed=started.map_or(0,|start|start.elapsed().as_millis()as u64);
+            if !self.boot_intro_cancelled && elapsed<crate::boot_motion::BOOT_MS
+                && matches!(self.session.app().phase(),crate::app::Phase::Shelf) {
+                self.compose_boot_frame(compositor,&brand,elapsed);
+                // First-frame texture setup can be expensive on the handheld.
+                // Start motion only after the static firmware frame is built.
+                self.boot_intro=Some((brand,Some(started.unwrap_or_else(Instant::now))));
+            } else {brand.release(compositor);self.compose(compositor);}
+        } else {self.compose(compositor);}
         compositor.end_frame(window);
     }
 
@@ -615,6 +649,31 @@ impl Frontend {
     }
 
     pub fn compose(&mut self, compositor: &mut Compositor) {
+        self.compose_scene(compositor,None);
+    }
+
+    pub fn compose_boot_frame(&mut self,compositor:&mut Compositor,motion:&crate::boot_motion::BootMotion,ms:u64) {
+        self.compose_scene(compositor,Some((motion,ms)));
+    }
+
+    fn compose_scene(&mut self,compositor:&mut Compositor,intro:Option<(&crate::boot_motion::BootMotion,u64)>) {
+        let light = self.session.app().light();
+        compositor.set_light_ui(light);
+        if self.mute_icon_key != Some(light) {
+            let face = |ink| {
+                let f = slot_ui::status_icon_face(Icon::VolumeMuted, ink);
+                UndoFace {
+                    rgba: f.rgba,
+                    w: f.w,
+                    h: f.h,
+                }
+            };
+            upload(compositor, &mut self.mute_icon, face(HUD_INK));
+            upload(compositor, &mut self.hud_mute_icon, face(HUD_INK));
+            self.mute_icon_key = Some(light);
+        }
+        self.session.app_mut().mute_indicator = self.mute_icon;
+        self.session.app_mut().hud_mute_indicator = self.hud_mute_icon;
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
@@ -631,7 +690,7 @@ impl Frontend {
                     if bluetooth && !usb {
                         crate::bluetooth::indicator_face_with_ink(ink)
                     } else {
-                        let f = slot_ui::icon_face(slot_ui::Icon::Headphones, 20.0, ink);
+                        let f = slot_ui::status_icon_face(slot_ui::Icon::Headphones, ink);
                         slot_ui::UndoFace {
                             rgba: f.rgba,
                             w: f.w,
@@ -642,7 +701,7 @@ impl Frontend {
                 upload(
                     compositor,
                     &mut self.audio_icon,
-                    face(slot_ui::footer_ink(light)),
+                    face(HUD_INK),
                 );
                 upload(compositor, &mut self.hud_audio_icon, face(slot_ui::HUD_INK));
                 self.audio_icon_key = Some((kind, light));
@@ -659,40 +718,39 @@ impl Frontend {
             .app()
             .bluetooth
             .as_ref()
-            .is_some_and(|m| m.busy());
-        if sound_busy && self.bluetooth_spinner.is_empty() {
-            for frame in 0..12 {
-                self.bluetooth_spinner.push(upload(
-                    compositor,
-                    &mut None,
-                    crate::bluetooth::progress_face(frame),
-                ));
-            }
+            .is_some_and(|m| m.show_progress()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.show_progress());
+        if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
+            self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
+            self.spinner_frames=None;
         }
         let progress = if sound_busy {
             self.bluetooth_spinner
-                .get((self.start.elapsed().as_millis() / 80 % 12) as usize)
+                .get((self.start.elapsed().as_millis() / slot_ui::LOADING_FRAME_MS % slot_ui::LOADING_FRAMES as u128) as usize)
                 .copied()
         } else {
             None
         };
+        self.session.app_mut().set_quick_control_progress(progress);
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
+        let mut chrome_updates=vec![];
         if let Some(menu) = &mut self.session.app_mut().bluetooth {
+            if self.bluetooth_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.bluetooth_tex, &mut self.bluetooth_old_tex);
+                self.bluetooth_page=Some(menu.page_key()); menu.face=None;
+            }
             menu.progress_face = progress;
             let lines = menu.lines();
             if lines != self.bluetooth_lines || menu.face.is_none() {
-                menu.face = Some(upload(
-                    compositor,
-                    &mut self.bluetooth_tex,
-                    crate::bluetooth::screen_face_on(&lines, sound_footer_ink, sound_canvas),
-                ));
+                let face=crate::bluetooth::screen_face_without_switches(&lines,sound_footer_ink,sound_canvas);
+                menu.face=Some(upload_menu_face(compositor,&mut self.bluetooth_tex,&mut self.menu_chrome_cache,face,&mut chrome_updates));
                 self.bluetooth_lines = lines;
             }
         }
 
         compositor.set_blue_light(self.session.app().blue_light());
         compositor.set_picture(self.session.app().picture_rect());
+        compositor.set_game_destination(self.session.app().game_destination());
         compositor.set_screen_effect(match self.session.app().screen_shader() {
             slot_store::Shader::Off => ScreenEffect::None,
             slot_store::Shader::Lcd3x => ScreenEffect::Lcd3x,
@@ -706,7 +764,7 @@ impl Frontend {
         compositor.set_game_source_rect(self.session.app().source_rect());
         self.grab_link_shot(compositor);
         compositor.begin_frame();
-        if self.draw_rebuild(compositor) {
+        if self.draw_rebuild(compositor,intro.is_some_and(|(_,ms)|ms>0)) {
             return;
         }
         if let Some([r, g, b]) = self.session.app().blank_panel() {
@@ -718,19 +776,39 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
+        if let Some(menu) = &mut self.session.app_mut().display_schedule {
+            if self.schedule_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
+                self.schedule_page=Some(menu.page_key()); menu.face=None;
+            }
+            if menu.face.is_none() { menu.face = Some(upload_menu_face(compositor,&mut self.schedule_tex,&mut self.menu_chrome_cache,menu.screen_face_animated_on(sound_canvas),&mut chrome_updates)); }
+        }
         if let Some(menu) = &mut self.session.app_mut().kid_menu {
+            if self.kid_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.kid_tex,&mut self.kid_old_tex);
+                self.kid_page=Some(menu.page_key()); menu.face=None;
+            }
             let lines = menu.lines();
             if lines != self.kid_lines || menu.face.is_none() {
-                menu.face = Some(upload(compositor, &mut self.kid_tex, menu.screen_face()));
+                menu.face = Some(upload_menu_face(compositor,&mut self.kid_tex,&mut self.menu_chrome_cache,menu.screen_face_animated_on(sound_canvas),&mut chrome_updates));
                 self.kid_lines = lines;
             }
         }
-        sync_clock(self.session.app_mut(), compositor, &mut self.clocks);
+        for (tex,title,hints) in chrome_updates {self.session.app_mut().set_custom_chrome(tex,title,hints);}
+        self.session.app_mut().note_custom_menu_face();
+        sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
+        let app=self.session.app();
+        let header=if !app.light() && self.wallpaper.image.is_some() && app.seated_cart().is_none() {self.wallpaper.header_light}else{[app.light();3]};
+        let footer=if !app.light() && self.wallpaper.image.is_some() && app.seated_cart().is_none() {self.wallpaper.footer_light}else{[app.light();2]};
+        self.session.app_mut().set_footer_contrast(footer);
+        compositor.set_backdrop_light(header);
+        compositor.set_hint_light(footer);
+        for tex in [self.mute_icon,self.audio_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
+        sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
         sync_quick_clock(self.session.app_mut(), compositor, &mut self.quick_clock);
         sync_quick_palette(self.session.app_mut(), compositor, &mut self.quick_palette);
-        sync_wallpaper(self.session.app_mut(), compositor, &mut self.wallpaper);
         sync_game_bezel(self.session.app_mut(), compositor, &mut self.game_bezel);
         compositor.set_game_bezel(self.session.app().shown_game_bezel());
         compositor.set_sp_frame(self.session.app().sp_frame());
@@ -789,8 +867,33 @@ impl Frontend {
             },
             &mut self.switcher,
         );
+        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter());
+        if self.kid_meter_key!=meter {
+            if let Some((seconds,budget))=meter {
+                let face=slot_ui::kid_time_meter(seconds,budget);let size=(face.w,face.h);
+                let tex=upload(compositor,&mut self.kid_meter_tex,face);
+                self.session.app_mut().set_kid_meter_face((tex,size.0,size.1));
+            }
+            self.kid_meter_key=meter;
+        }
         self.draws.clear();
         self.session.app().draw(&mut self.draws);
+        let app=self.session.app();
+        let (now,canvas)=(app.now(),app.canvas());
+        self.settings_notice.observe(app.settings_notice(),now);
+        if let Some(message)=self.settings_notice.text() {
+            let key=format!("{light}:{message}");
+            if key!=self.settings_notice_text {
+                let face=slot_ui::settings_notice_face_on(message,canvas,light);
+                let (w,h)=(face.w,face.h);
+                let tex=upload_rgba(compositor,&mut self.settings_notice_tex,face.w,face.h,&face.rgba);
+                self.settings_notice_face=Some((tex,w,h));
+                self.settings_notice_text=key;
+            }
+        }
+        let notice_canvas=slot_ui::Canvas{h:canvas.h-44.0*app.kid_meter_presence(),..canvas};
+        self.settings_notice.draw_on(notice_canvas,self.settings_notice_face,now,light,&mut self.draws);
+        if let Some((motion,ms))=intro {app.compose_boot_intro(motion,ms,&mut self.draws);}
         compositor.draw_list(&self.draws);
         if let Some((w, h, rgba)) = compositor.take_capture() {
             self.session.app_mut().shot_taken(w, h, rgba);
@@ -847,9 +950,11 @@ impl Frontend {
         }
     }
 
-    fn draw_rebuild(&mut self, compositor: &mut Compositor) -> bool {
+    fn draw_rebuild(&mut self, compositor: &mut Compositor, boot_moving:bool) -> bool {
         self.poll_label_check();
-        self.poll_ui_faces(compositor);
+        // Upload a ready batch on the static opening frame or after the intro.
+        // Any input cancels the intro, so menus still become available at once.
+        if !boot_moving {self.poll_ui_faces(compositor);}
         let Some(rebuild) = &mut self.rebuild else {
             return false;
         };
@@ -950,6 +1055,7 @@ impl Frontend {
     }
 
     pub fn restart(&mut self) {
+        self.session.prepare_poweroff();
         self.session.app_mut().restart();
     }
 
@@ -982,7 +1088,7 @@ fn legend_faces(compositor: &mut Compositor, legend: &[(&str, &str)]) -> Vec<Tex
         .iter()
         .map(|(key, label)| {
             let f = hint_face(key, label);
-            compositor.create_texture(f.w, f.h, &f.rgba)
+            compositor.create_ui_texture(f.w, f.h, &f.rgba)
         })
         .collect()
 }
@@ -990,6 +1096,7 @@ fn legend_faces(compositor: &mut Compositor, legend: &[(&str, &str)]) -> Vec<Tex
 struct UiFaces {
     link_badges: Vec<CartFace>,
     shutdown: Vec<UndoFace>,
+    quick_headings: Vec<(QuickRow, UndoFace)>,
     quick_labels: Vec<[UndoFace; 2]>,
     quick_pointer: UndoFace,
     quick_values: Vec<[UndoFace; 2]>,
@@ -1039,6 +1146,8 @@ impl UiFaces {
                     })
                 })
                 .collect(),
+            quick_headings: QuickRow::ALL.into_iter().filter(|r| r.page()[0] == *r)
+                .map(|r| (r, slot_ui::quick_heading_face(r.heading()))).collect(),
             quick_labels: QuickRow::ALL
                 .iter()
                 .map(|r| [false, true].map(|lit| quick_label_face(*r, lit)))
@@ -1046,7 +1155,7 @@ impl UiFaces {
             quick_pointer: quick_pointer_face(),
             quick_values: QuickValue::ALL
                 .iter()
-                .map(|v| [false, true].map(|lit| quick_value_face(v.text(), lit)))
+                .map(|v| [false, true].map(|lit| quick_value_face(&slot_ui::menu_sentence_case(v.settings_text()), lit)))
                 .collect(),
             quick_toggles: [false, true].map(|on| [false, true].map(|lit| slot_ui::toggle_face(on, lit))),
             quick_carets: [false, true].map(quick_caret_face),
@@ -1161,11 +1270,10 @@ fn sync_switcher(app: &mut App, compositor: &mut Compositor, texes: Faces, state
             .map(|l| upload(compositor, texes.undo, hint_face("X", l)));
         app.set_undo_face(label);
     }
-    if state.titled.as_deref() != app.polaroid_stamp() {
-        state.titled = app.polaroid_stamp().map(str::to_string);
-        let face = title_face(&app.polaroid_title(&format_stamp(app.wall_secs())));
-        let id = upload(compositor, texes.title, face);
-        app.set_polaroid_title_face(id);
+    let title=app.polaroid_title(&format_stamp(app.wall_secs()));
+    if state.titled.as_deref()!=Some(title.as_str()) {
+        state.titled=Some(title.clone());let face=title_face(&title);
+        let id=upload(compositor,texes.title,face);app.set_polaroid_title_face(id);
     }
     sync_gallery(app, compositor, state);
 }
@@ -1238,8 +1346,8 @@ fn sync_gallery(app: &mut App, compositor: &mut Compositor, state: &mut Switcher
     }
     if state.counted.as_deref() != Some(count.as_str()) {
         let face = slot_ui::word_face(&count);
-        let id = upload_rgba(compositor, &mut state.count, face.w, face.h, &face.rgba);
-        app.set_shot_count_face(Some((id, face.w)));
+        let w=face.w;let id=upload(compositor,&mut state.count,face);
+        app.set_shot_count_face(Some((id,w)));
         state.counted = Some(count);
     }
     let prompted = app.delete_shot_lines();
@@ -1323,36 +1431,37 @@ fn sync_binding_faces(app: &mut App, compositor: &mut Compositor) {
         }
         let faces = [false, true].map(|lit| {
             let f = match text.strip_prefix(crate::app::CLASH_MARK) {
-                Some(bare) => quick_warning_value_face(bare, lit),
-                None => quick_value_face(&text, lit),
+                Some(bare) => slot_ui::quick_binding_face(bare, lit,true),
+                None => slot_ui::quick_binding_face(&text, lit,false),
             };
-            (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
+            (compositor.create_ui_texture(f.w, f.h, &f.rgba), f.w, f.h)
         });
         app.add_binding_face(text, faces);
     }
 }
 
-fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
+fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks,header:[bool;3]) {
     let ink = app.status_ink();
     if clocks.ink != ink {
         clocks.ink = ink;
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| p.text());
+    let picked = app.picker().map(|p| format!("{}:{}",app.canvas().w,p.text()));
     if picked != clocks.picked {
         clocks.picked = picked;
-        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face()), clocks.hint) {
+        if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_on(app.canvas())), clocks.hint) {
             let line = upload(compositor, &mut clocks.line, face);
             app.set_clock_faces(line, hint);
         }
     }
-    let shown = hhmm(app.wall_secs());
+    let shown = slot_ui::clock_text(app.wall_secs(),app.clock_12h());
     if shown != clocks.shown {
-        let face = word_ink(&shown, clocks.ink);
+        let face = slot_ui::status_word_face(&shown, clocks.ink);
         clocks.shown = shown;
         let w = face.w;
         let id = upload(compositor, &mut clocks.shelf, face);
+        compositor.mark_backdrop_texture(id,0);
         app.set_shelf_clock_face(id, w);
     }
     let platform_shown = app.slot_text().unwrap_or_default();
@@ -1361,10 +1470,10 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
         if platform_shown.is_empty() {
             app.clear_shelf_platform();
         } else {
-            let face = word_ink(&platform_shown, [0xff, 0xff, 0xff]);
-            let w = face.w;
+            let face = slot_ui::carousel_name_face(&platform_shown,platform_shown.chars().count()==1);
+            let (w,h) = (face.w,face.h);
             let id = upload(compositor, &mut clocks.platform_tex, face);
-            app.set_shelf_platform_face(id, w);
+            app.set_shelf_name_face(id, w,h);
         }
     }
     let title_shown = app.title_text().unwrap_or_default();
@@ -1381,14 +1490,14 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks) {
     }
     let battery_shown = app
         .battery()
-        .map(|b| format!("{}%", b.percent))
+        .map(|b| format!("{}:{:?}:{}", b.percent,b.charge,header[1]))
         .unwrap_or_default();
     if battery_shown != clocks.battery {
         clocks.battery = battery_shown.clone();
         if !battery_shown.is_empty() {
-            let face = word_ink(&battery_shown, clocks.ink);
+            let face = slot_ui::status_battery_face_on(app.battery().unwrap(),header[1]);
             let w = face.w;
-            let id = upload(compositor, &mut clocks.battery_tex, face);
+            let id = upload_rgba(compositor, &mut clocks.battery_tex, face.w,face.h,&face.rgba);
             app.set_battery_percent_face(id, w);
         }
     }
@@ -1464,13 +1573,17 @@ fn sync_wallpaper(app: &mut App, compositor: &mut Compositor, state: &mut Wallpa
                 .map(|root| root.join("Wallpapers").join(name))
                 .and_then(|path| wallpaper_face(&path, w, h))
             {
+                state.header_light=slot_gfx::ui_palette::header_contrast(&rgba,w,h);
+                let top=378.min(h);let bottom=422.min(h);
+                let footer=slot_gfx::ui_palette::header_contrast(&rgba[(top*w*4)as usize..(bottom*w*4)as usize],w,bottom-top);
+                state.footer_light=[footer[0],footer[1]];
                 let id = match state.tex {
                     Some(id) => {
-                        compositor.update_texture(id, w, h, &rgba);
+                        compositor.update_background_texture(id, w, h, &rgba);
                         id
                     }
                     None => {
-                        let id = compositor.create_texture(w, h, &rgba);
+                        let id = compositor.create_background_texture(w, h, &rgba);
                         state.tex = Some(id);
                         id
                     }
@@ -1501,7 +1614,7 @@ fn sync_quick_clock(app: &mut App, compositor: &mut Compositor, state: &mut Quic
     if app.quick_menu().is_none() {
         return;
     }
-    let text = date_time_text(app.wall_secs());
+    let text = slot_ui::date_time_format(app.wall_secs(),app.clock_12h());
     if text == state.shown {
         return;
     }
@@ -1548,8 +1661,14 @@ fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace)
         version: build.version,
         model: &crate::baseos::var("BASEOS_MODEL").unwrap_or_default(),
     });
-    let id = upload(compositor, &mut state.tex, face);
+    let id = upload_rgba(compositor, &mut state.tex, face.w,face.h,&face.rgba);
     app.set_sticker_face(id);
+    if app.about_heading_needed() {
+        let heading=slot_ui::quick_heading_face("About");
+        let tex=compositor.create_ui_texture(heading.w,heading.h,&heading.rgba);
+        compositor.mark_backdrop_texture(tex,2);
+        app.set_about_heading((tex,heading.w,heading.h));
+    }
 }
 
 /// The textures the core picker reuses from one cart to the next.
@@ -1611,7 +1730,7 @@ fn sync_core_picker(
 }
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {
-    upload_rgba(compositor, slot, face.w, face.h, &face.rgba)
+    match *slot {Some(id)=>{compositor.update_ui_texture(id,face.w,face.h,&face.rgba);id},None=>{let id=compositor.create_ui_texture(face.w,face.h,&face.rgba);*slot=Some(id);id}}
 }
 
 fn upload_rgba(
@@ -1632,4 +1751,22 @@ fn upload_rgba(
             id
         }
     }
+}
+
+fn upload_menu_face(gpu:&mut Compositor,body:&mut Option<TexId>,cache:&mut Vec<(UndoFace,TexId,usize)>,face:UndoFace,updates:&mut Vec<(TexId,Vec<Draw>,Vec<Draw>)>)->TexId {
+    let mut parts=vec![];
+    for (left,right,y,h) in [(0,face.w,0,slot_ui::expressive::TITLE_H as u32),(0,face.w/2,378,44),(face.w/2,face.w,378,44)] {
+        let ink=|x:u32|(y..y+h).any(|yy|face.rgba[((yy*face.w+x)*4+3)as usize]!=0);
+        let Some(mut x0)=(left..right).find(|&x|ink(x)) else {parts.push(vec![]);continue;};
+        let mut x1=(left..right).rev().find(|&x|ink(x)).unwrap()+1;
+        if y==0 {x0=x0.saturating_sub(1);x1=(x1+1).min(face.w);}
+        let w=x1-x0;let mut rgba=vec![];
+        for yy in y..y+h {let a=((yy*face.w+x0)*4)as usize;rgba.extend_from_slice(&face.rgba[a..a+(w*4)as usize]);}
+        let zone=if y==0 {2}else if left==0 {0}else{1};
+        let tex=if let Some((_,t,_))=cache.iter().find(|(f,_,z)|*z==zone&&f.w==w&&f.h==h&&f.rgba==rgba){*t}
+            else{let t=gpu.create_ui_texture(w,h,&rgba);cache.push((UndoFace{rgba,w,h},t,zone));t};
+        if y==0 {gpu.mark_backdrop_texture(tex,2);}else{gpu.mark_hint_texture(tex,zone);}
+        parts.push(vec![Draw::Tex{x:x0 as f32,y:y as f32,w:w as f32,h:h as f32,tex,alpha:1.0}]);
+    }
+    let tex=upload(gpu,body,face);let title=parts.remove(0);let hints=parts.into_iter().flatten().collect();updates.push((tex,title,hints));tex
 }

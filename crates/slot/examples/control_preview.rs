@@ -1,0 +1,237 @@
+//! Review actual control faces and animated quads through the production compositor.
+#[cfg(target_os = "linux")]
+#[path = "../../slot-ui/examples/support/mod.rs"]
+mod support;
+#[cfg(target_os = "linux")]
+fn main() {
+    use slot_gfx::Compositor;
+    use slot_ui::*;
+    let path = std::path::PathBuf::from(std::env::args().nth(1).expect("output directory"));
+    std::fs::create_dir_all(&path).unwrap();
+    let width = std::env::args()
+        .nth(3)
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(640);
+    let canvas = Canvas {
+        w: width as f32,
+        h: 480.0,
+    };
+    let surface = support::Egl::new(std::env::args().nth(2).as_deref() != Some("gl"));
+    let mut gpu = Compositor::new(&surface).unwrap();
+    gpu.fit((width, 480));
+    let ground = gpu.create_texture(720, 480, default_background().unwrap());
+    let slot = shell_slot_faces(slot_store::ShellColour::FINISHES[0])
+        .map(|f| gpu.create_texture(SLOT_W, SLOT_H, &f));
+    let mut save =
+        |name: &str, face: UndoFace, mut overlays: Vec<Draw>, focus: Option<[f32; 4]>| {
+            let tex = gpu.create_texture(face.w, face.h, &face.rgba);
+            let mut draws = vec![];
+            draw_ground(canvas, Some((ground, 720)), &mut draws);
+            if name=="kid-pause" || name=="kid-settings" {
+                let mut frame=MenuFrame::settled(QuickRow::Settings,&[]);
+                frame.focus_compact=if name=="kid-pause" {1.0}else{0.0};
+                expressive::draw_kid_pause_surface(canvas,frame,&mut draws);
+            }
+            else {expressive::draw_card(canvas,&mut draws);}
+            if let Some(r) = focus {
+                expressive::rounded(
+                    &mut draws,
+                    r[0],
+                    r[1],
+                    r[2],
+                    r[3],
+                    12.0,
+                    expressive::SELECTED,
+                );
+            }
+            if name=="kid-pause" {
+                let begin=draws.len();expressive::draw_cached_menu(canvas,tex,MenuFrame::settled(QuickRow::Resume,&[]),&mut draws);
+                let offset=(menu_grid::pause_rect(canvas,3)[1]-expressive::CARD_TOP)/2.0;
+                for draw in &mut draws[begin..]{if let Draw::Part{y,h,..}=draw {if *y==0.0&&*h==expressive::TITLE_H{*y+=offset;}}}
+            }else{
+            draws.push(Draw::Tex {
+                x: 0.0,
+                y: 0.0,
+                w: canvas.w,
+                h: 480.0,
+                tex,
+                alpha: 1.0,
+            });
+            }
+            draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut draws);
+            draws.append(&mut overlays);
+            if name=="kid-pause" || name=="kid-settings" {
+                let face=kid_time_meter(900,1800);let tex=gpu.create_texture(face.w,face.h,&face.rgba);
+                draws.push(Draw::Tex{x:canvas.centred(face.w as f32),y:376.0,w:face.w as f32,h:face.h as f32,tex,alpha:1.0});
+            }
+            gpu.begin_frame();
+            gpu.draw_list(&draws);
+            let mut encoder = png::Encoder::new(
+                std::fs::File::create(path.join(format!("{name}.png"))).unwrap(),
+                width,
+                480,
+            );
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            encoder
+                .write_header()
+                .unwrap()
+                .write_image_data(&gpu.read_frame())
+                .unwrap();
+        };
+    let rows = [
+        ("System", "GBA"),
+        ("Playtime", "123 h 59 min"),
+        ("Last played", "2026-10-30"),
+        ("At", "23:59"),
+    ]
+    .map(|(a, b)| (a.into(), b.into(), false));
+    save(
+        "details",
+        reference_face(canvas, "Game details", &rows, 0, 1),
+        vec![],
+        None,
+    );
+    let sound_lines=vec!["Sound".into(),"".into(),"COMPACT".into(),"SELECTED VOLUME 100%".into(),"ROW ACTIVE SPEAKER_DEVICE Internal speaker".into(),"ROW DISCONNECT 100%".into(),"ROW PAUSE_DISCONNECT Off".into(),"B Back · Change".into()];
+    save("sound-sliders",slot::bluetooth::screen_face_on(&sound_lines,footer_ink(false),canvas),vec![],None);
+    for (i,(title,rows)) in slot::reference::pages(false,true,slot_store::Platform::Gba,Default::default(),Default::default(),Default::default()).into_iter().enumerate() {
+        save(&format!("reference-{i}"),reference_face(canvas,&title,&rows,i,10),vec![],None);
+    }
+    let mut schedule = slot::display_schedule::Menu::new(slot::display_settings::DisplaySettings {
+        schedule: true,
+        bedtime: (2, 9),
+        ..Default::default()
+    });
+    schedule.twelve=true;
+    schedule.input(slot_input::Action::GbaDown(slot_input::Btn::Up), true);
+    let mut switches = expressive::SwitchMotion::default();
+    switches.update(&schedule.visible_switches(), 1.0);
+    let mut sliders = expressive::SliderMotion::default();
+    sliders.update(&schedule.visible_sliders(), 1.0);
+    let mut controls = vec![];
+    let frame = MenuFrame::settled(QuickRow::DisplaySchedule, &[]);
+    draw_menu_switches(
+        canvas,
+        &schedule.visible_switches(),
+        &switches,
+        frame,
+        &mut controls,
+    );
+    draw_menu_sliders(
+        canvas,
+        &schedule.visible_sliders(),
+        &sliders,
+        frame,
+        &mut controls,
+    );
+    save(
+        "schedule",
+        schedule.screen_face_animated_on(canvas),
+        controls,
+        Some([84.0,expressive::ROW_TOP+3.0*QUICK_PITCH,canvas.w-168.0,expressive::ROW_H]),
+    );
+    let mut policy=slot::kid_policy::Policy::default(); policy.active=true;
+    let mut child=slot::kid_menu::Menu::child(path.clone(),policy.clone(),true,35,55);
+    child.set_remaining(Some((900,1800)));
+    save("kid-pause",child.screen_face_animated_on(canvas),vec![],Some(menu_grid::cell(canvas,0,3,3,true)));
+    child.input(slot_input::Action::GbaDown(slot_input::Btn::Down),0);
+    child.input(slot_input::Action::GbaDown(slot_input::Btn::A),0);
+    save("kid-settings",child.screen_face_on(canvas),vec![],Some(menu_grid::cell(canvas,0,4,2,false)));
+    let mut parent=slot::kid_menu::Menu::new(path.clone(),policy);
+    save("parent-code-empty",parent.screen_face_on(canvas),vec![],None);
+    for b in [slot_input::Btn::A,slot_input::Btn::B,slot_input::Btn::X] {parent.input(slot_input::Action::GbaDown(b),0);}
+    save("parent-code",parent.screen_face_on(canvas),vec![],None);
+    drop(save);
+    let mut quick=slot::app::App::new(vec![]);quick.set_panel((width,480));quick.set_ground(ground);quick.set_slot_faces(slot[0],slot[1]);
+    let quick_icons=[Icon::Volume,Icon::VolumeMuted,Icon::Bluetooth,Icon::BlueLight].into_iter().map(|icon|{let f=icon_face(icon,32.0,[246,244,239]);(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
+    let quick_hints=quick_controls_legends().into_iter().map(|f|(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h)).collect();
+    quick.set_quick_control_faces(quick_icons,quick_hints);quick.apply(slot_input::Action::QuickControls);
+    for frame in 0..24 {
+        quick.update(1.0/60.0);let mut out=vec![];quick.draw(&mut out);gpu.begin_frame();gpu.draw_list(&out);
+        if [3,7,23].contains(&frame){write(&path.join(format!("quick-controls-{frame}.png")),width,&gpu.read_frame());}
+    }
+    let icons = Icon::ALL
+        .into_iter()
+        .map(|icon| {
+            let f = icon_face(icon, HUD_ICON_PX, [245, 242, 239]);
+            gpu.create_texture(f.w, f.h, &f.rgba)
+        })
+        .collect();
+    let mut hud = Hud::new();
+    hud.set_icons(icons);
+    hud.show(HudKind::Volume, 65, false, 0);
+    for ms in [0, 50, 100, 300, 1300, 1400, 1490] {
+        let mut out = vec![];
+        draw_menu_ground(canvas, Some((ground, 720)), &mut out);
+        hud.draw(canvas, ms, &mut out);
+        gpu.begin_frame();
+        gpu.draw_list(&out);
+        write(
+            &path.join(format!("slider-{ms}.png")),
+            width,
+            &gpu.read_frame(),
+        );
+    }
+    hud.show(HudKind::Volume,65,true,0);
+    let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);hud.draw(canvas,300,&mut out);
+    let f=status_icon_face(Icon::VolumeMuted,[246,244,239]);let tex=gpu.create_texture(f.w,f.h,&f.rgba);
+    out.push(Draw::Tex{x:canvas.w-48.0,y:64.0,w:f.w as f32,h:f.h as f32,tex,alpha:1.0});
+    gpu.begin_frame();gpu.draw_list(&out);write(&path.join("mute-icons.png"),width,&gpu.read_frame());
+    let toasts = Toast::all().into_iter().map(|t| {
+        let f=toast_face(t); gpu.create_texture(f.w,f.h,&f.rgba)
+    }).collect();
+    hud.hush(); hud.set_toasts(toasts); hud.toast(Toast::DeepSleepWake,0);
+    let mut notice=vec![]; draw_menu_ground(canvas,Some((ground,720)),&mut notice);
+    hud.draw(canvas,200,&mut notice); gpu.begin_frame(); gpu.draw_list(&notice);
+    write(&path.join("wake-notice.png"),width,&gpu.read_frame());
+    let message="Day and night need different times";
+    let f=settings_notice_face(message,canvas);
+    let face=(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h);
+    let mut feedback=SettingsNotice::default();feedback.observe(Some((1,message.into())),0);
+    for ms in [0,70,200,2700,2800] {
+        let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);
+        draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut out);
+        feedback.draw(canvas,Some(face),ms,&mut out);
+        gpu.begin_frame();gpu.draw_list(&out);
+        write(&path.join(format!("settings-notice-{ms}.png")),width,&gpu.read_frame());
+    }
+    for percent in [12,57,100] {
+        let message=format!("Charging: {percent}%");let f=settings_notice_face(&message,canvas);
+        let face=(gpu.create_texture(f.w,f.h,&f.rgba),f.w,f.h);
+        let mut feedback=SettingsNotice::default();feedback.observe(Some((1,message)),0);
+        for ms in [70,200,365,590,815,1100,2300,2700] {
+            let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);
+            draw_empty_slot(canvas,Some((slot[0],slot[1])),&mut out);
+            feedback.draw(canvas,Some(face),ms,&mut out);
+            gpu.begin_frame();gpu.draw_list(&out);
+            write(&path.join(format!("charging-{percent}-{ms}.png")),width,&gpu.read_frame());
+        }
+    }
+    let mut picker = ClockPicker::local(slot_store::parse_stamp("2026-10-30_12-00-00").unwrap(), 60);
+    picker.set_twelve(true);
+    let f = picker.face_on(canvas);
+    let line = gpu.create_texture(f.w, f.h, &f.rgba);
+    let f = set_clock_hint_face();
+    let hint = gpu.create_texture(f.w, f.h, &f.rgba);
+    let f = prompt_legends([246, 244, 239], "Back", "Save")
+        .into_iter()
+        .next()
+        .unwrap();
+    let back = (gpu.create_texture(f.w, f.h, &f.rgba), f.w);
+    let mut out = vec![];
+    draw_ground(canvas, Some((ground,720)), &mut out);
+    picker.draw(canvas, Some(line), Some(hint), Some(back), &mut out);
+    draw_empty_slot(canvas, Some((slot[0], slot[1])), &mut out);
+    gpu.begin_frame();
+    gpu.draw_list(&out);
+    write(&path.join("clock.png"), width, &gpu.read_frame());
+}
+#[cfg(target_os = "linux")]
+fn write(path: &std::path::Path, width: u32, pixels: &[u8]) {
+    let mut e = png::Encoder::new(std::fs::File::create(path).unwrap(), width, 480);
+    e.set_color(png::ColorType::Rgba);
+    e.set_depth(png::BitDepth::Eight);
+    e.write_header().unwrap().write_image_data(pixels).unwrap();
+}
+#[cfg(not(target_os = "linux"))]
+fn main() {}

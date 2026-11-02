@@ -9,7 +9,9 @@ pub fn cover(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
 pub fn cover_label(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
     let (mut src, sw, sh) = decode(path)?;
     crate::label_mask::clear_corner_background(&mut src, sw, sh);
-    cover_rgba(&src, sw, sh, w, h)
+    let mut art=cover_rgba(&src, sw, sh, w, h)?;
+    crate::label_mask::round_sharp_corners(&mut art,w,h);
+    Some(art)
 }
 
 pub fn cover_bytes(bytes: &[u8], w: u32, h: u32) -> Option<Vec<u8>> {

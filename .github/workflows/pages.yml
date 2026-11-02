@@ -11,6 +11,8 @@ on:
       - 'tools/prepare-site.py'
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
+      - 'tools/check-site-navigation.cjs'
+      - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
   push:
     branches: [main]
@@ -23,6 +25,8 @@ on:
       - 'tools/prepare-site.py'
       - 'tools/assemble-studio.py'
       - 'tools/check-site.py'
+      - 'tools/check-site-navigation.cjs'
+      - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -34,10 +38,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  model:
+    name: Check 3D handheld preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Prepare homepage
+        run: |
+          python -m pip install --disable-pip-version-check zensical==0.0.71 'fonttools[woff]==4.61.1' pillow==13.0.0
+          python tools/prepare-site.py
+          zensical build --clean --strict -f site/zensical.build.toml
+      - name: Check the model and capture desktop and mobile views
+        env:
+          NODE_PATH: ${{ runner.temp }}/model-browser/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/model-browser" playwright@1.62.1
+          node site/scripts/check-sp-model.cjs "$RUNNER_TEMP/sp-model-review"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sp-model-review
+          retention-days: 3
+          path: ${{ runner.temp }}/sp-model-review
+          if-no-files-found: ignore
+
   build:
     name: Build and check website
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -72,26 +104,62 @@ jobs:
           curl -fsSL https://github.com/wasm-bindgen/wasm-pack/releases/download/v0.15.0/wasm-pack-v0.15.0-x86_64-unknown-linux-musl.tar.gz | tar -xz -C "$RUNNER_TEMP"
           cd _studio/slot-cart-studio
           "$RUNNER_TEMP/wasm-pack-v0.15.0-x86_64-unknown-linux-musl/wasm-pack" build --release --target web --no-typescript --out-dir web/pkg
+      - id: art
+        name: Read public artwork catalog
+        run: echo "digest=$(python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-source.json --catalog-only)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        if: github.event_name != 'pull_request'
+        with:
+          path: .studio-art-cache
+          key: studio-art-v1-${{ hashFiles('_studio/slot-cart-studio/tools/mirror_art.py') }}-${{ steps.art.outputs.digest }}
+          restore-keys: studio-art-v1-${{ hashFiles('_studio/slot-cart-studio/tools/mirror_art.py') }}-
       - name: Prepare feature guides, font and fork previews
         run: python tools/prepare-site.py
       - name: Build website
         run: zensical build --clean --strict -f site/zensical.build.toml
       - name: Integrate Cart Studio
         run: python tools/assemble-studio.py
+      - name: Mirror Studio artwork under the site origin
+        env:
+          PREVIEW: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -eu
+          if [ "$PREVIEW" = true ]; then
+            python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-cache --catalog .studio-art-source.json --sample 2 --copy-to site/public/studio/art
+          else
+            python3 _studio/slot-cart-studio/tools/mirror_art.py .studio-art-cache --catalog .studio-art-source.json --copy-to site/public/studio/art
+          fi
       - name: Check published links and assets
         run: python tools/check-site.py
-      - uses: actions/upload-pages-artifact@v3
+      - name: Check navigation on desktop and phones
+        env:
+          NODE_PATH: ${{ runner.temp }}/website-browser/node_modules
+        run: |
+          npm install --prefix "$RUNNER_TEMP/website-browser" playwright@1.62.1
+          node tools/check-site-navigation.cjs "$RUNNER_TEMP/website-navigation-review"
+          node tools/check-page-motion.cjs "$RUNNER_TEMP/website-navigation-review/page-motion"
+      - uses: actions/upload-artifact@v7
+        if: always()
         with:
+          name: website-navigation-review
+          retention-days: 1
+          path: ${{ runner.temp }}/website-navigation-review
+          if-no-files-found: ignore
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          retention-days: 1
           path: site/public
 
   deploy:
     name: Publish website
-    needs: build
+    needs: [build, model]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == 'jgraving/slot.sp' || vars.ENABLE_PAGES == 'true')
     runs-on: ubuntu-latest
     permissions:
       pages: write
       id-token: write
+      actions: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -99,3 +167,13 @@ jobs:
       - uses: actions/configure-pages@v5
       - id: deploy
         uses: actions/deploy-pages@v4
+      - name: Remove the deployed Pages upload
+        continue-on-error: true
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {owner, repo, run_id: context.runId, per_page: 100});
+            for (const artifact of artifacts.filter(a => a.name === 'github-pages')) {
+              await github.rest.actions.deleteArtifact({owner, repo, artifact_id: artifact.id});
+            }

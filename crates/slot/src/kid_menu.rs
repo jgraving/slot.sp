@@ -17,6 +17,9 @@ enum Page {
     Notice,
     Warning,
     Reference,
+    ChildSettings,
+    ChildSound,
+    ChildScreen,
 }
 pub struct Menu {
     root: PathBuf,
@@ -32,6 +35,7 @@ pub struct Menu {
     start_after_code: bool,
     status: String,
     pub visible: bool,
+    pub twelve: bool,
     pub face: Option<TexId>,
     pub changed: Option<Policy>,
     pub child_action: Option<Action>,
@@ -69,6 +73,7 @@ impl Menu {
                 String::new()
             },
             visible: true,
+            twelve:false,
             face: None,
             changed: None,
             child_action: None,
@@ -100,7 +105,7 @@ impl Menu {
     pub fn reference_open(&self) -> bool { self.page == Page::Reference }
     pub fn time_warning(&self) -> bool { self.page == Page::Warning }
     pub fn set_remaining(&mut self, remaining: Option<(u64, u64)>) {
-        if self.remaining != remaining { self.remaining = remaining; self.face = None; }
+        if self.remaining != remaining { self.remaining = remaining; if self.page==Page::Warning {self.face=None;} }
     }
     pub fn remaining_seconds(&self) -> Option<u64> { self.remaining.map(|r| r.0) }
     pub fn warning(root: PathBuf, policy: Policy, seconds: u64) -> Self {
@@ -111,33 +116,45 @@ impl Menu {
         menu.remaining = Some((seconds, budget));
         menu
     }
-    fn add_time_meter(&self, face: &mut UndoFace) {
-        if !self.draft.active { return; }
-        if let Some((seconds, budget)) = self.remaining {
-            let meter = slot_ui::kid_time_meter(seconds, budget);
-            let x = face.w.saturating_sub(meter.w) / 2;
-            let y = (slot_ui::OUT_H as f32 - slot_ui::MOUTH_H
-                - slot_ui::MENU_HINT_H as f32 - 24.0 - meter.h as f32).max(0.0) as u32;
-            blit(face, &meter, x, y);
-        }
+    pub fn remaining_meter(&self)->Option<(u64,u64)> {
+        (self.draft.active && matches!(self.page,Page::Home|Page::Time|Page::Child|Page::ChildSettings|Page::ChildSound|Page::ChildScreen)).then_some(self.remaining).flatten()
     }
-    pub fn child_menu(&self) -> bool { self.page == Page::Child }
+    pub fn settings_grid(&self)->bool {self.page==Page::ChildSettings || (self.page==Page::Child && !self.child_in_game)}
+    pub fn open_sound(&mut self){self.page=Page::ChildSound;self.selected=0;self.face=None;}
+    pub fn in_game_card(&self) -> bool { self.child_in_game && self.page == Page::Child }
+    fn visible_rows(&self,count:usize)->usize {count.min(slot_ui::QUICK_VISIBLE)}
+    pub fn focus_info(&self) -> Option<(usize,usize)> {
+        let count=match self.page {Page::Child|Page::ChildSettings|Page::ChildSound|Page::ChildScreen=>self.child_rows().len(),Page::Home=>5,Page::Time=>2,_=>return None};
+        let visible=self.visible_rows(count);
+        let selected=if self.page==Page::Time {self.time_selected}else{self.selected};
+        Some((selected,selected.saturating_sub(visible/2).min(count.saturating_sub(visible))))
+    }
+    pub fn scroll_info(&self)->Option<(usize,usize,usize,usize)> {
+        let (selected,start)=self.focus_info()?;
+        let count=match self.page {Page::Home=>5,Page::Time=>2,_=>self.child_rows().len()};
+        if self.in_game_card() || self.settings_grid(){return None;}
+        Some((selected,count,start,self.visible_rows(count)))
+    }
+    pub fn child_menu(&self) -> bool { matches!(self.page,Page::Child|Page::ChildSettings|Page::ChildSound|Page::ChildScreen) }
     fn child_rows(&self) -> Vec<(String, String, bool)> {
-        let mut rows = vec![
-            (if self.child_in_game { "Resume" } else { "Games" }.into(), String::new(), false),
-            ("Volume".into(), format!("{}%", self.child_volume), true),
-            ("Brightness".into(), format!("{}%", self.child_brightness), true),
-        ];
-        if self.child_in_game { rows.push(("Exit game".into(), String::new(), false)); }
-        rows.push(("Buttons & shortcuts".into(), String::new(), false));
-        rows.push(("Parent controls".into(), String::new(), false));
-        rows
+        if self.in_game_card() {return ["Resume","Settings","Exit game"].map(|s|(s.into(),String::new(),false)).to_vec();}
+        if self.settings_grid() {return ["Sound","Screen","Buttons & shortcuts","Parental controls"].map(|s|(s.into(),String::new(),false)).to_vec();}
+        if self.page==Page::ChildSound {return vec![("Volume".into(),format!("{}%",self.child_volume),true)];}
+        vec![("Brightness".into(),format!("{}%",self.child_brightness),true)]
     }
     pub fn entered_buttons(&self) -> &[u8] {
         &self.code
     }
     pub fn entering_code(&self) -> bool {
         matches!(self.page, Page::Set | Page::Confirm | Page::Unlock)
+    }
+    fn code_instruction(&self) -> &str {
+        match self.page {
+            Page::Set => "Choose 4 buttons",
+            Page::Confirm => "Repeat your 4 buttons",
+            Page::Unlock => "Enter your 4-button code",
+            _ => "",
+        }
     }
     pub fn notice(root: PathBuf, policy: Policy, message: &str) -> Self {
         let mut menu = Self::new(root, policy);
@@ -156,13 +173,11 @@ impl Menu {
             return vec![slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0))];
         }
         let title = match self.page {
-            Page::Set => "Choose four buttons",
-            Page::Confirm => "Repeat your code",
-            Page::Unlock => "Parent code",
+            Page::Set | Page::Confirm | Page::Unlock => "Parent code",
             Page::Notice => "Time for a break",
-            Page::Home | Page::Time | Page::Child | Page::Warning | Page::Reference => "",
+            Page::Home | Page::Time | Page::Child | Page::ChildSettings | Page::ChildSound | Page::ChildScreen | Page::Warning | Page::Reference => "",
         };
-        if self.page == Page::Child {
+        if matches!(self.page,Page::Child|Page::ChildSettings|Page::ChildSound|Page::ChildScreen) {
             return self.child_rows().into_iter().enumerate().map(|(i, (label, value, _))|
                 format!("{} {label} {value}", if i == self.selected { "SELECTED" } else { "ROW" })).collect();
         }
@@ -183,9 +198,9 @@ impl Menu {
             };
             let rows = [
                 format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
+                "Set parent code".into(),
                 self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
-                if self.gate.enabled() { "Change parent code" } else { "Set parent code" }.into(),
             ];
             let status = if self.status.is_empty() {
                 format!(
@@ -217,7 +232,7 @@ impl Menu {
             )
         } else {
             if self.entering_code() && self.status.is_empty() {
-                format!("{} of 4 buttons · A/B/X/Y or D-pad", self.code.len())
+                format!("{} of 4 buttons", self.code.len())
             } else if self.entering_code() {
                 format!("{} · {} of 4 buttons", self.status, self.code.len())
             } else {
@@ -227,7 +242,7 @@ impl Menu {
         vec![
             title.into(),
             status,
-            String::new(),
+            self.code_instruction().into(),
             if self.page == Page::Notice {
                 "PARENT NOTICE HINTS".into()
             } else {
@@ -235,85 +250,114 @@ impl Menu {
             },
         ]
     }
-    pub fn screen_face(&self) -> UndoFace {
-        if self.page == Page::Reference {
-            let mut face = slot_ui::parent_footer_face(6,false);
-            if let Some((title,rows)) = self.reference.get(self.reference_at) {
-                let title=slot_ui::quick_heading_face(title);
-                let x=face.w.saturating_sub(title.w)/2;
-                blit(&mut face,&title,x,40);
-                for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
-                    let label=slot_ui::quick_value_face(label,false);
-                    let value=slot_ui::quick_value_face(value,true);
-                    let right=face.w.saturating_sub(value.w+32);
-                    blit(&mut face,&label,32,108+i as u32*42);
-                    blit(&mut face,&value,right,108+i as u32*42);
-                }
-                let page=slot_ui::quick_description_face(&[&format!("{} / {}",self.reference_at+1,self.reference.len())]);
-                let x=face.w.saturating_sub(page.w)/2;
-                blit(&mut face,&page,x,370);
-            }
-            return face;
+    pub fn page_key(&self) -> u64 {match self.page {Page::Child if !self.child_in_game=>2010,Page::ChildSound=>2011,Page::ChildScreen=>2012,_=>2000+self.page as u64}}
+    pub fn notice_text(&self) -> Option<&str> {
+        (self.gate.remaining(Instant::now()) == 0 && !self.status.is_empty() && !self.status.starts_with("Recovery:") && !self.status.starts_with("Use A/B"))
+            .then_some(self.status.as_str())
+    }
+    pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
+    pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        match self.page {
+            Page::Home=>{let(_,start)=self.focus_info().unwrap();let visible=self.visible_rows(5);if (start..start+visible).contains(&4){vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16+4,fraction:self.draft.volume_limit as f32/100.0,y:slot_ui::expressive::ROW_TOP+6.0+(4-start)as f32*slot_ui::QUICK_PITCH}]}else{vec![]}},
+            Page::ChildSound|Page::ChildScreen=>{
+                let value=if self.page==Page::ChildSound {self.child_volume}else{self.child_brightness};
+                vec![slot_ui::MenuSlider{width:slot_ui::MENU_SLIDER_W,span:slot_ui::MENU_SLIDER_SPAN,id:self.page_key()*16,fraction:value as f32/100.0,y:slot_ui::expressive::ROW_TOP+6.0}]
+            },_=>vec![]
         }
+    }
+    pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        if self.page==Page::Home && self.focus_info().is_some_and(|(_,start)|start==0) {vec![slot_ui::MenuSwitch{id:self.page_key()*16,on:self.draft.active,y:slot_ui::expressive::ROW_TOP+6.0}]} else {vec![]}
+    }
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,false)}
+    pub fn screen_face_animated_on(&self, canvas: slot_ui::Canvas) -> UndoFace {self.render_face(canvas,true)}
+    fn render_face(&self, canvas: slot_ui::Canvas, animated: bool) -> UndoFace {
+        let settings_face=if animated {slot_ui::parent_settings_face_animated_on} else {slot_ui::parent_settings_face_on};
+        if self.page == Page::Reference {
+            return self.reference.get(self.reference_at).map_or_else(
+                ||slot_ui::parent_footer_face_on(canvas,6,false),
+                |(title,rows)|slot_ui::reference_face(canvas,title,rows,self.reference_at,self.reference.len()));
+        }
+
         if self.page == Page::Warning {
-            let mut face = slot_ui::parent_footer_face(5, false);
+            let mut face = slot_ui::parent_footer_face_on(canvas, 5, false);
             let title = slot_ui::quick_heading_face(&slot_ui::kid_time_text(self.remaining_seconds().unwrap_or(0)));
             let x = face.w.saturating_sub(title.w) / 2;
             blit(&mut face, &title, x, 190);
             return face;
         }
-        if self.page == Page::Child {
-            let mut face = slot_ui::parent_settings_face_with_space(&self.child_rows(), self.selected, 0, "", if self.child_in_game {32.0} else {0.0});
-            self.add_time_meter(&mut face);
+        if self.in_game_card() {
+            let mut face=slot_ui::parent_footer_face_on(canvas,0,false);
+            let title=slot_ui::quick_heading_face("Paused");let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);
+            for (i,row) in [slot_ui::QuickRow::Resume,slot_ui::QuickRow::Settings,slot_ui::QuickRow::ExitGame].into_iter().enumerate(){
+                let tile=slot_ui::menu_grid::tile_face(row,i==self.selected);
+                let [x,y,w,h]=slot_ui::menu_grid::cell(canvas,i,3,3,true);
+                blit(&mut face,&tile,(x+(w-tile.w as f32)/2.0)as u32,(y+(h-tile.h as f32)/2.0)as u32);
+            }
             return face;
+        }
+        if self.settings_grid() {
+            let mut face=slot_ui::parent_footer_face_on(canvas,0,false);
+            let title=slot_ui::quick_heading_face("Kid settings");let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);
+            for (i,(row,label)) in [(slot_ui::QuickRow::Bluetooth,"Sound"),(slot_ui::QuickRow::Screen,"Screen"),(slot_ui::QuickRow::Controls,"Buttons &\nshortcuts"),(slot_ui::QuickRow::Kids,"Parental\ncontrols")].into_iter().enumerate(){
+                let tile=slot_ui::menu_grid::tile_face_label(row,i==self.selected,Some(label));let [x,y,w,h]=slot_ui::menu_grid::cell(canvas,i,4,2,false);
+                blit(&mut face,&tile,(x+(w-tile.w as f32)/2.0)as u32,(y+(h-tile.h as f32)/2.0)as u32);
+            }
+            return face;
+        }
+        if matches!(self.page,Page::ChildSound|Page::ChildScreen) {
+            let mut face=settings_face(canvas,&self.child_rows(),0,0,"",0.0);
+            let title=slot_ui::quick_heading_face(if self.page==Page::ChildSound{"Sound"}else{"Screen"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);return face;
         }
         if self.page == Page::Home {
             let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
             let time = if self.draft.rule == Rule::Until {
-                format!("{:02}:{:02}", self.draft.bedtime / 60, self.draft.bedtime % 60)
+                slot_ui::clock_text(i64::from(self.draft.bedtime)*60,self.twelve)
             } else { duration_label(self.draft.minutes) };
             let rows = vec![
                 ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
+                ("Set parent code".into(), String::new(), false),
                 ("Play limit".into(), kind.into(), true),
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
-                ("Parent code".into(), if self.gate.enabled() { "Change" } else { "Set" }.into(), false),
             ];
-            let status = if self.status == "Parent code saved" { "" } else { &self.status };
-            let mut face = slot_ui::parent_settings_face(&rows, self.selected, 0, status);
-            if status.is_empty() { self.add_time_meter(&mut face); }
+            let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
+            let mut face = settings_face(canvas, &rows, self.selected, 0, status, 0.0);
+            let heading=slot_ui::quick_heading_face("Parental controls");
+            let x=face.w.saturating_sub(heading.w)/2;
+            blit(&mut face,&heading,x,0);
             return face;
         }
         if self.page == Page::Time {
             let minutes = self.time_minutes();
-            let rows = vec![("Hours".into(), (minutes / 60).to_string(), true),
+            let rows = vec![("Hours".into(), if self.twelve && self.draft.rule==Rule::Until {let hour=minutes/60;format!("{} {}",if hour%12==0 {12}else{hour%12},if hour<12 {"AM"}else{"PM"})}else{(minutes/60).to_string()}, true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = slot_ui::parent_settings_face(&rows, self.time_selected, 0, &self.status);
-            if self.status.is_empty() { self.add_time_meter(&mut face); }
+            let mut face = settings_face(canvas, &rows, self.time_selected, 0, if animated { "" } else { &self.status }, 0.0);
+            let title=slot_ui::quick_heading_face(if self.draft.rule==Rule::Until {"Bedtime"}else{"Play limit"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);
             return face;
         }
-        let mut face = slot_ui::parent_footer_face(if self.page == Page::Notice { 2 } else { 1 }, false);
+        let mut face = slot_ui::parent_footer_face_on(canvas, if self.page == Page::Notice { 2 } else { 1 }, false);
         let title = match self.page {
-            Page::Set => "Choose four buttons", Page::Confirm => "Repeat your code",
             Page::Notice => "Time for a break", _ => "Parent code",
         };
         let title = slot_ui::quick_heading_face(title);
         let left = (face.w - title.w) / 2;
-        blit(&mut face, &title, left, 112);
+        blit(&mut face, &title, left, 0);
         if self.entering_code() {
+            // Keep one instruction and the slots centred in the shared
+            // card. Setup/confirmation change the instruction, never its title.
+            let instruction = slot_ui::quick_value_face(self.code_instruction(), true);
+            let left = (face.w - instruction.w) / 2;
+            blit(&mut face, &instruction, left, 160);
             let buttons = slot_ui::button_code_face(&self.code);
             let left = ((face.w - buttons.w) as i32 / 2 + self.code_offset()) as u32;
-            blit(&mut face, &buttons, left, 208);
-            let count = slot_ui::quick_description_face(&[&format!("{} / 4", self.code.len())]);
-            let left = (face.w - count.w) / 2;
-            blit(&mut face, &count, left, 284);
+            blit(&mut face, &buttons, left, 200);
         }
         let cooldown = self.gate.remaining(Instant::now());
         let retry = format!("Try again in {cooldown} seconds");
         let status = if self.page == Page::Unlock && cooldown > 0 { &retry }
         else if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
             ""
-        } else { &self.status };
+        } else if animated { "" } else { &self.status };
         if !status.is_empty() {
             let status = slot_ui::quick_description_face(&[status]);
             let left = face.w.saturating_sub(status.w) / 2;
@@ -444,7 +488,7 @@ impl Menu {
         self.face = None;
         match action {
             Action::GbaDown(button @ (Btn::Left | Btn::Right))
-                if self.page == Page::Time || (self.page == Page::Home && self.selected == 2) => {
+                if self.page == Page::Time || (self.page == Page::Home && matches!(self.selected,3|4)) || matches!(self.page,Page::ChildSound|Page::ChildScreen) => {
                 if self.repeat.is_none_or(|(held, _)| held != button) { self.repeat = Some((button, 0.4)); }
             }
             Action::GbaUp(button) if self.repeat.is_some_and(|(held, _)| held == button) => self.stop_repeat(),
@@ -457,7 +501,7 @@ impl Menu {
         }
         if self.page == Page::Reference {
             match action {
-                Action::GbaDown(Btn::B) => if self.reference_child { self.page=Page::Child; } else { self.visible=false; },
+                Action::GbaDown(Btn::B) => if self.reference_child { self.page=if self.child_in_game {Page::ChildSettings}else{Page::Child}; self.selected=2; } else { self.visible=false; },
                 Action::GbaDown(Btn::Left | Btn::Right) if !self.reference.is_empty() => {
                     let n=self.reference.len();
                     self.reference_at=(self.reference_at+if action==Action::GbaDown(Btn::Right) {1} else {n-1})%n;
@@ -474,31 +518,38 @@ impl Menu {
             }
             return;
         }
-        if self.page == Page::Child {
-            let count = self.child_rows().len();
+        if self.in_game_card() {
             match action {
-                Action::GbaDown(Btn::B) => self.visible = false,
-                Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
-                Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
-                Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
-                    let up = action == Action::GbaDown(Btn::Right);
-                    self.child_action = match self.selected {
-                        1 => Some(if up { Action::VolumeUp } else { Action::VolumeDown }),
-                        2 => Some(if up { Action::BrightnessUp } else { Action::BrightnessDown }),
-                        _ => None,
-                    };
-                }
-                Action::GbaDown(Btn::A) => match self.selected {
-                    0 => self.visible = false,
-                    1 | 2 => self.input(Action::GbaDown(Btn::Right), wall),
-                    n if n == count - 2 => { self.page=Page::Reference; self.reference_at=0; self.reference_child=true; },
-                    n if n == count - 1 => { self.page = Page::Unlock; self.selected = 0; self.code.clear(); self.status.clear(); }
-                    _ if self.child_in_game => { self.child_action = Some(Action::Eject); self.visible = false; }
-                    _ => {}
-                },
-                _ => {}
+                Action::GbaDown(Btn::B)=>self.visible=false,
+                Action::GbaDown(Btn::Up|Btn::Left)=>self.selected=(self.selected+2)%3,
+                Action::GbaDown(Btn::Down|Btn::Right)=>self.selected=(self.selected+1)%3,
+                Action::GbaDown(Btn::A)=>match self.selected {
+                    0=>self.visible=false,
+                    1=>{self.page=Page::ChildSettings;self.selected=0;},
+                    _=>{self.child_action=Some(Action::Eject);self.visible=false;}
+                },_=>{}
             }
             return;
+        }
+        if self.settings_grid() {
+            match action {
+                Action::GbaDown(Btn::B)=>{if self.child_in_game{self.page=Page::Child;self.selected=1;}else{self.visible=false;}},
+                Action::GbaDown(Btn::Left)=>self.selected^=1,
+                Action::GbaDown(Btn::Right)=>self.selected^=1,
+                Action::GbaDown(Btn::Up|Btn::Down)=>self.selected^=2,
+                Action::GbaDown(Btn::A)=>match self.selected {
+                    0=>{self.page=Page::ChildSound;self.selected=0;},
+                    1=>{self.page=Page::ChildScreen;self.selected=0;},
+                    2=>{self.page=Page::Reference;self.reference_at=0;self.reference_child=true;},
+                    _=>{self.page=Page::Unlock;self.selected=0;self.code.clear();self.status.clear();}
+                },_=>{}
+            }return;
+        }
+        if matches!(self.page,Page::ChildSound|Page::ChildScreen) {
+            match action {
+                Action::GbaDown(Btn::B)=>{self.selected=usize::from(self.page==Page::ChildScreen);self.page=if self.child_in_game{Page::ChildSettings}else{Page::Child};},
+                Action::GbaDown(Btn::Left|Btn::Right|Btn::A)=>{let up=action!=Action::GbaDown(Btn::Left);self.child_action=Some(if self.page==Page::ChildSound {if up{Action::VolumeUp}else{Action::VolumeDown}}else{if up{Action::BrightnessUp}else{Action::BrightnessDown}});},_=>{}
+            }return;
         }
         if self.page == Page::Notice {
             match action {
@@ -538,17 +589,17 @@ impl Menu {
                     } else {
                         1
                     };
-                    if self.selected == 2 {
+                    if self.selected == 3 {
                         self.adjust_time(by, wall);
                         return;
                     }
-                    if self.selected == 1 { self.draft.rule = self.draft.rule.next(by); }
-                    if self.selected == 3 {
-                        self.draft.volume_limit = (self.draft.volume_limit as i32 + 10 * by).clamp(10, 80) as u8;
+                    if self.selected == 2 { self.draft.rule = self.draft.rule.next(by); }
+                    if self.selected == 4 {
+                        self.draft.volume_limit = (self.draft.volume_limit as i32 + 10 * by).clamp(0, 100) as u8;
                     }
-                    if matches!(self.selected, 1 | 3) {
+                    if matches!(self.selected, 2 | 4) {
                         let mut next = self.draft.clone();
-                        if next.active && self.selected == 1 {
+                        if next.active && self.selected == 2 {
                             if let Err(e) = next.begin(wall) { self.status = e.to_string(); return; }
                         }
                         self.save_open(next);
@@ -556,9 +607,9 @@ impl Menu {
                 }
                 Action::GbaDown(Btn::A) => match self.selected {
                     0 => self.toggle_mode(wall),
-                    1 | 3 => self.input(Action::GbaDown(Btn::Right), wall),
-                    2 => { self.time_selected = 0; self.page = Page::Time; },
-                    4 => {
+                    2 | 4 => self.input(Action::GbaDown(Btn::Right), wall),
+                    3 => { self.time_selected = 0; self.page = Page::Time; },
+                    1 => {
                         self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();
@@ -585,6 +636,10 @@ impl Menu {
             Action::GbaDown(Btn::Down) => Some(5),
             Action::GbaDown(Btn::Left) => Some(6),
             Action::GbaDown(Btn::Right) => Some(7),
+            Action::GbaDown(Btn::L1) => Some(8),
+            Action::GbaDown(Btn::R1) => Some(9),
+            Action::GbaDown(Btn::L2) => Some(10),
+            Action::GbaDown(Btn::R2) => Some(11),
             _ => None,
         };
         if let Some(button) = button {

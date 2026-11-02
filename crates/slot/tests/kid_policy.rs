@@ -185,3 +185,8 @@ fn older_policy_formats_upgrade_and_invalid_warning_data_fails_closed() {
     std::fs::write(&file, bad).unwrap();
     assert!(Policy::read(d.path()).is_err());
 }
+
+#[test]
+fn parental_volume_caps_cover_the_full_device_range_and_survive_restart(){
+    let (d,mut p)=ready(Rule::Daily);for volume in [0u8,10,80,90,100]{p.volume_limit=volume;p.save(d.path()).unwrap();assert_eq!(Policy::read(d.path()).unwrap().volume_limit,volume);}
+}

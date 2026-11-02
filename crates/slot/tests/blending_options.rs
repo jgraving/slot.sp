@@ -9,17 +9,21 @@ fn press(a: &mut App, b: Btn) {
 }
 fn screen_row(a: &mut App, want: QuickRow) {
     a.apply(Action::QuickMenu);
-    for target in [QuickRow::Settings, QuickRow::PlayScreen, want] {
+    for target in [QuickRow::Settings, QuickRow::Screen, want] {
         for _ in 0..16 {
-            if a.in_game_menu() == Some(target) {
-                break;
-            }
-            press(a, Btn::Down);
+            let current = a.in_game_menu().unwrap();
+            if current == target { break; }
+            if slot_ui::menu_grid::is_page(current.page()) {
+                let hidden = a.in_game_hidden();
+                let cols = slot_ui::menu_grid::columns(current, &hidden);
+                let now = current.position(&hidden);
+                let to = target.position(&hidden);
+                press(a, if now % cols < to % cols { Btn::Right }
+                    else if now % cols > to % cols { Btn::Left } else { Btn::Down });
+            } else { press(a, Btn::Down); }
         }
         assert_eq!(a.in_game_menu(), Some(target));
-        if target != want {
-            press(a, Btn::A);
-        }
+        if target != want { press(a, Btn::A); }
     }
 }
 #[test]

@@ -7,9 +7,9 @@ hide:
 
 # Update slot.sp
 
-Already running slot or slot.sp? The **System ZIP** contains the launcher, emulators and bundled files for an update. You copy its `System` folder onto your existing content card; your games, saves and settings stay in place.
+Use the **System ZIP** to update a card that already runs slot or slot.sp. It contains the launcher, emulators and bundled files. Copy its `System` folder onto your existing card; your games, artwork, saves and settings stay in place.
 
-**[Download the update — slot.sp-System.zip ↓](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)**
+**[Download slot.sp-System.zip](https://github.com/jgraving/slot.sp/releases/latest/download/slot.sp-System.zip)**
 
 Starting with a new card? Follow the **[new installation guide](installing.md)** instead.
 
@@ -22,7 +22,7 @@ Your `Games`, `Saves`, `States`, `Labels` and `Config` folders stay in place. Wi
 
 !!! tip
 
-    `System` should sit alongside `Games` and `Config`, rather than inside another `System` folder.
+    The card’s top folder should contain `System`, `Games` and `Config`. Check that you have not created a nested `System/System` folder.
 
 If you are moving from a version of slot older than 1.4.0, copy over the existing `System` folder without deleting it first. The launcher moves the old settings into `Config`.
 

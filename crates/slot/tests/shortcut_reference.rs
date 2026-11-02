@@ -42,13 +42,14 @@ fn reference_uses_saved_bindings_and_child_pages_never_advertise_blocked_shortcu
     ] {
         assert!(!text.contains(forbidden), "{forbidden}");
     }
-    assert!(text.contains("Parent controls"));
+    assert!(text.contains("Parental controls"));
     let d = common::tmp_root_with_carts(&["Alpha"]);
     let mut menu = Menu::child(d.path().into(), Policy::default(), true, 50, 50);
     menu.set_reference(kid);
-    // Up wraps to Parent controls; one more Up reaches the reference without unlocking anything.
-    menu.input(Action::GbaDown(Btn::Up), 0);
-    menu.input(Action::GbaDown(Btn::Up), 0);
+    // Expand restricted Settings, then reach the reference without unlocking.
+    menu.input(Action::GbaDown(Btn::Down), 0);
+    menu.input(Action::GbaDown(Btn::A), 0);
+    menu.input(Action::GbaDown(Btn::Down), 0);
     menu.input(Action::GbaDown(Btn::A), 0);
     assert!(menu.reference_open());
     menu.input(Action::GbaDown(Btn::Right), 0);
@@ -95,12 +96,8 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
     common::clocked(d.path());
     let mut a = App::boot(d.path());
     a.apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if a.quick_menu() == Some(QuickRow::Controls) {
-            break;
-        }
-        press(&mut a, Btn::Down);
-    }
+    press(&mut a,Btn::Right);
+    press(&mut a,Btn::Down);
     press(&mut a, Btn::A);
     press(&mut a, Btn::Up);
     press(&mut a, Btn::Up);
@@ -111,18 +108,18 @@ fn adult_reference_is_reachable_from_both_menus_and_returns_without_changing_set
     assert!(a.kid_menu.is_none());
     assert_eq!(a.quick_menu(), Some(QuickRow::Reference));
     let mut a = common::app_playing_in(d.path(), "Alpha");
+    let before = std::fs::read(d.path().join("Config/slot.state")).unwrap();
     a.apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if a.in_game_menu() == Some(QuickRow::Settings) {
-            break;
-        }
-        press(&mut a, Btn::Down);
-    }
+    common::navigate_in_game_menu(&mut a,QuickRow::Settings);
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
+    common::navigate_in_game_menu(&mut a,QuickRow::Controls);
+    press(&mut a, Btn::A);
+    common::navigate_in_game_menu(&mut a,QuickRow::Reference);
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Reference));
     press(&mut a, Btn::A);
     assert!(a.kid_menu.as_ref().unwrap().reference_open());
     press(&mut a, Btn::B);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayReference));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Reference));
+    assert!(matches!(a.phase(), slot::app::Phase::Playing { cart } if cart == "Alpha"));
+    assert_eq!(std::fs::read(d.path().join("Config/slot.state")).unwrap(), before);
 }

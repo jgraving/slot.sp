@@ -70,12 +70,21 @@ pub fn fit_box(
     max_px: f32,
     min_px: f32,
 ) -> Layout {
-    let upper = text.to_uppercase();
+    fit_box_text(font, &text.to_uppercase(), max_w, max_h, max_lines, max_px, min_px)
+}
+
+/// UI copy keeps its authored case; cartridge printing still uses `fit`.
+pub fn fit_preserving_case(font: &Font, text: &str, max_w: f32, max_lines: usize, max_px: f32, min_px: f32) -> Layout {
+    fit_box_text(font, text, max_w, f32::INFINITY, max_lines, max_px, min_px)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fit_box_text(font: &Font, text: &str, max_w: f32, max_h: f32, max_lines: usize, max_px: f32, min_px: f32) -> Layout {
     let role = role_of(font);
     let mut px = max_px;
     while px > min_px {
         let tracking = tracking_for_role(role, px);
-        let lines = wrap(font, &upper, px, tracking, max_w, false);
+        let lines = wrap(font, text, px, tracking, max_w, false);
         if lines.len() <= max_lines
             && lines
                 .iter()
@@ -93,7 +102,7 @@ pub fn fit_box(
     }
     let tracking = tracking_for_role(role, min_px);
     Layout {
-        lines: wrap(font, &upper, min_px, tracking, max_w, true)
+        lines: wrap(font, text, min_px, tracking, max_w, true)
             .into_iter()
             .take(max_lines)
             .collect(),

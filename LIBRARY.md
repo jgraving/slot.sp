@@ -4,15 +4,17 @@
 
 [Browsing](#browse-your-games) · [Favorites & Recents](#favorites--recents) · [Labels](#game-artwork) · [Cartridge colors](#cartridge-colors)
 
+Browse your collection by system, Favorites or Recents. Add label artwork and change cartridge colors to identify games on the carousel.
+
 ## Browse your games
 
 Use <kbd>Left</kbd> and <kbd>Right</kbd> to move through cartridges. Tap <kbd>A</kbd> to launch one. Hold <kbd>A</kbd> to start from the title screen instead of a resume state.
 
 <kbd>L1</kbd> and <kbd>R1</kbd> switch between Recents, Favorites and the system carousels: Game Boy Advance, Game Boy Color and Game Boy. Empty carousels are hidden.
 
-Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between starting letters. To display game names above the slot, turn on **Menu → General → Game Titles**.
+Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between starting letters. To display game names above the slot, choose **Menu → General → Game Titles → Clean**. Choose **Filename** to see region/version tags, or **Off** to hide names. These display choices never rename games, saves or labels.
 
-![Browse game cartridges on the carousel](previews/guide/carousel.png)
+![Browse game cartridges on the carousel](previews/current/light/carousel.png)
 
 ## Favorites & Recents
 
@@ -25,7 +27,21 @@ Games are sorted by name. <kbd>Up</kbd> and <kbd>Down</kbd> jump between startin
 
 Press <kbd>Y</kbd> on a starred game. A prompt appears above it. Release <kbd>Y</kbd> and press it again within three seconds to remove the star. Moving to another game, leaving the carousel or waiting cancels the prompt.
 
-![Confirm removing a game from Favorites](previews/favorite-remove.gif)
+![The Favorites carousel](previews/current/light/favorites.png)
+
+### Favorites order
+
+Open **Menu → General → Sort Favorites**:
+
+| Order | How it sorts |
+| :--- | :--- |
+| **Alphabetically** | By game name. |
+| **Most used** | By total recorded playing time, longest first. |
+| **Recently used** | By the last time you played each game, newest first. |
+
+All favorites stay in the list. Recents is separate and keeps only the last ten games. Changing the order keeps the same game selected. Games without recorded play history appear alphabetically after those with history.
+
+Playing time excludes loading, menus and sleep. The launcher counts only the history it has recorded. Keep `Config/play-history.txt` with your settings when backing up or moving the card.
 
 ### Mark games for children
 

@@ -15,6 +15,8 @@ mod gb_palette;
 mod gba;
 pub mod ini;
 mod platform;
+mod play_history;
+pub use play_history::{FavoriteSort, PlayHistory, PlayRecord};
 mod ring;
 mod scan;
 mod shell_colour;

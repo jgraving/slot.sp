@@ -91,7 +91,7 @@ fn label_colour_is_stable_across_calls() {
 }
 
 #[test]
-fn a_label_that_decodes_is_what_the_face_shows() {
+fn a_decoded_label_keeps_its_ink_and_rounds_only_the_corners() {
     let d = tmp_root();
     write_rom(&d, "Labelled.gba", "LABELLED");
     write_label(&d, "Labelled.png", 64, 64, |_, _| [0xd0, 0x20, 0xa0]);
@@ -99,7 +99,8 @@ fn a_label_that_decodes_is_what_the_face_shows() {
     assert_eq!((face.w, face.h), (CART_W, CART_H));
     for y in [0, LABEL_H / 2, LABEL_H - 1] {
         for x in [0, LABEL_W / 2, LABEL_W - 1] {
-            assert_eq!(label_pixel(&face, x, y), [0xd0, 0x20, 0xa0], "at {x},{y}");
+            if x==LABEL_W/2 || y==LABEL_H/2 {assert_eq!(label_pixel(&face,x,y),[0xd0,0x20,0xa0],"at {x},{y}");}
+            else {assert_ne!(label_pixel(&face,x,y),[0xd0,0x20,0xa0],"corner should reveal the shell");}
         }
     }
 }
@@ -116,6 +117,7 @@ fn a_label_of_the_wrong_aspect_is_cropped_not_squashed() {
     let face = cart_face(&scan(d.path()).unwrap()[0]);
     for y in 0..LABEL_H {
         for x in 0..LABEL_W {
+            if (x<12 || x>=LABEL_W-12) && (y<12 || y>=LABEL_H-12){continue;}
             assert_eq!(label_pixel(&face, x, y), [0xff, 0xff, 0xff], "at {x},{y}");
         }
     }

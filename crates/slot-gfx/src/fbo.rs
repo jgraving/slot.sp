@@ -32,6 +32,7 @@ pub struct Compositor {
     sprites: Sprites,
     game_bezel: Option<TexId>,
     sp_frame: bool,
+    game_destination: Option<[f32;4]>,
     turn: Option<Turn>,
     captured: Option<(u32, u32, Vec<u8>)>,
 }
@@ -82,6 +83,7 @@ impl Compositor {
                 sprites: Sprites::new()?,
                 game_bezel: None,
                 sp_frame: true,
+                game_destination: None,
                 turn: None,
                 captured: None,
             })
@@ -155,6 +157,16 @@ impl Compositor {
         self.sprites.create_texture(w, h, rgba)
     }
 
+    pub fn create_ui_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {self.sprites.create_ui_texture(w,h,rgba)}
+    pub fn update_ui_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]){self.sprites.update_ui_texture(id,w,h,rgba);}
+    pub fn create_background_texture(&mut self,w:u32,h:u32,rgba:&[u8])->TexId {self.sprites.create_background_texture(w,h,rgba)}
+    pub fn update_background_texture(&mut self,id:TexId,w:u32,h:u32,rgba:&[u8]){self.sprites.update_background_texture(id,w,h,rgba);}
+    pub fn mark_hint_texture(&mut self,id:TexId,side:usize){self.sprites.mark_hint_texture(id,side);}
+    pub fn set_hint_light(&mut self,light:[bool;2]){self.sprites.set_hint_light(light);}
+    pub fn mark_backdrop_texture(&mut self,id:TexId,zone:usize){self.sprites.mark_backdrop_texture(id,zone);}
+    pub fn set_backdrop_light(&mut self,light:[bool;3]){self.sprites.set_backdrop_light(light);}
+    pub fn set_light_ui(&mut self,light:bool){self.sprites.set_light_ui(light);}
+
     pub fn create_texture_nearest(&mut self, w: u32, h: u32, rgba: &[u8]) -> TexId {
         self.sprites.create_texture_nearest(w, h, rgba)
     }
@@ -213,7 +225,7 @@ impl Compositor {
     }
 
     fn native(&self) -> bool {
-        crate::bezel::framed(self.window)
+        self.game_destination.is_some() || crate::bezel::framed(self.window)
     }
 
     fn resize(&mut self, size: (u32, u32)) {
@@ -257,6 +269,10 @@ impl Compositor {
         self.game.set_fills_frame(on);
     }
 
+    pub fn set_game_destination(&mut self, rect: Option<[f32;4]>) {
+        self.game_destination=rect;
+        self.game.set_destination(rect);
+    }
     pub fn set_game_source_rect(&mut self, rect: [f32; 4]) {
         self.game.set_source_rect(rect);
     }
@@ -444,7 +460,7 @@ impl Compositor {
 
 impl Compositor {
     fn in_game_rect(&mut self, draw: impl FnOnce(&mut Self)) {
-        if !self.native() {
+        if !self.native() || self.game_destination.is_some() {
             return draw(self);
         }
         let (x, top, w, h) = crate::bezel::game_rect(self.window, self.sp_frame);

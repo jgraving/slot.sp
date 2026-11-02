@@ -4,7 +4,9 @@
 
 [Carousel](#on-the-carousel) · [In game](#in-game) · [Display & volume](#display--volume) · [Remapping](#change-a-button)
 
-These are the default controls. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
+Use these default controls, or change them under **Device controls**. Press a shortcut's buttons together, then release them. Hold a button only where the instructions say to. In kid mode, use the [kid menu](KID-MODE.md#the-kid-menu) for the available settings.
+
+Use the D-pad to move between tiles in the main settings grid. Press **A** to expand a tile into its settings card and **B** to return.
 
 ## On the carousel
 
@@ -37,7 +39,7 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | Hold <kbd>L2</kbd> | Rewind. |
 | Hold <kbd>X</kbd> / <kbd>Y</kbd> | Turbo A / Turbo B. |
 | <kbd>SELECT</kbd> + <kbd>MENU</kbd> | Open link play. |
-| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Stretch the picture / restore its original proportions. |
+| <kbd>L1</kbd> / <kbd>R1</kbd> in GB or GBC games | Previous / next scaling mode: Actual, Stretch, Fit and Integer. |
 
 ## Display & volume
 
@@ -53,6 +55,12 @@ To confirm removal of a favorite or kid approval, release the button and press i
 | <kbd>SELECT</kbd> + <kbd>Y</kbd>, in game | Toggle color correction. |
 | <kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd>, in GB games | Previous / next palette. |
 
+Hold a brightness or warmth shortcut to keep adjusting it, just like volume. Release either button to stop. Remapped shortcuts work the same way.
+
+## Game rumble
+
+On supported handhelds, **Gameplay → Rumble** controls vibration requested by a game.
+
 ## In menus
 
 | Button | Action |
@@ -67,21 +75,23 @@ Follow the on-screen hints for a confirmation or a screen with different control
 
 ## On-device reference
 
-Open **Menu → Controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Buttons & Shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
+Open **Menu → Device controls → Buttons & Shortcuts**, or during a game **Menu → Settings → Device controls → Buttons & shortcuts**. Use **Left / Right** to change pages and **B** to return. It shows your saved button mappings, including remapped or unbound shortcuts.
 
-![The on-device reference showing the saved shortcut bindings](previews/guide/buttons-shortcuts.png)
+![The on-device reference showing the saved shortcut bindings](previews/current/light/buttons-shortcuts.png)
 
-Kid mode has its own **Buttons & shortcuts** row in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
+Kid mode has its own **Buttons & shortcuts** tile in the kid menu. Its guide covers choosing and leaving games, safe menu controls and mapped game buttons. It leaves out shortcuts that kid mode blocks and never unlocks parent settings.
 
 ## Change a button
 
-Open **Menu → Controls**, then choose a page:
+Open **Menu → Device controls**, then choose a page:
 
 | Page | What it changes |
 | :--- | :--- |
 | **Shelf** | Carousel switching and the Favorite button. |
 | **Shortcuts** | Save/load, screenshots, display shortcuts, day/night, fast-forward and rewind. |
-| **In-Game** | Game buttons and turbo buttons. Also available through in-game **Settings → Controls**. |
+| **In-Game** | Game buttons and turbo buttons. Also available through in-game **Settings → Device controls**. |
+
+**Fast Forward Toggle** is an optional shortcut: press once to start and again to stop. It has no default binding. Assigning it to the current **Fast Forward** button replaces the hold binding.
 
 1. Highlight the action and press <kbd>A</kbd>.
 2. When **Recording** appears, press the button or combination you want.

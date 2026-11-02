@@ -151,7 +151,7 @@ fn the_game_does_not_draw_during_the_insert() {
 #[test]
 fn the_reveal_waits_for_the_power_on_to_finish() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
-    let mut a = App::boot(d.path());
+    let mut a = common::boot(d.path());
     a.apply(Action::Insert);
     a.on_core_ready();
     while a.seat() < 1.0 {
@@ -583,7 +583,8 @@ fn a_cart_in_flight_is_not_also_left_standing_on_the_shelf() {
     let carts = out
         .iter()
         .filter(|d| match **d {
-            Draw::Rect { w, h, .. }
+            Draw::RoundRect { w, h, .. }
+            | Draw::Rect { w, h, .. }
             | Draw::Tex { w, h, .. }
             | Draw::Part { w, h, .. }
             | Draw::Turned { w, h, .. } => {
@@ -744,10 +745,10 @@ fn both_b_and_menu_take_the_about_screen_back_to_the_quick_menu() {
     ] {
         let (mut s, _motor) = common::session_with_platform(d.path());
         s.app_mut().apply(slot_input::Action::QuickMenu);
-        for _ in 0..slot_ui::QuickRow::About.position(&[]) {
-            s.app_mut()
-                .apply(slot_input::Action::GbaDown(slot_input::Btn::Down));
+        for _ in 0..slot_ui::QuickRow::About.position(&[])%4 {
+            s.app_mut().apply(slot_input::Action::GbaDown(slot_input::Btn::Right));
         }
+        s.app_mut().apply(slot_input::Action::GbaDown(slot_input::Btn::Down));
         s.app_mut()
             .apply(slot_input::Action::GbaDown(slot_input::Btn::A));
         assert!(matches!(s.app().phase(), slot::app::Phase::About));
@@ -1846,8 +1847,8 @@ fn l_and_r_change_the_mode_on_a_game_boy_cart_and_not_on_a_gba_one() {
     s.feed([RawEvent::Down(Btn::L1)], 100);
     assert_eq!(
         s.app().source_rect(),
-        GB_WINDOW,
-        "L did not stretch the picture"
+        slot::video_mode::source_rect(Platform::Gb, VideoMode::Integer),
+        "L did not cycle backward to integer scaling"
     );
     assert_eq!(pad(&s) & ButtonMask::L, 0, "L reached the game as well");
     s.feed([RawEvent::Up(Btn::L1)], 120);
@@ -1943,7 +1944,7 @@ fn the_picture_mode_is_remembered_per_cart() {
     let mut s = session_playing(d.path());
     s.feed([RawEvent::Down(Btn::L1)], 100);
     s.feed([RawEvent::Up(Btn::L1)], 120);
-    assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Stretch);
+    assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Integer);
     assert_eq!(
         video_mode_for(d.path(), "Zzz"),
         VideoMode::Actual,
@@ -1954,8 +1955,8 @@ fn the_picture_mode_is_remembered_per_cart() {
     let mut s = session_playing(d.path());
     assert_eq!(
         s.app().source_rect(),
-        GB_WINDOW,
-        "the cart did not come back stretched"
+        slot::video_mode::source_rect(Platform::Gb, VideoMode::Integer),
+        "the cart did not restore integer scaling"
     );
     s.feed([RawEvent::Down(Btn::R1)], 100);
     assert_eq!(video_mode_for(d.path(), "Tetris"), VideoMode::Actual);

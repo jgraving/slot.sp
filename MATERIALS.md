@@ -31,11 +31,11 @@ https://anbernic.com/products/rg-sp. They are not colorimeter measurements.
 
 ## Settings
 
-General → Shell Color cycles Match Theme, Graphite, Platinum, Pearl Blue,
-Pearl Pink. It updates the carousel housing immediately and the shutdown switch
-uses that same saved selection. Match Theme preserves the prior behavior:
-dark uses Graphite and light uses Platinum. Explicit colors are independent of
-the light/dark text theme. Cards without `shell_colour` keep Match Theme.
+General → Shell Color cycles Graphite, Platinum, Pearl Blue and Pearl Pink.
+It updates the carousel housing immediately and the shutdown switch uses the
+same saved selection. Platinum is a cool silvery grey with preserved edge relief.
+Old automatic selections resolve to their previous concrete finish on boot;
+Match Theme is no longer a choice.
 
 ## Wallpaper
 

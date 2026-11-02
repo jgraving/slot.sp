@@ -60,7 +60,7 @@ pub fn valid_address(address: &str) -> bool {
             .all(|p| p.len() == 2 && p.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
-fn bluetooth_enabled(root: &std::path::Path) -> bool {
+pub(crate) fn bluetooth_enabled(root: &std::path::Path) -> bool {
     !root.join("Config/bluetooth-off").exists()
         && (root.join("Config/bluetooth-enabled").exists()
             || root.join("Config/bluetooth-headphones").exists())
@@ -99,23 +99,46 @@ pub struct Manager {
     pub status: String,
     output: String,
     pending: Option<Receiver<ResultMessage>>,
+    progress_requested: bool,
     recovering: Arc<AtomicBool>,
+    cancel_path: Option<PathBuf>,
     pub face: Option<TexId>,
     pub progress_face: Option<TexId>,
     pub wired: bool,
     pub bluetooth_available: bool,
     pub disconnect_volume: u8,
+    pub current_volume: u8,
+    pub pause_on_disconnect: bool,
     pub disconnect_notice: bool,
     pub route_choice: Option<String>,
     choosing_route: bool,
     forget_confirmation: Option<String>,
 }
 
+/// A brief cause and next step; raw helper details stay in the saved report.
+pub fn error_notice(status:&str)->&'static str {
+    let error=status.to_ascii_lowercase();
+    if error.contains("usb") && (error.contains("unplug")||error.contains("no longer connected")) {"USB audio disconnected. Reconnect it and retry."}
+    else if error.contains("save") {"Couldn’t save settings. Check the SD card."}
+    else if error.contains("br-connection-busy") || error.contains("another bluetooth operation") || error.contains("inprogress") {"Bluetooth is busy. Wait a moment, then retry."}
+    else if error.contains("page-timeout") || error.contains("waiting for connected") {"Device didn’t answer. Wake it and try again."}
+    else if error.contains("authentication") || error.contains("pairing failed") {"Pairing failed. Forget the device and pair again."}
+    else if error.contains("profile-unavailable") || error.contains("not supported") {"Bluetooth audio unavailable. Try pairing again."}
+    else if error.contains("notready") || error.contains("no default controller") || error.contains("initialization") || error.contains("couldn’t start") {"Bluetooth isn’t ready. Turn it off and on."}
+    else if error.contains("worker stopped") {"Bluetooth stopped. Turn it off and on."}
+    else if error.contains("timed out") || error.contains("timeout") {"Bluetooth timed out. Move closer and retry."}
+    else if error.contains("requires the handheld") {"Bluetooth needs a supported handheld."}
+    else {"Bluetooth failed. Turn it off and on, then retry."}
+}
+
 impl Manager {
     pub fn new(root: PathBuf, bluetooth_available: bool) -> Self {
         let disconnect_volume = disconnect_volume(&root);
+        let pause_on_disconnect = pause_on_disconnect(&root);
         let mut manager = Self {
             disconnect_volume,
+            current_volume:50,
+            pause_on_disconnect,
             bluetooth_available,
             root,
             page: Page::Home,
@@ -126,7 +149,9 @@ impl Manager {
             status: String::new(),
             output: "speaker".into(),
             pending: None,
+            progress_requested: false,
             recovering: Arc::default(),
+            cancel_path: None,
             face: None,
             progress_face: None,
             wired: false,
@@ -141,6 +166,10 @@ impl Manager {
         manager
     }
 
+    pub fn quick_toggle(root:PathBuf)->Self {
+        let mut menu=Self::new(root,false);menu.bluetooth_available=true;menu.toggle_bluetooth();menu
+    }
+
     pub fn set_available(&mut self, available: bool) {
         if available && !self.bluetooth_available {
             self.bluetooth_available = true;
@@ -152,6 +181,10 @@ impl Manager {
         self.pending.is_some()
     }
 
+    pub fn show_progress(&self) -> bool { self.busy() && self.progress_requested }
+
+    pub fn select_usb_automatically(&mut self,route:String){self.select_usb(route);self.progress_requested=false;}
+
     pub fn select_usb(&mut self, route: String) {
         self.ask("usb", Some(route));
     }
@@ -159,11 +192,25 @@ impl Manager {
     // An automatic switch can start with the menu closed. Hand its worker to
     // the visible menu when it opens, so user actions cannot race that switch.
     pub fn adopt_usb_switch(&mut self, other: &mut Self) {
+        self.cancel_pending();
         self.pending = other.pending.take();
+        self.progress_requested = other.progress_requested;
+        self.cancel_path = other.cancel_path.take();
         self.recovering = other.recovering.clone();
         self.choosing_route = other.choosing_route;
         self.status = std::mem::take(&mut other.status);
         self.route_choice = other.route_choice.take();
+    }
+
+    pub fn cancel_pending(&mut self) {
+        if self.pending.take().is_some() {
+            if let Some(path) = self.cancel_path.take() { let _ = std::fs::write(path, b"cancel"); }
+            self.recovering.store(false, Ordering::Relaxed);
+            self.choosing_route = false;
+            self.progress_face = None;
+            self.status = "Connection cancelled".into();
+            self.face = None;
+        }
     }
 
     fn ask(&mut self, verb: &'static str, address: Option<String>) {
@@ -175,6 +222,7 @@ impl Manager {
         let root = self.root.clone();
         let (tx, rx) = mpsc::channel();
         self.pending = Some(rx);
+        self.progress_requested = verb != "list";
         self.status = match verb {
             "scan" => "Scanning…",
             "connect"
@@ -194,6 +242,10 @@ impl Manager {
             _ => "",
         }
         .into();
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let cancel = std::env::temp_dir().join(format!("slot-bt-{}-{}.cancel", std::process::id(), NEXT.fetch_add(1,Ordering::Relaxed)));
+        let _ = std::fs::remove_file(&cancel);
+        self.cancel_path = Some(cancel.clone());
         let bluetooth_available = self.bluetooth_available;
         self.recovering.store(false, Ordering::Relaxed);
         let recovering = self.recovering.clone();
@@ -203,8 +255,9 @@ impl Manager {
             } else {
                 run_with_recovery(verb, address,
                     || recovering.store(true, Ordering::Relaxed),
-                    |verb, address| run(root.clone(), verb, address))
+                    |verb, address| run_cancel(root.clone(), verb, address, Some(&cancel)))
             };
+            let _ = std::fs::remove_file(cancel);
             let _ = tx.send(result);
         });
     }
@@ -251,10 +304,12 @@ impl Manager {
                 };
                 self.selected = self.selected.min(self.rows().len().saturating_sub(1));
                 self.pending = None;
+                self.cancel_path = None;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
                 self.status = "Error: Bluetooth worker stopped".into();
                 self.pending = None;
+                self.cancel_path = None;
             }
             Err(mpsc::TryRecvError::Empty) => {}
         }
@@ -277,10 +332,13 @@ impl Manager {
         self.status.clear();
     }
 
-    fn local_row(&self) -> usize { usize::from(self.bluetooth_available) }
+    fn local_row(&self) -> usize { 1 + usize::from(self.bluetooth_available) }
     fn device_start(&self) -> usize { self.local_row() + 1 }
     fn pair_row(&self) -> usize { self.device_start() + self.device_indices().len() + self.usb_devices.len() }
     fn disconnect_row(&self) -> usize { self.pair_row() + usize::from(self.bluetooth_available) }
+    fn pause_row(&self) -> usize { self.disconnect_row() + 1 }
+    pub fn slider_selected(&self)->bool {self.volume_selected() || (self.page==Page::Home && self.selected==self.disconnect_row())}
+    pub fn volume_selected(&self)->bool {self.page==Page::Home && self.selected==0}
 
     fn device_indices(&self) -> Vec<usize> {
         self.devices
@@ -305,7 +363,7 @@ impl Manager {
                 } else {
                     "SPEAKER_DEVICE Internal speaker"
                 };
-                let mut rows = Vec::new();
+                let mut rows = vec![format!("VOLUME {}%",self.current_volume)];
                 if self.bluetooth_available {
                     rows.push(format!("BLUETOOTH {}", if bluetooth_enabled(&self.root) { "On" } else { "Off" }));
                 }
@@ -344,6 +402,7 @@ impl Manager {
                     rows.push("Pair audio device".into());
                 }
                 rows.push(format!("DISCONNECT {}%", self.disconnect_volume));
+                rows.push(format!("PAUSE_DISCONNECT {}", if self.pause_on_disconnect {"On"} else {"Off"}));
                 rows
             }
             Page::Pair => {
@@ -368,9 +427,11 @@ impl Manager {
             self.forget_confirmation = None;
         }
         if action == Action::QuickMenu {
+            self.cancel_pending();
             return true;
         }
         if action == Action::GbaDown(Btn::B) {
+            self.cancel_pending();
             if let Some(page) = self.stack.pop() {
                 self.page = page;
                 self.selected = 0;
@@ -386,6 +447,9 @@ impl Manager {
         match action {
             Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
             Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
+            Action::GbaDown(Btn::A | Btn::Left | Btn::Right)
+                if self.page == Page::Home && self.selected == self.pause_row() =>
+            { self.toggle_pause_on_disconnect(); }
             Action::GbaDown(Btn::Left | Btn::Right)
                 if self.page == Page::Home && self.selected == self.disconnect_row() =>
             {
@@ -394,7 +458,7 @@ impl Manager {
             Action::GbaDown(Btn::Left | Btn::Right)
                 if self.page == Page::Home
                     && self.bluetooth_available
-                    && self.selected == 0 =>
+                    && self.selected == 1 =>
             {
                 self.toggle_bluetooth();
             }
@@ -416,7 +480,7 @@ impl Manager {
             }
             Action::GbaDown(Btn::A) => match self.page.clone() {
                 Page::Home => {
-                    if self.bluetooth_available && self.selected == 0 {
+                    if self.bluetooth_available && self.selected == 1 {
                         self.toggle_bluetooth();
                     } else if self.selected == self.local_row() {
                         self.ask(if self.bluetooth_available { "speaker" } else { "local" }, None);
@@ -459,6 +523,14 @@ impl Manager {
         );
     }
 
+    fn toggle_pause_on_disconnect(&mut self) {
+        let value = !self.pause_on_disconnect;
+        match save_sound_value(&self.root, "pause_on_disconnect", if value {"1"} else {"0"}) {
+            Ok(()) => { self.pause_on_disconnect = value; self.status.clear(); }
+            Err(_) => self.status = "Error: Could not save pause setting".into(),
+        }
+    }
+
     fn change_disconnect_volume(&mut self, increase: bool) {
         let value = if increase {
             self.disconnect_volume.saturating_add(5).min(100)
@@ -474,22 +546,42 @@ impl Manager {
         }
     }
 
+    pub fn visible_sliders(&self)->Vec<slot_ui::MenuSlider> {
+        let(_,_,first,visible)=self.scroll_info();
+        if self.page!=Page::Home {return vec![];}
+        [(self.disconnect_row(),self.disconnect_volume,4),(0,self.current_volume,3)].into_iter().filter(|(row,_,_)|(first..first+visible).contains(row)).map(|(row,value,id)|slot_ui::MenuSlider{width:112.0,span:200.0,id:self.page_key()*16+id,fraction:value as f32/100.0,y:slot_ui::expressive::ROW_TOP+6.0+(row-first)as f32*slot_ui::QUICK_PITCH}).collect()
+    }
+
+    pub fn visible_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        let (_,_,first,visible)=self.scroll_info();
+        self.rows().iter().enumerate().skip(first).take(visible).filter_map(|(i,row)| {
+            let (id,value)=if let Some(v)=row.strip_prefix("BLUETOOTH ") {(1,v)}
+                else if let Some(v)=row.strip_prefix("PAUSE_DISCONNECT ") {(2,v)} else {return None;};
+            Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:slot_ui::expressive::ROW_TOP+6.0+(i-first) as f32*slot_ui::QUICK_PITCH})
+        }).collect()
+    }
+    pub fn scroll_info(&self) -> (usize,usize,usize,usize) {
+        let total=self.rows().len();
+        let visible=total.min(slot_ui::QUICK_VISIBLE);
+        (self.selected,total,self.selected.saturating_sub(visible/2).min(total.saturating_sub(visible)),visible)
+    }
+    pub fn page_key(&self) -> u64 { 1000 + self.page.clone() as u64 }
     pub fn lines(&self) -> Vec<String> {
         let title = "";
         let message = if self.forget_confirmation.is_some() {
             "CONFIRM_FORGET".to_owned()
         } else if self.recovering.load(Ordering::Relaxed) {
-            "Error".into()
+            "Bluetooth is restarting. Please wait.".into()
         } else if self.busy() {
             String::new()
         } else if self.status.starts_with("Error:") {
-            "Error".into()
+            error_notice(&self.status).into()
         } else if self.status.is_empty() && self.disconnect_notice {
             "Device disconnected — choose output".into()
         } else {
             self.status.clone()
         };
-        let compact = matches!(self.page, Page::Home | Page::Pair);
+        let compact = true;
         let mut lines = vec![
             title.to_owned(),
             message,
@@ -501,8 +593,8 @@ impl Manager {
                 String::new()
             },
         ];
-        let visible = if compact { 6 } else { 4 };
-        let first = self.selected.saturating_sub(visible - 1);
+        let visible = if compact { slot_ui::QUICK_VISIBLE } else { 3 };
+        let first = self.scroll_info().2;
         for (i, row) in self.rows().iter().enumerate().skip(first).take(visible) {
             lines.push(format!(
                 "{}{}",
@@ -516,8 +608,8 @@ impl Manager {
         }
         lines.push(
             if self.page == Page::Home
-                && (self.selected == self.disconnect_row()
-                    || (self.bluetooth_available && self.selected == 0))
+                && (self.selected == self.disconnect_row() || self.selected == self.pause_row() || self.volume_selected()
+                    || (self.bluetooth_available && self.selected == 1))
             {
                 "B Back · Change"
             } else if self.disconnect_notice && self.page == Page::Home {
@@ -538,12 +630,16 @@ impl Manager {
     }
 }
 
-// A failed interactive operation gets one stack restart and one retry.
+impl Drop for Manager {
+    fn drop(&mut self) { self.cancel_pending(); }
+}
+
+// Radio power failures get one restart and retry; a missing/offline device does not.
 // Background reconnect keeps its existing backoff instead of cycling the radio.
 fn run_with_recovery(verb: &str, address: Option<String>, on_recover: impl FnOnce(),
     mut run: impl FnMut(&str, Option<String>) -> ResultMessage) -> ResultMessage {
     let first = run(verb, address.clone());
-    if !first.status.starts_with("Error:") || verb == "diagnose" { return first; }
+    if !first.status.starts_with("Error:") || matches!(verb, "diagnose" | "connect") { return first; }
     on_recover();
     let restarted = run("restart", None);
     if restarted.status.starts_with("Error:") { return restarted; }
@@ -647,23 +743,44 @@ pub fn disconnect_volume(root: &std::path::Path) -> u8 {
         .unwrap_or(0)
 }
 
+pub fn pause_on_disconnect(root: &std::path::Path) -> bool {
+    std::fs::read_to_string(root.join("Config/sound.conf")).ok()
+        .is_some_and(|text| text.lines().any(|line| line == "pause_on_disconnect=1"))
+}
+
+fn save_sound_value(root: &std::path::Path, key: &str, value: &str) -> std::io::Result<()> {
+    let path = root.join("Config/sound.conf");
+    let previous = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e),
+    };
+    let mut text: String = previous.lines().filter(|line| line.split_once('=').is_none_or(|(k, _)| k != key))
+        .map(|line| format!("{line}\n")).collect();
+    text.push_str(&format!("{key}={value}\n"));
+    std::fs::create_dir_all(root.join("Config"))?;
+    slot_store::atomic_write(&path, text.as_bytes())
+}
+
 fn save_disconnect_volume(root: &std::path::Path, value: u8) -> std::io::Result<()> {
-    let config = root.join("Config");
-    std::fs::create_dir_all(&config)?;
-    let temp = config.join("sound.conf.tmp");
-    std::fs::write(&temp, format!("disconnect_volume={}\n", value.min(100)))?;
-    std::fs::rename(temp, config.join("sound.conf"))
+    save_sound_value(root, "disconnect_volume", &value.min(100).to_string())
+}
+
+fn run(root: PathBuf, verb: &str, address: Option<String>) -> ResultMessage {
+    run_cancel(root, verb, address, None)
 }
 
 #[cfg(feature = "device")]
-fn run(root: PathBuf, verb: &str, address: Option<String>) -> ResultMessage {
+fn run_cancel(root: PathBuf, verb: &str, address: Option<String>, cancel: Option<&std::path::Path>) -> ResultMessage {
     let mut command = std::process::Command::new("timeout");
     command
-        .arg("180")
+        .args(["-k", "5", if verb == "connect" {"60"} else {"90"}])
         .arg("/bin/sh")
         .arg(root.join("System/bluetooth.sh"))
         .arg(verb)
-        .env("SLOT_ROOT", &root);
+        .env("SLOT_ROOT", &root)
+        .env("SLOT_BT_LOCK_TRIES", "12");
+    if let Some(cancel) = cancel { command.env("SLOT_BT_CANCEL_FILE", cancel); }
     if let Some(address) = address {
         command.arg(address);
     }
@@ -744,7 +861,7 @@ fn run(root: PathBuf, verb: &str, address: Option<String>) -> ResultMessage {
 }
 
 #[cfg(not(feature = "device"))]
-fn run(_root: PathBuf, _verb: &str, _address: Option<String>) -> ResultMessage {
+fn run_cancel(_root: PathBuf, _verb: &str, _address: Option<String>, _cancel: Option<&std::path::Path>) -> ResultMessage {
     ResultMessage {
         devices: None,
         output: None,
@@ -760,9 +877,17 @@ pub fn screen_face_with_ink(lines: &[String], footer_ink: [u8; 3]) -> UndoFace {
     screen_face_on(lines,footer_ink,slot_ui::Canvas::FRAMED)
 }
 
-pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Canvas) -> UndoFace {
+pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Canvas) -> UndoFace {render_face(lines,footer_ink,canvas,true)}
+pub fn screen_face_without_switches(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas) -> UndoFace {
+    let mut lines=lines.to_vec();
+    if let Some(message)=lines.get_mut(1) {
+        if message != "CONFIRM_FORGET" { message.clear(); }
+    }
+    render_face(&lines,footer_ink,canvas,false)
+}
+fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, switches: bool) -> UndoFace {
     let screen_w=canvas.w.round() as u32;
-    let mut rgba = vec![0u8; (screen_w * OUT_H * 4) as usize];
+    let rgba = vec![0u8; (screen_w * OUT_H * 4) as usize];
     let Some(font) = slot_ui::text::label_font() else {
         return UndoFace {
             rgba,
@@ -770,25 +895,32 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             h: OUT_H,
         };
     };
-    let label_w = screen_w - 96;
+    let label_w = screen_w - 2 * slot_ui::QUICK_LABEL_X as u32;
     let compact = lines.get(2).is_some_and(|line| line == "COMPACT");
     let clean = lines.iter().take(3).all(String::is_empty);
     let row_count = lines.len().saturating_sub(4) as u32;
     // Reserve six row positions so status text and new scan results cannot
     // recenter the menu or change the visible window.
     let row_top = if compact {
-        88
+        slot_ui::expressive::ROW_TOP as u32
     } else if clean {
-        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * 48) / 2 + 4
+        (OUT_H - slot_ui::MOUTH_H as u32 - slot_ui::MENU_HINT_H - 12 - row_count * slot_ui::QUICK_PITCH as u32) / 2 + 4
     } else {
         184
     };
+    let selected = lines.iter().skip(3).position(|line|line.starts_with("SELECTED "));
+    let mut panel = UndoFace { rgba, w: screen_w, h: OUT_H };
+    slot_ui::expressive::raster_menu_rows(&mut panel, row_top as f32, slot_ui::QUICK_PITCH, row_count as usize, if switches {selected}else{None});
+    let mut rgba = panel.rgba;
+    if compact { let title=slot_ui::quick_heading_face("Sound"); let x=screen_w.saturating_sub(title.w)/2; blit(&mut rgba,&title,x,0); }
     for (i, line) in lines.iter().enumerate() {
-        if compact && (i == 0 || i == 2) {
+        // Transient feedback belongs to the floating pill, not a second line
+        // inside the card. Keep the inline destructive-action confirmation.
+        if compact && (i == 0 || i == 2 || (i==1 && line!="CONFIRM_FORGET")) {
             continue;
         }
         let (label, top, h, px, max_lines, highlight) = match i {
-            1 if compact => (if line.starts_with("Error:") { "Error" } else { line.as_str() }, 12, 64, 20.0, 2, false),
+            1 if compact => (if line.starts_with("Error:") { error_notice(line) } else { line.as_str() }, 346, 26, 16.0, 1, false),
             0 => (line.as_str(), 16, 46, 30.0, 1, false),
             1 => (line.as_str(), 66, 82, 22.0, 3, false),
             2 => (line.as_str(), 146, 30, 20.0, 1, false),
@@ -797,9 +929,9 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                 line.strip_prefix("SELECTED ")
                     .or_else(|| line.strip_prefix("ROW "))
                     .unwrap_or(line),
-                row_top + (i as u32 - 3) * 48 + 4,
+                row_top + (i as u32 - 3) * slot_ui::QUICK_PITCH as u32 + 1,
                 40u32,
-                30.0,
+                26.0,
                 1,
                 line.starts_with("SELECTED "),
             ),
@@ -810,10 +942,6 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         } else {
             [246, 244, 239]
         };
-        if highlight {
-            let pointer = slot_ui::quick_pointer_face();
-            blit(&mut rgba, &pointer, 18, top.saturating_sub(4));
-        }
         if i == lines.len() - 1 {
             let faces = slot_ui::sound_button_legends(footer_ink);
             let left: Vec<_> = [line.contains("B Back").then_some(0)]
@@ -852,27 +980,34 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         }
         if label == "CONFIRM_FORGET" {
             let hint = slot_ui::sound_forget_confirmation();
-            blit(&mut rgba, &hint, (screen_w - hint.w) / 2, 12);
+            blit(&mut rgba, &hint, (screen_w - hint.w) / 2, 320);
             continue;
         }
         if let Some((name, value)) = label
             .strip_prefix("DISCONNECT ")
-            .map(|v| ("Volume on disconnect", v))
+            .map(|v| ("Vol. on disconnect", v))
+            .or_else(|| label.strip_prefix("VOLUME ").map(|v| ("Volume", v)))
+            .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
         {
             let name = slot_ui::quick_value_face(name, highlight);
-            blit(&mut rgba, &name, 64 - slot_ui::MENU_PAD, top);
-            if label.starts_with("BLUETOOTH ") {
+            blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
+            if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
+                if !switches {continue;}
                 let switch = slot_ui::toggle_face(value == "On", highlight);
-                let x = screen_w - 32 + slot_ui::MENU_PAD - switch.w;
+                let x = screen_w - slot_ui::QUICK_EDGE as u32 + slot_ui::MENU_PAD - switch.w;
                 blit(&mut rgba, &switch, x, top);
                 continue;
+            }
+            if label.starts_with("VOLUME ") || label.starts_with("DISCONNECT ") {
+                if switches {let slider=slot_ui::slider_face_with_width(value.trim_end_matches('%').parse::<f32>().unwrap_or(0.0)/100.0,112.0);blit(&mut rgba,&slider,screen_w-slot_ui::QUICK_EDGE as u32-200-slot_ui::MENU_PAD,top);}
+                let value=slot_ui::quick_value_face(value,highlight);blit(&mut rgba,&value,screen_w-slot_ui::QUICK_EDGE as u32+slot_ui::MENU_PAD-value.w,top);continue;
             }
             let value = slot_ui::quick_value_face(value, highlight);
             if highlight {
                 let left = slot_ui::quick_caret_face(false);
                 let right = slot_ui::quick_caret_face(true);
-                let rx = screen_w - 32 - right.w;
+                let rx = screen_w - slot_ui::QUICK_EDGE as u32 - right.w;
                 let vx = rx - 14 + 18 - value.w;
                 blit(&mut rgba, &right, rx, top);
                 blit(&mut rgba, &value, vx, top);
@@ -887,7 +1022,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
                     .map(|(i, _)| i as u32 % value.w)
                     .max()
                     .unwrap_or(0);
-                blit(&mut rgba, &value, screen_w - 33 - ink_right, top);
+                blit(&mut rgba, &value, screen_w - slot_ui::QUICK_EDGE as u32 - 1 - ink_right, top);
             }
             continue;
         }
@@ -906,9 +1041,9 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
         let inset = if !row {
             48
         } else if device {
-            100
+            slot_ui::QUICK_LABEL_X as u32 + 36
         } else {
-            64
+            slot_ui::QUICK_LABEL_X as u32
         };
         let label_w = label_w - if device { 36 } else { 0 };
         if device {
@@ -926,7 +1061,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             blit(
                 &mut rgba,
                 &icon,
-                64 + 28u32.saturating_sub(icon.w) / 2,
+                slot_ui::QUICK_LABEL_X as u32 + 28u32.saturating_sub(icon.w) / 2,
                 top + (center - icon.h as f32 / 2.).round().max(0.) as u32,
             );
         }
@@ -934,7 +1069,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             if highlight { slot_ui::text::Role::Focus } else { slot_ui::text::Role::Menu }
         } else { slot_ui::text::Role::Detail };
         let font = slot_ui::text::font(role).unwrap_or(font);
-        let layout = slot_ui::text::fit(
+        let layout = slot_ui::text::fit_preserving_case(
             font,
             label,
             (label_w - if active { 44 } else { 0 }) as f32,
@@ -957,7 +1092,7 @@ pub fn screen_face_on(lines: &[String], footer_ink: [u8; 3], canvas:slot_ui::Can
             label_w
         };
         if active {
-            draw_check(&mut rgba, screen_w - 32 - 28, top + h / 2, ink);
+            draw_check(&mut rgba, screen_w - slot_ui::QUICK_EDGE as u32 - 28, top + h / 2, ink);
         }
         let mut face = vec![0u8; (face_w * h * 4) as usize];
         slot_ui::text::draw_centred(&mut face, face_w, h, &layout, ink);
@@ -1026,6 +1161,8 @@ mod menu_tests {
             root: PathBuf::new(),
             bluetooth_available: true,
             disconnect_volume: 0,
+            current_volume:50,
+            pause_on_disconnect: false,
             page: Page::Home,
             stack: Vec::new(),
             usb_devices: Vec::new(),
@@ -1039,7 +1176,9 @@ mod menu_tests {
             status: String::new(),
             output: "speaker".into(),
             pending: None,
+            progress_requested: false,
             recovering: Arc::default(),
+            cancel_path: None,
             face: None,
             progress_face: None,
             wired: false,
@@ -1050,7 +1189,42 @@ mod menu_tests {
         }
     }
     #[test]
-    fn an_error_restarts_bluetooth_and_retries_the_same_operation_once() {
+    fn error_pills_explain_the_reported_busy_and_unreachable_cases_concisely() {
+        for (raw,want) in [
+            ("Error: Connection failed: org.bluez.Error.Failed br-connection-busy","Bluetooth is busy. Wait a moment, then retry."),
+            ("Error: Connection failed: org.bluez.Error.Failed br-connection-page-timeout","Device didn’t answer. Wake it and try again."),
+            ("Error: Pairing failed: AuthenticationFailed","Pairing failed. Forget the device and pair again."),
+            ("Error: unknown raw details /mnt/sdcard/private.txt","Bluetooth failed. Turn it off and on, then retry."),
+        ] {
+            assert_eq!(error_notice(raw),want);assert!(want.chars().count()<=60);
+            let mut m=menu();m.status=raw.into();assert_eq!(m.lines()[1],want);
+        }
+    }
+
+    #[test]
+    fn opening_discovery_is_silent_but_requested_work_has_progress() {
+        let mut m=menu();let(_tx,rx)=mpsc::channel();m.pending=Some(rx);
+        assert!(m.busy());assert!(!m.show_progress());
+        m.cancel_pending();m.ask("scan",None);assert!(m.show_progress());
+        m.cancel_pending();assert!(!m.show_progress());
+    }
+    #[test]
+    fn backing_out_cancels_work_and_keeps_the_sound_menu_responsive() {
+        let dir=tempfile::tempdir().unwrap();
+        let path=dir.path().join("cancel");
+        let mut m=menu();
+        let (_tx,rx)=mpsc::channel();
+        m.pending=Some(rx); m.cancel_path=Some(path.clone());
+        m.page=Page::Pair; m.stack.push(Page::Home);
+        m.input(Action::GbaDown(Btn::B));
+        assert!(!m.busy()); assert!(path.exists()); assert_eq!(m.page,Page::Home);
+        let selected=m.selected;
+        m.input(Action::GbaDown(Btn::Down));
+        assert_ne!(m.selected,selected);
+    }
+
+    #[test]
+    fn offline_connect_does_not_restart_the_stack_but_radio_errors_can_recover() {
         let mut calls = Vec::new();
         let mut announced = false;
         let result = run_with_recovery("connect", Some("AA:BB:CC:DD:EE:FF".into()),
@@ -1059,10 +1233,9 @@ mod menu_tests {
                 ResultMessage { devices: None, output: None,
                     status: if calls.len() == 1 { "Error: failed" } else { "Connected" }.into() }
             });
-        assert!(announced);
-        assert_eq!(calls, vec![("connect".into(), Some("AA:BB:CC:DD:EE:FF".into())),
-            ("restart".into(), None), ("connect".into(), Some("AA:BB:CC:DD:EE:FF".into()))]);
-        assert!(!result.status.starts_with("Error:"));
+        assert!(!announced);
+        assert_eq!(calls, vec![("connect".into(), Some("AA:BB:CC:DD:EE:FF".into()))]);
+        assert!(result.status.starts_with("Error:"));
         let mut calls = Vec::new();
         let result = run_with_recovery("on", None, || {}, |verb, _| {
             calls.push(verb.to_owned());
@@ -1076,18 +1249,18 @@ mod menu_tests {
             ResultMessage { devices: None, output: None,
                 status: if verb == "restart" { "Ready" } else { "Error: unavailable" }.into() }
         });
-        assert_eq!(calls, ["connect", "restart", "connect"]);
+        assert_eq!(calls, ["connect"]);
     }
 
     #[test]
-    fn recovery_shows_only_error_and_never_exposes_helper_details() {
+    fn recovery_shows_a_brief_next_step_without_exposing_helper_details() {
         let mut m = menu();
         m.status = "Error: org.bluez.Error.Failed, secret debug detail".into();
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth failed. Turn it off and on, then retry.");
         assert!(!m.lines().iter().any(|l| l.contains("org.bluez") || l.contains("debug detail")));
         m.recovering.store(true, Ordering::Relaxed);
         m.status.clear();
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth is restarting. Please wait.");
     }
 
     #[test]
@@ -1115,7 +1288,7 @@ mod menu_tests {
         .unwrap();
         m.poll();
         assert!(!m.busy());
-        assert_eq!(m.lines()[1], "Error");
+        assert_eq!(m.lines()[1], "Bluetooth failed. Turn it off and on, then retry.");
         assert_eq!(&m.lines()[3..], &idle[3..]);
     }
 
@@ -1195,15 +1368,17 @@ mod menu_tests {
         assert_eq!(
             m.rows(),
             vec![
+                "VOLUME 50%",
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "USB_DEVICE AB13X Audio",
-                "DISCONNECT 0%"
+                "DISCONNECT 0%",
+                "PAUSE_DISCONNECT Off"
             ]
         );
         m.observe_output(Some("plughw:CARD=Audio,DEV=0"), true);
-        assert_eq!(m.rows()[0], "SPEAKER_DEVICE Internal speaker");
-        assert!(m.rows()[1].starts_with("ACTIVE USB"));
-        assert_eq!(m.disconnect_row(), 2);
+        assert_eq!(m.rows()[1], "SPEAKER_DEVICE Internal speaker");
+        assert!(m.rows()[2].starts_with("ACTIVE USB"));
+        assert_eq!(m.disconnect_row(), 3);
     }
 
     #[test]
@@ -1229,7 +1404,7 @@ mod menu_tests {
         let root = tempfile::tempdir().unwrap();
         let mut m = menu();
         m.root = root.path().to_owned();
-        m.selected = 0;
+        m.selected = 1;
         assert!(m.lines().last().unwrap().contains("Change"));
         m.selected = m.disconnect_row() - 1;
         m.input(Action::GbaDown(Btn::A));
@@ -1243,10 +1418,10 @@ mod menu_tests {
         let root = tempfile::tempdir().unwrap();
         let mut m = menu();
         m.root = root.path().to_owned();
-        assert_eq!(m.rows().first().unwrap(), "BLUETOOTH Off");
+        assert_eq!(m.rows().get(1).unwrap(), "BLUETOOTH Off");
         std::fs::create_dir(root.path().join("Config")).unwrap();
         std::fs::write(root.path().join("Config/bluetooth-off"), "").unwrap();
-        assert_eq!(m.rows().first().unwrap(), "BLUETOOTH Off");
+        assert_eq!(m.rows().get(1).unwrap(), "BLUETOOTH Off");
         m.bluetooth_available = false;
         assert!(!m.rows().iter().any(|r| r.starts_with("BLUETOOTH ")));
     }
@@ -1296,11 +1471,13 @@ mod menu_tests {
         assert_eq!(
             m.rows(),
             vec![
+                "VOLUME 50%",
                 "BLUETOOTH Off",
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "DEVICE WF-C510",
                 "Pair audio device",
-                "DISCONNECT 0%"
+                "DISCONNECT 0%",
+                "PAUSE_DISCONNECT Off"
             ]
         );
         assert!(m.lines()[0].is_empty());
@@ -1310,8 +1487,8 @@ mod menu_tests {
             m.status = status.into();
             let busy = screen_face(&m.lines());
             assert_eq!(
-                &idle.rgba[(88 * OUT_W * 4) as usize..],
-                &busy.rgba[(88 * OUT_W * 4) as usize..],
+                &idle.rgba[(88 * OUT_W * 4) as usize..(340 * OUT_W * 4) as usize],
+                &busy.rgba[(88 * OUT_W * 4) as usize..(340 * OUT_W * 4) as usize],
                 "status must not move or redraw the menu rows or hints"
             );
         }
@@ -1452,10 +1629,13 @@ mod menu_tests {
         let mut m = Manager::new(root.path().into(), false);
         assert_eq!(
             m.rows(),
-            vec!["ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%"]
+            vec!["VOLUME 50%","ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off"]
         );
         assert!(m.pending.is_none());
-        m.selected = 1;
+        m.selected = m.disconnect_row();
+        assert!(m.slider_selected());
+        assert_eq!(m.visible_sliders().len(),2);
+        assert!(m.visible_sliders().iter().any(|s|s.fraction==0.0));
         for _ in 0..25 {
             m.input(Action::GbaDown(Btn::Right));
         }
@@ -1800,29 +1980,8 @@ pub fn indicator_face() -> UndoFace {
 }
 
 pub fn indicator_face_with_ink(ink: [u8; 3]) -> UndoFace {
-    let mut face = UndoFace {
-        rgba: vec![0; 20 * 20 * 4],
-        w: 20,
-        h: 20,
-    };
-    for ((x0, y0), (x1, y1)) in [
-        ((9, 1), (9, 18)),
-        ((9, 1), (16, 6)),
-        ((16, 6), (3, 15)),
-        ((9, 18), (16, 13)),
-        ((16, 13), (3, 4)),
-    ] {
-        let steps = i32::abs(x1 - x0).max(i32::abs(y1 - y0));
-        for step in 0..=steps {
-            let x = x0 + (x1 - x0) * step / steps;
-            let y = y0 + (y1 - y0) * step / steps;
-            for dx in 0..2 {
-                let offset = ((y * 20 + x + dx) * 4) as usize;
-                face.rgba[offset..offset + 4].copy_from_slice(&[ink[0], ink[1], ink[2], 255]);
-            }
-        }
-    }
-    face
+    let face=slot_ui::status_icon_face(slot_ui::Icon::Bluetooth,ink);
+    UndoFace{rgba:face.rgba,w:face.w,h:face.h}
 }
 
 #[cfg(test)]
@@ -1922,32 +2081,10 @@ pub fn probe(root: &std::path::Path) -> Option<Receiver<bool>> {
         }
     });
     Some(rx)
+
+
 }
 
 /// Small antialiased progress ring. Frames are cached once by the frontend;
 /// animation never rerasterizes the full menu or delays its worker.
-pub fn progress_face(frame: usize) -> UndoFace {
-    let (w, h) = (32, 32);
-    let mut rgba = vec![0; (w * h * 4) as usize];
-    let turn = std::f32::consts::TAU;
-    let angle = (frame % 12) as f32 * turn / 12.;
-    for y in 0..h {
-        for x in 0..w {
-            let mut alpha = 0.;
-            for sy in 0..4 {
-                for sx in 0..4 {
-                    let dx = x as f32 + (sx as f32 + 0.5) / 4. - 16.;
-                    let dy = y as f32 + (sy as f32 + 0.5) / 4. - 16.;
-                    let r = (dx * dx + dy * dy).sqrt();
-                    if (10.5..13.).contains(&r) {
-                        let trail = (angle - dy.atan2(dx)).rem_euclid(turn) / turn;
-                        alpha += 0.16 + 0.84 * (1. - trail).powi(3);
-                    }
-                }
-            }
-            let at = ((y * w + x) * 4) as usize;
-            rgba[at..at + 4].copy_from_slice(&[246, 244, 239, (alpha * 255. / 16.).round() as u8]);
-        }
-    }
-    UndoFace { rgba, w, h }
-}
+pub fn progress_face(frame: usize) -> UndoFace { slot_ui::loading_face(frame) }

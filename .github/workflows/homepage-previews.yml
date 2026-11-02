@@ -71,6 +71,7 @@ jobs:
         run: python3 tools/collect-doc-media.py /tmp/slot-homepage --git-objects
       - uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: homepage-media
           path: |
             /tmp/slot-homepage/publish/**

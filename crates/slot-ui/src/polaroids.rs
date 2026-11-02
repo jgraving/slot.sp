@@ -104,9 +104,10 @@ impl Polaroids {
         (self.entries.len(), self.index)
     }
 
-    pub fn title(&self, now: &str) -> String {
+    pub fn title(&self, now: &str) -> String {self.title_format(now,false)}
+    pub fn title_format(&self, now: &str,twelve:bool) -> String {
         match self.selected() {
-            Some(e) => Self::relative_time(&e.stamp, now),
+            Some(e) => Self::relative_time_format(&e.stamp, now,twelve),
             None => String::new(),
         }
     }
@@ -188,7 +189,8 @@ impl Polaroids {
         });
     }
 
-    pub fn relative_time(stamp: &str, now: &str) -> String {
+    pub fn relative_time(stamp: &str, now: &str) -> String {Self::relative_time_format(stamp,now,false)}
+    pub fn relative_time_format(stamp: &str, now: &str,twelve:bool) -> String {
         const RELATIVE_WINDOW: i64 = 12 * 3600;
         let seconds = stamp.get(..19).unwrap_or(stamp);
         let (Some(then), Some(parsed)) = (parse_stamp(seconds), parse_stamp(now)) else {
@@ -204,7 +206,7 @@ impl Polaroids {
         if delta < RELATIVE_WINDOW {
             return format!("{} hr ago", delta / 3600);
         }
-        format!("{} {}:{}", &stamp[..10], &stamp[11..13], &stamp[14..16])
+        format!("{} {}",&stamp[..10],crate::clock_text(then,twelve))
     }
 }
 

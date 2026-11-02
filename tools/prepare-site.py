@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'site/docs'
 GUIDES = ['GUIDE', 'GETTING-STARTED', 'CONTROLS', 'LIBRARY', 'PLAYING',
           'SCREENSHOTS', 'DISPLAY', 'NIGHT-DISPLAY', 'BLUETOOTH', 'KID-MODE',
-          'POWER-OPTIONS', 'LINK-PLAY', 'CART-STUDIO']
+          'POWER-OPTIONS', 'LINK-PLAY', 'CART-STUDIO', 'SETTINGS']
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -24,8 +24,12 @@ def main():
     features = DOCS / 'features'
     media = DOCS / 'media/fork'
     fonts = DOCS / 'assets/fonts'
+    if media.exists():
+        shutil.rmtree(media)
     for directory in [features, media, fonts]:
         directory.mkdir(parents=True, exist_ok=True)
+    current = json.loads((ROOT / 'previews/current/provenance.json').read_text())
+    current_revision = current.get('capture_source_commit',current['source_commit'])[:12]
     mapping = {name + '.md': name.lower() + '.md' for name in GUIDES}
     mapping['README.md'] = '../index.md'
     def link(match):
@@ -34,6 +38,8 @@ def main():
             anchor = re.sub(r'-{2,}', '-', anchor)
         if path in mapping:
             path = mapping[path]
+        elif path.startswith('previews/current/'):
+            path = '../media/fork/current/' + current_revision + '/' + path.removeprefix('previews/current/')
         elif path.startswith('previews/'):
             path = '../media/fork/' + Path(path).name
         return '](' + path + anchor + ')'
@@ -47,30 +53,36 @@ def main():
         content = '\n'.join(lines) + '\n'
         content = content.replace('<details>', '<details markdown>')
         content = re.sub(r'\]\(([^)#]*)(#[^)]*)?\)', link, content)
+        # Keep the site's established styling; captures show the current OS UI.
         def video(match):
-            label, stem = match.groups()
-            stem = {'slot-fit-motion': 'cart-motion', 'power-switch': 'readme-shutdown'}.get(stem, stem)
+            label, theme, stem = match.groups()
+            base = f'/slot.sp/media/fork/current/{current_revision}/{theme}/'
+            import html
             return (f'<video controls muted playsinline loop preload="none" width="720" height="480" '
-                    f'poster="/slot.sp/media/fork/{stem}.png" aria-label="{label}">'
-                    f'<source src="/slot.sp/media/fork/{stem}.mp4" type="video/mp4"></video>')
-        content = re.sub(r'!\[([^]]*)\]\(../media/fork/([^/)]+)\.gif\)', video, content)
+                    f'poster="{base}{stem}.png" aria-label="{html.escape(label,quote=True)}">'
+                    f'<source src="{base}{stem}.mp4" type="video/mp4"></video>')
+        content = re.sub(r'!\[([^]]*)\]\(../media/fork/current/[^/]+/(light|dark)/([^/)]+)\.gif\)', video, content)
         # Render GitHub callouts as native site admonitions.
         content = re.sub(r'^> \[!(TIP|NOTE|WARNING)\]\n((?:>.*\n?)+)',
             lambda m: '!!! ' + m[1].lower() + '\n\n' + ''.join(
                 '    ' + line.removeprefix('> ').removeprefix('>') + '\n'
                 for line in m[2].splitlines()), content, flags=re.M)
         (features / (name.lower() + '.md')).write_text(content)
-    provenance = json.loads((ROOT / 'previews/media-provenance.json').read_text())
-    # Publish the reviewed captures, not obsolete experiments in the source folder.
-    for entry in provenance['files']:
+    current_media = media / 'current'
+    if current_media.exists():
+        shutil.rmtree(current_media)
+    for entry in current['files']:
         source = ROOT / entry['path']
         assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
-        if source.suffix in ('.mp4', '.png'):
-            shutil.copyfile(source, media / source.name)
-    shutil.copyfile(ROOT / 'previews/rgsp-shell-finishes.png', media / 'rgsp-shell-finishes.png')
-    shutil.copyfile(ROOT / 'previews/media-provenance.json', media / 'media-provenance.json')
+        if not entry['path'].startswith('previews/current/') or source.suffix not in ('.mp4','.png'):
+            continue
+        target = current_media / current_revision / Path(entry['path']).relative_to('previews/current')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source,target)
+    current_media.mkdir(exist_ok=True)
+    shutil.copyfile(ROOT / 'previews/current/provenance.json',current_media / 'provenance.json')
     homepage = json.loads((ROOT / 'previews/homepage/provenance.json').read_text())
-    revision = homepage['source_commit'][:12]
+    revision = homepage.get('capture_source_commit',homepage['source_commit'])[:12]
     homepage_media = media / 'homepage'
     if homepage_media.exists():
         shutil.rmtree(homepage_media)
@@ -83,6 +95,14 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
     shutil.copyfile(ROOT / 'previews/homepage/provenance.json', homepage_media / 'provenance.json')
+    model = json.loads((ROOT / 'previews/sp-model/provenance.json').read_text())
+    assert model['model_sha256'] == hashlib.sha256((DOCS / 'assets/sp-model.js').read_bytes()).hexdigest(), 'Re-capture the 3D fallback after changing its model'
+    for entry in model['files']:
+        source = ROOT / entry['path']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        target = media / 'sp-model' / model['revision'] / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
     manifest = json.loads((ROOT / 'crates/slot-ui/assets/fonts/profiles.json').read_text())
     data = args.font_source.read_bytes() if args.font_source else urllib.request.urlopen(
         manifest['source_url'], timeout=60).read()
@@ -98,11 +118,17 @@ def main():
         shutil.rmtree(generated)
     generated.mkdir(parents=True)
     config = (ROOT / 'site/zensical.toml').read_text()
+    config = config.replace('ui_media_revision = \"prepared\"', f'ui_media_revision = \"{current_revision}\"')
     config = config.replace('homepage_media_revision = "prepared"',
                             f'homepage_media_revision = "{revision}"')
-    for relative in ['assets/device.css', 'assets/slot.css', 'assets/slot.js']:
+    model_name = None
+    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/header.css', 'assets/page-motion.css', 'assets/navigation.js', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()
+        if source.name == 'sp-model.js':
+            content = content.replace("'./vendor/", "'../vendor/")
+        elif source.name == 'slot.js':
+            content = content.replace("'sp-model.js'", f"'generated/{model_name}'")
         if source.suffix == '.css':
             # Generated CSS is one directory deeper than the original file.
             def parent_url(match):
@@ -115,8 +141,16 @@ def main():
             content = re.sub(r'url\(([^)]+)\)', parent_url, content)
         digest = hashlib.sha256(content.encode()).hexdigest()[:12]
         name = f'{source.stem}.{digest}{source.suffix}'
+        if source.name == 'sp-model.js':
+            model_name = name
         (generated / name).write_text(content)
         config = config.replace('"' + relative + '"', '"assets/generated/' + name + '"')
+    # The logo changes with the UI font; never reuse a cached previous image.
+    wordmark = DOCS / 'assets/wordmark.png'
+    wordmark_name = f'wordmark.{hashlib.sha256(wordmark.read_bytes()).hexdigest()[:12]}.png'
+    shutil.copyfile(wordmark, generated / wordmark_name)
+    config = config.replace('[project.extra]\n',
+                            f'[project.extra]\nsp_model_revision = "{model["revision"]}"\nwordmark_asset = "assets/generated/{wordmark_name}"\n')
     (ROOT / 'site/zensical.build.toml').write_text(config)
     print(f'Prepared {len(GUIDES)} guides, reviewed media, font and fingerprinted website assets')
 
