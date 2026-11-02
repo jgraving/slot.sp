@@ -77,11 +77,14 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
     execFileSync('python3',['-c',`import io,json,sys
 from PIL import Image
 im=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert('RGB');p=json.loads(sys.argv[1])
-point=(round(p['x']+8),round(p['y']+p['height']/2));actual=im.getpixel(point)
-assert max(abs(a-b) for a,b in zip(actual,(51,79,82)))<5, ('Pill disappeared in rendered pixels',point,actual,sys.argv[2])
+box=(round(p['x']),round(p['y']),round(p['x']+p['width']),round(p['y']+p['height']))
+pixels=list(im.crop(box).get_flattened_data())
+surface=sum(max(abs(a-b) for a,b in zip(pixel,(51,79,82)))<5 for pixel in pixels)
+# Rounded corners and text interrupt the fill; a disappearing pill cannot
+# retain most of its solid surface. Avoid sampling an antialiased letter.
+assert surface>len(pixels)*.45, ('Pill disappeared in rendered pixels',surface,len(pixels),sys.argv[2])
 if sys.argv[3]=='420':
- box=(round(p['x']),round(p['y']),round(p['x']+p['width']),round(p['y']+p['height']))
- ink=sum(r>130 and g>150 and b>150 for r,g,b in im.crop(box).getdata())
+ ink=sum(r>130 and g>150 and b>150 for r,g,b in pixels)
  assert ink>12, ('Shared pill covers its label',ink,sys.argv[2])
 `,JSON.stringify(position),label,String(time)],{input:png});
     positions.push(position);
@@ -122,6 +125,7 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
    await transition(page,()=>page.goBack({waitUntil:'domcontentloaded'}),'installing/','back',`${width}-back`);
    await transition(page,()=>page.goForward({waitUntil:'domcontentloaded'}),'updating/','forward',`${width}-history-forward`);
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Cart Studio',exact:true}).click(),'studio/','forward',`${width}-studio`,width===980);
+   await transition(page,()=>page.locator('header').getByRole('link',{name:'About',exact:true}).click(),'questions/','forward',`${width}-about`);
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','back',`${width}-guide`);
    const reveals=await page.evaluate(()=>window.__pageReveals);
    await page.locator('.md-typeset a.headerlink[href="#find-a-feature"]').click();
