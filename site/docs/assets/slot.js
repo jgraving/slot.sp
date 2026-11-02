@@ -195,12 +195,12 @@
       else { waitingInputs.push(action); if (waitingInputs.length > 5) waitingInputs.shift(); }
     }
     toggle.addEventListener('click', () => {
-      if (pose === 'closed' && ready) { flipLid(true); send('boot'); return; }
+      if (pose === 'closed' && ready) { flipLid(true); player?.play(); return; }
       player?.toggle();
     });
     import(new URL('hero-player.js', assets).href).then(({createHero}) => {
-      player = createHero(preview, screen, {media, reduced, onState:({moving,paused,failed}) => {
-        const playing = moving && !paused;
+      player = createHero(preview, screen, {media, reduced, onState:({moving,paused,active,failed}) => {
+        const playing = moving && !paused && active;
         toggle.setAttribute('aria-pressed', String(playing));
         toggle.querySelector('span').textContent = playing ? 'Pause preview' : moving ? 'Play preview' : 'Replay startup';
         toggle.disabled = failed;

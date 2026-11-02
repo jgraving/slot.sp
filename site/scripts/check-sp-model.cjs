@@ -145,6 +145,9 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
         return !v.paused&&v.currentTime>0&&document.getElementById('hero-screen').dataset.state==='boot';
       },{},{timeout:10000});
       assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false','Native boot must actually play');
+      const bootFrame=await page.locator('#hero-screen').evaluate(c=>c.toDataURL());
+      await page.waitForFunction(()=>document.getElementById('hero-preview').currentTime>.7);
+      assert.notEqual(await page.locator('#hero-screen').evaluate(c=>c.toDataURL()),bootFrame,'The hidden decoder must paint changing boot frames into the glass');
       await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
       stable(before,await boxes(page),`${width}: first opening`);
       assert(await page.locator('.model-opening').evaluate(v=>v.currentTime>.9&&!v.error),'The rendered opening must play');
