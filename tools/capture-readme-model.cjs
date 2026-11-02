@@ -19,6 +19,7 @@ html,body{margin:0;overflow:hidden;background:${readme?'#e8e3d8':'#0e1423'}}
 </style></head><body>${readme?'<div class="readme-brand"><img src="/site/docs/assets/wordmark.png" alt="slot.sp"><p>Your games.<br><span>SP style.</span></p></div>':''}${model}<script type="module">import {mountSP} from '/site/docs/assets/sp-model.js';window.captureSP=mountSP(document.querySelector('.sp-stage'),document.querySelector('video'),{capture:true});window.captureReady=true;</script></body></html>`;}
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');
+ if(url.pathname==='/favicon.ico'){res.writeHead(204);return res.end();}
  if(url.pathname==='/'){res.setHeader('Content-Type','text/html');return res.end(html(url.searchParams.has('readme')));}
  const file=/^\/native-frames\/\d{4}\.png$/.test(url.pathname)?path.join(output,url.pathname.slice(1)):path.resolve(repo,'.'+url.pathname);
  if(!file.startsWith(repo+path.sep)&&!file.startsWith(path.join(output,'native-frames')+path.sep)){res.writeHead(403);return res.end();}
@@ -40,6 +41,7 @@ const server=http.createServer((req,res)=>{
     const t=Math.max(0,Math.min(1,(frame/30-.08)/.9)),lidAngle=150*(1-(1-t)**3);
     projection=await page.evaluate(args=>window.captureSP.captureFrame(args),{color,lidAngle});
     await page.screenshot({path:path.join(directory,`${String(frame).padStart(4,'0')}.png`)});
+    if(errors.length)throw Error(errors.join('\n'));
    }
    await page.evaluate(()=>{document.documentElement.style.background='transparent';document.body.style.background='transparent';});
    for(const [pose,lidAngle]of [['open',150],['closed',0]]) {

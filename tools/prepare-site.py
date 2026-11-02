@@ -95,6 +95,14 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
     shutil.copyfile(ROOT / 'previews/homepage/provenance.json', homepage_media / 'provenance.json')
+    model = json.loads((ROOT / 'previews/sp-model/provenance.json').read_text())
+    assert model['model_sha256'] == hashlib.sha256((DOCS / 'assets/sp-model.js').read_bytes()).hexdigest(), 'Re-capture the 3D fallback after changing its model'
+    for entry in model['files']:
+        source = ROOT / entry['path']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        target = media / 'sp-model' / model['revision'] / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
     manifest = json.loads((ROOT / 'crates/slot-ui/assets/fonts/profiles.json').read_text())
     data = args.font_source.read_bytes() if args.font_source else urllib.request.urlopen(
         manifest['source_url'], timeout=60).read()
@@ -142,7 +150,7 @@ def main():
     wordmark_name = f'wordmark.{hashlib.sha256(wordmark.read_bytes()).hexdigest()[:12]}.png'
     shutil.copyfile(wordmark, generated / wordmark_name)
     config = config.replace('[project.extra]\n',
-                            f'[project.extra]\nwordmark_asset = "assets/generated/{wordmark_name}"\n')
+                            f'[project.extra]\nsp_model_revision = "{model["revision"]}"\nwordmark_asset = "assets/generated/{wordmark_name}"\n')
     (ROOT / 'site/zensical.build.toml').write_text(config)
     print(f'Prepared {len(GUIDES)} guides, reviewed media, font and fingerprinted website assets')
 

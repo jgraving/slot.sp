@@ -213,3 +213,16 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
    controls on browsers that use the non-WebGL fallback. */
 .sp-preview .sp-stage:not(.model-ready){margin-bottom:32px}
 .sp-preview .sp-stage:not(.model-ready)>.device{scale:.86}
+
+/* The first frame, recorded opening and GPU model depict the same hardware. */
+.sp-render-fallback{position:absolute;top:0;left:50%;width:480px;height:600px;transform-origin:50% 0;transform:translateX(-50%) scale(var(--fallback-scale,1));pointer-events:none}
+.sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:480px;height:600px;max-width:none;margin:0;border:0;background:none}
+.model-opening{display:none}
+.sp-render-fallback .hero-screen{display:none;position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;transform-origin:0 0;transform:var(--fallback-screen);opacity:1;border:0;border-radius:1px;transition:none;z-index:2}
+.sp-render-fallback .hardware-button{display:none;position:absolute;width:40px;height:40px;transform:none;pointer-events:auto;z-index:3}
+.fallback-ready .sp-render-fallback .hero-screen,.fallback-ready .sp-render-fallback .hardware-button{display:block}
+.fallback-opening .sp-render-fallback .hero-screen,.fallback-opening .sp-render-fallback .hardware-button{display:none}
+.fallback-opening .model-poster{visibility:hidden}
+.fallback-opening .model-opening{display:block;z-index:4}
+.sp-stage.model-ready>.sp-render-fallback{display:none}
+.sp-preview .sp-stage:not(.model-ready){margin-bottom:12px;overflow:hidden}
