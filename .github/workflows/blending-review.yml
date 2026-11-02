@@ -1,0 +1,27 @@
+name: Blending regression checks
+on:
+  push:
+    branches: ['integrate-upstream-blending-review']
+  pull_request:
+    paths:
+      - 'crates/**'
+      - '.github/workflows/blending-review.yml'
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    env:
+      SLOT_SILENT: '1'
+      SLOT_FEATURE_PREVIEW: /tmp/slot-feature-previews
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install software rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libgl1-mesa-dri libasound2t64
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Test blending settings and regressions
+        run: |
+          mkdir -p "$SLOT_FEATURE_PREVIEW"
+          cargo test --locked -p slot --no-default-features --lib --test app --test blending_options --test kid_controls --test kid_policy --test in_game_menu --test quick_menu --test bindings --test play --test emu --test core_options -- --test-threads=1
+          cargo test --locked -p slot-ui --lib --test quick_menu --test typography --test native_menus --test kid_time
+          cargo test --locked -p slot-gfx --no-default-features --lib --test grade --test layout --test lava --test scale --test blit --test power

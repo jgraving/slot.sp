@@ -74,6 +74,12 @@ During a game, open **Menu → Settings → Screen**:
 
 Scaling is saved per game. On GB/GBC, **L1 / R1** cycle backward / forward through the four modes unless those buttons are mapped to game controls. GBA shoulder buttons keep their normal game functions. Fit and Integer hide the decorative border without changing its saved setting. On a panel smaller than the original game image, Integer falls back to fitting it without cropping.
 
+### Frame blending
+
+During a game, open **Menu → Settings → Screen → Frame Blending**. Choose **Mix** for games that use flickering transparency, such as F-Zero’s minimap.
+
+Frame Blending is **Off** by default and is saved separately for GBA, GBC and GB. It uses the bundled emulator’s existing 50/50 mixing setting; emulator binaries are unchanged. Mixing can soften motion, so enable it for games that benefit. Live changes are unavailable during link play. The paused picture settles before it is shown, without advancing the saved game state.
+
 ### Display shortcuts
 
 | Button | Action |

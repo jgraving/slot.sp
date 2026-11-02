@@ -434,6 +434,8 @@ pub struct App {
     snapshot: Option<Box<dyn Snapshot>>,
     core: Core,
     colour_pending: Option<bool>,
+    blending_pending: Option<bool>,
+    frame_blending: [bool;3],
     palette_live: bool,
     palette_pending: Option<GbColors>,
     link_player: Option<u8>,
@@ -712,6 +714,8 @@ impl App {
             snapshot: None,
             core: Core::default(),
             colour_pending: None,
+            blending_pending: None,
+            frame_blending: [false;3],
             palette_live: false,
             palette_pending: None,
             link_player: None,
@@ -843,6 +847,7 @@ impl App {
         app.display_settings = crate::display_settings::DisplaySettings::read(root, &app.state);
         (app.state.brightness, app.state.blue_light) = app.display_settings.current();
         app.power_settings = crate::power_settings::PowerSettings::read(root);
+        for p in Platform::ALL { app.frame_blending[p as usize]=crate::frame_blending::read(root,p); }
         app.carousel = read_carousel(root);
         app.shortcuts = read_shortcuts(root);
         app.controls = read_controls(root);
@@ -1186,6 +1191,7 @@ impl App {
         let no_bezel = self.playing_platform() == Platform::Gba && !self.framed_panel();
         let mut hidden = vec![];
         if self.hidden_rows().contains(&QuickRow::WallpaperTint){hidden.push(QuickRow::WallpaperTint);}
+        if self.link_active() { hidden.push(QuickRow::FrameBlending); }
         if !self.palette_live {
             hidden.push(QuickRow::Palette);
         }
@@ -1309,6 +1315,7 @@ impl App {
     pub fn quick_value(&self, row: QuickRow) -> Option<QuickValue> {
         match row {
             QuickRow::Scaling => Some(match self.video_mode { VideoMode::Actual=>QuickValue::Actual, VideoMode::Stretch=>QuickValue::Stretch, VideoMode::Fit=>QuickValue::Fit, VideoMode::Integer=>QuickValue::Integer }),
+            QuickRow::FrameBlending => Some(if self.frame_blending() { QuickValue::Mix } else { QuickValue::Off }),
             QuickRow::Power | QuickRow::SleepNow | QuickRow::ShutDown => None,
             QuickRow::LidClose => Some(
                 [
@@ -2805,6 +2812,8 @@ impl App {
         }
     }
 
+    pub fn frame_blending(&self) -> bool { self.frame_blending[self.playing_platform() as usize] }
+    pub fn take_frame_blending(&mut self) -> Option<bool> { self.blending_pending.take() }
     pub fn reference_pages(&self, in_game: bool) -> Vec<crate::reference::Page> {
         crate::reference::pages(self.kid_mode(),in_game,self.playing_platform(),self.controls,self.shortcuts,self.carousel)
     }
@@ -3382,6 +3391,7 @@ impl App {
                 }
             }
             QuickRow::Scaling
+            | QuickRow::FrameBlending
             | QuickRow::Brightness
             | QuickRow::BlueLight
             | QuickRow::PlayBrightness
@@ -3462,6 +3472,17 @@ impl App {
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
         if row == QuickRow::Scaling { self.set_picture(self.video_mode.step(right)); return; }
+        if row == QuickRow::FrameBlending {
+            if self.link_active() { return; }
+            if let Some(root)=self.root.clone() {
+                let on=!self.frame_blending();
+                let written=crate::frame_blending::write(&root,self.playing_platform(),on);
+                if written.is_ok() { self.frame_blending[self.playing_platform() as usize]=on; self.blending_pending=Some(on); }
+                self.card_writes.wrote("frame-blending.txt",&written);
+            }
+            return;
+        }
+
         if matches!(row, QuickRow::LidClose | QuickRow::SleepTimeout) {
             if row == QuickRow::LidClose {
                 self.power_settings.lid_close =
@@ -3635,6 +3656,7 @@ impl App {
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
             | QuickRow::Scaling
+            | QuickRow::FrameBlending
             | QuickRow::Reference
             | QuickRow::PlayReference
             | QuickRow::Screen
