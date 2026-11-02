@@ -7,7 +7,7 @@ const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../public');
 const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
 const origin='https://jakegraving.com/slot.sp/';
-const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
+const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
 (async()=>{
   const browser=await chromium.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
   const report=[];
@@ -79,6 +79,44 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
     await blendedEdges(page,label);
     await video.evaluate(v=>v.play());
   }
+  async function interactiveChecks(page) {
+    const screen=page.locator('#hero-screen');
+    const waitFor=(state,cart)=>page.waitForFunction(([state,cart])=>{
+      const el=document.getElementById('hero-screen');return el.dataset.state===state&&el.dataset.cart===String(cart);
+    },[state,cart]);
+    // Five actual selections, each with its own insertion/ejection, including wrap.
+    for(let cart=0;cart<5;cart++) {
+      await page.locator('[data-hardware=insert]').click();await waitFor('seated',cart);
+      assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
+      await screen.screenshot({path:path.join(out,`cart-${cart}-seated.png`)});
+      await page.locator('[data-hardware=eject]').click();await waitFor('shelf',cart);
+      await page.locator('[data-hardware=right]').click();await waitFor('shelf',(cart+1)%5);
+    }
+    await page.locator('[data-hardware=right]').click({clickCount:3,delay:30});await waitFor('shelf',3);
+    await page.locator('[data-hardware=left]').click({clickCount:2,delay:30});await waitFor('shelf',1);
+    // Reversals and A/B during motion settle to the latest intent, without resets.
+    await page.locator('[data-hardware=right]').click();
+    await page.locator('[data-hardware=left]').click();
+    await page.locator('[data-hardware=insert]').click();
+    await waitFor('seated',1);
+    await page.locator('[data-hardware=eject]').click();await waitFor('shelf',1);
+    await page.locator('[data-hardware=insert]').click();
+    await page.locator('[data-hardware=eject]').click();await waitFor('shelf',1);
+    const before=await boxes(page);
+    await page.locator('[data-hardware=right]').click();
+    await page.locator('.model-fold').click();await page.locator('[data-pose=closed]').waitFor();
+    const stopped=await page.locator('#hero-preview').evaluate(v=>v.currentTime);
+    await page.waitForTimeout(300);
+    assert.equal(await page.locator('#hero-preview').evaluate(v=>v.currentTime),stopped,'Lid closure suspends the exact action frame');
+    await page.locator('.model-fold').click();await page.locator('[data-pose=open]').waitFor();await waitFor('shelf',2);
+    stable(before,await boxes(page),'Interactive playback and lid');
+    assert.equal(await screen.getAttribute('data-boots'),'1','Interactions and lid reopening never restart boot');
+    await page.locator('[data-hardware=right]').focus();await page.keyboard.press('ArrowRight');await waitFor('shelf',3);
+    await page.keyboard.press('a');await waitFor('seated',3);await page.keyboard.press('b');await waitFor('shelf',3);
+    await page.locator('[data-hardware=boot]').click();await waitFor('shelf',0);
+    assert.equal(await screen.getAttribute('data-boots'),'2','Explicit replay alone restarts boot');
+    report.push({nativeActions:true,fiveCartridges:true,wrap:true,rapidInput:true,reversals:true,resume:true,keyboard:true});
+  }
   try {
     for(const width of [1366,390,320]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
@@ -103,7 +141,7 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
       await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
       stable(before,await boxes(page),`${width}: first opening`);
       assert(await page.locator('.model-opening').evaluate(v=>v.currentTime>.9&&!v.error),'The rendered opening must play');
-      assert.equal(await page.locator('canvas,.pose-hero,.device,.model-angle').count(),0,'No rotation renderer, old illustration or angle toolbar');
+      assert.equal(await page.locator('.pose-hero,.device,.model-angle').count(),0,'No rotation renderer, old illustration or angle toolbar');
       assert(!requests.some(url=>/\/vendor\/three|\/sp-model\.[^/]*js/.test(url)),'Do not load a rotatable 3D runtime');
       const stage=page.locator('.sp-stage'),box=await stage.boundingBox();
       await page.mouse.move(box.x+12,box.y+80);await page.mouse.down();await page.mouse.move(box.x+box.width-12,box.y+120,{steps:8});await page.mouse.up();
@@ -119,7 +157,10 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
       if(width===1366)await stage.screenshot({path:path.join(out,'closed-model.png')});
       await page.getByRole('button',{name:'Open lid',exact:true}).click();await page.locator('[data-pose=open]').waitFor();
       stable(before,await boxes(page),`${width}: lid reopened`);
-      await page.getByRole('button',{name:'Pause preview',exact:true}).click();
+      await page.locator('#hero-screen[data-state=shelf][data-painted=true]').waitFor();
+      assert.equal(await page.locator('#hero-screen').getAttribute('data-boots'),'1','First opening plays boot exactly once; reopening resumes it');
+      assert(await page.locator('#hero-preview').evaluate(v=>v.paused),'The carousel waits for input after boot');
+      if(width===1366)await interactiveChecks(page);
       if(width===1366)await page.screenshot({path:path.join(out,'desktop-home.png')});
       if(width===390)await page.screenshot({path:path.join(out,'phone-home.png')});
       assert.deepEqual(errors,[],`${width}: opening browser errors`);
@@ -143,14 +184,18 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
         const hit=await page.getByRole('button',{name,exact:true}).evaluate(el=>{const r=el.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {correct:top===el,rect:r.toJSON(),target:top?.outerHTML.slice(0,240),scale:getComputedStyle(document.querySelector('.sp-stage')).getPropertyValue('--model-scale')};});
         assert(hit.correct,`${width}: ${name} is obscured: ${JSON.stringify(hit)}`);
       }
-      for(const [action,end]of width===1366?[['insert',1.1],['eject',3],['right',5.13],['left',7.38],['boot',9.25]]:[['insert',1.1]]) {
+      for(const [action,state,cart] of [['right','shelf',1],['insert','seated',1],['eject','shelf',1],['left','shelf',0]]) {
         await page.locator(`[data-hardware=${action}]`).click();
-        await page.waitForFunction(end=>{const v=document.getElementById('hero-preview');return v.paused&&Math.abs(v.currentTime-end)<.08;},end,{timeout:15000});
+        await page.waitForFunction(([state,cart])=>{
+          const screen=document.getElementById('hero-screen');return screen.dataset.state===state&&screen.dataset.cart===String(cart);
+        },[state,cart]);
       }
+      assert.equal(await page.locator('#hero-preview').getAttribute('src'),null,'Reduced motion uses native stills without downloading the film');
       for(const name of ['Graphite','Pearl Blue','Pearl Pink','Platinum']) {
         await page.getByRole('button',{name,exact:true}).click();
         await page.waitForFunction(finish=>document.querySelector('.model-poster img').currentSrc.includes(finish.replaceAll(' ','_')+'-open.png'),name.toLowerCase());
         assert.equal(await page.locator('.finish-name').textContent(),name);
+        await page.waitForFunction(finish=>document.getElementById('hero-screen').dataset.finish===finish,name.toLowerCase().replaceAll(' ','_'));
         if(width===1366)await stage.screenshot({path:path.join(out,`${name.toLowerCase().replaceAll(' ','-')}-model.png`)});
       }
       const before=await boxes(page);
@@ -180,6 +225,6 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
     assert.equal(await saved.locator('.model-opening').getAttribute('src'),null);
     await saved.getByRole('button',{name:'Close lid',exact:true}).click();await saved.locator('[data-pose=closed]').waitFor();await saved.close();
     fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
-    console.log('PASS: fixed angle, stable first load and lid controls, matching opening/closing, all finishes and persistence, native cartridge endpoints, prominent wordmark, responsive layout and reduced motion');
+    console.log('PASS: fixed angle, stable first load and lid controls, matching opening/closing, all finishes and persistence, stateful native carousel, boot-first playback, queued inputs, prominent wordmark, responsive layout and reduced motion');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

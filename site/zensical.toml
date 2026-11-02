@@ -35,6 +35,7 @@ extra_javascript = ["assets/navigation.js", "assets/slot.js"]
 
 [project.extra]
 homepage_media_revision = "prepared"
+interactive_revision = "prepared"
 ui_media_revision = "prepared"
 
 [project.theme]

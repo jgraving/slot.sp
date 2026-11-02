@@ -95,6 +95,14 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
     shutil.copyfile(ROOT / 'previews/homepage/provenance.json', homepage_media / 'provenance.json')
+    interactive = json.loads((ROOT / 'previews/interactive/provenance.json').read_text())
+    interactive_revision = interactive['source_commit'][:12]
+    for entry in interactive['files']:
+        source = ROOT / entry['path']
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+        target = media / 'interactive' / interactive_revision / source.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
     model = json.loads((ROOT / 'previews/sp-model/provenance.json').read_text())
     assert model['model_sha256'] == hashlib.sha256((DOCS / 'assets/sp-model.js').read_bytes()).hexdigest(), 'Re-capture the 3D fallback after changing its model'
     for entry in model['files']:
@@ -121,13 +129,16 @@ def main():
     config = config.replace('ui_media_revision = \"prepared\"', f'ui_media_revision = \"{current_revision}\"')
     config = config.replace('homepage_media_revision = "prepared"',
                             f'homepage_media_revision = "{revision}"')
+    config = config.replace('interactive_revision = \"prepared\"', f'interactive_revision = \"{interactive_revision}\"')
     model_name = None
-    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/header.css', 'assets/page-motion.css', 'assets/navigation.js', 'assets/slot.js']:
+    hero_name = None
+    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/header.css', 'assets/page-motion.css', 'assets/navigation.js', 'assets/hero-player.js', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()
         if source.name == 'sp-model.js':
             content = content.replace("'./vendor/", "'../vendor/")
         elif source.name == 'slot.js':
+            content = content.replace("'hero-player.js'", f"'generated/{hero_name}'")
             content = content.replace("'sp-model.js'", f"'generated/{model_name}'")
         if source.suffix == '.css':
             # Generated CSS is one directory deeper than the original file.
@@ -141,6 +152,8 @@ def main():
             content = re.sub(r'url\(([^)]+)\)', parent_url, content)
         digest = hashlib.sha256(content.encode()).hexdigest()[:12]
         name = f'{source.stem}.{digest}{source.suffix}'
+        if source.name == 'hero-player.js':
+            hero_name = name
         if source.name == 'sp-model.js':
             model_name = name
         (generated / name).write_text(content)
