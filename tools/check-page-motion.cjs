@@ -81,7 +81,7 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Cart Studio',exact:true}).click(),'studio/','forward',`${width}-studio`);
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','forward',`${width}-guide`);
    const reveals=await page.evaluate(()=>window.__pageReveals);
-   await page.locator('a[href="#find-a-feature"]').first().click();
+   await page.locator('.md-typeset a.headerlink[href="#find-a-feature"]').click();
    assert(new URL(page.url()).hash==='#find-a-feature');
    assert.equal(await page.evaluate(()=>window.__pageReveals),reveals,'Section anchors keep ordinary in-page navigation');
    await transition(page,()=>page.locator('header .mast-mark').click(),'','forward',`${width}-home`);
