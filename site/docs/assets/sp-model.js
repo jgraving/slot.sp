@@ -104,7 +104,7 @@ export function mountSP(stage, video, options={}) {
         float seed = flakeHash(cell);
         vec2 dotUV = fract(vPaintUV * 4.8) - .5;
         float footprint = max(length(fwidth(vPaintUV * 4.8)), .01);
-        float dotMask = 1.0 - smoothstep(.14, .24 + footprint, length(dotUV));
+        float dotMask = (1.0 - smoothstep(.14, .24 + footprint, length(dotUV))) * min(1.0, .42 / footprint);
         vec3 baseN = normalize(vNormal);
         vec3 tangent = normalize(abs(baseN.z)<.95 ? cross(baseN,vec3(0,0,1)) : cross(baseN,vec3(0,1,0)));
         vec3 bitangent = cross(baseN,tangent);
@@ -113,11 +113,11 @@ export function mountSP(stage, video, options={}) {
         vec3 flakeN = normalize(baseN + tilt*(cos(azimuth)*tangent+sin(azimuth)*bitangent));
         vec3 halfLight = normalize(normalize(vViewPosition)+normalize(vec3(-.45,.65,1.0)));
         float glint = pow(max(dot(flakeN,halfLight),0.0),72.0);
-        float sparse = smoothstep(.86,.91,seed);
-        reflectedLight.directSpecular += mix(vec3(.9),diffuseColor.rgb,.25)*glint*dotMask*sparse*3.5;
+        float sparse = smoothstep(.90,.95,seed);
+        reflectedLight.directSpecular += mix(vec3(.9),diffuseColor.rgb,.25)*glint*dotMask*sparse*2.2;
       `);
     };
-    mat.customProgramCacheKey=()=> 'sp-metal-flake-v1';
+    mat.customProgramCacheKey=()=> 'sp-metal-flake-v2';
   }
 
   function rr(w,h,r,cx=0,cy=0,Type=T.Shape) {
@@ -518,13 +518,14 @@ export function mountSP(stage, video, options={}) {
     finish(fallback?.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
   } catch(error) { cleanup();throw error; }
   if(options.capture) {
-    visible=false;cancelAnimationFrame(frame);frame=0;observer.disconnect();
+    visible=false;cancelAnimationFrame(frame);frame=0;observer.disconnect();resizeObserver.disconnect();visibilityObserver.disconnect();
+    let capturedAngle=null;
     cleanup.captureFrame=async({lidAngle=150,color='platinum',source=null}={})=>{
       finish(color);setLid(lidAngle);hinge=targetHinge;
       if(source){const texture=await new T.TextureLoader().loadAsync(source);texture.colorSpace=T.SRGBColorSpace;poster?.dispose();poster=texture;}
       screenMat.map=source?poster:null;screenMat.color.setHex(source?0xffffff:0x080b10);screenMat.needsUpdate=true;
       product.rotation.set(defaultPitch,defaultYaw,roll);lid.rotation.x=hinge;product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
-      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
+      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=capturedAngle!==lidAngle;renderer.render(scene,camera);capturedAngle=lidAngle;
       const {width,height}=stage.getBoundingClientRect();
       const point=object=>{object.getWorldPosition(project);project.project(camera);return {x:(project.x*.5+.5)*width,y:(-.5*project.y+.5)*height};};
       const screenQuad=[[-36.15,24.1],[36.15,24.1],[36.15,-24.1],[-36.15,-24.1]].map(([x,y])=>{
