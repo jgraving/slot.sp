@@ -42,6 +42,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await page.evaluate(()=>document.fonts.ready);
       assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Reduced motion must stay paused');
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Horizontal overflow');
+      assert.equal(await stage.getAttribute('data-lid-angle'),'150','Default lid should lean toward the player');
       await stage.screenshot({path:path.join(out,`${width}-model.png`)});
       if(width===1366)await page.screenshot({path:path.join(out,'desktop-home.png')});
       if(width===390)await page.screenshot({path:path.join(out,'phone-home.png')});
@@ -66,9 +67,28 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
         fs.writeFileSync(path.join(out,'browser-errors.json'),JSON.stringify(errors,null,2));
         await stage.screenshot({path:path.join(out,'video-failure.png')});throw error;
       }
-      await page.getByRole('button',{name:'Graphite',exact:true}).click();
-      await page.waitForFunction(()=>document.getElementById('hero-preview').poster.includes('graphite'));
-      if(width===1366)await stage.screenshot({path:path.join(out,'graphite-model.png')});
+      for(const name of ['Graphite','Pearl Blue','Pearl Pink','Platinum']) {
+        const finish=name.toLowerCase();
+        await page.getByRole('button',{name,exact:true}).click();
+        await page.waitForFunction(finish=>document.querySelector('.sp-stage').dataset.finish===finish&&document.getElementById('hero-preview').poster.includes(finish.replaceAll(' ','_')),finish);
+        assert.equal(await page.locator('.finish-name').textContent(),name);
+        assert.equal(await page.getByRole('button',{name,exact:true}).getAttribute('aria-pressed'),'true');
+        await page.waitForTimeout(150);
+        if(width===1366)await stage.screenshot({path:path.join(out,`${finish.replaceAll(' ','-')}-model.png`)});
+      }
+      // The slider reaches the true 180-degree stop and cannot over-extend.
+      const angle=page.getByRole('slider',{name:'Lid',exact:true});
+      await angle.focus();await page.keyboard.press('End');
+      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='flat');
+      await page.keyboard.press('ArrowRight');
+      assert.equal(await angle.inputValue(),'180');
+      if(width===1366)await stage.screenshot({path:path.join(out,'flat-model.png')});
+      await page.keyboard.press('Home');
+      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='closed');
+      assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Closed lid must pause the screen');
+      await page.getByRole('button',{name:'Open lid',exact:true}).click();
+      await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='open');
+      assert.equal(await angle.inputValue(),'150');
       await page.getByRole('button',{name:'Platinum',exact:true}).click();
       await page.getByRole('button',{name:'Close lid',exact:true}).click();
       await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='closed');
@@ -79,6 +99,25 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await stage.focus();await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');
       if(width===1366)await stage.screenshot({path:path.join(out,'turned-model.png')});
       await page.keyboard.press('Home');
+      if(width===1366) {
+        // Inspect both asymmetric sides, underside and rear shoulder/port surface.
+        for(const [name,key,count]of [['right-side','ArrowLeft',8],['left-side','ArrowRight',13],['underside','ArrowRight',23]]) {
+          await page.keyboard.press('Home');
+          for(let i=0;i<count;i++)await page.keyboard.press(key);
+          await page.waitForTimeout(150);
+          await stage.screenshot({path:path.join(out,`${name}-model.png`)});
+          if(name==='underside')assert(!(await page.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible()),'Back-facing buttons should not intercept clicks');
+        }
+        for(let i=0;i<9;i++)await page.keyboard.press('ArrowDown');
+        await page.waitForTimeout(150);
+        await stage.screenshot({path:path.join(out,'rear-ports-model.png')});
+        await page.keyboard.press('Home');
+        await page.getByRole('button',{name:'Pearl Blue',exact:true}).click();
+        await page.reload({waitUntil:'networkidle'});
+        await stage.scrollIntoViewIfNeeded();
+        await page.waitForFunction(()=>document.querySelector('.sp-stage').dataset.finish==='pearl blue');
+        assert.equal(await page.locator('.finish-name').textContent(),'Pearl Blue','Keep the selected shell after reload');
+      }
       assert.deepEqual(errors,[],`Browser errors at ${width}`);
       report.push({width,webgl:true,overflow:false,controls:true,reducedMotion:true,errors});await page.close();
     }
@@ -89,6 +128,9 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await fallback.locator('.sp-stage').scrollIntoViewIfNeeded();
       assert(await fallback.locator('.device').isVisible());assert(await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
       assert(!(await fallback.locator('.model-fold').isVisible()));
+      assert(!(await fallback.locator('.model-angle').isVisible()));
+      await fallback.getByRole('button',{name:'Pearl Blue',exact:true}).click();
+      assert.equal(await fallback.locator('.finish-name').textContent(),'Pearl Blue');
       await fallback.locator('.preview-controls').scrollIntoViewIfNeeded();
       const uncovered=await fallback.locator('.preview-toggle,[data-shell]').evaluateAll(nodes=>nodes.every(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;}));
       assert(uncovered,`${width}: fallback covers its playback or color controls`);
@@ -96,6 +138,6 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await fallback.screenshot({path:path.join(out,`no-webgl-${width}.png`)});await fallback.close();
     }
     fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
-    console.log('PASS: 3D desktop and mobile renders, native clip actions, color changes, fold, keyboard rotation, reduced motion and WebGL fallback');
+    console.log('PASS: desktop/mobile, native clip actions, all four finishes and persistence, 150° default and 180° limit, fold, full rotation, reduced motion and WebGL fallback');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
