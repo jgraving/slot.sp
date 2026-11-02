@@ -441,7 +441,7 @@ fn the_in_game_screen_page_shows_five_rows_and_scrolls_the_rest() {
 
 #[test]
 fn a_scroll_bar_shows_only_on_a_page_with_rows_out_of_sight() {
-    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*5.0/6.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
+    let top=slot_ui::quick_scroll(QuickRow::PlayBrightness,&[]).unwrap();assert!((top.thumb_y-top.y).abs()<0.5);assert!((top.thumb_h-top.h*5.0/7.0).abs()<0.5);let end=slot_ui::quick_scroll(QuickRow::ColourCorrection,&[]).unwrap();assert!((end.thumb_y+end.thumb_h-end.y-end.h).abs()<0.5);assert!(slot_ui::quick_scroll(QuickRow::Shader,&[QuickRow::Palette,QuickRow::Bezel]).is_none());
 }
 
 #[test]
