@@ -1,0 +1,43 @@
+name: Capture interactive homepage actions
+on:
+  push:
+    branches: [web/responsive-carousel]
+    paths: ['previews/interactive_hero.rs', 'previews/prepare_interactive_capture.py', 'previews/collect_interactive_hero.py', '.github/workflows/interactive-hero-media.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      SLOT_SILENT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Install capture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0 av==16.0.0 numpy
+      - name: Capture native carousel, slot and boot actions
+        run: |
+          python3 previews/prepare_interactive_capture.py
+          cargo run --locked -p slot --no-default-features --example interactive_hero -- /tmp/slot-interactive/raw
+          python3 previews/collect_interactive_hero.py /tmp/slot-interactive
+      - name: Prepare media blobs for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/collect-doc-media.py /tmp/slot-interactive --git-objects
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: interactive-hero-media
+          retention-days: 3
+          path: |
+            /tmp/slot-interactive/publish/**
+            /tmp/slot-interactive/media-entries.json
+            /tmp/slot-interactive/review/**
+          if-no-files-found: ignore
