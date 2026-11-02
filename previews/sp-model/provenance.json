@@ -10,6 +10,11 @@
       "sha256": "99ee23e79e505110b131049981f45e51fbf1c1a1f463fa326f28b6a9d52664e7"
     },
     {
+      "path": "previews/sp-model/ed70d9ece175/gold-closing.mp4",
+      "bytes": 252653,
+      "sha256": "6b21390e9d67ad50995d8667666d85c8e78e7512a53570a09459ffbf0854b57c"
+    },
+    {
       "path": "previews/sp-model/ed70d9ece175/gold-open.png",
       "bytes": 290137,
       "sha256": "51423d52f2a99e38565f53a4e97bbfc932d9d94b0540dc7e7f4378240ff493ab"
@@ -23,6 +28,11 @@
       "path": "previews/sp-model/ed70d9ece175/graphite-closed.png",
       "bytes": 193719,
       "sha256": "34008f0bfe9b49367d5b4798b9f2eb724f9a0b6c6d36206692c7567c5caa86a0"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/graphite-closing.mp4",
+      "bytes": 234178,
+      "sha256": "920adf4c4c97209e400336504b35392c237a3730717983b227acbeb4d74bed67"
     },
     {
       "path": "previews/sp-model/ed70d9ece175/graphite-open.png",
@@ -40,6 +50,11 @@
       "sha256": "7c0b4ff2a539b107af73639f72d2589df60fd8d1d4311e94d047b74121005d59"
     },
     {
+      "path": "previews/sp-model/ed70d9ece175/pearl_blue-closing.mp4",
+      "bytes": 244674,
+      "sha256": "2de5f85328c0b52aca04d39003e406ad383ea53e020f0c6be51954659b1db323"
+    },
+    {
       "path": "previews/sp-model/ed70d9ece175/pearl_blue-open.png",
       "bytes": 287090,
       "sha256": "765da56a89174d7686eeaf7505b16b962b46278b63877d7756b672304c5bb786"
@@ -53,6 +68,11 @@
       "path": "previews/sp-model/ed70d9ece175/pearl_pink-closed.png",
       "bytes": 230462,
       "sha256": "6eca83a6fc5117b615956865c36f861976637cd9b8db281ca78187b0bc399ca1"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_pink-closing.mp4",
+      "bytes": 240932,
+      "sha256": "02c0326ee3017ea39c895c72704235b76925fac8548920804330f4a401bcee75"
     },
     {
       "path": "previews/sp-model/ed70d9ece175/pearl_pink-open.png",
@@ -70,6 +90,11 @@
       "sha256": "a911b2e25c84a7bc6c9a23cd29b19916a52046e2d355f679bc123fd21bf63642"
     },
     {
+      "path": "previews/sp-model/ed70d9ece175/platinum-closing.mp4",
+      "bytes": 238772,
+      "sha256": "f12895b0ac2e665551e74f8181841d51759dfce0953cccbc018cdc6cd4959b8f"
+    },
+    {
       "path": "previews/sp-model/ed70d9ece175/platinum-open.png",
       "bytes": 283099,
       "sha256": "438f7d2ed890d617bf0355d64a4653cee1d7c08bfc9f14ea5a8569d221e5aa16"
@@ -83,6 +108,38 @@
       "path": "previews/sp-model/ed70d9ece175/projection.json",
       "bytes": 745,
       "sha256": "2d1abc79a5ba8f40a0450a8e6bedc6213a0fd390f812ebea5bc1cbe45dee9299"
+    }
+  ],
+  "derived_closing": [
+    {
+      "path": "previews/sp-model/ed70d9ece175/platinum-closing.mp4",
+      "source": "previews/sp-model/ed70d9ece175/platinum-opening.mp4",
+      "source_sha256": "c801f608364a50ae91c37b3fb2edb77c60f49135a499d1d04225b0c185cff91f",
+      "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/graphite-closing.mp4",
+      "source": "previews/sp-model/ed70d9ece175/graphite-opening.mp4",
+      "source_sha256": "e5d9727926105c9b7b060e7335f4fe322e7fc2c4c4a52ff9249f614dd404ba0b",
+      "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_blue-closing.mp4",
+      "source": "previews/sp-model/ed70d9ece175/pearl_blue-opening.mp4",
+      "source_sha256": "9ec4af3a75ecf5b3db13eabeac96314faf5f3b85197580bd1f35755b337bff28",
+      "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_pink-closing.mp4",
+      "source": "previews/sp-model/ed70d9ece175/pearl_pink-opening.mp4",
+      "source_sha256": "663fb317730bc1bd2bd0bf7a3c77511c8dc9654c8b62ebc471f02199f0c954b8",
+      "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/gold-closing.mp4",
+      "source": "previews/sp-model/ed70d9ece175/gold-opening.mp4",
+      "source_sha256": "7c1f8eca6fed5743cc8fe6a4627d95cacfbd950e61c62a4432918eb7fc71a0cf",
+      "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     }
   ]
 }

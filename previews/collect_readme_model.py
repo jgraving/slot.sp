@@ -4,6 +4,7 @@ from fractions import Fraction
 from pathlib import Path
 import av
 from PIL import Image
+from build_model_closing import build_closing
 root=Path(sys.argv[1]);publish=root/'publish';target=publish/'previews/readme-model';target.mkdir(parents=True,exist_ok=True)
 meta=json.loads((root/'model-capture.json').read_text())
 gif=(target/'hero.gif').rename(target/'hero-3d.gif')
@@ -29,9 +30,10 @@ for name in ['platinum','graphite','pearl_blue','pearl_pink','gold']:
             for packet in stream.encode(frame):clip.mux(packet)
         for packet in stream.encode():clip.mux(packet)
 shutil.copyfile(root/'projection.json',model/'projection.json')
+derived_closing=build_closing(model,publish)
 def entries(directory):
     return [dict(path=str(p.relative_to(publish)),bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in sorted(directory.rglob('*')) if p.is_file() and p.name!='provenance.json']
 source=dict(source_commit=os.environ['GITHUB_SHA'],run_url=f'https://github.com/{os.environ["GITHUB_REPOSITORY"]}/actions/runs/{os.environ["GITHUB_RUN_ID"]}')
 (target/'provenance.json').write_text(json.dumps(dict(meta,**source,files=entries(target)),indent=2)+'\n')
-(publish/'previews/sp-model/provenance.json').write_text(json.dumps(dict(**source,revision=revision,model_sha256=meta['model_sha256'],files=entries(model)),indent=2)+'\n')
+(publish/'previews/sp-model/provenance.json').write_text(json.dumps(dict(**source,revision=revision,model_sha256=meta['model_sha256'],derived_closing=derived_closing,files=entries(model)),indent=2)+'\n')
 print('Collected production 3D opening clips, posters and README hero:',revision)
