@@ -31,7 +31,7 @@
     const finishes = {
       graphite:['#5a5d64','#34363b','#16171a','#3c3e43','#5c5f66','rgba(255,255,255,.42)'],
       platinum:['#e2e5e9','#b8bcc2','#7e838b','#c2c6cc','#e9ecf0','rgba(0,0,0,.46)'],
-      'pearl blue':['#dbe9f2','#a8c4d8','#6d8ba1','#d0dae3','#edf3f8','rgba(0,0,0,.44)'],
+      'pearl blue':['#d9eceb','#91c7cb','#628f96','#d0d8da','#edf3f8','rgba(0,0,0,.44)'],
       'pearl pink':['#f6d3dd','#e6a6b8','#a76d7e','#dbd1d5','#f2eaed','rgba(0,0,0,.44)']
     };
     document.querySelectorAll('[data-shell]').forEach(button => {
@@ -40,6 +40,8 @@
         const values = finishes[button.dataset.shell];
         ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,values[i]));
         document.querySelectorAll('[data-shell]').forEach(other => other.setAttribute('aria-pressed',String(other === button)));
+        document.querySelector('.finish-name').textContent = button.getAttribute('aria-label');
+        try { localStorage.setItem('slot.sp:hardware-finish',button.dataset.shell); } catch { /* Color switching also works without storage. */ }
         changePreview(button);
         document.querySelector('.sp-stage')?.dispatchEvent(new CustomEvent('sp:finish',{detail:button.dataset.shell}));
       });
@@ -160,6 +162,7 @@
       const gold = ['#f2dfaa','#d3ad60','#92713c','#e5cf95','#fff1c9','rgba(57,39,18,.56)'];
       ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,gold[i]));
       document.querySelectorAll('[data-shell]').forEach(button => button.setAttribute('aria-pressed','false'));
+      document.querySelector('.finish-name').textContent = 'Gold';
       stage?.dispatchEvent(new CustomEvent('sp:finish',{detail:'gold'}));
       const notice = document.querySelector('.secret-notice');
       notice.replaceChildren(topicIcon('kid-mode', 'secret-icon'), document.createTextNode('You found the gold shell.'));
@@ -184,6 +187,10 @@
     }
     document.addEventListener('visibilitychange',sync);
     state();
+    try {
+      const saved = localStorage.getItem('slot.sp:hardware-finish');
+      if (saved && finishes[saved]) [...document.querySelectorAll('[data-shell]')].find(button => button.dataset.shell === saved)?.click();
+    } catch { /* Storage may be disabled. */ }
   }
   document.addEventListener('visibilitychange',() => {
     if (document.hidden) document.querySelectorAll('video').forEach(video => video.pause());

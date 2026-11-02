@@ -201,6 +201,13 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-stage.model-ready>.hero-screen{position:absolute;left:50%;top:50%;width:1px;height:1px;opacity:.001;visibility:visible;z-index:0;pointer-events:none}
 
 .preview-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex:none}
+.finish-controls{display:grid;justify-items:center;gap:2px}
+.finish-name{color:var(--muted);font-size:13px;line-height:1.5}
+.model-angle{display:none;align-items:center;gap:12px;max-width:304px;margin:12px auto 0;color:var(--muted);font-size:13px}
+.sp-preview:has(.model-ready) .model-angle{display:flex}
+.model-angle input{flex:1;min-width:0;height:28px;margin:0;accent-color:var(--teal);cursor:pointer}
+.model-angle output{width:4ch;text-align:right;font-variant-numeric:tabular-nums}
+.model-angle input:focus-visible,.model-fold:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 
 /* Perspective extends the illustration beyond its layout box. Reserve room for
    controls on browsers that use the non-WebGL fallback. */
