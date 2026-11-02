@@ -7,8 +7,9 @@ Review targets:
 - Fork baselines: slot.sp `2e53a8b709bff77e82a3349d9bda41d83519b140` and
   Cart Studio `7908e952da31c46d94d9aa0d05e7168af9d6aeec`.
 
-This is a selective integration. These PRs propose changes for review; neither
-project's main branch, release channel or published site is updated by this review.
+This is a selective integration. The save-compatibility fix (#177) was merged on
+2 November 2026 after its ARM64 and regression checks passed. The other code PRs
+remain open for review. This document does not enable the deferred features.
 
 ## Prepared independently
 
