@@ -39,6 +39,15 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
   return page;
  }
  async function transition(page,action,route,direction,label,capture=false){
+  // Start each navigation from the active destination rather than a lingering
+  // mouse hover left behind by the previous scripted click/history action.
+  await page.mouse.move(8,850);
+  await page.waitForFunction(()=>{
+   const root=document.querySelector('header .slot-selector'),active=root.querySelector('a[aria-current]'),pill=root.querySelector('.selector-surface');
+   if(!active)return getComputedStyle(pill).opacity==='0';
+   const a=active.getBoundingClientRect(),p=pill.getBoundingClientRect();
+   return Math.abs(a.x-p.x)<.2&&Math.abs(a.y-p.y)<.2&&Math.abs(a.width-p.width)<.2;
+  });
   await action();
   await page.waitForURL(origin+route);
   await page.waitForFunction(()=>window.__pageMotion?.ready||window.__pageMotion?.error,{},{timeout:10000});

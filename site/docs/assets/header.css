@@ -28,6 +28,12 @@ html{scrollbar-gutter:stable}
 .mast-end>.md-header__button{margin:0;min-width:44px;min-height:44px;align-items:center;justify-content:center}
 .mast-end>label[for=__drawer]{display:none}
 .mast-gh{display:grid;place-items:center;box-sizing:border-box;min-width:44px;min-height:44px}
+@media(max-width:1219.98px){
+ .mast-end .md-search{padding:0}
+ .mast-end .md-search__button{box-sizing:border-box;width:44px;height:44px;min-width:44px;padding:0;border-radius:22px;background:transparent;font-size:0}
+ .mast-end .md-search__button::before{inset-inline-start:12px;top:12px}
+ .mast-end .md-search__button::after{display:none}
+}
 @media(min-width:960px) and (max-width:1219.98px){
  .md-header__inner.md-grid,.mast>.mast-inner{padding:0 20px;gap:12px}
  .md-header__inner[data-guide-topics=true]>.mast-end>label[for=__drawer]{display:flex}
