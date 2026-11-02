@@ -56,3 +56,58 @@ Retained the fork's shell finishes and geometry, 120 Hz/native-game pacing, audi
 Upstream’s Select + X screenshot default conflicts with the fork’s night shortcut, so screenshot capture defaults to Menu + X; existing night bindings are retained and both remain remappable.
 
 The project display name is now **slot.sp**. README animations explicitly identify upstream recordings; current fork artwork and shutdown previews remain separate. The executable, card layout and saved preferences keep their existing names for compatibility. Release ZIPs use `slot.sp-...` names with the former names retained as aliases. Release metadata derives the repository from GitHub Actions, and the fork build guard accepts both `jgraving/slot` and the planned `jgraving/slot.sp` rename. No repository rename or upstream writes are performed.
+
+
+## 2026-10-29: selective upstream v1.11 review
+
+Reviewed BrandonKowalski/slot from the shared v1.9.0 base through `729c61ddc30ef733b8e1058554c5195d6130267d`. This is a selective integration, not a merge of the entire v1.10/v1.11 feature set.
+
+Adapted these changes by Brandon T. Kowalski:
+
+- `aa8bfab`: close the audio device before restarting. Power-off already used the fork's explicit shutdown path; restart now uses the same path and retains its final zero-PCM drain.
+- `1fa71e3`: retain an already-open PCM while wired headphones are active to avoid buzzing after silence. Bluetooth/USB selections release this hold in the same update. Quiet boot remains lazy; routing and reconnect behavior are retained.
+- `ade9a49`: optional, remappable Fast Forward Toggle. It starts with one press and stops with the next. Existing hold/double-tap bindings and the Day / Night shortcut remain available; kid mode excludes the new shortcut.
+- `a4c3bb2`: 1.5× fast-forward, with fractional frame accumulation in the launcher worker. Existing saved multipliers retain their meanings. No emulator core sources, patches, versions or binary inputs change.
+- `b01232e`: brightness 0 remains lit. UI levels 0–9 map to device steps 1–10; device step 0 still turns the backlight off for sleep. The fork's extra-low raw night floor remains 1, and both manual and scheduled day/night presets use the same mapping.
+- `39c05b2`: show B Cancel on the link picker, with Mode on the right when available. The fork's footer, port artwork and geometry remain.
+
+The fork already leaves CPU governor selection to the kernel, matching upstream's stutter-fix outcome (`5a223f5`). Its native-game/120 Hz pacing and missed-period diagnostics are retained; upstream's different stale-frame bookkeeping (`1e69a62`) is not transplanted.
+
+Deferred the clock/city/DST/12-hour rewrite and its first-boot follow-up (`5edec20`, `34cd2ff`) until it can be integrated with scheduled display overrides, play history and kid-time limits. Deferred the GBA Video platform and directory addition (`db1e370`, `546d565`) until device and Cart Studio platform support can be updated together. Upstream typography/legend changes and whole-workspace formatting are not included. Scaling, related bezels and frame blending remain held for review, and ZIP support remains unmerged.
+
+Validation covers device-feature compilation, input gestures, settings persistence, fractional fast-forward, route-aware headphone holds, restart shutdown ordering, brightness/night/sleep behavior, kid controls, link hints, existing high-refresh/native-game pacing, and the fork's menu rendering. Native ARM64 packaging and release regressions run on the integration branch before merging. Electrical noise and final screen behavior still require handheld verification.
+
+
+## 2026-11-02: RetroArch compressed battery-save compatibility
+
+Adapted BrandonKowalski/slot `e5e0ac8e1f0f0daab4329ebe2851d54e185f16e4`
+by Brandon T. Kowalski. RZIP v1 (zlib) battery saves in `.sav` or `.srm` now
+load as raw save RAM. This is battery-save decoding, unrelated to ZIP ROM support.
+The existing `.sav` precedence, atomic writes and untrusted-save handling remain.
+An unchanged compressed save is left intact; later gameplay changes use the existing
+raw `.sav` format, leaving an imported `.srm` untouched.
+
+The adaptation validates headers, chunk boundaries, decompressed lengths, zlib
+completion/checksums and trailing bytes. Decoded battery saves are limited to
+16 MiB. Unknown RZIP versions and damaged saves report a read error, and direct
+save writes also refuse to overwrite unreadable data. `flate2` was already in
+the lockfile through PNG; it is now a direct dependency. No emulator inputs change.
+
+Regression coverage includes multi-chunk saves, `.srm` imports, unchanged files,
+normal writes after an import, malformed headers, unsupported compression,
+truncated streams, checksum errors, excessive sizes and overwrite refusal.
+
+
+## 2026-11-02: mGBA Game Boy LCD-enable fix
+
+Integrated BrandonKowalski/slot `c7a79b9a52e67b07bd911596365ac91b8780816b`
+by Brandon T. Kowalski as a separate emulator bug-fix review. Keep mGBA's first
+Game Boy frame blank after LCD enable, matching hardware behavior and fixing
+reported screen flashes (upstream issue #169). The patch only raises a lower
+frameskip counter to one at that transition; it does not change the core pin,
+GBA rendering, frontend pacing or user settings.
+
+The existing mGBA build stamp includes every patch hash, so this change forces
+a rebuild. Release packaging includes the patch and its provenance as before.
+Native ARM64 build, device regressions, binary and source-material checks run
+on the integration branch. Final Game Boy display behavior needs handheld review.

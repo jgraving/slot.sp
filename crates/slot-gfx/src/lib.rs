@@ -11,6 +11,7 @@ mod fbdev;
 mod fbo;
 mod gl;
 mod grade;
+pub mod ui_palette;
 #[cfg(target_os = "macos")]
 mod headless;
 #[cfg(feature = "host")]

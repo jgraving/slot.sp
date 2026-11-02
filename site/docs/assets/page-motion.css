@@ -1,0 +1,19 @@
+/* The browser keeps ordinary document navigation, history and scroll behavior. */
+@media(prefers-reduced-motion:no-preference){
+ @view-transition{navigation:auto}
+ :root{--page-enter-x:36px;--page-leave-x:-36px}
+ :root[data-page-direction=back]{--page-enter-x:-36px;--page-leave-x:36px}
+ .md-header,.mast{view-transition-name:site-header}
+ ::view-transition-group(root){animation:none}
+ ::view-transition-old(root){animation:slot-page-out 180ms var(--motion-effects,cubic-bezier(.2,0,0,1)) both;mix-blend-mode:normal}
+ ::view-transition-new(root){animation:slot-page-in 320ms var(--motion-spatial,cubic-bezier(.2,.8,.2,1)) both;mix-blend-mode:normal}
+ ::view-transition-group(site-header){animation:none;z-index:1}
+ ::view-transition-old(site-header){display:none}
+ ::view-transition-new(site-header){animation:none}
+ @keyframes slot-page-in{from{opacity:0;transform:translate3d(var(--page-enter-x),0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+ @keyframes slot-page-out{from{opacity:1;transform:translate3d(0,0,0)}to{opacity:0;transform:translate3d(var(--page-leave-x),0,0)}}
+}
+@media(prefers-reduced-motion:reduce){
+ @view-transition{navigation:none}
+ ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
+}

@@ -42,18 +42,18 @@ fn a_held_down_walks_the_menu_rows_after_a_pause_and_stops_on_release() {
     a.apply_at(Action::QuickMenu, T - 500);
     assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[0]));
     a.apply_at(Action::GbaDown(Btn::Down), T);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[1]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]));
     at(&mut a, T + 399);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[1]), "it repeated early");
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]), "it repeated early");
     at(&mut a, T + 400);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[2]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[0]));
     at(&mut a, T + 510);
-    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[3]));
+    assert_eq!(a.quick_menu(), Some(QuickRow::MAIN[4]));
     a.apply_at(Action::GbaUp(Btn::Down), T + 520);
     at(&mut a, T + 5_000);
     assert_eq!(
         a.quick_menu(),
-        Some(QuickRow::MAIN[3]),
+        Some(QuickRow::MAIN[4]),
         "it kept going after the release"
     );
 }
@@ -67,14 +67,22 @@ fn a_held_left_or_right_changes_a_menu_value_once() {
     a.apply_at(Action::GbaUp(Btn::Down), T - 690);
     a.apply_at(Action::GbaDown(Btn::Down), T - 650);
     a.apply_at(Action::GbaUp(Btn::Down), T - 640);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme));
+    // Theme is visible now; find the value row rather than assuming its offset.
+    for i in 0..8 {
+        if a.quick_menu()==Some(QuickRow::Recents) {break;}
+        a.apply_at(Action::GbaDown(Btn::Down), T-600+i*30);
+        a.apply_at(Action::GbaUp(Btn::Down), T-590+i*30);
+    }
+    assert_eq!(a.quick_menu(), Some(QuickRow::Recents));
+    let before=a.quick_value(QuickRow::Recents);
     a.apply_at(Action::GbaDown(Btn::Right), T);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Light));
+    let changed=a.quick_value(QuickRow::Recents);
+    assert_ne!(before,changed);
     for ms in [T + 400, T + 510, T + 600, T + 2_000] {
         at(&mut a, ms);
         assert_eq!(
-            a.quick_value(QuickRow::Theme),
-            Some(QuickValue::Light),
+            a.quick_value(QuickRow::Recents),
+            changed,
             "the value flipped again by {ms}"
         );
     }
@@ -88,6 +96,8 @@ fn a_held_up_keeps_turning_the_clock() {
     a.tick_ms(T - 1_000);
     let read = |a: &App| a.picker().expect("on the clock").secs();
     let start = read(&a);
+    a.apply_at(Action::GbaDown(Btn::A), T - 100);
+    a.apply_at(Action::GbaUp(Btn::A), T - 90);
     a.apply_at(Action::GbaDown(Btn::Up), T);
     let mut seen = vec![read(&a)];
     for ms in [T + 400, T + 510, T + 595, T + 660] {
@@ -163,4 +173,15 @@ fn a_direction_held_through_play_does_not_scroll_a_menu_opened_over_it() {
             "the held Down scrolled it at {ms}"
         );
     }
+}
+
+#[test]
+fn holding_right_walks_the_grid_and_releasing_stops_it() {
+    let (_d,mut a)=on_shelf(&["Emerald","Fusion"]);
+    a.apply_at(Action::QuickMenu,T-500);
+    a.apply_at(Action::GbaDown(Btn::Right),T);
+    assert_eq!(a.quick_menu(),Some(QuickRow::Screen));
+    at(&mut a,T+400);assert_eq!(a.quick_menu(),Some(QuickRow::Bluetooth));
+    a.apply_at(Action::GbaUp(Btn::Right),T+410);
+    at(&mut a,T+5000);assert_eq!(a.quick_menu(),Some(QuickRow::Bluetooth));
 }

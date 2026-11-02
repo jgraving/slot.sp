@@ -1,5 +1,7 @@
 # Troubleshooting
 
+Check the section that matches the problem. Before changing card files, back up your saves and settings.
+
 ## A game is missing from the carousel
 
 - Is it unzipped? slot.sp doesn't read `.zip` or `.7z`.
@@ -9,27 +11,33 @@
 
 ## My save / save state is missing
 
-You probably renamed the game. Saves, states and labels follow the file name, so rename the matching files in `Saves/` and `States/` too.
+If you renamed the game, check that its files in `Saves/` and `States/` have the same name. Saves, states and labels are matched to the game by filename.
 
 If you switched a GBA game to the other emulator, your save states are still there. They are tied to the emulator that created them and show up again when you switch back. See [Save States](../features/playing.md#save-states-undo).
 
 ## The Read-Only Red Alarm
 
-The red alarm means slot.sp couldn't write to your SD card.
-
-Your progress isn't being saved while it's up.
+This red warning means slot.sp cannot write to the SD card. New progress is not being saved while the warning is visible.
 
 | It says | Do this |
 | --- | --- |
-| Can't write to SD card | Something went wrong with the card. |
+| Can't write to SD card | Back up the card, then check it for errors on a computer. |
 | Press SELECT + START to repair | slot.sp can try to fix it. It checks the card and restarts. If this fails try plugging it into your computer and use the repair function. |
 | Charge the battery to repair | The repair needs 20% battery, or the charger plugged in. |
 
-If it keeps coming back, the card might be on its way out and you should back up your `Saves/` and `States/` while you can.
+If the warning returns, back up `Saves/` and `States/` and consider replacing the card.
 
 ## A label didn't change
 
 slot.sp spots a new label with the same name and redraws it. If it still looks wrong, check the name matches the game exactly and restart.
+
+## Bluetooth will not connect
+
+Read the short error message at the bottom of the screen. Wake the headphones and try again if they did not answer. If pairing failed, forget the saved device and pair it again. See [Audio & headphones](../features/bluetooth.md#switch-back-or-turn-bluetooth-off).
+
+## Light mode and night mode seem different
+
+They control different things. **General → UI theme** selects Light or Dark menus. **Screen → Night mode** controls saved brightness and warmth, including an optional schedule. See [Day & night](../features/night-display.md).
 
 ## Reporting a bug
 

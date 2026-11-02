@@ -274,6 +274,9 @@ impl Session {
                 self.act(action);
             }
         }
+        if self.app.capturing() || self.app.parent_controls_open() || self.dozing() {
+            self.gestures.cancel_display_ramps();
+        }
         actions.extend(self.gestures.tick(now));
         if !latched && self.app.in_game_menu().is_some() {
             actions.extend(self.gestures.drop_ff_latch());
@@ -346,6 +349,7 @@ impl Session {
     }
 
     pub fn update(&mut self, dt: f32) {
+        let was_overlaid = self.overlaid();
         let awake = !matches!(self.app.phase(), crate::app::Phase::Doze { .. });
         let (changed, watching) = self.bluetooth_events.poll(&self.root, awake);
         let mut automatic_choice = None;
@@ -377,11 +381,11 @@ impl Session {
                     if let Some(menu) = &mut self.app.bluetooth {
                         // A deliberate user action already in progress wins.
                         if !menu.busy() {
-                            menu.select_usb(device.route);
+                            menu.select_usb_automatically(device.route);
                         }
                     } else {
                         let mut worker = crate::bluetooth::Manager::new(self.root.clone(), false);
-                        worker.select_usb(device.route);
+                        worker.select_usb_automatically(device.route);
                         self.usb_switch = Some(worker);
                     }
                 }
@@ -426,6 +430,7 @@ impl Session {
             .bluetooth
             .as_mut()
             .and_then(|menu| menu.route_choice.take())
+            .or_else(||self.app.quick_bluetooth.as_mut().and_then(|menu|menu.route_choice.take()))
             .or(automatic_choice)
         {
             let usb = crate::usb_audio::valid_route(&output);
@@ -434,6 +439,7 @@ impl Session {
             self.app.bluetooth_state(address.clone(), address.is_some());
             self.app.usb_state(usb, false);
         }
+        self.sink.hold_open(self.app.wired_audio_active());
         if awake {
             if let Some(level) = self
                 .bluetooth_volume
@@ -519,6 +525,12 @@ impl Session {
             self.gestures = Gestures::new();
             self.entries.clear(); // Reinstall remapped shortcuts after clearing held inputs.
             self.sync_speed();
+        }
+        // Disconnects and policy timers can open a pause menu without an input edge.
+        if !was_overlaid && self.overlaid() {
+            self.pad.clear();
+            self.fast = false;
+            self.rewinding = false;
         }
         self.sync_rewind_hud();
         self.sync_ff_hud();
@@ -621,7 +633,7 @@ impl Session {
 
     fn sync_speed(&self) {
         if let Some(emu) = &self.emu {
-            emu.set_fast_steps(u32::from(self.app.ff_speed()));
+            emu.set_fast_quarters(u32::from(self.app.ff_speed()));
             emu.set_ff_sound(self.app.ff_sound());
             emu.set_speed(
                 if self.inserting()
@@ -844,6 +856,9 @@ mod kid_shortcut_tests {
     #[test]
     fn child_shortcuts_cannot_arm_fast_or_rewind_latches() {
         let d = tempfile::tempdir().unwrap();
+        let mut keys = slot_store::ShortcutKeys::default();
+        keys.set(slot_store::Shortcut::FastForwardToggle, slot_store::Binding::plain(slot_store::Device::R2));
+        slot_store::write_shortcuts(d.path(), &keys).unwrap();
         let mut sink = crate::audio::StubSink::new();
         sink.open(48000).unwrap();
         let mut session = Session::boot_with(d.path().to_path_buf(), Box::new(sink));
@@ -865,9 +880,13 @@ mod kid_shortcut_tests {
         );
         assert!(!session.entries.iter().any(|entry| matches!(
             entry.action,
-            Action::SaveState | Action::LoadState | Action::FfStart | Action::RewindStart
+            Action::SaveState
+                | Action::LoadState
+                | Action::FfStart
+                | Action::FfToggle
+                | Action::RewindStart
         )));
-        for action in [Action::FfStart, Action::RewindStart] {
+        for action in [Action::FfStart, Action::FfToggle, Action::RewindStart] {
             session.act(action);
         }
         assert!(!session.fast && !session.rewinding);
@@ -875,7 +894,7 @@ mod kid_shortcut_tests {
             d.path().to_path_buf(),
             session.app.kids.clone(),
         ));
-        for action in [Action::FfStart, Action::RewindStart] {
+        for action in [Action::FfStart, Action::FfToggle, Action::RewindStart] {
             session.act(action);
         }
         assert!(!session.fast && !session.rewinding);

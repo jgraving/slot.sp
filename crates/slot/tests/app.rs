@@ -151,7 +151,7 @@ fn the_game_does_not_draw_during_the_insert() {
 #[test]
 fn the_reveal_waits_for_the_power_on_to_finish() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
-    let mut a = App::boot(d.path());
+    let mut a = common::boot(d.path());
     a.apply(Action::Insert);
     a.on_core_ready();
     while a.seat() < 1.0 {
@@ -583,7 +583,8 @@ fn a_cart_in_flight_is_not_also_left_standing_on_the_shelf() {
     let carts = out
         .iter()
         .filter(|d| match **d {
-            Draw::Rect { w, h, .. }
+            Draw::RoundRect { w, h, .. }
+            | Draw::Rect { w, h, .. }
             | Draw::Tex { w, h, .. }
             | Draw::Part { w, h, .. }
             | Draw::Turned { w, h, .. } => {
@@ -744,10 +745,10 @@ fn both_b_and_menu_take_the_about_screen_back_to_the_quick_menu() {
     ] {
         let (mut s, _motor) = common::session_with_platform(d.path());
         s.app_mut().apply(slot_input::Action::QuickMenu);
-        for _ in 0..slot_ui::QuickRow::About.position(&[]) {
-            s.app_mut()
-                .apply(slot_input::Action::GbaDown(slot_input::Btn::Down));
+        for _ in 0..slot_ui::QuickRow::About.position(&[])%4 {
+            s.app_mut().apply(slot_input::Action::GbaDown(slot_input::Btn::Right));
         }
+        s.app_mut().apply(slot_input::Action::GbaDown(slot_input::Btn::Down));
         s.app_mut()
             .apply(slot_input::Action::GbaDown(slot_input::Btn::A));
         assert!(matches!(s.app().phase(), slot::app::Phase::About));

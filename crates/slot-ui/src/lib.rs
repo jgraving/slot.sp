@@ -19,9 +19,13 @@ mod draw;
 mod favorite;
 mod favorite_remove;
 mod footer;
+pub mod expressive;
+pub use expressive::{MenuFrame, MenuMotion};
 pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
+mod settings_notice;
+pub use settings_notice::{settings_notice_face_on,SettingsNotice,settings_notice_face};
 mod icon;
 mod link_art;
 mod material;
@@ -31,6 +35,7 @@ mod power_menu;
 mod shot_viewer;
 pub use material::{shell_link_port, shell_rgb, shell_slot_faces};
 mod quick_menu;
+pub mod menu_grid;
 mod rebuild;
 mod refusal;
 mod shelf;
@@ -41,7 +46,9 @@ mod sticker;
 pub mod text;
 mod toast;
 mod toggle;
-pub use toggle::toggle_face;
+mod slider;
+pub use slider::{draw_slider,draw_menu_sliders,MenuSlider,setting_slider,slider_face, slider_face_with_width,MENU_SLIDER_W,MENU_SLIDER_SPAN};
+pub use toggle::{toggle_face, draw_switch, draw_menu_switches, MenuSwitch, SWITCH_W, SWITCH_H};
 
 pub use art::decode as decode_png;
 pub use backdrop::{
@@ -49,7 +56,7 @@ pub use backdrop::{
     draw_ground, game_bezel_face, wallpaper_face,
 };
 pub use barcode::{code39, CODE39_NARROW, CODE39_WIDE};
-pub use battery::{draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
+pub use battery::{status_battery_face,status_battery_face_on, draw_gauge, BOLT_PX, GAUGE_H, GAUGE_W, WALL};
 pub use board::{
     board_at, board_face, board_from, board_in, board_x, board_zoom, chip_face, chip_shadow_face,
     grown, lid_at, lid_from, lift_of, on_board, padded, rom_marking, rom_marking_face, shelf_cart,
@@ -64,10 +71,11 @@ pub use cart::{
     GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H,
     GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y,
 };
-pub use clock::{clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
+pub use clock::{clock_text, date_time_format, clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    draw_corner_connection, draw_corners, draw_footer, draw_footer_connection, draw_status,
+    draw_corner_audio, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
+    draw_status,
     Printed, FOOTER_Y,
 };
 pub use hud::{
@@ -75,7 +83,7 @@ pub use hud::{
     HUD_ICON_PX, HUD_INK, HUD_MS, LINK_HOST_INK, LINK_JOIN_INK, PLATE_H,
 };
 pub use icon::{
-    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, warm_fonts, Badge, Icon,
+    badge_face, icon_box, icon_face, sound_device_icon, star_face, kid_smiley_face, kid_status_face, status_icon_face,control_icon_face, STATUS_ICON_SIZE, STATUS_ICON_PX, warm_fonts, Badge, Icon,
 };
 pub use link_art::{
     link_art, LinkArt, ADAPTER_BASE_X, ADAPTER_BASE_Y, ADAPTER_H, ADAPTER_W, ARCS, ARROW_H,
@@ -85,7 +93,7 @@ pub use link_art::{
 pub use plate::{
     arrows_hint_coloured, arrows_hint_face, arrows_hint_width, cap_width, centred_hints,
     hint_coloured, hint_face, hint_quad, hint_row, hint_width, pad_hint_face, pad_hint_width,
-    tick_cap_face, title_face, title_line_face, word_face, word_ink, word_width, Hint, UndoFace,
+    tick_cap_face, title_face, title_line_face, word_face, word_ink, status_word_face, STATUS_TEXT_H, word_width, Hint, UndoFace,
     ARROW_GAP, CAP, CAP_GAP, HINT_EDGE, HINT_GAP, HINT_H, LEGEND_GAP, TITLE_H, TITLE_LINE_H,
     TITLE_W,
 };
@@ -97,11 +105,11 @@ pub use power_menu::{
     PowerChoice, MENU_PAD, POWER_SWITCH_MS, POWER_SWITCH_SLIDE_MS,
 };
 pub use quick_menu::{
-    core_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
+    core_button_legends, gallery_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
-    quick_value_face, quick_heading_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
-    kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_with_space, parent_footer_face, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
+    reference_face, reference_binding_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, quick_controls_legends, carousel_name_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
+    kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
 };
@@ -122,7 +130,7 @@ pub use shot_viewer::{
 };
 pub use silhouette::{gb_silhouette, silhouette, GbShell};
 pub use slot_chrome::{
-    draw_empty_slot, draw_plugged_slot, draw_slot_name, draw_slot_title, ease, edge, housing,
+    draw_empty_slot, draw_plugged_slot, draw_slot_name, draw_slot_name_sized, draw_slot_title, ease, edge, housing,
     opening, recess, slot_name_y, SlotChrome, ALERT_PX, LIP_H, MOUTH_H, MOUTH_W,
 };
 pub use sticker::{
@@ -133,3 +141,9 @@ pub use toast::{toast_box, toast_face, toast_rect, Toast};
 
 mod button_code;
 pub use button_code::button_code_face;
+
+mod loading;
+pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};
+
+/// Shared clipping boundary for moving settings content, excluding anchored chrome.
+pub fn clip_menu_body(out:&mut Vec<Draw>,begin:usize,canvas:Canvas){quick_menu::clip_quads(out,begin,[expressive::MENU_INSET,expressive::CARD_TOP,canvas.w-expressive::MENU_INSET,expressive::CARD_BOTTOM]);}

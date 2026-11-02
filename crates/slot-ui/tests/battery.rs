@@ -1,160 +1,45 @@
-use slot_power::{Battery, Charge};
-use slot_ui::{draw_gauge, Draw, Printed, TexId, GAUGE_H, GAUGE_W, HUD_INK, WALL};
-
-fn percent_face() -> Printed {
-    Printed { face: None, w: 30 }
-}
-
-fn quads(out: &[Draw]) -> Vec<(f32, f32, f32, f32)> {
-    out.iter()
-        .filter_map(|d| match *d {
-            Draw::Rect { x, y, w, h, .. } | Draw::Tex { x, y, w, h, .. } => Some((x, y, w, h)),
-            _ => None,
-        })
-        .collect()
-}
-
-fn at(percent: u8, charge: Charge) -> Option<Battery> {
-    Some(Battery { percent, charge })
-}
-
+use slot_power::{Battery,Charge};
+use slot_ui::{Canvas,Draw,Printed,TexId,status_battery_face,draw_status,draw_corner_audio,draw_corner_kid,GAUGE_W,GAUGE_H};
+fn at(percent:u8,charge:Charge)->Battery{Battery{percent,charge}}
+fn pixel(f:&slot_ui::UndoFace,x:u32,y:u32)->[u8;4]{f.rgba[((y*f.w+x)*4)as usize..((y*f.w+x)*4+4)as usize].try_into().unwrap()}
 #[test]
-fn nothing_moves_when_the_charge_state_changes() {
-    let mut idle = Vec::new();
-    let mut charging = Vec::new();
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Discharging),
-        percent_face(),
-        None,
-        HUD_INK,
-        &mut idle,
-    );
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Charging),
-        percent_face(),
-        Some(TexId::from_raw(7)),
-        HUD_INK,
-        &mut charging,
-    );
-    let idle = quads(&idle);
-    for q in idle.iter() {
-        assert!(
-            quads(&charging).contains(q),
-            "{q:?} moved or vanished when charging started"
-        );
+fn native_battery_has_a_capsule_and_visible_level_at_every_percentage(){
+    let mut fills=vec![];
+    for n in [0,10,50,82,100]{let f=status_battery_face(at(n,Charge::Discharging));assert_eq!((f.w,f.h),(GAUGE_W as u32,GAUGE_H as u32));assert_eq!(pixel(&f,0,0)[3],0);let width=(0..70).filter(|&x|pixel(&f,x,4)[0]>200).count();fills.push(width);}
+    assert!(fills.windows(2).all(|p|p[0]<p[1]));
+}
+#[test]
+fn battery_state_colours_and_bolt_are_part_of_the_same_native_asset(){
+    let regular=status_battery_face(at(82,Charge::Discharging));let charging=status_battery_face(at(82,Charge::Charging));let low=status_battery_face(at(20,Charge::Discharging));
+    let g=pixel(&charging,10,4);assert!(g[1]>g[0]);let red=pixel(&low,4,10);assert!(red[0]>red[1]);
+    assert_ne!(regular.rgba,charging.rgba);
+    for percent in [0,7,10,99,100] {for light in [false,true] {let f=slot_ui::status_battery_face_on(at(percent,Charge::Charging),light);for y in 0..f.h {for x in 0..f.w {assert_eq!(pixel(&f,x,y)[3],pixel(&regular,x,y)[3],"bolt escaped capsule at {percent}%");}}}}
+}
+#[test]
+fn time_is_left_and_the_icon_cluster_and_battery_are_right_without_overlap(){
+    for width in [640.0,720.0]{let canvas=Canvas{w:width,h:480.0};let b=Some(at(100,Charge::Charging));let p=Printed::new(TexId::from_raw(1),70);let mut out=vec![];
+        draw_status(canvas,b,p,None,Printed::new(TexId::from_raw(2),100),slot_ui::HUD_INK,&mut out);
+        draw_corner_audio(canvas,b,p,Some(TexId::from_raw(3)),Some(TexId::from_raw(4)),&mut out);
+        draw_corner_kid(canvas,b,p,TexId::from_raw(5),2,&mut out);
+        let rect=|id|out.iter().find_map(|d|match d{Draw::Tex{x,y,w,h,tex,..}if *tex==TexId::from_raw(id)=>Some([*x,*y,*w,*h]),_=>None}).unwrap();
+        assert_eq!(rect(2)[0],16.0);assert_eq!(rect(1)[0]+rect(1)[2],width-16.0);
+        for id in 3..=5{let [x,y,w,h]=rect(id);assert_eq!((w,h),(24.0,24.0));assert!(y>=0.0&&y+h<=slot_ui::PLATE_H);assert!(x>116.0&&x+w<rect(1)[0]);}
     }
 }
 
 #[test]
-fn the_bolt_never_reaches_the_capsule() {
-    let mut out = Vec::new();
-    draw_gauge(
-        24.0,
-        400.0,
-        at(68, Charge::Charging),
-        percent_face(),
-        Some(TexId::from_raw(7)),
-        HUD_INK,
-        &mut out,
-    );
-    let bolt_right = out
-        .iter()
-        .find_map(|d| match *d {
-            Draw::Tex { x, w, tex, .. } if tex == TexId::from_raw(7) => Some(x + w),
-            _ => None,
-        })
-        .expect("the bolt did not draw while charging");
-    let capsule_left = out
-        .iter()
-        .filter_map(|d| match *d {
-            Draw::Rect { x, .. } => Some(x),
-            _ => None,
-        })
-        .fold(f32::MAX, f32::min);
-    assert!(
-        bolt_right <= capsule_left,
-        "the bolt's right edge ({bolt_right}) reaches past the capsule's left wall ({capsule_left})"
-    );
-}
-
-#[test]
-fn the_bolt_is_only_drawn_while_charging() {
-    let bolt = |charge| {
-        let mut out = Vec::new();
-        draw_gauge(
-            24.0,
-            400.0,
-            at(68, charge),
-            percent_face(),
-            Some(TexId::from_raw(7)),
-            HUD_INK,
-            &mut out,
-        );
-        out.iter()
-            .any(|d| matches!(d, Draw::Tex { tex: t, .. } if *t == TexId::from_raw(7)))
-    };
-    assert!(bolt(Charge::Charging));
-    assert!(!bolt(Charge::Discharging));
-    assert!(!bolt(Charge::Full));
-    assert!(!bolt(Charge::Unknown));
-}
-
-#[test]
-fn the_fill_tracks_the_percent_and_never_leaves_the_capsule() {
-    let mut widths = Vec::new();
-    for percent in [0u8, 1, 50, 99, 100] {
-        let mut out = Vec::new();
-        draw_gauge(
-            24.0,
-            400.0,
-            at(percent, Charge::Discharging),
-            percent_face(),
-            None,
-            HUD_INK,
-            &mut out,
-        );
-        let capsule_left = out
-            .iter()
-            .filter_map(|d| match *d {
-                Draw::Rect { x, .. } => Some(x),
-                _ => None,
-            })
-            .fold(f32::MAX, f32::min);
-        let inner_right = capsule_left + GAUGE_W - 2.0 * WALL;
-        let fill = out.iter().find_map(|d| match *d {
-            Draw::Rect { x, w, .. } if (x - (capsule_left + 2.0 * WALL)).abs() < 0.01 => Some(w),
-            _ => None,
-        });
-        if let Some(w) = fill {
-            assert!(
-                capsule_left + 2.0 * WALL + w <= inner_right + 0.01,
-                "a {percent}% fill burst through the capsule's own wall"
-            );
+fn light_battery_has_smooth_readable_ink_and_a_flat_borderless_capsule(){
+    use slot_ui::status_battery_face_on;
+    for charge in [Charge::Charging,Charge::Full,Charge::Discharging] {
+        for percent in [0,10,50,82,100] {
+            let f=status_battery_face_on(at(percent,charge),true);
+            assert_eq!(pixel(&f,0,0)[3],0);
+            let edge=pixel(&f,0,13);let inside=pixel(&f,2,13);
+            assert_eq!(&edge[..3],&inside[..3],"a separate outline remains on the capsule");
+            let colours:std::collections::BTreeSet<_>=f.rgba.chunks_exact(4).filter(|p|p[3]>240).map(|p|[p[0],p[1],p[2]]).collect();
+            assert!(colours.len()>20,"percentage lost its antialiased text edges");
+            assert!(colours.iter().any(|p|p.iter().all(|&v|v<130)));
+            if percent>20 {assert!(colours.iter().any(|p|p.iter().all(|&v|v>235)),"filled battery lost its light percentage");}
         }
-        widths.push(fill.unwrap_or(0.0));
     }
-    for pair in widths.windows(2) {
-        assert!(
-            pair[1] > pair[0],
-            "the fill must grow strictly with the percent, got {widths:?}"
-        );
-    }
-}
-
-#[test]
-fn the_capsule_is_a_fifth_larger_than_it_was() {
-    assert!((GAUGE_W - 22.0 * 1.2).abs() < 0.01);
-    assert!((GAUGE_H - 11.0 * 1.2).abs() < 0.01);
-    assert!((WALL - 1.5 * 1.2).abs() < 0.01);
-}
-
-#[test]
-fn no_reading_draws_nothing() {
-    let mut out = Vec::new();
-    draw_gauge(24.0, 400.0, None, percent_face(), None, HUD_INK, &mut out);
-    assert!(out.is_empty());
 }

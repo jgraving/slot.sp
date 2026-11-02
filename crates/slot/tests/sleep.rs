@@ -103,7 +103,10 @@ fn timed_wake_shuts_down_and_never_has_no_alarm() {
 fn power_page_persists_lid_choice_and_sleep_timer() {
     let (d, mut a, _) = setup(false, 0);
     a.apply(Action::QuickMenu);
-    for _ in 0..QuickRow::Power.position(&[]) {
+    for _ in 0..QuickRow::Power.position(&[])%4 {
+        a.apply(Action::GbaDown(Btn::Right));
+    }
+    for _ in 0..QuickRow::Power.position(&[])/4 {
         a.apply(Action::GbaDown(Btn::Down));
     }
     assert_eq!(a.quick_menu(), Some(QuickRow::Power));
@@ -123,7 +126,10 @@ fn power_page_persists_lid_choice_and_sleep_timer() {
 fn menu_sleep_uses_deep_sleep_and_never_timer_without_shutting_down() {
     let (_d, mut a, calls) = setup(false, 3);
     a.apply(Action::QuickMenu);
-    for _ in 0..QuickRow::Power.position(&[]) {
+    for _ in 0..QuickRow::Power.position(&[])%4 {
+        a.apply(Action::GbaDown(Btn::Right));
+    }
+    for _ in 0..QuickRow::Power.position(&[])/4 {
         a.apply(Action::GbaDown(Btn::Down));
     }
     a.apply(Action::GbaDown(Btn::A));

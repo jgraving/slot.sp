@@ -254,6 +254,78 @@ fn r2_double_tap_latches_and_single_press_clears() {
     assert_eq!(g.feed(Up(R2), 5050), vec![FfStop]);
 }
 
+fn with_toggle() -> Gestures {
+    let mut g = gestures();
+    let mut shortcuts = today();
+    shortcuts.push((
+        Chord {
+            modifier: None,
+            button: R1,
+        },
+        FfToggle,
+    ));
+    g.set_shortcuts(shortcuts);
+    g
+}
+
+#[test]
+fn a_toggle_press_starts_fast_forward_and_the_next_press_stops_it() {
+    let mut g = with_toggle();
+    assert_eq!(g.feed(Down(R1), 0), vec![FfStart]);
+    assert!(
+        g.feed(Up(R1), 50).is_empty(),
+        "the release stopped the toggle"
+    );
+    assert!(g.ff_latched(), "a toggled run is not held on like a latch");
+    assert_eq!(g.feed(Down(R1), 5000), vec![FfStop]);
+    assert!(g.feed(Up(R1), 5050).is_empty());
+    assert!(!g.ff_latched());
+}
+
+#[test]
+fn the_fast_forward_button_stops_a_toggled_run() {
+    let mut g = with_toggle();
+    g.feed(Down(R1), 0);
+    g.feed(Up(R1), 50);
+    assert!(g.feed(Down(R2), 5000).is_empty());
+    assert_eq!(g.feed(Up(R2), 5050), vec![FfStop]);
+    assert_eq!(
+        g.feed(Down(R1), 6000),
+        vec![FfStart],
+        "the toggle lost its place"
+    );
+}
+
+#[test]
+fn the_toggle_stops_a_held_fast_forward() {
+    let mut g = with_toggle();
+    assert_eq!(g.feed(Down(R2), 0), vec![FfStart]);
+    assert_eq!(g.feed(Down(R1), 100), vec![FfStop]);
+    assert!(g.feed(Up(R1), 150).is_empty());
+    assert!(
+        g.feed(Up(R2), 200).is_empty(),
+        "letting go of R2 reached the game"
+    );
+}
+
+#[test]
+fn rewind_stops_a_toggled_run() {
+    let mut g = with_toggle();
+    g.feed(Down(R1), 0);
+    g.feed(Up(R1), 50);
+    assert_eq!(g.feed(Down(L2), 200), vec![FfStop, RewindStart]);
+}
+
+#[test]
+fn a_toggle_press_during_a_rewind_does_nothing() {
+    let mut g = with_toggle();
+    g.feed(Down(L2), 0);
+    assert!(g.feed(Down(R1), 50).is_empty());
+    assert!(g.feed(Up(R1), 100).is_empty());
+    assert_eq!(g.feed(Up(L2), 150), vec![RewindStop]);
+    assert!(!g.ff_latched());
+}
+
 #[test]
 fn power_flushes_on_the_press_and_locks_on_the_release() {
     let mut g = gestures();
@@ -943,4 +1015,27 @@ fn a_press_seen_during_a_capture_leaves_nothing_behind() {
         vec![GbaDown(R1)],
         "a stale L1 completed the pair"
     );
+}
+
+#[test]
+fn select_tap_is_dormant_on_the_shelf_and_chords_still_win() {
+    let mut g=on_shelf(vec![entry(Some(Mod::Select),X,Favorite,slot_input::Contexts::SHELF)]);
+    assert!(g.feed(Down(Select),0).is_empty());
+    assert!(g.feed(Up(Select),60).is_empty());
+    assert!(g.feed(Down(Select),100).is_empty());
+    assert!(g.feed(Down(X),120).contains(&Favorite));
+    assert!(!g.feed(Up(Select),150).contains(&QuickControls));
+    g.feed(Up(X),160);
+    g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),200);
+    assert_eq!(g.feed(Up(Select),230),vec![GbaDown(Select)]);
+    assert_eq!(g.tick(280),vec![GbaUp(Select)]);
+}
+
+#[test]
+fn select_pressed_in_a_game_does_not_open_controls_after_returning_to_the_shelf() {
+    let mut g=Gestures::new();g.set_context(slot_input::Context::Game);
+    g.feed(Down(Select),0);assert_eq!(g.tick(SELECT_CHORD_MS),vec![GbaDown(Select)]);
+    g.set_context(slot_input::Context::Shelf);
+    assert_eq!(g.feed(Up(Select),SELECT_CHORD_MS+100),vec![GbaUp(Select)]);
 }

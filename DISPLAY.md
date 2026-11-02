@@ -2,15 +2,13 @@
 
 [← Overview](README.md) · [All guides](GUIDE.md)
 
-[Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Game picture](#the-game-picture) · [Your own artwork](#your-own-backgrounds--borders)
+[Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Screen effects & borders](#screen-effects--borders) · [Your own artwork](#your-own-backgrounds--borders)
 
-![General settings with SP color, theme, wallpaper and animation options](previews/guide/appearance.png)
+![General settings with Light UI theme selected](previews/current/light/general.png)
 
-## Type
+## Text
 
-Google Sans Flex is used across menus, cartridge captions, notices and settings. Selected rows gain weight and a little width. Headings use rounder letterforms, while hints and small text use an optical size chosen for readability. Numeric values use equal-width digits so changing a clock or percentage does not make the text jump.
-
-The About sticker credits the typeface alongside the artwork and symbols.
+Menus, game names and notices use Google Sans Flex. The selected setting has heavier text, and clock and percentage digits keep a fixed width as their values change. The About screen credits the typeface, artwork and symbols.
 
 ## Colors
 
@@ -24,9 +22,9 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → Theme** changes the light or dark appearance.
+The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
 
-![The four SP colors](previews/rgsp-shell-finishes.png)
+[Preview all four SP colors on the homepage](https://jakegraving.com/slot.sp/#intro-title).
 
 ## Backgrounds & animation
 
@@ -34,17 +32,23 @@ Open **Menu → General**:
 
 | Setting | What to choose |
 | :--- | :--- |
-| **Wallpaper** | Flowing Gradient, Static Gradient, a blurred background, None, Random, or one of your own images. |
-| **Wallpaper Tint** | Darken a custom or random background so the games stand out. |
-| **Boot Animation** | Show or skip the slot.sp logo animation at startup. |
+| **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
+| **Wallpaper Tint** | Darken a custom or random wallpaper in Dark mode, or lighten it in Light mode. |
+| **Boot Animation** | Show or skip the startup animation, where the letters gather and drop into the slot. |
+| **Carousel motion** | Wheel places cartridges along a curved path; Classic keeps them in a horizontal line. Wheel is the default. |
 | **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
-| **Game Titles** | Show game names above the slot. |
+| **Clock format** | Use 12-hour or 24-hour time in the status bar, time editors, schedules and time labels. The default is 24-hour. |
+| **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
 
-**Flowing Gradient** slowly moves through teal and purple. **Static Gradient** keeps a still background. **Random** chooses one of your wallpaper images at startup.
+**Flowing Gradient** animates the background; **Static Gradient** keeps it still. Both have separate Light and Dark colors. **None** uses a plain background. **Random** chooses one of your images from `Wallpapers/` at startup.
 
-![The slot.sp startup animation](previews/boot-brand.gif)
+Custom and random wallpapers are lightened in Light mode. **Wallpaper Tint** adjusts how strongly they are lightened or darkened; it appears only for these wallpapers. Switching back to Dark restores their original colors.
 
-## The game picture
+![Letters gather into a small blob and drop behind the slot at startup](previews/current/light/boot.gif)
+
+<span id="the-game-picture"></span>
+
+## Screen effects & borders
 
 Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
 
@@ -53,7 +57,7 @@ Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** o
 | **Shader** | The screen effect: LCD3x, grid, dots or a simpler texture, depending on the system. |
 | **Color Correction** | Adjust colors toward the original handheld's display. |
 | **Palette** | Choose the colors for original Game Boy games. |
-| **Bezel** | Choose the border around the game picture. |
+| **Bezel** | Choose the border around the game screen. |
 
 Each system remembers its own settings. Game Boy palettes include **Auto**, grayscale, DMG Green, GB Pocket, GB Light, Game Boy Color presets and Super Game Boy palettes.
 
@@ -70,7 +74,7 @@ During a game, open **Menu → Settings → Screen**:
 
 Scaling is saved per game. On GB/GBC, **L1 / R1** cycle backward / forward through the four modes unless those buttons are mapped to game controls. GBA shoulder buttons keep their normal game functions. Fit and Integer hide the decorative border without changing its saved setting. On a panel smaller than the original game image, Integer falls back to fitting it without cropping.
 
-### Picture shortcuts
+### Display shortcuts
 
 | Button | Action |
 | :--- | :--- |
@@ -79,7 +83,11 @@ Scaling is saved per game. On GB/GBC, **L1 / R1** cycle backward / forward throu
 | <kbd>SELECT</kbd> + <kbd>L2</kbd> / <kbd>R2</kbd> | Previous / next Game Boy palette. |
 | <kbd>L1</kbd> / <kbd>R1</kbd>, in GB or GBC games | Previous / next scaling mode. |
 
-The picture-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
+The screen-size choice is remembered per game. Brightness and warmth have separate [day/night presets](NIGHT-DISPLAY.md).
+
+### Automatic day and night
+
+Set start times in **Screen → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
 
 ## Your own backgrounds & borders
 

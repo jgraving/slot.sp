@@ -469,6 +469,23 @@ esac
         self.assertNotEqual(self.run_command('connect', MAC).returncode, 0)
         self.assertNotIn('trust ' + MAC, (self.root / 'calls').read_text())
 
+    def test_cancelled_interactive_connect_releases_lock_without_changing_output(self):
+        cancel = self.root / 'request.cancel'
+        (self.root / 'route').write_text('plughw:CARD=Existing,DEV=0')
+        env = dict(self.env, MOCK_CONNECTED='no', SLOT_BT_POLL_INTERVAL='0.1', SLOT_BT_CANCEL_FILE=str(cancel))
+        worker = subprocess.Popen(['sh', str(SCRIPT), 'connect', MAC], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            deadline = time.monotonic() + 2
+            while not (self.root / 'calls').exists() and time.monotonic() < deadline: time.sleep(0.01)
+            cancel.touch()
+            worker.communicate(timeout=3)
+            self.assertFalse((self.root / 'lock').exists())
+            self.assertEqual((self.root / 'route').read_text(), 'plughw:CARD=Existing,DEV=0')
+            self.assertFalse((self.root / 'Config/bluetooth-headphones').exists())
+            self.assertEqual(self.run_command('speaker').returncode, 0)
+        finally:
+            if worker.poll() is None: worker.kill(); worker.communicate()
+
     def test_off_cancels_an_in_flight_periodic_reconnect(self):
         (self.root / 'Config').mkdir()
         (self.root / 'Config/bluetooth-headphones').write_text(MAC)

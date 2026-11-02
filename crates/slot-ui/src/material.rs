@@ -5,7 +5,7 @@ use slot_store::ShellColour;
 pub fn shell_rgb(colour: ShellColour) -> [u8; 3] {
     match colour {
         ShellColour::Theme | ShellColour::Graphite => [40, 43, 49],
-        ShellColour::Platinum => [190, 193, 198],
+        ShellColour::Platinum => [154, 160, 168],
         ShellColour::PearlBlue => [119, 150, 170],
         ShellColour::PearlPink => [198, 155, 170],
     }

@@ -1,11 +1,11 @@
-use crate::bitmaps::{ButtonLegend, button_legend};
+use crate::bitmaps::ButtonLegend;
 use crate::draw::{Canvas, Draw, OUT_H, OUT_W, TexId};
 use crate::icon::{Icon, WARNING_INK};
 use crate::plate::{
     CAP_GAP, HINT_EDGE, LEGEND_GAP, UndoFace, blit, centred_hints, word_face, word_ink,
 };
 use crate::power_menu::{MENU_H, MENU_INK, MENU_PAD, MENU_PX};
-use crate::slot_chrome::{MOUTH_H, opening};
+use crate::slot_chrome::MOUTH_H;
 use crate::text;
 use slot_store::{CarouselAction, GameButton, Shortcut};
 
@@ -92,6 +92,7 @@ pub enum QuickRow {
     ScShaderNext,
     ScShaderBack,
     ScFastForward,
+    ScFastForwardToggle,
     ScRewind,
     ScNight,
     Controls,
@@ -108,6 +109,12 @@ pub enum QuickRow {
     UndoLoad,
     Reference,
     PlayReference,
+    FavoriteSort,
+    GameDetails,
+    PlayDetails,
+    DisplaySchedule,
+    ClockFormat,
+    CarouselMotion,
     Scaling,
 }
 
@@ -116,9 +123,9 @@ impl QuickRow {
         matches!(self, Self::FastForwardSound | Self::Rumble | Self::AutoLoad | Self::EjectSave
             | Self::Turbo | Self::Rewind | Self::BootAnimation | Self::CarouselSounds
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
-            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::ShowTitles)
+            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 98] = [
+    pub const ALL: [QuickRow; 105] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -200,6 +207,7 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::ScNight,
         QuickRow::Controls,
@@ -216,6 +224,12 @@ impl QuickRow {
         QuickRow::UndoLoad,
         QuickRow::Reference,
         QuickRow::PlayReference,
+        QuickRow::FavoriteSort,
+        QuickRow::GameDetails,
+        QuickRow::PlayDetails,
+        QuickRow::DisplaySchedule,
+        QuickRow::ClockFormat,
+        QuickRow::CarouselMotion,
         QuickRow::Scaling,
     ];
 
@@ -237,15 +251,18 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    pub const GENERAL: [QuickRow; 12] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
         QuickRow::Theme,
         QuickRow::Recents,
         QuickRow::ShowTitles,
+        QuickRow::FavoriteSort,
         QuickRow::BootAnimation,
         QuickRow::CarouselSounds,
+        QuickRow::CarouselMotion,
+        QuickRow::ClockFormat,
         QuickRow::DateTime,
     ];
 
@@ -277,7 +294,7 @@ impl QuickRow {
         QuickRow::GameTurboB,
     ];
 
-    pub const SHORTCUTS: [QuickRow; 15] = [
+    pub const SHORTCUTS: [QuickRow; 16] = [
         QuickRow::ScSave,
         QuickRow::ScLoad,
         QuickRow::ScScreenshot,
@@ -291,18 +308,21 @@ impl QuickRow {
         QuickRow::ScShaderNext,
         QuickRow::ScShaderBack,
         QuickRow::ScFastForward,
+        QuickRow::ScFastForwardToggle,
         QuickRow::ScRewind,
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 4] = [
-        QuickRow::ScreenGeneral,
+    pub const SCREEN: [QuickRow; 6] = [
+        QuickRow::Brightness,
+        QuickRow::BlueLight,
+        QuickRow::DisplaySchedule,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
     ];
 
-    pub const SCREEN_GENERAL: [QuickRow; 2] = [QuickRow::Brightness, QuickRow::BlueLight];
+    pub const SCREEN_GENERAL: [QuickRow; 3] = [QuickRow::Brightness, QuickRow::BlueLight, QuickRow::DisplaySchedule];
 
     pub const SCREEN_GBA: [QuickRow; 3] = [
         QuickRow::GbaShader,
@@ -334,15 +354,7 @@ impl QuickRow {
         QuickRow::EjectSave,
     ];
 
-    pub const PLAY: [QuickRow; 7] = [
-        QuickRow::Resume,
-        QuickRow::UndoSave,
-        QuickRow::UndoLoad,
-        QuickRow::States,
-        QuickRow::Screenshots,
-        QuickRow::Settings,
-        QuickRow::ExitGame,
-    ];
+    pub const PLAY: [QuickRow; 7] = [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
 
     pub const SETTINGS: [QuickRow; 5] = [
         QuickRow::PlayScreen,
@@ -353,13 +365,13 @@ impl QuickRow {
     ];
 
     pub const PLAY_SCREEN: [QuickRow; 7] = [
+        QuickRow::PlayBrightness,
+        QuickRow::PlayBlueLight,
         QuickRow::Shader,
         QuickRow::Bezel,
         QuickRow::Palette,
         QuickRow::ColourCorrection,
         QuickRow::Scaling,
-        QuickRow::PlayBrightness,
-        QuickRow::PlayBlueLight,
     ];
 
     pub fn index(self) -> usize {
@@ -376,7 +388,7 @@ impl QuickRow {
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
-            QuickRow::Brightness | QuickRow::BlueLight => &QuickRow::SCREEN_GENERAL,
+            QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN,
             QuickRow::Scaling | QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
@@ -397,13 +409,14 @@ impl QuickRow {
             | QuickRow::LeftStick
             | QuickRow::AutoLoad
             | QuickRow::EjectSave => &QuickRow::GAME,
-            QuickRow::Wallpaper
+            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::DateTime
             | QuickRow::ShellColour
             | QuickRow::Theme
             | QuickRow::Recents
             | QuickRow::ShowTitles
+            | QuickRow::FavoriteSort
             | QuickRow::BootAnimation
             | QuickRow::CarouselSounds => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
@@ -420,6 +433,7 @@ impl QuickRow {
             | QuickRow::PlaySound
             | QuickRow::PlayGameplay
             | QuickRow::PlayReference
+            | QuickRow::PlayDetails
             | QuickRow::PlayControls => &QuickRow::SETTINGS,
 
             r if r.game_button().is_some() => &QuickRow::CONTROLS,
@@ -436,7 +450,7 @@ impl QuickRow {
         match self.page()[0] {
             QuickRow::LidClose => Some(QuickRow::Power),
             QuickRow::ScreenGeneral => Some(QuickRow::Screen),
-            QuickRow::Brightness => Some(QuickRow::ScreenGeneral),
+            QuickRow::Brightness => Some(QuickRow::Screen),
             QuickRow::ScreenGba => Some(QuickRow::Screen),
 
             QuickRow::GbaShader => Some(QuickRow::ScreenGba),
@@ -444,7 +458,7 @@ impl QuickRow {
             QuickRow::GbShader => Some(QuickRow::ScreenGb),
             QuickRow::FastForward => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
-            QuickRow::Shader => Some(QuickRow::PlayScreen),
+            QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
             QuickRow::Wallpaper => Some(QuickRow::General),
@@ -455,10 +469,17 @@ impl QuickRow {
     }
 
     pub fn parent_in_game(self) -> Option<QuickRow> {
-        match self.parent() {
-            Some(QuickRow::Game) => Some(QuickRow::PlayGameplay),
-            Some(QuickRow::ControlsInGame) => Some(QuickRow::PlayControls),
-            parent => parent,
+        if self.page()==QuickRow::MAIN {Some(QuickRow::Settings)}else if self.page()==QuickRow::PLAY_SCREEN {Some(QuickRow::Screen)}else{self.parent()}
+    }
+
+    /// The title is cached once per page, never built during an animation.
+    pub fn heading(self) -> &'static str {
+        match self.page()[0] {
+            QuickRow::General => "Settings",
+            QuickRow::Resume => "Paused",
+            QuickRow::PlayScreen => "Settings",
+            QuickRow::PlayBrightness => "Screen",
+            _ => self.parent().map_or("Settings", QuickRow::label),
         }
     }
 
@@ -478,7 +499,7 @@ impl QuickRow {
             QuickRow::Power => Some(QuickRow::POWER[0]),
             QuickRow::Screen => Some(QuickRow::SCREEN[0]),
             QuickRow::Game => Some(QuickRow::GAME[0]),
-            QuickRow::Settings => Some(QuickRow::SETTINGS[0]),
+            QuickRow::Settings => Some(QuickRow::MAIN[0]),
             QuickRow::PlayScreen => Some(QuickRow::PLAY_SCREEN[0]),
             QuickRow::PlayGameplay => Some(QuickRow::GAME[0]),
             QuickRow::PlayControls => Some(QuickRow::CONTROLS[0]),
@@ -512,8 +533,8 @@ impl QuickRow {
 
     pub fn label(self) -> &'static str {
         match self {
-            QuickRow::Power => "Power",
-            QuickRow::Kids => "Kid Mode",
+            QuickRow::Power => "Power & lid",
+            QuickRow::Kids => "Parental controls",
             QuickRow::LidClose => "Lid Close",
             QuickRow::SleepTimeout => "Shut Down After",
             QuickRow::SleepNow => "Sleep Now",
@@ -525,9 +546,14 @@ impl QuickRow {
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
-            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Blue Light",
+            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp",
             QuickRow::DateTime => "Date & Time",
+            QuickRow::ClockFormat => "Clock format",
+            QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
+            QuickRow::DisplaySchedule => "Night mode",
+            QuickRow::FavoriteSort => "Sort Favorites",
+            QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
             QuickRow::Scaling => "Scaling",
             QuickRow::Bluetooth | QuickRow::PlaySound => "Sound",
@@ -543,7 +569,7 @@ impl QuickRow {
             QuickRow::Turbo => "Turbo Buttons",
             QuickRow::Rewind => "Rewind",
             QuickRow::GbPalette => "Palette",
-            QuickRow::Theme => "Theme",
+            QuickRow::Theme => "UI theme",
             QuickRow::ShellColour => "Shell Color",
             QuickRow::Wallpaper => "Wallpaper",
             QuickRow::Recents => "Recents",
@@ -559,10 +585,10 @@ impl QuickRow {
             QuickRow::Settings => "Settings",
             QuickRow::ExitGame => "Exit Game",
             QuickRow::General => "General",
-            QuickRow::Controls => "Controls",
+            QuickRow::Controls => "Device controls",
             QuickRow::ControlsShelf => "Shelf",
             QuickRow::ControlsInGame => "In-Game",
-            QuickRow::PlayControls => "Controls",
+            QuickRow::PlayControls => "Device controls",
             QuickRow::Shortcuts => "Shortcuts",
             QuickRow::GameUp
             | QuickRow::GameDown
@@ -589,6 +615,7 @@ impl QuickRow {
             | QuickRow::ScShaderNext
             | QuickRow::ScShaderBack
             | QuickRow::ScFastForward
+            | QuickRow::ScFastForwardToggle
             | QuickRow::ScRewind
             | QuickRow::ScNight => self.shortcut().map_or("", Shortcut::label),
             QuickRow::ShelfPrev | QuickRow::ShelfNext | QuickRow::ShelfFavorite => {
@@ -609,6 +636,7 @@ impl QuickRow {
         }
     }
 
+    pub fn disclosure(self)->bool {self.opens() && !matches!(self,Self::Resume|Self::ExitGame|Self::UndoSave|Self::UndoLoad|Self::SleepNow|Self::ShutDown)}
     pub fn opens(self) -> bool {
         matches!(
             self,
@@ -622,6 +650,9 @@ impl QuickRow {
                 | QuickRow::About
                 | QuickRow::Reference
                 | QuickRow::PlayReference
+                | QuickRow::DisplaySchedule
+                | QuickRow::GameDetails
+                | QuickRow::PlayDetails
                 | QuickRow::Screen
                 | QuickRow::Game
                 | QuickRow::Resume
@@ -679,6 +710,7 @@ impl QuickRow {
             QuickRow::ScShaderNext => Shortcut::ShaderNext,
             QuickRow::ScShaderBack => Shortcut::ShaderBack,
             QuickRow::ScFastForward => Shortcut::FastForward,
+            QuickRow::ScFastForwardToggle => Shortcut::FastForwardToggle,
             QuickRow::ScRewind => Shortcut::Rewind,
             QuickRow::ScNight => Shortcut::NightToggle,
             _ => return None,
@@ -713,6 +745,7 @@ impl QuickRow {
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum QuickValue {
+    Speed1_5,
     Speed2,
     Speed3,
     Speed4,
@@ -756,6 +789,25 @@ pub enum QuickValue {
     Level7,
     Level8,
     Level9,
+    Clean,
+    Filename,
+    Alphabetical,
+    MostUsed,
+    RecentlyUsed,
+    Warm0,
+    Warm1,
+    Warm2,
+    Warm3,
+    Warm4,
+    Warm5,
+    Warm6,
+    Warm7,
+    Warm8,
+    Warm9,
+    Hour12,
+    Hour24,
+    Classic,
+    Wheel,
     Actual,
     Stretch,
     Fit,
@@ -763,7 +815,8 @@ pub enum QuickValue {
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 46] = [
+    pub const ALL: [QuickValue; 66] = [
+        QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
         QuickValue::Speed4,
@@ -806,6 +859,25 @@ impl QuickValue {
         QuickValue::Level7,
         QuickValue::Level8,
         QuickValue::Level9,
+        QuickValue::Clean,
+        QuickValue::Filename,
+        QuickValue::Alphabetical,
+        QuickValue::MostUsed,
+        QuickValue::RecentlyUsed,
+        QuickValue::Warm0,
+        QuickValue::Warm1,
+        QuickValue::Warm2,
+        QuickValue::Warm3,
+        QuickValue::Warm4,
+        QuickValue::Warm5,
+        QuickValue::Warm6,
+        QuickValue::Warm7,
+        QuickValue::Warm8,
+        QuickValue::Warm9,
+        QuickValue::Hour12,
+        QuickValue::Hour24,
+        QuickValue::Classic,
+        QuickValue::Wheel,
         QuickValue::Actual,
         QuickValue::Stretch,
         QuickValue::Fit,
@@ -840,6 +912,21 @@ impl QuickValue {
 
     pub fn text(self) -> &'static str {
         match self {
+            QuickValue::Hour12 => "12-hour",
+            QuickValue::Hour24 => "24-hour",
+            QuickValue::Classic => "Classic",
+            QuickValue::Wheel => "Wheel",
+            QuickValue::Warm0 => "Neutral",
+            QuickValue::Warm1 => "Warm 11%",
+            QuickValue::Warm2 => "Warm 22%",
+            QuickValue::Warm3 => "Warm 33%",
+            QuickValue::Warm4 => "Warm 44%",
+            QuickValue::Warm5 => "Warm 55%",
+            QuickValue::Warm6 => "Warm 66%",
+            QuickValue::Warm7 => "Warm 77%",
+            QuickValue::Warm8 => "Warm 88%",
+            QuickValue::Warm9 => "Warm 100%",
+            QuickValue::Speed1_5 => "1.5×",
             QuickValue::Speed2 => "2×",
             QuickValue::Speed3 => "3×",
             QuickValue::Speed4 => "4×",
@@ -883,6 +970,11 @@ impl QuickValue {
             QuickValue::Level7 => "7",
             QuickValue::Level8 => "8",
             QuickValue::Level9 => "9",
+            QuickValue::Clean => "Clean",
+            QuickValue::Filename => "Filename",
+            QuickValue::Alphabetical => "Alphabetically",
+            QuickValue::MostUsed => "Most used",
+            QuickValue::RecentlyUsed => "Recently used",
             QuickValue::Actual => "Actual",
             QuickValue::Stretch => "Stretch",
             QuickValue::Fit => "Fit",
@@ -891,17 +983,28 @@ impl QuickValue {
         }
     }
 
+    pub fn settings_text(self)-> &'static str {
+        if let Some(n)=(0..10).find(|&n|Self::level(n)==self || Self::temperature(n)==self) {
+            ["0%","11%","22%","33%","44%","56%","67%","78%","89%","100%"][n as usize]
+        } else {self.text()}
+    }
+
+    pub fn temperature(n: u8) -> QuickValue {
+        [Self::Warm0,Self::Warm1,Self::Warm2,Self::Warm3,Self::Warm4,Self::Warm5,Self::Warm6,Self::Warm7,Self::Warm8,Self::Warm9][n.min(9) as usize]
+    }
+
     pub fn level(n: u8) -> QuickValue {
         QuickValue::LEVELS[usize::from(n).min(QuickValue::LEVELS.len() - 1)]
     }
 
-    pub fn speed(frames: u8) -> Option<QuickValue> {
-        match frames {
+    pub fn speed(quarters: u8) -> Option<QuickValue> {
+        match quarters {
             0 => Some(QuickValue::Off),
-            2 => Some(QuickValue::Speed2),
-            3 => Some(QuickValue::Speed3),
-            4 => Some(QuickValue::Speed4),
-            6 => Some(QuickValue::Speed6),
+            6 => Some(QuickValue::Speed1_5),
+            8 => Some(QuickValue::Speed2),
+            12 => Some(QuickValue::Speed3),
+            16 => Some(QuickValue::Speed4),
+            24 => Some(QuickValue::Speed6),
             _ => None,
         }
     }
@@ -911,32 +1014,30 @@ impl QuickValue {
     }
 }
 
-pub const QUICK_PITCH: f32 = 48.0;
+pub const QUICK_PITCH: f32 = 54.0;
 pub const MENU_HINT_H: u32 = 32;
-pub const QUICK_VISIBLE_ROWS: usize = 6;
-pub const QUICK_EDGE: f32 = 32.0;
-pub const QUICK_LABEL_X: f32 = 64.0;
-const POINTER_GAP: f32 = 14.0;
+pub const QUICK_VISIBLE_ROWS: usize = 5;
+pub const QUICK_EDGE: f32 = 96.0;
+pub const QUICK_LABEL_X: f32 = 96.0;
 const POINTER_SCALE: usize = 4;
 const POINTER: [&str; 11] = [
     "X.......", "XX......", "XoX.....", "XooX....", "XoooX...", "XooooX..", "XoooX...", "XooX....",
     "XoX.....", "XX......", "X.......",
 ];
 const POINTER_BLEED: u32 = 4;
-const GROUND_SCRIM: f32 = 0.65;
-const TYPE_DROP: f32 = 4.0;
+
+const TYPE_DROP: f32 = 1.0;
 const CARET_GAP: f32 = 14.0;
-const CARET_PX: f32 = 24.0;
 const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
 const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
 const DESCRIPTION_GAP: f32 = 8.0;
-const PANEL_GAP: f32 = 12.0;
 const WARNING_PX: f32 = 22.0;
 const WARNING_GAP: u32 = 10;
 
 pub fn quick_label_face(row: QuickRow, lit: bool) -> UndoFace {
-    quick_text_face(row.label(), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
+    if crate::menu_grid::is_page(row.page()) {return crate::menu_grid::tile_face(row,lit);}
+    quick_text_face(&menu_sentence_case(row.label()), if lit { MENU_INK } else { DIM_INK }, if lit { text::Role::Focus } else { text::Role::Menu })
 }
 
 fn cap_centre(label: &fontdue::Font, h: u32) -> f32 {
@@ -988,8 +1089,99 @@ pub fn quick_value_face(text: &str, lit: bool) -> UndoFace {
     quick_text_face(text, if lit { MENU_INK } else { DIM_INK }, role)
 }
 
+fn binding_button(key:&str)->Option<ButtonLegend> {
+    Some(match key.trim().to_ascii_uppercase().as_str() {
+            "A"=>ButtonLegend::A,"B"=>ButtonLegend::B,"X"=>ButtonLegend::X,"Y"=>ButtonLegend::Y,
+            "UP"=>ButtonLegend::Up,"DOWN"=>ButtonLegend::Down,"LEFT"=>ButtonLegend::Left,"RIGHT"=>ButtonLegend::Right,
+            "VOLDOWN"=>ButtonLegend::VolumeDown,"VOLUP"=>ButtonLegend::VolumeUp,
+            "START"=>ButtonLegend::Start,"SEL"|"SELECT"=>ButtonLegend::Select,"MENU"=>ButtonLegend::Menu,
+            "L"=>ButtonLegend::L,"R"=>ButtonLegend::R,"L1"=>ButtonLegend::L1,"R1"=>ButtonLegend::R1,"L2"=>ButtonLegend::L2,"R2"=>ButtonLegend::R2,
+            _=>return None,
+        })
+}
+
+/// Native keycaps for physical mappings; prose remains readable while recording.
+pub fn quick_binding_face(value:&str,lit:bool,warning:bool)->UndoFace {
+    let mut parts=Vec::new();
+    if warning {
+        let icon=crate::icon_face(Icon::Alert,22.0,[255,190,105]);
+        parts.push(UndoFace{rgba:icon.rgba,w:icon.w,h:icon.h});
+    }
+    for (i,key) in value.split('+').enumerate() {
+        let Some(which)=binding_button(key) else {
+            return if warning{quick_warning_value_face(value,lit)}else{quick_value_face(value,lit)};
+        };
+        if i>0 {parts.push(inline_text("+",lit,24.0));}
+        parts.push(controller_button_face(which,32));
+    }
+    let w=parts.iter().map(|p|p.w+6).sum::<u32>()+2*MENU_PAD;
+    let h=MENU_H;
+    let mut face=UndoFace{rgba:vec![0;(w*h*4)as usize],w,h};
+    let mut x=MENU_PAD;
+    for p in parts {parent_blit(&mut face,&p,x as f32,(h.saturating_sub(p.h)/2)as f32);x+=p.w+6;}
+    face
+}
+
+// Text stays text; only physical device tokens become native keycaps.
+fn inline_text(value:&str,lit:bool,px:f32)->UndoFace {
+    let face=bounded_menu_face(value,text::Role::Menu,if lit{MENU_INK}else{DIM_INK},600.0,px);
+    let w=face.w.saturating_sub(2*MENU_PAD);
+    let mut rgba=vec![0;(w*face.h*4)as usize];
+    for y in 0..face.h {let a=((y*face.w+MENU_PAD)*4)as usize;let b=(y*w*4)as usize;rgba[b..b+(w*4)as usize].copy_from_slice(&face.rgba[a..a+(w*4)as usize]);}
+    UndoFace{rgba,w,h:face.h}
+}
+
+pub fn reference_binding_face(value:&str,max_w:f32)->UndoFace {
+    if value=="Volume buttons" {return reference_binding_face("VOLDOWN / VOLUP",max_w);}
+    let mut tokens=Vec::<String>::new();
+    let mut word=String::new();
+    for c in value.chars().chain(std::iter::once(' ')) {
+        if c.is_alphanumeric() || c=='-' {word.push(c);} else {
+            if !word.is_empty(){tokens.push(std::mem::take(&mut word));}
+            if !c.is_whitespace(){tokens.push(c.to_string());}
+        }
+    }
+    if !tokens.iter().any(|t|binding_button(t).is_some()) {return bounded_menu_face(value,text::Role::Value,MENU_INK,max_w,26.0);}
+    for size in (20..=32).rev() {
+        let parts:Vec<_>=tokens.iter().map(|token|match binding_button(token) {
+            Some(button)=>controller_button_face(button,size),
+            None=>inline_text(token,true,size as f32*0.75),
+        }).collect();
+        let width=parts.iter().map(|p|p.w).sum::<u32>()+4*parts.len().saturating_sub(1)as u32;
+        if width as f32>max_w {
+            if size>20 {continue;}
+            return bounded_menu_face(value,text::Role::Value,MENU_INK,max_w,26.0);
+        }
+        let w=width+2*MENU_PAD;
+        let mut face=UndoFace{rgba:vec![0;(w*MENU_H*4)as usize],w,h:MENU_H};
+        let mut x=MENU_PAD;
+        for part in parts {parent_blit(&mut face,&part,x as f32,(MENU_H.saturating_sub(part.h)/2)as f32);x+=part.w+4;}
+        return face;
+    }
+    unreachable!()
+}
+
+pub fn quick_controls_legends()->Vec<UndoFace> {
+    vec![with_hint(button_face(ButtonLegend::B),"Close",Some(MENU_INK),true),with_hint(button_face(ButtonLegend::A),"Tap toggle · Hold settings",Some(MENU_INK),false)]
+}
+
+pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
+    let h=if jump {48}else{36};
+    let px=if jump {36.0}else{26.0};
+    let Some(font)=text::font(text::Role::Focus)else{return quick_value_face(label,true)};
+    let layout=text::fit_preserving_case(font,label,480.0,1,px,px);
+    let w=layout.lines.iter().map(|s|text::line_width(font,s,layout.px,layout.tracking)).fold(0.0,f32::max).ceil()as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*h*4)as usize];
+    text::draw_centred(&mut rgba,w,h,&layout,[255,255,255]);
+    UndoFace{rgba,w,h}
+}
+
 pub fn quick_heading_face(label: &str) -> UndoFace {
-    quick_text_face(label, MENU_INK, text::Role::Display)
+    let label=menu_sentence_case(label);let h=crate::expressive::TITLE_H as u32;
+    let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h};};
+    let layout=text::fit_preserving_case(font,&label,260.0,1,32.0,24.0);
+    let w=layout.lines.iter().map(|line|text::line_width(font,line,layout.px,layout.tracking)).fold(0.0,f32::max).ceil() as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*h*4)as usize];text::draw_centred(&mut rgba,w,h,&layout,MENU_INK);UndoFace{rgba,w,h}
 }
 
 pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
@@ -1033,7 +1225,8 @@ fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
             h: 0,
         };
     };
-    let layout = text::fit(font, label, OUT_W as f32, 1, MENU_PX, MENU_PX);
+    let layout = text::Layout { lines: vec![label.to_string()],
+        px: if role == text::Role::Display { MENU_PX } else { 26.0 }, tracking: 0.0, role };
     let set = layout
         .lines
         .iter()
@@ -1046,28 +1239,21 @@ fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
 }
 
 pub fn quick_caret_face(right: bool) -> UndoFace {
-    let glyph = if right { '\u{f0da}' } else { '\u{f0d9}' };
-    let (Some(symbols), Some(label)) = (crate::icon::symbols_font(), text::font(text::Role::Focus)) else {
-        return UndoFace {
-            rgba: Vec::new(),
-            w: 0,
-            h: 0,
-        };
-    };
-    let (m, cov) = symbols.rasterize(glyph, CARET_PX);
-    let (w, h) = (m.width as u32, MENU_H);
-    let centre = cap_centre(label, h);
-    let top = (centre - m.height as f32 / 2.0).round() as i32;
-    let mut rgba = vec![0u8; (w * h * 4) as usize];
-    for gy in 0..m.height {
-        let y = top + gy as i32;
-        if y < 0 || y >= h as i32 {
-            continue;
-        }
-        for gx in 0..m.width {
-            let at = ((y as u32 * w + gx as u32) * 4) as usize;
-            let a = cov[gy * m.width + gx];
-            rgba[at..at + 4].copy_from_slice(&[MENU_INK[0], MENU_INK[1], MENU_INK[2], a]);
+    // Small vector chevrons avoid adding glyphs to the symbols-font subset.
+    let (w, h) = (14, MENU_H);
+    let mut rgba = vec![0; (w * h * 4) as usize];
+    for y in 0..h {
+        for x in 0..w {
+            let px = if right { x as f32 + 0.5 } else { w as f32 - x as f32 - 0.5 };
+            let py = y as f32 + 0.5;
+            let distance = |ay: f32, by: f32| {
+                let (dx, dy) = (6.0, by - ay);
+                let t = (((px - 4.0) * dx + (py - ay) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+                ((px - 4.0 - t * dx).powi(2) + (py - ay - t * dy).powi(2)).sqrt()
+            };
+            let a = ((1.9 - distance(14.0, 20.0).min(distance(26.0, 20.0))).clamp(0.0, 1.0) * 255.0).round() as u8;
+            let at = ((y * w + x) * 4) as usize;
+            rgba[at..at+4].copy_from_slice(&[MENU_INK[0], MENU_INK[1], MENU_INK[2], a]);
         }
     }
     UndoFace { rgba, w, h }
@@ -1094,6 +1280,37 @@ pub fn quick_legend_faces(ink: [u8; 3]) -> [UndoFace; 8] {
 
 /// Sound uses the same bitmap buttons and typography as the other menus.
 /// Back goes on the left; Forget and Connect/Select/Change on the right.
+/// Screenshot controls use the same final-size keycaps as settings.
+pub fn gallery_button_legends() -> Vec<UndoFace> {
+    crate::SHOT_HINTS.iter().map(|&(key,label)| {
+        let button=match key {
+            "A"=>button_face(ButtonLegend::A), "B"=>button_face(ButtonLegend::B),
+            "Y"=>button_face(ButtonLegend::Y), "SELECT"=>button_face(ButtonLegend::Select),
+            _=>direction_pad_face(),
+        };
+        with_hint(button,label,Some([246,244,239]),true)
+    }).collect()
+}
+
+fn direction_pad_face() -> UndoFace {
+    let h=MENU_HINT_H;let mut rgba=vec![0;(h*h*4)as usize];
+    let tri=|x:f32,y:f32,points:[(f32,f32);3]| {
+        let side=|a:(f32,f32),b:(f32,f32)|(x-b.0)*(a.1-b.1)-(a.0-b.0)*(y-b.1);
+        let d=[side(points[0],points[1]),side(points[1],points[2]),side(points[2],points[0])];
+        !(d.iter().any(|&v|v<0.0)&&d.iter().any(|&v|v>0.0))
+    };
+    for y in 0..h {for x in 0..h {
+        let (mut cover,mut ink)=(0u32,0u32);
+        for sy in 0..4 {for sx in 0..4 {
+            let px=x as f32+(sx as f32+0.5)/4.0;let py=y as f32+(sy as f32+0.5)/4.0;
+            let inside=((11.0..=21.0).contains(&px)&&(2.0..=30.0).contains(&py)) || ((2.0..=30.0).contains(&px)&&(11.0..=21.0).contains(&py));
+            if inside {cover+=1;if [ [(16.0,4.0),(12.5,9.0),(19.5,9.0)],[(16.0,28.0),(12.5,23.0),(19.5,23.0)],[(4.0,16.0),(9.0,12.5),(9.0,19.5)],[(28.0,16.0),(23.0,12.5),(23.0,19.5)] ].iter().any(|&t|tri(px,py,t)){ink+=1;}}
+        }}
+        if cover>0 {let at=((y*h+x)*4)as usize;for c in 0..3{rgba[at+c]=(([224,227,232][c]*(cover-ink)+[34,37,42][c]*ink)/cover)as u8;}rgba[at+3]=(cover*255/16)as u8;}
+    }}
+    UndoFace{rgba,w:h,h}
+}
+
 pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
     let ink = Some(ink);
     [
@@ -1114,6 +1331,7 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        7 => vec![with_hint(button_face(ButtonLegend::B), "Back", hint, true)],
         6 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
             with_hint(button_pair(ButtonLegend::Left, ButtonLegend::Right), "Page", hint, false),
@@ -1155,24 +1373,36 @@ pub fn parent_settings_face(rows: &[(String, String, bool)], selected: usize,
 
 pub fn parent_settings_face_with_space(rows: &[(String, String, bool)], selected: usize,
     footer: u8, status: &str, reserve: f32) -> UndoFace {
-    let mut face = parent_footer_face(footer, rows.get(selected).is_some_and(|r| r.2));
-    let visible = rows.len().min(QUICK_VISIBLE);
+    parent_settings_face_on(Canvas::FRAMED, rows, selected, footer, status, reserve)
+}
+pub fn parent_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32) -> UndoFace {
+    parent_settings_face_render(canvas,rows,selected,footer,status,reserve,true)
+}
+pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32) -> UndoFace {
+    parent_settings_face_render(canvas,rows,selected,footer,status,reserve,false)
+}
+fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
+    let width=canvas.w as u32;
+    let mut face = parent_footer_face_on(canvas,footer,rows.get(selected).is_some_and(|r|r.2));
+    let visible = rows.len().min(if reserve>0.0 {3}else{QUICK_VISIBLE});
     let start = selected.saturating_sub(visible / 2).min(rows.len().saturating_sub(visible));
-    let top = (LEGEND_Y - reserve.max(0.0) - QUICK_PITCH * visible as f32) / 2.0;
+    let top = crate::expressive::ROW_TOP;
+    crate::expressive::raster_menu_rows(&mut face, top, QUICK_PITCH, visible, switches.then_some(selected - start));
     let pad = MENU_PAD as f32;
-    let right = OUT_W as f32 - QUICK_EDGE;
+    let right = width as f32 - QUICK_EDGE;
     for (i, (label, value, adjustable)) in rows.iter().enumerate().skip(start).take(visible) {
         let lit = i == selected;
         let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
-        let label = parent_label_face(label, lit, !value.is_empty());
-        parent_blit(&mut face, &label, QUICK_LABEL_X - pad, y);
-        if lit {
-            let pointer = quick_pointer_face();
-            parent_blit(&mut face, &pointer, QUICK_LABEL_X - POINTER_GAP - pointer.w as f32,
-                y - POINTER_BLEED as f32);
-        }
+        let label_face = parent_label_face(label, lit, !value.is_empty(), width);
+        parent_blit(&mut face, &label_face, QUICK_LABEL_X - pad, y);
         if value.is_empty() { continue; }
+        if let Some(fraction)=crate::setting_slider(label,value) {
+            if switches {let slider=crate::slider_face(fraction);parent_blit(&mut face,&slider,right-crate::MENU_SLIDER_SPAN-pad,y);}
+            let percentage=format!("{}%",(fraction*100.0).round()as u32);
+            let value=quick_value_face(&percentage,lit);parent_blit(&mut face,&value,right+pad-value.w as f32,y);continue;
+        }
         let toggle = matches!(value.as_str(), "On" | "Off");
+        if toggle && !switches {continue;}
         let value = if toggle { crate::toggle_face(value == "On", lit) }
             else { quick_value_face(value, lit) };
         if toggle {
@@ -1191,27 +1421,24 @@ pub fn parent_settings_face_with_space(rows: &[(String, String, bool)], selected
             parent_blit(&mut face, &value, right + pad - value.w as f32, y);
         }
     }
-    if rows.len() > visible {
-        let h = QUICK_PITCH * visible as f32;
-        let thumb = h / rows.len() as f32;
-        let y = top + (h - thumb) * selected as f32 / (rows.len() - 1) as f32;
-        for yy in y as u32..(y + thumb) as u32 {
-            for x in OUT_W - 16..OUT_W - 12 {
-                let at = ((yy * OUT_W + x) * 4) as usize;
-                face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, 255]);
-            }
-        }
+    if switches && rows.len()>visible {
+        let mut bar=vec![];crate::expressive::draw_scrollbar(canvas,top,visible,rows.len(),start as f32,&mut bar);
+        for draw in bar {if let Draw::RoundRect{x,y,w,h,radius,colour}=draw {crate::expressive::raster_round(&mut face,x,y,w,h,radius,colour);}}
     }
     if !status.is_empty() {
         let description = quick_description_face(&[status]);
-        parent_blit(&mut face, &description, (OUT_W - description.w) as f32 / 2.0,
+        parent_blit(&mut face, &description, (width - description.w) as f32 / 2.0,
             LEGEND_Y - description.h as f32 - DESCRIPTION_GAP);
     }
     face
 }
 
 pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
-    let mut face = UndoFace { rgba: vec![0; (OUT_W * OUT_H * 4) as usize], w: OUT_W, h: OUT_H };
+    parent_footer_face_on(Canvas::FRAMED,page,adjustable)
+}
+pub fn parent_footer_face_on(canvas: Canvas, page: u8, adjustable: bool) -> UndoFace {
+    let width=canvas.w as u32;
+    let mut face = UndoFace { rgba: vec![0; (width * OUT_H * 4) as usize], w: width, h: OUT_H };
     let hints = parent_button_legends(page, MENU_INK);
     parent_blit(&mut face, &hints[0], 16.0, LEGEND_Y);
     let right: Vec<_> = if page == 0 {
@@ -1219,7 +1446,7 @@ pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
     } else { hints[1..].iter().collect() };
     let total = right.iter().map(|h| h.w - HINT_EDGE).sum::<u32>()
         + 16 * right.len().saturating_sub(1) as u32;
-    let mut x = OUT_W.saturating_sub(16 + total);
+    let mut x = width.saturating_sub(16 + total);
     for hint in right {
         parent_blit(&mut face, hint, x as f32, LEGEND_Y);
         x += hint.w - HINT_EDGE + 16;
@@ -1240,26 +1467,25 @@ pub fn kid_time_text(seconds: u64) -> String {
 
 /// One quiet line of remaining time and a bar, above the native menu footer.
 pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
-    let label = quick_description_face(&[&kid_time_text(seconds)]);
-    let (bar_w, h) = (160, label.h.max(24));
-    let w = label.w + 16 + bar_w;
-    let mut face = UndoFace { rgba: vec![0; (w * h * 4) as usize], w, h };
-    parent_blit(&mut face, &label, 0.0, ((h - label.h) / 2) as f32);
-    let filled = ((bar_w as u64 * seconds.min(budget)) / budget.max(1)) as u32;
-    for y in h / 2 - 3..h / 2 + 3 {
-        for x in 0..bar_w {
-            let at = ((y * w + label.w + 16 + x) * 4) as usize;
-            let alpha = if x < filled { 255 } else { 64 };
-            face.rgba[at..at + 4].copy_from_slice(&[246, 244, 239, alpha]);
-        }
-    }
+    let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
+    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,20.0,20.0);
+    let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
+    let (w,h)=((width.ceil() as u32+40).max(300),36);
+    let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
+    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
+    text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
+    let span=(w-40) as f32;
+    crate::expressive::raster_round(&mut face,20.0,27.0,span,5.0,2.5,[0.35,0.39,0.42,1.0]);
+    let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
+    if fraction>0.0 {crate::expressive::raster_round(&mut face,20.0,27.0,span*fraction,5.0,2.5,crate::expressive::ACCENT);}
+    crate::expressive::raster_round(&mut face,18.5+span*fraction,24.0,3.0,11.0,1.0,[0.96,0.96,0.94,1.0]);
     face
 }
 
-fn parent_label_face(label: &str, lit: bool, has_value: bool) -> UndoFace {
+fn parent_label_face(label: &str, lit: bool, has_value: bool, width: u32) -> UndoFace {
     let Some(font) = text::font(if lit { text::Role::Focus } else { text::Role::Menu }) else { return quick_value_face(label, lit); };
-    let max = if has_value { OUT_W as f32 - 290.0 } else { OUT_W as f32 - 130.0 };
-    let layout = text::fit(font, label, max, 1, MENU_PX, MENU_PX);
+    let max = if has_value { width as f32 - 290.0 } else { width as f32 - 160.0 };
+    let layout = text::fit_preserving_case(font, &menu_sentence_case(label), max, 1, 26.0, 26.0);
     let width = layout.lines.first().map_or(0.0, |line|
         text::line_width(font, line, layout.px, layout.tracking)).ceil() as u32 + 2 * MENU_PAD;
     let mut rgba = vec![0; (width * MENU_H * 4) as usize];
@@ -1312,7 +1538,7 @@ pub fn quick_description_face(lines: &[&str]) -> UndoFace {
     let faces: Vec<(Vec<u8>, u32)> = lines
         .iter()
         .map(|line| {
-            let layout = text::fit(font, line, OUT_W as f32, 1, DESCRIPTION_PX, DESCRIPTION_PX);
+            let layout = text::fit_preserving_case(font, line, OUT_W as f32, 1, DESCRIPTION_PX, DESCRIPTION_PX);
             let w = text::line_width(font, &layout.lines[0], layout.px, layout.tracking).ceil()
                 as u32
                 + 2;
@@ -1405,20 +1631,74 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
         true => (0, button.w + CAP_GAP),
         false => (word.w + CAP_GAP, 0),
     };
-    blit(&mut rgba, w, &button.rgba, button.w, button.h, button_x, 0);
+    blit(&mut rgba, w, &button.rgba, button.w, button.h, button_x, h.saturating_sub(button.h)/2);
     blit(&mut rgba, w, &word.rgba, word.w, word.h, text_x, text_y);
     UndoFace { rgba, w, h }
 }
 
+pub(crate) fn clock_legend() -> UndoFace {
+    let a = with_hint(button_face(ButtonLegend::A), "Edit", Some([246,244,239]), true);
+    let start = with_hint(button_face(ButtonLegend::Start), "Save", Some([246,244,239]), true);
+    let w = a.w + start.w + 16;
+    let mut rgba = vec![0; (w * MENU_HINT_H * 4) as usize];
+    blit(&mut rgba, w, &a.rgba, a.w, a.h, 0, 0);
+    blit(&mut rgba, w, &start.rgba, start.w, start.h, a.w + 16, 0);
+    UndoFace { rgba, w, h: MENU_HINT_H }
+}
+
 pub(crate) fn button_face(which: ButtonLegend) -> UndoFace {
-    let (rgba, w, h) = button_legend(which);
-    let target_h = MENU_HINT_H;
-    let target_w = (w as f32 * target_h as f32 / h as f32).round() as u32;
-    UndoFace {
-        rgba: crate::art::cover_rgba(rgba, w, h, target_w, target_h).expect("button dimensions"),
-        w: target_w,
-        h: target_h,
+    controller_button_face(which, MENU_HINT_H)
+}
+
+/// Rasterise native vector keycaps at their final size; never enlarge a tiny PNG.
+pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
+    let (label, aspect) = match which {
+        ButtonLegend::A => ("A",1.0), ButtonLegend::B => ("B",1.0),
+        ButtonLegend::X => ("X",1.0), ButtonLegend::Y => ("Y",1.0),
+        ButtonLegend::Up => ("",1.0), ButtonLegend::Down => ("",1.0),
+        ButtonLegend::Left => ("",1.0), ButtonLegend::Right => ("",1.0),
+        ButtonLegend::Start => ("START",2.0), ButtonLegend::Select => ("SELECT",2.2),
+        ButtonLegend::Menu => ("MENU",1.9),
+        ButtonLegend::VolumeDown => ("−",1.0), ButtonLegend::VolumeUp => ("+",1.0),
+        ButtonLegend::L => ("L",1.0), ButtonLegend::R => ("R",1.0),
+        ButtonLegend::L1 => ("L1",1.2), ButtonLegend::R1 => ("R1",1.2),
+        ButtonLegend::L2 => ("L2",1.2), ButtonLegend::R2 => ("R2",1.2),
+    };
+    let w = (h as f32 * aspect).round() as u32;
+    let mut rgba = vec![0; (w*h*4) as usize];
+    let radius = (h as f32-4.0)/2.0;
+    for y in 0..h { for x in 0..w {
+        let mut coverage = 0u32;
+        for sy in 0..4 { for sx in 0..4 {
+            let px=x as f32+(sx as f32+0.5)/4.0;
+            let py=y as f32+(sy as f32+0.5)/4.0;
+            let cx=px.clamp(2.0+radius,w as f32-2.0-radius);
+            let cy=h as f32/2.0;
+            if (px-cx).powi(2)+(py-cy).powi(2)<=radius*radius {coverage+=1;}
+        }}
+        let at=((y*w+x)*4) as usize;
+        rgba[at..at+4].copy_from_slice(&[224,227,232,(coverage*255/16) as u8]);
+    }}
+    if matches!(which,ButtonLegend::Up|ButtonLegend::Down|ButtonLegend::Left|ButtonLegend::Right) {
+        for y in 0..h {for x in 0..w {
+            let mut coverage=0u32;
+            for sy in 0..4 {for sx in 0..4 {
+                let dx=(x as f32+(sx as f32+0.5)/4.0-w as f32/2.0)/h as f32;
+                let dy=(y as f32+(sy as f32+0.5)/4.0-h as f32/2.0)/h as f32;
+                let (u,v)=match which {ButtonLegend::Down=>(-dx,-dy),ButtonLegend::Left=>(-dy,dx),ButtonLegend::Right=>(dy,-dx),_=>(dx,dy)};
+                if ((-0.23..=0.02).contains(&v)&&u.abs()<=(v+0.23)*0.85) || ((0.0..=0.23).contains(&v)&&u.abs()<=0.055) {coverage+=1;}
+            }}
+            let at=((y*w+x)*4) as usize;
+            for (i,ink) in [34u32,37,42].iter().enumerate() {rgba[at+i]=((u32::from(rgba[at+i])*(16-coverage)+ink*coverage)/16) as u8;}
+        }}
+    } else if let Some(font)=text::font(text::Role::Value) {
+        let px=if label.len()>2 {h as f32*0.45}else if aspect>1.0 {h as f32*0.50}else{h as f32*0.62};
+        let safe_width=w as f32-h as f32*0.28;
+        let px=px.min(px*safe_width/text::line_width(font,label,px,text::tracking_for(px)).max(1.0));
+        let layout=text::fit_preserving_case(font,label,safe_width,1,px,px);
+        text::draw_centred(&mut rgba,w,h,&layout,[34,37,42]);
     }
+    UndoFace{rgba,w,h}
 }
 
 fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
@@ -1435,6 +1715,7 @@ fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
 pub type FacePair = [(TexId, u32, u32); 2];
 
 pub struct QuickMenuFaces {
+    pub headings: Vec<(QuickRow, (TexId, u32, u32))>,
     pub labels: Vec<[(TexId, u32, u32); 2]>,
     pub pointer: (TexId, u32, u32),
     pub values: Vec<[(TexId, u32, u32); 2]>,
@@ -1470,51 +1751,91 @@ pub struct QuickMenu<'a> {
 
 impl QuickMenu<'_> {
     pub fn draw(&self, out: &mut Vec<Draw>) {
-        match (self.over_game, self.row.page() == QuickRow::PLAY_SCREEN) {
-            (false, _) => draw_menu_ground(self.canvas, self.ground, out),
-            (true, panel) => {
-                let y = match panel {
-                    true => quick_row_top(self.row.page()[0], self.hidden) - PANEL_GAP,
-                    false => 0.0,
-                };
-                let bottom = self.footer_top.max(y);
-                out.push(Draw::Rect {
-                    x: 0.0,
-                    y,
-                    w: self.canvas.w,
-                    h: bottom - y,
-                    colour: [0.0, 0.0, 0.0, GROUND_SCRIM],
-                });
+        self.draw_animated(crate::MenuFrame::settled(self.row, self.hidden), out);
+    }
+
+    pub fn draw_animated(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
+        let begin = out.len();
+        self.draw_content(frame, out);
+        // The scene is a few existing sprites. Transform them in place: no
+        // framebuffer copies, live blur, text rasterisation or texture uploads.
+        let dy = (1.0 - frame.entry) * (self.canvas.h+32.0);
+        let dx = frame.page_shift * (self.canvas.w - 2.0 * crate::expressive::MENU_INSET);
+        for draw in &mut out[begin..] {
+            if crate::expressive::is_chrome(draw) {continue;}
+            match draw {
+                Draw::RoundRect { x, y, colour, .. } => { *x += dx; *y += dy; colour[3] *= frame.opacity; }
+                Draw::Tex { x, y, alpha, .. } => { *x += dx; *y += dy; *alpha *= frame.opacity*frame.content_opacity; }
+                // Keep full-screen grounds anchored.
+                Draw::Rect { y, colour, .. } => { *y += dy; colour[3] *= frame.opacity; },
+                Draw::Part { x, y, alpha, .. } if *y >= 40.0 => { *x += dx; *y += dy; *alpha *= frame.opacity*frame.content_opacity; }
+                Draw::Part { y, alpha, .. } => { *y += dy; *alpha *= frame.opacity; },
+                _ => {}
+            }
+        }
+        if frame.tile_origin.is_some() {
+            // Clip in card space first, so off-card scroll rails cannot enter
+            // the viewport as the shared container shrinks.
+            clip_quads(out,begin,[crate::expressive::MENU_INSET,0.0,self.canvas.w-crate::expressive::MENU_INSET,LEGEND_Y+MENU_HINT_H as f32]);
+        }
+
+        clip_quads(out, begin, [crate::expressive::MENU_INSET, 0.0, self.canvas.w - crate::expressive::MENU_INSET, LEGEND_Y + MENU_HINT_H as f32]);
+    }
+
+    fn draw_content(&self, frame: crate::MenuFrame, out: &mut Vec<Draw>) {
+        use crate::expressive::{rounded, SELECTED, MENU_INSET, ROW_H, ROW_RADIUS};
+        if frame.background {
+            if self.over_game {
+                crate::expressive::draw_pause_surface(self.canvas, frame, self.hidden, out);
+            } else {
+                draw_menu_ground(self.canvas, self.ground, out);
             }
         }
         let Some(faces) = self.faces else {
             return;
         };
-        let (right, pad) = (self.canvas.w - QUICK_EDGE, MENU_PAD as f32);
-        let main_w = self
-            .row
-            .page()
-            .iter()
-            .filter_map(|r| faces.labels.get(r.index()))
-            .map(|l| l[1].1)
-            .max()
-            .unwrap_or(0);
+        if crate::menu_grid::is_page(self.row.page()) {crate::menu_grid::draw(self,frame,out);return;}
+        if frame.background && !self.over_game {crate::expressive::draw_card(self.canvas,out);}
+        let pause=self.row.page()==QuickRow::PLAY;
+        let (right,pad)=(if pause {self.canvas.w/2.0+160.0-24.0}else{self.canvas.w-QUICK_EDGE},MENU_PAD as f32);
         let shown = self.row.shown(self.hidden);
         let (start, len) = quick_window(self.row, self.hidden);
-        for row in shown.iter().copied().skip(start).take(len) {
-            let y = quick_row_top_at(row, self.row, self.hidden) + TYPE_DROP;
+        if len == 0 { return; }
+        let top = quick_row_top_at(shown[start], self.row, self.hidden);
+        let panel_y = 0.0;
+        if let Some((_, (tex, w, h))) = faces.headings.iter().find(|(key, _)| !frame.outgoing && *key == self.row.page()[0]) {
+            push(out,*tex,self.canvas.centred(*w as f32),panel_y,*w,*h);
+        }
+        // The selection travels as one shape. Keep it within the current
+        // window during wraparound and scrolling so it never covers a heading.
+        let focus_y = frame.focus_y.clamp(top - 2.0, top + (len - 1) as f32 * QUICK_PITCH + 2.0);
+        if !frame.suppress_focus {
+            let expanded=self.canvas.w-168.0;
+            let w=expanded+(320.0-expanded)*frame.focus_compact;
+            rounded(out,self.canvas.centred(w),focus_y,w,ROW_H,ROW_RADIUS,SELECTED);
+        }
+        for (index, row) in shown.iter().copied().enumerate() {
+            let y = top + (index as f32 - frame.window_start) * QUICK_PITCH + TYPE_DROP;
+            if y + MENU_H as f32 <= top || y >= top + len as f32 * QUICK_PITCH { continue; }
+            let row_begin = out.len();
             let lit = row == self.row;
             if let Some(&(tex, w, h)) = faces.labels.get(row.index()).map(|l| &l[lit as usize]) {
-                let x = match row.centred() {
-                    true => self.canvas.centred(main_w as f32),
-                    false => QUICK_LABEL_X - pad,
-                };
+                let x=if pause {self.canvas.centred(w as f32)}else{QUICK_LABEL_X-pad};
                 push(out, tex, x, y, w, h);
-                if lit {
-                    let (tex, pw, ph) = faces.pointer;
-                    let px = x + pad - POINTER_GAP - pw as f32;
-                    push(out, tex, px, y - POINTER_BLEED as f32, pw, ph);
+            }
+            if row.disclosure() && !row.binds() {
+                let (tex, w, h) = faces.carets[1];
+                push(out, tex, right - w as f32, y, w, h);
+            }
+            if row.toggle() {
+                if let Some(value) = self.values[row.index()] {
+                    let on = matches!(value, QuickValue::On | QuickValue::Show);
+                    let t = if lit { frame.switch.unwrap_or(if on { 1.0 } else { 0.0 }) }
+                        else if on { 1.0 } else { 0.0 };
+                    crate::draw_switch(out,right-crate::SWITCH_W,y+5.0,t,1.0);
                 }
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                continue;
             }
             let value = match row {
                 _ if row.toggle() => self.values[row.index()].and_then(|value| match value {
@@ -1538,10 +1859,25 @@ impl QuickMenu<'_> {
                     .map(|v| v[lit as usize]),
             };
             let Some((tex, w, h)) = value else {
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
                 continue;
             };
-            if !lit || row.opens() || row.binds() || row.toggle() {
+            if matches!(row,QuickRow::Brightness|QuickRow::PlayBrightness|QuickRow::BlueLight|QuickRow::PlayBlueLight) {
+                let index=usize::from(matches!(row,QuickRow::BlueLight|QuickRow::PlayBlueLight));
+                let value=self.values[row.index()];
+                let t=value.and_then(|v|(0..10).find(|&n|if index==1 {QuickValue::temperature(n)==v}else{QuickValue::level(n)==v})).unwrap_or(0) as f32/9.0;
+                crate::draw_slider(out,right-crate::MENU_SLIDER_SPAN,y+5.0,crate::MENU_SLIDER_W,frame.sliders[index].unwrap_or(t),1.0);
+                push(out,tex,right+pad-w as f32,y,w,h);
+                clip_quads(out,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
+            }
+            if row.disclosure() {
+                let (_,cw,_)=faces.carets[1];
+                push(out,tex,right-cw as f32-CARET_GAP+pad-w as f32,y,w,h);
+                clip_quads(out,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
+            }
+            if !lit || row.binds() || row.toggle() {
                 push(out, tex, right + pad - w as f32, y, w, h);
+                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
                 continue;
             }
             let [(left_tex, lw, lh), (right_tex, rw, rh)] = faces.carets;
@@ -1550,28 +1886,11 @@ impl QuickMenu<'_> {
             let vx = rx - CARET_GAP + pad - w as f32;
             push(out, tex, vx, y, w, h);
             push(out, left_tex, vx + pad - CARET_GAP - lw as f32, y, lw, lh);
+            clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
         }
-        if let Some(bar) = quick_scroll(self.row, self.hidden) {
-            let x = self.canvas.w - SCROLL_INSET - SCROLL_W;
-            let ink = DIM_INK.map(|c| f32::from(c) / 255.0);
-            out.push(Draw::Rect {
-                x,
-                y: bar.y,
-                w: SCROLL_W,
-                h: bar.h,
-                colour: [ink[0], ink[1], ink[2], 0.3],
-            });
-            let lit = crate::hud::HUD_INK.map(|c| f32::from(c) / 255.0);
-            out.push(Draw::Rect {
-                x,
-                y: bar.thumb_y,
-                w: SCROLL_W,
-                h: bar.thumb_h,
-                colour: [lit[0], lit[1], lit[2], 1.0],
-            });
-        }
+        crate::expressive::draw_scrollbar(self.canvas,top,len,shown.len(),frame.window_start,out);
         if let Some((tex, w, h)) = self.description {
-            let y = LEGEND_Y - h as f32 - DESCRIPTION_GAP;
+            let y = crate::expressive::CARD_BOTTOM - h as f32 - 16.0;
             push(out, tex, self.canvas.centred(w as f32), y, w, h);
         }
         if self.over_game || self.footer_legends {
@@ -1589,44 +1908,13 @@ impl QuickMenu<'_> {
     }
 }
 
-pub fn draw_menu_ground(canvas: Canvas, ground: Option<(TexId, u32)>, out: &mut Vec<Draw>) {
-    let (w, h) = (canvas.w, OUT_H as f32);
-    match ground {
-        Some((tex, tex_w)) => {
-            out.push(Draw::Part {
-                x: 0.0,
-                y: 0.0,
-                w,
-                h,
-                tex,
-                alpha: 1.0,
-                uv: canvas.cover(tex_w as f32),
-            });
-            out.push(Draw::Rect {
-                x: 0.0,
-                y: 0.0,
-                w,
-                h,
-                colour: [0.0, 0.0, 0.0, GROUND_SCRIM],
-            });
-        }
-        None => out.push(Draw::Rect {
-            x: 0.0,
-            y: 0.0,
-            w,
-            h,
-            colour: opening(),
-        }),
-    }
-}
+/// The scene owns the wallpaper. Cards are the only opaque menu surface.
+pub fn draw_menu_ground(_canvas: Canvas, _ground: Option<(TexId, u32)>, _out: &mut Vec<Draw>) {}
 
-pub const QUICK_VISIBLE: usize = 6;
+pub const QUICK_VISIBLE: usize = 5;
 
-const PANEL_VISIBLE: usize = 3;
 
-const SCROLL_INSET: f32 = 12.0;
 
-const SCROLL_W: f32 = 4.0;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct QuickScroll {
@@ -1636,12 +1924,7 @@ pub struct QuickScroll {
     pub thumb_h: f32,
 }
 
-fn visible(page: &[QuickRow]) -> usize {
-    match page == QuickRow::PLAY_SCREEN {
-        true => PANEL_VISIBLE,
-        false => QUICK_VISIBLE,
-    }
-}
+fn visible(page: &[QuickRow]) -> usize { if page.first().is_some_and(|r|r.binds()){QUICK_VISIBLE-1}else{QUICK_VISIBLE} }
 
 pub fn quick_window(selected: QuickRow, hidden: &[QuickRow]) -> (usize, usize) {
     let count = selected.shown(hidden).len();
@@ -1661,9 +1944,9 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
         return None;
     }
     let y = quick_row_top_at(shown[start], selected, hidden);
-    let h = QUICK_PITCH * len as f32;
-    let thumb_h = h / shown.len() as f32;
-    let along = selected.position(hidden) as f32 / (shown.len() - 1) as f32;
+    let h = QUICK_PITCH * len as f32 - 6.0;
+    let thumb_h = (h * len as f32 / shown.len() as f32).max(24.0);
+    let along = start as f32 / (shown.len() - len) as f32;
     Some(QuickScroll {
         y,
         h,
@@ -1674,11 +1957,9 @@ pub fn quick_scroll(selected: QuickRow, hidden: &[QuickRow]) -> Option<QuickScro
 
 pub fn quick_row_top_at(row: QuickRow, selected: QuickRow, hidden: &[QuickRow]) -> f32 {
     let (start, len) = quick_window(selected, hidden);
-    let rows = QUICK_PITCH * len as f32;
-    let top = match row.page() == QuickRow::PLAY_SCREEN {
-        true => LEGEND_Y - PANEL_GAP - rows,
-        false => (LEGEND_Y - rows) / 2.0,
-    };
+    let top=if row.page()==QuickRow::PLAY {
+        (OUT_H as f32-((len.saturating_sub(1))as f32*QUICK_PITCH+crate::expressive::ROW_H))/2.0
+    } else {crate::expressive::ROW_TOP};
     top + QUICK_PITCH * (row.position(hidden) as f32 - start as f32)
 }
 
@@ -1699,4 +1980,87 @@ fn push(out: &mut Vec<Draw>, tex: TexId, x: f32, y: f32, w: u32, h: u32) {
         tex,
         alpha: 1.0,
     });
+}
+
+/// Sentence case for authored interface copy, retaining acronyms and brand names.
+pub fn menu_sentence_case(label: &str) -> String {
+    label.split(' ').enumerate().map(|(i, word)| {
+        if i == 0 || word.chars().filter(|c| c.is_alphabetic()).all(|c| c.is_uppercase()) ||
+            ["Bluetooth", "Wi-Fi", "D-Pad", "mGBA", "gpSP"].contains(&word) { word.to_string() }
+        else { word.to_lowercase() }
+    }).collect::<Vec<_>>().join(" ")
+}
+
+pub(crate) fn clip_quads(out: &mut Vec<Draw>, begin: usize, bounds: [f32; 4]) {
+    let mut at = begin;
+    while at < out.len() {
+        let old = out[at];
+        let (x,y,w,h) = match old {
+            Draw::Rect{x,y,w,h,..} | Draw::Tex{x,y,w,h,..} | Draw::Part{x,y,w,h,..} | Draw::RoundRect{x,y,w,h,..} => (x,y,w,h),
+            _ => { at += 1; continue; }
+        };
+        let (left,top,right,bottom) = (x.max(bounds[0]),y.max(bounds[1]),(x+w).min(bounds[2]),(y+h).min(bounds[3]));
+        if right <= left || bottom <= top { out.remove(at); continue; }
+        if left != x || top != y || right != x+w || bottom != y+h {
+            out[at] = match old {
+                Draw::Rect{colour,..}=>Draw::Rect{x:left,y:top,w:right-left,h:bottom-top,colour},
+                Draw::Tex{tex,alpha,..} => Draw::Part{x:left,y:top,w:right-left,h:bottom-top,tex,alpha,uv:[(left-x)/w,(top-y)/h,(right-left)/w,(bottom-top)/h]},
+                Draw::Part{tex,alpha,uv,..} => Draw::Part{x:left,y:top,w:right-left,h:bottom-top,tex,alpha,uv:[uv[0]+(left-x)/w*uv[2],uv[1]+(top-y)/h*uv[3],(right-left)/w*uv[2],(bottom-top)/h*uv[3]]},
+                Draw::RoundRect{radius,colour,..} => Draw::RoundRect{x:left,y:top,w:right-left,h:bottom-top,radius,colour},
+                _ => unreachable!(),
+            };
+        }
+        at += 1;
+    }
+}
+
+/// Read-only details/reference table, fitted to the same safe area as menus.
+pub fn reference_face(canvas: Canvas, title: &str, rows: &[(String,String,bool)], page: usize, pages: usize) -> UndoFace {
+    let mut face=parent_footer_face_on(canvas,if pages>1 {6}else{7},false);
+    let content=canvas.w-2.0*QUICK_LABEL_X;
+    let label_w=(content-24.0)*0.44;
+    let value_w=content-24.0-label_w;
+    let heading=quick_heading_face(title);
+    parent_blit(&mut face,&heading,(canvas.w-heading.w as f32)/2.0,0.0);
+    for (i,(label,value,_)) in rows.iter().take(6).enumerate() {
+        let label=bounded_menu_face(&menu_sentence_case(label),text::Role::Menu,DIM_INK,label_w,26.0);
+        let value=reference_binding_face(value,value_w);
+        let y=80.0+i as f32*40.0;
+        parent_blit(&mut face,&label,QUICK_LABEL_X-MENU_PAD as f32,y);
+        parent_blit(&mut face,&value,canvas.w-QUICK_EDGE+MENU_PAD as f32-value.w as f32,y);
+    }
+    if pages>1 {
+        let count=quick_description_face(&[&format!("{} / {}",page+1,pages)]);
+        parent_blit(&mut face,&count,(canvas.w-count.w as f32)/2.0,328.0);
+        let w=120.0;let left=canvas.centred(w);let h=3.0;
+        crate::expressive::raster_round(&mut face,left,357.0,w,h,1.5,[0.55,0.64,0.65,0.22]);
+        crate::expressive::raster_round(&mut face,left+w*page as f32/pages as f32,357.0,w/pages as f32,h,1.5,[0.76,0.84,0.83,1.0]);
+    }
+    face
+}
+fn bounded_menu_face(label: &str, role: text::Role, ink:[u8;3], max_w:f32, px:f32)->UndoFace {
+    let Some(font)=text::font(role) else {return UndoFace{rgba:vec![],w:0,h:MENU_H};};
+    let mut layout=text::fit_preserving_case(font,label,max_w,1,px,18.0);
+    if text::line_width(font,label,layout.px,layout.tracking)>max_w {
+        let mut short=label.to_owned();
+        while !short.is_empty() && text::line_width(font,&format!("{short}…"),layout.px,layout.tracking)>max_w {short.pop();}
+        layout.lines=vec![format!("{}…",short.trim_end())];
+    }
+    let w=layout.lines.iter().map(|s|text::line_width(font,s,layout.px,layout.tracking)).fold(0.0,f32::max).ceil() as u32+2*MENU_PAD;
+    let mut rgba=vec![0;(w*MENU_H*4) as usize];
+    text::draw_centred(&mut rgba,w,MENU_H,&layout,ink);
+    UndoFace{rgba,w,h:MENU_H}
+}
+
+#[cfg(test)]
+mod keycap_tests {
+    use super::*;
+    #[test]
+    fn word_keycaps_have_large_legible_text_inside_the_pill() {
+        for height in [28,40] {for button in [ButtonLegend::L1,ButtonLegend::R1,ButtonLegend::L2,ButtonLegend::R2,ButtonLegend::Start,ButtonLegend::Select,ButtonLegend::Menu] {
+            let face=controller_button_face(button,height);let mut ys=vec![];
+            for y in 0..face.h {for x in 0..face.w {let p=&face.rgba[((y*face.w+x)*4)as usize..][..4];if p[3]>240&&p[0]<100 {assert!(y>=4&&y<face.h-4&&x>=4&&x<face.w-4,"word escaped keycap");ys.push(y);}}}
+            assert!(!ys.is_empty());assert!(ys.iter().max().unwrap()-ys.iter().min().unwrap()>=if height==28 {8}else{11});
+        }}
+    }
 }

@@ -45,6 +45,8 @@ fn the_capture_mark_sits_after_the_game_and_before_the_toast() {
     a.set_game_ready(true);
     a.apply(Action::SaveState);
     assert_eq!(a.toast(), Some(Toast::StateSaved));
+    a.set_toast_faces(Toast::all().iter().map(|_| slot_ui::TexId::from_raw(900)).collect());
+    a.tick_ms(a.now() + 200); // Let the notice finish fading in before checking draw order.
     let without = drawn(&a);
     a.apply(Action::Screenshot);
     let with = drawn(&a);
@@ -113,12 +115,7 @@ fn two_shots_in_one_second_are_two_files() {
 fn a_gallery_whose_shots_vanished_closes_and_hides_the_row() {
     let (d, mut a) = shots(2);
     a.apply(Action::QuickMenu);
-    for _ in 0..6 {
-        if a.in_game_menu() == Some(slot_ui::QuickRow::Screenshots) {
-            break;
-        }
-        press(&mut a, slot_input::Btn::Down);
-    }
+    common::navigate_in_game_menu(&mut a,slot_ui::QuickRow::Screenshots);
     assert_eq!(a.in_game_menu(), Some(slot_ui::QuickRow::Screenshots));
     for e in ShotDir::new(d.path(), Platform::Gba, "Emerald").list().unwrap() {
         std::fs::remove_file(e.path).unwrap();
@@ -153,12 +150,7 @@ fn two_shots() -> (tempfile::TempDir, App) {
 
 fn open_viewer(a: &mut App) {
     a.apply(Action::QuickMenu);
-    for _ in 0..6 {
-        if a.in_game_menu() == Some(slot_ui::QuickRow::Screenshots) {
-            break;
-        }
-        press(a, slot_input::Btn::Down);
-    }
+    common::navigate_in_game_menu(a,slot_ui::QuickRow::Screenshots);
     assert_eq!(a.in_game_menu(), Some(slot_ui::QuickRow::Screenshots));
     press(a, slot_input::Btn::A);
     assert!(a.shot_viewer().is_some(), "the viewer did not open");

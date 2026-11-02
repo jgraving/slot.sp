@@ -30,7 +30,7 @@ fn placed(s: &Shelf) -> Vec<(f32, f32)> {
             Draw::Tex { x, w, .. } => (x, w),
             Draw::Part { x, w, .. } => (x, w),
             Draw::Turned { x, w, .. } => (x, w),
-            Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
+            Draw::RoundRect { .. } | Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
         })
         .collect()
 }
@@ -41,7 +41,7 @@ fn xw(d: &Draw) -> (f32, f32) {
         | Draw::Tex { x, w, .. }
         | Draw::Part { x, w, .. }
         | Draw::Turned { x, w, .. } => (x, w),
-        Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
+        Draw::RoundRect { .. } | Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => (0.0, OUT_W as f32),
     }
 }
 
@@ -362,13 +362,69 @@ fn shelf_scroll_settles_on_the_selected_index() {
 }
 
 #[test]
-fn scroll_never_overshoots_the_cart_it_lands_on() {
+fn scroll_has_a_small_springy_overshoot_then_settles() {
+    for (press, way) in [(Shelf::right as fn(&mut Shelf), 1.0), (Shelf::left, -1.0)] {
+        let mut s = shelf_with(5);
+        press(&mut s);
+        let mut peak = 0.0f32;
+        for _ in 0..60 {
+            s.update(1.0 / 60.0);
+            peak = peak.max(s.scroll * way);
+        }
+        assert!((1.02..1.06).contains(&peak), "overshoot was {peak} slots");
+        assert_eq!(
+            s.scroll,
+            s.scroll_target(),
+            "did not stop exactly on the cart"
+        );
+    }
+}
+
+#[test]
+fn spring_motion_matches_at_30_60_and_120_hz_and_after_a_dropped_frame() {
+    let sample = |hz| {
+        let mut s = shelf_with(5);
+        s.right();
+        for _ in 0..hz / 2 {
+            s.update(1.0 / hz as f32);
+        }
+        s.scroll
+    };
+    for hz in [30, 60, 120] {
+        assert!((sample(hz) - sample(60)).abs() < 0.00002);
+    }
+    let mut smooth = shelf_with(5);
+    let mut stalled = shelf_with(5);
+    smooth.right();
+    stalled.right();
+    for _ in 0..24 {
+        smooth.update(1.0 / 60.0);
+    }
+    for dt in [0.05, 0.2, 0.05, 0.1] {
+        stalled.update(dt);
+    }
+    assert!((smooth.scroll - stalled.scroll).abs() < 0.00002);
+    stalled.update(5.0);
+    assert_eq!(stalled.scroll, stalled.scroll_target());
+}
+
+#[test]
+fn reversing_a_moving_row_carries_momentum_without_jumping() {
     let mut s = shelf_with(5);
     s.right();
-    for _ in 0..600 {
+    for _ in 0..6 {
         s.update(1.0 / 60.0);
-        assert!(s.scroll <= 1.0 + 1e-4, "overshot to {}", s.scroll);
     }
+    let before = s.scroll;
+    s.left();
+    assert_eq!(s.scroll, before, "retargeting teleported the row");
+    s.update(0.001);
+    assert!(s.scroll > before, "retargeting discarded forward momentum");
+    for _ in 0..60 {
+        s.update(1.0 / 60.0);
+    }
+    assert_eq!(s.index, 0);
+    assert_eq!(s.scroll, 0.0);
 }
 
 #[test]
@@ -492,8 +548,8 @@ fn the_gauge_is_white_in_dark_mode_and_black_in_light_mode() {
             })
             .expect("the gauge did not draw")
     };
-    assert_eq!(gauge(false), [1.0, 1.0, 1.0, 1.0]);
-    assert_eq!(gauge(true), [0.0, 0.0, 0.0, 1.0]);
+    assert_eq!(gauge(false), [1.0, 1.0, 1.0, 0.08]);
+    assert_eq!(gauge(true), [1.0, 1.0, 1.0, 0.08]);
 }
 
 #[test]
@@ -514,7 +570,7 @@ fn the_gauge_starts_at_the_case_margin() {
     let leftmost = out
         .iter()
         .map(|d| match *d {
-            Draw::Rect { x, .. } | Draw::Tex { x, .. } => x,
+            Draw::Rect { x, .. } | Draw::RoundRect { x, .. } | Draw::Tex { x, .. } => x,
             _ => f32::MAX,
         })
         .fold(f32::MAX, f32::min);
@@ -539,7 +595,7 @@ fn the_band_prints_the_charge_at_one_margin_and_the_clock_at_the_other() {
     let xs: Vec<(f32, f32)> = out
         .iter()
         .filter_map(|d| match *d {
-            Draw::Rect { x, w, .. } | Draw::Tex { x, w, .. } => Some((x, x + w)),
+            Draw::Rect { x, w, .. } | Draw::RoundRect { x, w, .. } | Draw::Tex { x, w, .. } => Some((x, x + w)),
             _ => None,
         })
         .collect();
@@ -559,8 +615,8 @@ fn the_band_prints_the_charge_at_one_margin_and_the_clock_at_the_other() {
     );
     assert_eq!(
         last.1 - last.0,
-        40.0,
-        "the rightmost thing on the band is not the clock"
+        slot_ui::GAUGE_W,
+        "the rightmost thing on the band is not the battery"
     );
     for (a, b) in &xs {
         assert!(
@@ -598,12 +654,10 @@ fn the_footer_does_not_move_the_gauge_when_the_charge_state_changes() {
         [255, 255, 255],
         &mut charging,
     );
-    for d in &idle {
-        assert!(
-            charging.contains(d),
-            "{d:?} moved or vanished when charging started"
-        );
-    }
+    let body=|draws:&[Draw]|draws.iter().filter_map(|d|match d {
+        Draw::RoundRect{x,y,w,h,..}=>Some((*x,*y,*w,*h)),_=>None
+    }).collect::<Vec<_>>();
+    assert_eq!(body(&idle),body(&charging));
 }
 
 #[test]
@@ -621,11 +675,11 @@ fn the_clock_stays_at_the_right_margin() {
     let rightmost = out
         .iter()
         .map(|d| match *d {
-            Draw::Rect { x, w, .. } | Draw::Tex { x, w, .. } => x + w,
+            Draw::Rect { x, w, .. } | Draw::RoundRect { x, w, .. } | Draw::Tex { x, w, .. } => x + w,
             _ => 0.0,
         })
         .fold(0.0, f32::max);
-    assert_eq!(rightmost, OUT_W as f32 - 24.0);
+    assert_eq!(rightmost, 64.0);
 }
 
 #[test]
@@ -710,7 +764,7 @@ fn cart_spans(out: &[Draw]) -> Vec<(f32, f32)> {
             | Draw::Tex { x, w, h, .. }
             | Draw::Part { x, w, h, .. }
             | Draw::Turned { x, w, h, .. } => (h > slot_ui::MOUTH_H).then_some((x, x + w)),
-            Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => None,
+            Draw::RoundRect { .. } | Draw::Lava { .. } | Draw::Game | Draw::Shot { .. } | Draw::Capture => None,
 
         })
         .filter(|(x0, x1)| *x1 > 0.0 && *x0 < OUT_W as f32)
@@ -1277,4 +1331,26 @@ fn only_a_starred_cart_wears_the_star_in_its_label_top_right_corner() {
         top >= ly && top < ly + 16.0,
         "star top {top}, label top {ly}"
     );
+}
+
+#[test]
+fn carousel_cartridge_centres_follow_an_invisible_wheel_arc() {
+    let mut shelf=shelf_with(8);
+    shelf.select(3);
+    settle(&mut shelf);
+    let canvas=Canvas{w:640.0,h:480.0};
+    let mut out=vec![];
+    shelf.draw_row(canvas,None,0.0,0.0,1.0,&mut out);
+    let mut centres=out.iter().filter_map(|d|match d {
+        Draw::Rect{x,y,w,h,..}=>Some((x+w/2.0,y+h/2.0)),_=>None
+    }).collect::<Vec<_>>();
+    centres.sort_by(|a,b|a.0.total_cmp(&b.0));
+    let crown=*centres.iter().min_by(|a,b|(a.0-320.0).abs().total_cmp(&(b.0-320.0).abs())).unwrap();
+    assert!((crown.0-320.0).abs()<0.01);
+    assert!(centres.len()>=3);
+    for (x,y) in centres {
+        let dx=x-320.0;
+        let dy=y-crown.1;
+        assert!((dx*dx+(900.0-dy).powi(2)-900.0f32.powi(2)).abs()<1.0);
+    }
 }

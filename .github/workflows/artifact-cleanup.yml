@@ -1,0 +1,36 @@
+name: Generated artifact retention
+on:
+  pull_request:
+    paths: ['tools/artifact-retention*', '.github/workflows/artifact-cleanup.yml']
+  push:
+    branches: [main]
+    paths: ['tools/artifact-retention*', '.github/workflows/artifact-cleanup.yml']
+  schedule:
+    - cron: '17 * * * *'
+  workflow_run:
+    workflows: ["Build and release", "pages", "Launcher quality of life checks", "Shortcut guide regression checks", "Capture homepage previews", "Capture cartridge motion", "Capture documentation media", "Capture illustrated README hero"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: keep-newest-actions-artifacts
+  cancel-in-progress: false
+jobs:
+  cleanup:
+    if: github.repository_owner == 'jgraving'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test retention boundaries
+        run: node --test tools/artifact-retention.test.cjs
+      - name: Audit or clean completed workflow artifacts
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {run} = require('./tools/artifact-retention.cjs');
+            await run({github, context, core, dryRun: context.eventName === 'pull_request'});

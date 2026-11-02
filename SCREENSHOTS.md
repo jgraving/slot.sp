@@ -4,15 +4,19 @@
 
 [Capture](#take-a-screenshot) · [Browse & zoom](#browse--zoom) · [Select & delete](#select--delete) · [Files](#find-your-pictures)
 
+Save pictures of a game, view them on the handheld, or copy the PNG files to your computer. The gallery supports zooming and deleting several pictures together.
+
 ## Take a screenshot
 
 During a game, press <kbd>MENU</kbd> + <kbd>X</kbd> together, then release both buttons. Avoid holding <kbd>MENU</kbd> on its own: that exits the game.
 
-To change this combination, open **Menu → Controls → Shortcuts → Screenshot** from the carousel and record a new binding.
+To change this combination, open **Menu → Device controls → Shortcuts → Screenshot** from the carousel and record a new binding.
 
 ## Browse & zoom
 
-Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures appear as thumbnails, newest first.
+Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. The Screenshots choice appears once a picture exists. Pictures appear as thumbnails, newest first. The footer shows the buttons for the current view, using the same button icons as settings. The gallery follows your Light or Dark theme.
+
+![The current screenshot gallery in Light mode, with button hints for Back, Move, View, Delete and Select](previews/current/light/screenshots.png)
 
 | View | Button | Action |
 | :--- | :--- | :--- |
@@ -23,7 +27,9 @@ Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures
 | Zoomed picture | D-pad | Pan around the picture. |
 | Zoomed picture | <kbd>B</kbd> | Zoom out. |
 | Open picture | <kbd>B</kbd> | Return to thumbnails. |
-| Thumbnails | <kbd>B</kbd> | Return to the game. |
+| Thumbnails | <kbd>B</kbd> | Return to the pause menu, with Screenshots selected. |
+
+![A screenshot at 2× zoom, with Zoom out, Pan and Zoom hints](previews/current/light/screenshots-zoom.png)
 
 ## Select & delete
 
@@ -41,6 +47,8 @@ Open the game's menu with <kbd>MENU</kbd>, then choose **Screenshots**. Pictures
 4. Press <kbd>X</kbd> to confirm, or <kbd>B</kbd> to cancel.
 
 Press <kbd>B</kbd> or <kbd>SELECT</kbd> in multi-select to return to normal browsing.
+
+![Selecting several screenshots, with a selected-count label and current button hints](previews/current/light/screenshots-select.png)
 
 ## Find your pictures
 

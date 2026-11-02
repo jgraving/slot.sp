@@ -57,10 +57,18 @@ fn card() -> tempfile::TempDir {
 fn press(app: &mut App, b: Btn) {
     common::through(app, b);
 }
+fn kid_tile(app:&mut App,label:&str) {
+    assert!(app.kid_menu.as_ref().unwrap().settings_grid());
+    for button in [Btn::Right,Btn::Down,Btn::Left,Btn::Up] {
+        if app.kid_menu.as_ref().unwrap().lines().iter().any(|l|l.starts_with(&format!("SELECTED {label}"))){press(app,Btn::A);return;}
+        press(app,button);
+    }
+    panic!("missing kid tile {label}");
+}
 fn unlock(app: &mut App) {
+    if app.kid_menu.as_ref().unwrap().in_game_card() { press(app,Btn::Down); press(app,Btn::A); }
     if app.kid_menu.as_ref().unwrap().child_menu() {
-        press(app, Btn::Up);
-        press(app, Btn::A);
+        kid_tile(app,"Parental controls");
     }
     for b in [Btn::A, Btn::B, Btn::X, Btn::Y] {
         press(app, b);
@@ -136,8 +144,7 @@ fn blocked_shortcuts_cannot_change_rules_or_launch_parent_screens() {
         assert!(app.kid_menu.is_none());
     }
     app.apply(Action::QuickMenu);
-    press(&mut app, Btn::Up);
-    press(&mut app, Btn::A);
+    kid_tile(&mut app,"Parental controls");
     for b in [Btn::A, Btn::A, Btn::A, Btn::A, Btn::Start] {
         press(&mut app, b);
     }
@@ -428,10 +435,9 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     let mut s = Session::boot(d.path().to_owned());
     let mut time = 0;
     s.app_mut().apply(Action::QuickMenu);
-    for _ in 0..12 {
-        if s.app().quick_menu() == Some(slot_ui::QuickRow::Kids) { break; }
-        raw_tap(&mut s, &mut time, Btn::Down);
-    }
+    raw_tap(&mut s,&mut time,Btn::Right);
+    raw_tap(&mut s,&mut time,Btn::Right);
+    raw_tap(&mut s,&mut time,Btn::Down);
     assert_eq!(s.app().quick_menu(), Some(slot_ui::QuickRow::Kids));
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
@@ -439,9 +445,11 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     preview_menu(&s, "parent-first-settings.png");
     // Select Parent code. Merely opening settings must not create a code.
     assert!(!dir.join("code").exists());
-    for _ in 0..4 { raw_tap(&mut s, &mut time, Btn::Down); }
+    raw_tap(&mut s, &mut time, Btn::Down);
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose 4 buttons");
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
     for (i, b) in [Btn::A, Btn::B].into_iter().enumerate() {
         raw_tap(&mut s, &mut time, b);
@@ -450,8 +458,8 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
         assert!(menu.lines()[1].contains(&format!("{} of 4", i + 1)));
         assert_ne!(menu.screen_face().rgba, empty);
         let face = menu.screen_face();
-        let x0 = (face.w - 320) / 2 + i as u32 * 80;
-        let visible = (208..272).any(|y| (x0..x0 + 80).any(|x| {
+        let x0 = (face.w - 256) / 2 + i as u32 * 64;
+        let visible = (200..256).any(|y| (x0..x0 + 64).any(|x| {
             let at = ((y * face.w + x) * 4) as usize;
             face.rgba[at + 3] > 0 && face.rgba[at..at + 3].iter().any(|c| *c > 150)
         }));
@@ -460,15 +468,16 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     }
     raw_tap(&mut s, &mut time, Btn::X);
     raw_tap(&mut s, &mut time, Btn::Y);
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Repeat your code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     assert!(!dir.join("code").exists());
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Repeat your 4 buttons");
     preview_menu(&s, "parent-confirm-empty.png");
     for b in [Btn::A; 4] { raw_tap(&mut s, &mut time, b); }
     assert!(!dir.join("code").exists(), "mismatched confirmation created a code");
     assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(), &[0; 4]);
     s.app_mut().update(0.4);
     assert!(s.app().kid_menu.as_ref().unwrap().entered_buttons().is_empty());
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Repeat your code");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     for b in [Btn::A, Btn::B, Btn::X, Btn::Y] { raw_tap(&mut s, &mut time, b); }
     assert!(dir.join("code").exists());
     assert!(!s.app().kid_mode());
@@ -578,19 +587,27 @@ fn kid_pause_menu_allows_volume_brightness_resume_and_exit_without_a_code() {
     preview_menu(&s, "kid-pause-menu.png");
     let mut time = 0;
     raw_tap(&mut s, &mut time, Btn::Down);
+    raw_tap(&mut s, &mut time, Btn::A); // Expand restricted Settings.
+    raw_tap(&mut s, &mut time, Btn::A); // Sound tile.
     for _ in 0..30 { raw_tap(&mut s, &mut time, Btn::Right); }
     assert_eq!(s.app().volume(), s.app().kid_volume_limit());
     raw_tap(&mut s, &mut time, Btn::Left);
     assert!(s.app().volume() < s.app().kid_volume_limit());
-    raw_tap(&mut s, &mut time, Btn::Down);
+    raw_tap(&mut s, &mut time, Btn::B);
+    raw_tap(&mut s, &mut time, Btn::Right);
+    raw_tap(&mut s, &mut time, Btn::A);
     let brightness = s.app().brightness();
     raw_tap(&mut s, &mut time, Btn::Left);
     assert_eq!(s.app().brightness(), brightness.saturating_sub(1));
     raw_tap(&mut s, &mut time, Btn::B);
+    assert!(s.app().kid_menu.as_ref().unwrap().settings_grid());
+    raw_tap(&mut s, &mut time, Btn::B);
+    assert!(s.app().kid_menu.as_ref().unwrap().in_game_card());
+    raw_tap(&mut s, &mut time, Btn::B);
     assert!(s.app().kid_menu.is_none());
     assert!(matches!(s.app().phase(), Phase::Playing { .. }));
     s.app_mut().apply(Action::QuickMenu);
-    for _ in 0..3 { raw_tap(&mut s, &mut time, Btn::Down); }
+    for _ in 0..2 { raw_tap(&mut s, &mut time, Btn::Down); }
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.is_none());
     assert!(matches!(s.app().phase(), Phase::Ejecting { .. } | Phase::Shelf));
@@ -603,7 +620,7 @@ fn parent_settings_apply_volume_immediately_and_use_transparent_menu_artwork() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..4 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Left);
     assert_eq!(app.kid_volume_limit(), 40);
     assert_eq!(Policy::read(d.path()).unwrap().volume_limit, 40);
@@ -632,7 +649,7 @@ fn kid_can_exit_when_only_one_game_is_approved() {
     for _ in 0..120 { app.update(1.0 / 60.0); }
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     app.apply(Action::QuickMenu);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..2 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::A);
     assert!(matches!(app.phase(), Phase::Ejecting { .. }));
     for _ in 0..120 { app.update(1.0 / 60.0); }
@@ -651,7 +668,7 @@ fn parent_can_adjust_the_volume_cap_and_resume_the_same_game() {
     assert!(matches!(app.phase(), Phase::Playing { .. }));
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..3 { press(&mut app, Btn::Down); }
+    for _ in 0..4 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Left);
     assert_eq!(app.kid_volume_limit(), 40);
     assert!(matches!(app.phase(), Phase::Playing { .. }));
@@ -778,33 +795,22 @@ fn warning_allows_saving_and_exiting_without_a_parent_code() {
 
 #[test]
 fn settings_meter_is_present_only_while_kid_mode_is_on() {
-    let d = card();
-    let mut app = App::boot(d.path());
-    app.apply(Action::QuickMenu);
-    unlock(&mut app);
-    assert!(app.kid_menu.as_ref().unwrap().remaining_seconds().is_some());
-    let active = app.kid_menu.as_ref().unwrap().screen_face();
-    let band = |face: &slot_ui::UndoFace| (342..366).any(|y|
-        (0..face.w).any(|x| face.rgba[((y * face.w + x) * 4 + 3) as usize] != 0));
-    assert!(band(&active));
-    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
-        write_preview(&dir, "parent-time-meter.png", active);
-    }
-    press(&mut app, Btn::A);
-    assert!(!app.kid_mode());
-    if let Ok(dir) = std::env::var("SLOT_KID_UI_PREVIEW") {
-        write_preview(&dir, "parent-mode-off.png", app.kid_menu.as_ref().unwrap().screen_face());
-    }
-    assert_eq!(app.kid_menu.as_ref().unwrap().remaining_seconds(), None);
-    assert!(!band(&app.kid_menu.as_ref().unwrap().screen_face()));
+    let d=card();let mut app=App::boot(d.path());app.apply(Action::QuickMenu);unlock(&mut app);
+    assert!(app.kid_menu.as_ref().unwrap().remaining_meter().is_some());
+    app.set_kid_meter_face((slot_ui::TexId::from_raw(9901),300,36));app.update(1.0);
+    let mut out=vec![];app.draw(&mut out);
+    assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::Tex{tex,y,h,..}if *tex==slot_ui::TexId::from_raw(9901)&&*y==376.0&&*h==36.0)),"the complete pill must bypass the card clip");
+    press(&mut app,Btn::A);assert!(!app.kid_mode());app.update(1.0);
+    assert!(app.kid_menu.as_ref().unwrap().remaining_meter().is_none());let mut out=vec![];app.draw(&mut out);
+    assert!(!out.iter().any(|d|matches!(d,slot_ui::Draw::Tex{tex,..}if *tex==slot_ui::TexId::from_raw(9901))));
 }
 
 #[test]
 fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
     let (_d, mut app, _clock) = warning_game(slot::kid_policy::Rule::Daily, 5);
     app.apply(Action::QuickMenu);
-    press(&mut app, Btn::Up);
-    press(&mut app, Btn::A);
+    press(&mut app,Btn::Down); press(&mut app,Btn::A);
+    kid_tile(&mut app,"Parental controls");
     let remaining = app.kids.remaining(now());
     for b in [Btn::A; 4] { press(&mut app, b); }
     let menu = app.kid_menu.as_ref().unwrap();
@@ -822,7 +828,7 @@ fn a_wrong_code_shakes_only_the_icons_then_resets_for_an_automatic_retry() {
         }
         if i < 20 {
             let moving = menu.screen_face();
-            for y in (0..208).chain(272..moving.h) {
+            for y in (0..200).chain(256..moving.h) {
                 let row = (y * moving.w * 4) as usize;
                 assert_eq!(&moving.rgba[row..row + moving.w as usize * 4],
                     &still.rgba[row..row + still.w as usize * 4]);
@@ -850,7 +856,7 @@ fn time_controls_allow_one_minute_steps_and_separate_hours_and_minutes() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..2 { press(&mut app, Btn::Down); }
+    for _ in 0..3 { press(&mut app, Btn::Down); }
     press(&mut app, Btn::Right);
     assert_eq!(app.kids.minutes, 6);
     press(&mut app, Btn::A);
@@ -887,7 +893,7 @@ fn bedtime_editor_wraps_at_midnight_in_one_minute_steps() {
     policy.bedtime = 1439;
     let mut menu = Menu::new(d.path().to_owned(), policy);
     let tap = |m: &mut Menu, b| m.input(Action::GbaDown(b), now());
-    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::A] { tap(&mut menu, b); }
+    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::Down, Btn::A] { tap(&mut menu, b); }
     tap(&mut menu, Btn::Down);
     tap(&mut menu, Btn::Right);
     assert_eq!(menu.draft.bedtime, 0);
@@ -904,7 +910,7 @@ fn holding_time_arrows_repeats_and_stops_on_release_sleep_and_long_frames() {
     let mut app = App::boot(d.path());
     app.apply(Action::QuickMenu);
     unlock(&mut app);
-    for _ in 0..2 { press(&mut app, Btn::Down); }
+    for _ in 0..3 { press(&mut app, Btn::Down); }
     app.apply(Action::GbaDown(Btn::Right));
     assert_eq!(app.kids.minutes, 6);
     for _ in 0..20 { app.update(0.05); }
@@ -938,7 +944,7 @@ fn an_expired_bedtime_edit_shows_feedback_and_stops_repeating() {
     policy.begin(wall).unwrap();
     policy.save(d.path()).unwrap();
     let mut menu = Menu::new(d.path().to_owned(), policy);
-    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::A, Btn::Down, Btn::Left] {
+    for b in [Btn::A, Btn::B, Btn::X, Btn::Y, Btn::Down, Btn::Down, Btn::Down, Btn::A, Btn::Down, Btn::Left] {
         menu.input(Action::GbaDown(b), wall);
     }
     assert_eq!(menu.draft.bedtime, 12 * 60 + 1);
@@ -951,4 +957,129 @@ fn an_expired_bedtime_edit_shows_feedback_and_stops_repeating() {
     menu.input(Action::GbaDown(Btn::Right), wall);
     assert_eq!(menu.draft.bedtime, 12 * 60 + 2);
     assert!(!menu.lines().iter().any(|line| line == "Choose a later time today"));
+}
+
+#[test]
+fn parent_focus_keeps_the_five_row_page_aligned_at_its_last_entry() {
+    let d=common::tmp_root_with_carts(&["Approved"]);
+    let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());
+    menu.input(Action::GbaDown(Btn::Up),0);
+    assert_eq!(menu.focus_info(),Some((4,0)));
+    assert!(menu.lines().iter().any(|line|line.contains("SELECTED Volume limit")));
+}
+
+#[test]
+fn closing_kid_pause_retains_its_cached_surface_until_it_is_offscreen() {
+    let (_d,mut app,_)=warning_game(slot::kid_policy::Rule::Daily,5);
+    app.apply(Action::QuickMenu);
+    app.kid_menu.as_mut().unwrap().face=Some(slot_ui::TexId::from_raw(9002));
+    app.note_custom_menu_face();app.update(1.0);
+    app.set_game_ready(true);
+    let mut initial=vec![];app.draw(&mut initial);
+    assert!(initial.iter().any(|d|matches!(d,slot_ui::Draw::Game)),"kid pause lost the game behind its card");
+    assert!(initial.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
+    press(&mut app,Btn::B);app.note_custom_menu_face();app.update(0.05);
+    let mut closing=vec![];app.draw(&mut closing);
+    assert!(closing.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,y,alpha,..} if *tex==slot_ui::TexId::from_raw(9002)&&*y>40.0&&*alpha==1.0)));
+    app.update(1.0);let mut gone=vec![];app.draw(&mut gone);
+    assert!(!gone.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,..} if *tex==slot_ui::TexId::from_raw(9002))));
+}
+
+#[test]
+fn shelf_and_in_game_kid_menus_have_distinct_layout_keys() {
+    let root=tempfile::tempdir().unwrap();
+    let shelf=slot::kid_menu::Menu::child(root.path().into(),Default::default(),false,50,50);
+    let pause=slot::kid_menu::Menu::child(root.path().into(),Default::default(),true,50,50);
+    assert_eq!(shelf.page_key(),2010);
+    assert_eq!(pause.page_key(),2001);
+}
+
+#[test]
+fn kid_pause_text_has_equal_top_and_bottom_card_whitespace(){
+    let canvas=slot_ui::Canvas{w:640.0,h:480.0};let [_,y,_,h]=slot_ui::menu_grid::pause_rect(canvas,3);let [_,ty,_,th]=slot_ui::menu_grid::cell(canvas,0,3,3,true);assert_eq!(ty-y,y+h-ty-th);assert_eq!(y+h/2.0,240.0);
+}
+
+#[test]
+fn kid_settings_use_identical_four_tile_pages_on_the_shelf_and_in_game() {
+    let root=tempfile::tempdir().unwrap();let mut policy=slot::kid_policy::Policy::default();policy.active=true;
+    let mut shelf=slot::kid_menu::Menu::child(root.path().into(),policy.clone(),false,50,50);
+    let mut game=slot::kid_menu::Menu::child(root.path().into(),policy,true,50,50);
+    shelf.set_remaining(Some((600,1800)));game.set_remaining(Some((600,1800)));
+    game.input(Action::GbaDown(Btn::Down),0);game.input(Action::GbaDown(Btn::A),0);
+    assert!(shelf.settings_grid()&&game.settings_grid());
+    for width in [640.0,720.0] {let canvas=slot_ui::Canvas{w:width,h:480.0};assert_eq!(shelf.screen_face_animated_on(canvas).rgba,game.screen_face_animated_on(canvas).rgba);}
+    for menu in [&mut shelf,&mut game] {assert_eq!(menu.lines().len(),4);menu.input(Action::GbaDown(Btn::Right),0);menu.input(Action::GbaDown(Btn::A),0);assert!(menu.lines().iter().any(|l|l.contains("Brightness")));assert!(!menu.entering_code());menu.input(Action::GbaDown(Btn::B),0);assert!(menu.settings_grid());}
+}
+
+#[test]
+fn parent_volume_slider_can_reach_zero_and_one_hundred(){
+    let d=common::tmp_root_with_carts(&["Approved"]);let mut menu=slot::kid_menu::Menu::new(d.path().to_owned(),Policy::default());for _ in 0..4{menu.input(Action::GbaDown(Btn::Down),0);}for _ in 0..20{menu.input(Action::GbaDown(Btn::Left),0);}assert_eq!(menu.draft.volume_limit,0);for _ in 0..20{menu.input(Action::GbaDown(Btn::Right),0);}assert_eq!(menu.draft.volume_limit,100);
+}
+
+#[test]
+fn enabling_kid_mode_preserves_all_parent_rows_and_closes_vertically_to_the_shelf() {
+    let d=card();let mut policy=Policy::read(d.path()).unwrap();policy.leave();policy.save(d.path()).unwrap();
+    let mut app=App::boot(d.path());app.apply(Action::QuickMenu);
+    for b in [Btn::Right,Btn::Right,Btn::Down,Btn::A,Btn::A,Btn::B,Btn::X,Btn::Y]{press(&mut app,b);}
+    let menu=app.kid_menu.as_ref().unwrap();assert_eq!(menu.scroll_info(),Some((0,5,0,5)));
+    let sliders=menu.visible_sliders();let y=sliders[0].y;
+    press(&mut app,Btn::A);assert!(app.kid_mode());
+    let menu=app.kid_menu.as_ref().unwrap();assert_eq!(menu.scroll_info(),Some((0,5,0,5)));assert_eq!(menu.visible_sliders()[0].y,y);
+    app.kid_menu.as_mut().unwrap().face=Some(slot_ui::TexId::from_raw(9910));app.set_kid_meter_face((slot_ui::TexId::from_raw(9911),300,36));app.note_custom_menu_face();app.update(1.0);
+    press(&mut app,Btn::B);app.note_custom_menu_face();assert!(app.kid_menu.is_none());assert_eq!(app.quick_menu(),None);assert!(matches!(app.phase(),Phase::Shelf));
+    app.update(0.03);let mut out=vec![];app.draw(&mut out);
+    assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::Part{tex,x,w,..} if *tex==slot_ui::TexId::from_raw(9910)&&(*x+*w/2.0-app.canvas().w/2.0).abs()<0.1)),"closing parent content must stay centered, not slide sideways");
+}
+#[test]
+fn hardware_level_feedback_is_drawn_after_parent_chrome_and_the_remaining_time_pill() {
+    use slot_ui::{Draw,TexId,Icon};
+    let d=card();let mut app=App::boot(d.path());app.apply(Action::QuickMenu);unlock(&mut app);
+    app.kid_menu.as_mut().unwrap().face=Some(TexId::from_raw(9920));app.set_slot_faces(TexId::from_raw(9921),TexId::from_raw(9922));
+    app.set_icon_faces(Icon::ALL.into_iter().enumerate().map(|(i,_)|TexId::from_raw(10000+i)).collect());app.set_kid_meter_face((TexId::from_raw(9923),300,36));app.note_custom_menu_face();app.update(1.0);
+    for action in [Action::VolumeDown,Action::BrightnessDown] {
+        app.apply(action);app.kid_menu.as_mut().unwrap().face=Some(TexId::from_raw(9920));app.note_custom_menu_face();app.tick_ms(app.now()+180);let mut out=vec![];app.draw(&mut out);
+        let foreground=out.iter().position(|d|matches!(d,Draw::RoundRect{w:360.0,h:48.0,..})).expect("level pill missing over parents");
+        for id in [9920,9921,9922,9923] {let i=out.iter().rposition(|d|matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(id))).unwrap();assert!(i<foreground,"level pill painted behind {id}");}
+        assert!(out.iter().skip(foreground).all(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(9920))),"parent texture covers feedback");
+    }
+}
+
+#[test]
+fn shoulder_code_roundtrips_through_raw_setup_confirmation_and_unlock() {
+    use slot::{session::Session,kid_menu::Menu};
+    let d=card();
+    std::fs::remove_dir_all(Policy::directory(d.path())).unwrap();
+    let mut s=Session::boot(d.path().to_owned());
+    s.app_mut().kid_menu=Some(Menu::new(d.path().to_owned(),Policy::default()));
+    let mut time=0;
+    raw_tap(&mut s,&mut time,Btn::Down);raw_tap(&mut s,&mut time,Btn::A);
+    for b in [Btn::L1,Btn::R1,Btn::L2] {raw_tap(&mut s,&mut time,b);}
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(),&[8,9,10]);
+    raw_tap(&mut s,&mut time,Btn::Select);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(),&[8,9]);
+    raw_tap(&mut s,&mut time,Btn::L2);raw_tap(&mut s,&mut time,Btn::R2);
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2],"Repeat your 4 buttons");
+    for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2] {raw_tap(&mut s,&mut time,b);}
+    let recovery=std::fs::read_to_string(Policy::directory(d.path()).join("parent-code.txt")).unwrap();
+    assert!(recovery.contains("L1 R1 L2 R2"));
+    s.app_mut().kid_menu=Some(Menu::new(d.path().to_owned(),Policy::default()));
+    for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2] {raw_tap(&mut s,&mut time,b);}
+    assert!(!s.app().kid_menu.as_ref().unwrap().entering_code());
+}
+
+#[test]
+fn first_kid_activation_keeps_volume_feedback_live_without_changing_the_limit() {
+    let d=card();let mut policy=Policy::read(d.path()).unwrap();policy.leave();policy.save(d.path()).unwrap();
+    let mut app=App::boot(d.path());app.apply(Action::QuickMenu);
+    for b in [Btn::Right,Btn::Right,Btn::Down,Btn::A,Btn::A,Btn::B,Btn::X,Btn::Y,Btn::A] {press(&mut app,b);}
+    assert!(app.kid_mode());assert_eq!(app.kid_volume_limit(),50);
+    for action in [Action::VolumeDown,Action::VolumeUp,Action::VolumeDown] {
+        let before=app.volume();app.apply(action);
+        assert_ne!(app.volume(),before);
+        assert_eq!(app.feedback_volume(),app.volume());
+        assert_ne!(app.hud_icon(),slot_ui::Icon::VolumeMuted,"the live slider must not read the paused output's zero");
+        assert_eq!(app.output_volume(),0,"gameplay stays silent while parent controls are open");
+    }
+    let volume=app.volume();press(&mut app,Btn::B);
+    assert_eq!(app.output_volume(),volume);assert_eq!(app.kid_volume_limit(),50);
 }

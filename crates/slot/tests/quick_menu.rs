@@ -7,7 +7,7 @@ use common::{
 use slot::app::{App, Phase};
 use slot_input::{Action, Btn};
 use slot_store::{
-    read_slot_state, write_slot_state, Appearance, BezelPick, GbColors, GbPalette, Platform,
+    read_slot_state, write_slot_state, BezelPick, GbColors, GbPalette, Platform,
     Shader, SlotState, WallpaperPick,
 };
 use slot_ui::{
@@ -54,11 +54,14 @@ fn open_at(a: &mut App, row: QuickRow) {
         if depth > 0 {
             press(a, Btn::A);
         }
-        for _ in 0..step.position(&a.hidden_rows()) {
-            press(a, Btn::Down);
-        }
+        let i=step.position(&a.hidden_rows());
+        if step.page()==QuickRow::MAIN {
+            for _ in 0..i%4 {press(a,Btn::Right);}
+            for _ in 0..i/4 {press(a,Btn::Down);}
+        }else{for _ in 0..i {press(a,Btn::Down);}}
     }
     assert_eq!(a.quick_menu(), Some(row), "the bar never reached {row:?}");
+    a.update(1.0);
 }
 
 #[test]
@@ -111,7 +114,7 @@ fn the_quick_menu_is_only_on_the_carousel() {
 }
 
 #[test]
-fn wallpaper_cycles_flowing_static_blur_then_the_folder_and_saves() {
+fn wallpaper_cycles_flowing_static_then_the_folder_and_saves() {
     let (d, mut a, _) = on_carousel();
     let dir = d.path().join("Wallpapers");
     std::fs::create_dir_all(&dir).unwrap();
@@ -129,9 +132,6 @@ fn wallpaper_cycles_flowing_static_blur_then_the_folder_and_saves() {
     assert_eq!(a.resolved_wallpaper(), WallpaperPick::Static);
     assert_eq!(a.resolved_wallpaper().label(), "Static Gradient");
     assert_eq!(read_slot_state(d.path()).wallpaper, WallpaperPick::Static);
-    press(&mut a, Btn::Right);
-    assert_eq!(a.resolved_wallpaper(), WallpaperPick::Blur);
-    assert_eq!(a.resolved_wallpaper().label(), "DEFAULT BLUR");
     for name in ["a.png", "b.png", "Crt.png"] {
         press(&mut a, Btn::Right);
         assert_eq!(a.resolved_wallpaper(), WallpaperPick::File(name.into()));
@@ -207,44 +207,18 @@ fn random_with_an_empty_folder_shows_the_default() {
 }
 
 #[test]
-fn theme_switches_between_dark_and_light_and_saves() {
-    let (d, mut a, _) = on_carousel();
-    open_at(&mut a, QuickRow::Theme);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme));
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    press(&mut a, Btn::Right);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Light));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Light);
-    press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::Theme), "theme opened a page");
-    press(&mut a, Btn::Left);
-    assert_eq!(a.quick_value(QuickRow::Theme), Some(QuickValue::Dark));
-    assert_eq!(read_slot_state(d.path()).appearance, Appearance::Dark);
+fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
+    let (_d, a, _) = on_carousel();
+    assert!(!a.hidden_rows().contains(&QuickRow::Theme));
+    assert!(!a.hidden_rows().contains(&QuickRow::ShellColour));
+    assert!(!a.hidden_rows().contains(&QuickRow::Wallpaper));
 }
 
 #[test]
-fn up_and_down_move_the_bar_and_wrap_at_the_ends() {
-    let (_d, mut a, _) = on_carousel();
-    a.apply(Action::QuickMenu);
-    press(&mut a, Btn::Up);
-    assert_eq!(
-        a.quick_menu(),
-        Some(QuickRow::About),
-        "up from the top did not wrap to the bottom"
-    );
-    for want in [
-        QuickRow::General,
-        QuickRow::Screen,
-        QuickRow::Bluetooth,
-        QuickRow::Game,
-        QuickRow::Power,
-        QuickRow::Controls,
-        QuickRow::Kids,
-        QuickRow::About,
-        QuickRow::General,
-    ] {
-        press(&mut a, Btn::Down);
-        assert_eq!(a.quick_menu(), Some(want));
+fn the_main_grid_wraps_within_rows_and_columns() {
+    let (_d,mut a,_)=on_carousel();a.apply(Action::QuickMenu);
+    for (button,want) in [(Btn::Up,QuickRow::Power),(Btn::Down,QuickRow::General),(Btn::Left,QuickRow::Game),(Btn::Right,QuickRow::General),(Btn::Right,QuickRow::Screen),(Btn::Down,QuickRow::Controls),(Btn::Right,QuickRow::Kids),(Btn::Right,QuickRow::About),(Btn::Down,QuickRow::Game)] {
+        press(&mut a,button);assert_eq!(a.quick_menu(),Some(want));
     }
 }
 
@@ -253,16 +227,18 @@ fn fast_forward_steps_through_its_speeds_wraps_at_both_ends_and_saves_each_one()
     let (d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::FastForward);
     for (btn, want) in [
-        (Btn::Left, 4),
-        (Btn::Left, 3),
-        (Btn::Left, 2),
-        (Btn::Left, 0),
+        (Btn::Left, 16),
+        (Btn::Left, 12),
+        (Btn::Left, 8),
         (Btn::Left, 6),
+        (Btn::Left, 0),
+        (Btn::Left, 24),
         (Btn::Right, 0),
-        (Btn::Right, 2),
-        (Btn::Right, 3),
-        (Btn::Right, 4),
         (Btn::Right, 6),
+        (Btn::Right, 8),
+        (Btn::Right, 12),
+        (Btn::Right, 16),
+        (Btn::Right, 24),
         (Btn::Right, 0),
     ] {
         press(&mut a, btn);
@@ -375,15 +351,10 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::Screen);
     press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::ScreenGeneral));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Brightness));
     for want in [
-        QuickRow::ScreenGba,
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
-        QuickRow::ScreenGeneral,
-        QuickRow::ScreenGba,
-        QuickRow::ScreenGbc,
-        QuickRow::ScreenGb,
+        QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
+        QuickRow::Brightness,QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
     ] {
         press(&mut a, Btn::Down);
         assert_eq!(
@@ -530,6 +501,7 @@ fn the_about_footer_puts_restart_on_the_right() {
     open_at(&mut a, QuickRow::About);
     assert!(!drawn(&frame(&a), 404), "Restart is on the menu");
     press(&mut a, Btn::A);
+    a.update(1.0);
     let out = frame(&a);
     let (lx, ly, _) = legend_box(&out, 400);
     let (rx, ry, rw) = legend_box(&out, 404);
@@ -567,13 +539,13 @@ fn confirming_the_clock_from_the_menu_sets_it_and_comes_back_to_the_menu() {
     });
     open_at(&mut a, QuickRow::DateTime);
     press(&mut a, Btn::A);
-    press(&mut a, Btn::Up);
-    for _ in 0..5 {
-        press(&mut a, Btn::Right);
-    }
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Right);
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
     press(&mut a, Btn::Down);
     let changed = a.picker().expect("not on the clock").secs() - (CLOCK_IS_SET - CLOCK_IS_SET % 60);
-    press(&mut a, Btn::A);
+    press(&mut a, Btn::Start);
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime), "{:?}", a.phase());
     assert_eq!(
         clock.get(),
@@ -654,8 +626,9 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
 fn fake_faces(a: &mut App) {
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: (0..QuickRow::ALL.len())
-            .map(|i| [(id(1000 + i), 200, 40), (id(1100 + i), 200, 40)])
+            .map(|i| {let (w,h)=if QuickRow::ALL[i].page()==QuickRow::MAIN {(112,100)}else{(200,40)};[(id(1000+i),w,h),(id(1100+i),w,h)]})
             .collect(),
         pointer: (id(700), 32, 48),
         values: (0..QuickValue::ALL.len())
@@ -712,9 +685,7 @@ fn frame(a: &App) -> Vec<Draw> {
 
 fn placed(out: &[Draw], id: usize) -> Option<[f32; 4]> {
     out.iter().find_map(|d| match *d {
-        Draw::Tex {
-            x, y, w, h, tex, ..
-        } if tex == TexId::from_raw(id) => Some([x, y, w, h]),
+        Draw::Tex {x,y,w,h,tex,..} | Draw::Part {x,y,w,h,tex,..} if tex == TexId::from_raw(id) => Some([x, y, w, h]),
         _ => None,
     })
 }
@@ -760,7 +731,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
         "the slot back is missing"
     );
     assert!(
-        !drawn(&open, 79),
+        !open.iter().any(|d|matches!(d,Draw::Tex{tex,y,h,..}|Draw::Part{tex,y,h,..}if *tex==TexId::from_raw(79) && *y<480.0 && y+h>0.0)),
         "a cart is inserted in the footer while no game is playing"
     );
     let (lx, ly, _) = legend_box(&open, 400);
@@ -774,9 +745,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
         "Open is not on the right: {right}"
     );
     assert!(!drawn(&open, 403), "Resume is on the carousel menu");
-    for _ in 0..3 {
-        press(&mut a, Btn::Down);
-    }
+    for _ in 0..3 {press(&mut a,Btn::Right);}
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::FastForward));
     for _ in 0..30 {
@@ -793,7 +762,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
         (right - (OUT_W as f32 - 16.0)).abs() < 1.0,
         "Change is not on the right: {right}"
     );
-    assert!(!drawn(&values, 79), "the value page seated a cart");
+    assert!(!values.iter().any(|d|matches!(d,Draw::Tex{tex,y,h,..}|Draw::Part{tex,y,h,..}if *tex==TexId::from_raw(79)&&*y<480.0&&y+h>0.0)), "the value page seated a cart");
 }
 
 fn strip_y(a: &App, id: usize) -> f32 {
@@ -817,13 +786,15 @@ fn the_legend_says_change_on_a_value_row_and_open_on_a_row_that_opens() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     a.apply(Action::QuickMenu);
-    for row in QuickRow::General.shown(&a.hidden_rows()) {
+    for (i,row) in QuickRow::General.shown(&a.hidden_rows()).into_iter().enumerate() {
+        a.update(1.0);
         assert_eq!(a.quick_menu(), Some(row));
         let out = frame(&a);
         assert!(drawn(&out, 400), "no B BACK on {row:?}");
         assert_eq!(drawn(&out, 401), !row.opens(), "CHANGE on {row:?}");
         assert_eq!(drawn(&out, 402), row.opens(), "OPEN on {row:?}");
-        press(&mut a, Btn::Down);
+        if i==3 {press(&mut a,Btn::Down);}
+        press(&mut a,Btn::Right);
     }
 }
 
@@ -841,20 +812,12 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
         drawn(&out, value(QuickValue::Speed6, true)),
         "6× is not lit"
     );
-    assert!(
-        drawn(&out, 4000),
-        "sound's OFF is not grey"
-    );
-    assert!(
-        drawn(&out, 4002),
-        "rumble's ON is not grey"
-    );
+    assert!(!drawn(&out, 4000) && !drawn(&out, 4002), "switches should use live vector geometry");
+    assert!(out.iter().filter(|d| matches!(d, Draw::RoundRect { w: 60.0, h: 30.0, .. })).count() >= 2);
     press(&mut a, Btn::B);
-    for _ in QuickRow::General.position(&[])..QuickRow::Game.position(&[]) {
-        press(&mut a, Btn::Up);
-    }
+    press(&mut a,Btn::Right);
     press(&mut a, Btn::A);
-    for _ in 0..QuickRow::CarouselSounds.position(&a.hidden_rows()) {
+    for _ in 0..QuickRow::ClockFormat.position(&a.hidden_rows()) {
         press(&mut a, Btn::Down);
     }
     let out = frame(&a);
@@ -866,51 +829,43 @@ fn the_arrows_stand_only_around_the_selected_rows_value() {
     assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
     let out = frame(&a);
     assert!(
-        !drawn(&out, 300) && !drawn(&out, 301),
-        "arrows on a row that opens"
+        !drawn(&out, 300) && drawn(&out, 301),
+        "an opening row keeps only its trailing disclosure"
     );
     assert!(drawn(&out, 501), "the date and time in hand is not lit");
 }
 
 #[test]
-fn the_pointer_stands_left_of_the_selected_row_and_only_it_is_lit() {
+fn the_selection_container_tracks_the_lit_row_without_a_pixel_pointer() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     a.apply(Action::QuickMenu);
-    for row in QuickRow::General.shown(&a.hidden_rows()) {
+    for (i,row) in QuickRow::General.shown(&a.hidden_rows()).into_iter().enumerate() {
+        a.update(1.0);
         let out = frame(&a);
-        let pointers: Vec<_> = out
-            .iter()
-            .filter(|d| matches!(d, Draw::Tex { tex, .. } if *tex == TexId::from_raw(700)))
-            .collect();
-        assert_eq!(pointers.len(), 1, "{row:?}: {} pointers", pointers.len());
-        let [px, py, pw, ph] = placed(&out, 700).expect("the pointer");
-        let [lx, ly, _, lh] = placed(&out, label(row, true)).expect("the lit label");
-        assert!(
-            px + pw <= lx + MENU_PAD as f32,
-            "{row:?}: the pointer runs into its label"
-        );
-        assert_eq!(
-            py + ph / 2.0,
-            ly + lh / 2.0,
-            "{row:?}: the pointer is off the row"
-        );
+        assert!(!drawn(&out, 700), "the retired pointer is still present");
+        let [lx, ly, lw, lh] = placed(&out, label(row, true)).expect("the lit label");
+        let focus = out.iter().find_map(|d| match d {
+            Draw::RoundRect { x, y, w, h, colour, .. } if *colour == slot_ui::expressive::SELECTED => Some((*x,*y,*w,*h)),
+            _ => None,
+        }).expect("the selection surface");
+        assert!((focus.0+focus.2/2.0-lx-lw/2.0).abs()<1.0);
+        assert!((focus.1 + focus.3/2.0 - ly - lh/2.0).abs() < 2.0);
         for other in QuickRow::General
             .shown(&a.hidden_rows())
             .into_iter()
-            .skip(slot_ui::quick_window(row, &a.hidden_rows()).0)
-            .take(slot_ui::QUICK_VISIBLE_ROWS)
             .filter(|r| *r != row)
         {
             assert!(drawn(&out, label(other, false)), "{other:?} is not grey");
             assert!(!drawn(&out, label(other, true)), "{other:?} is lit");
         }
-        press(&mut a, Btn::Down);
+        if i==3 {press(&mut a,Btn::Down);}
+        press(&mut a,Btn::Right);
     }
 }
 
 #[test]
-fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
+fn labels_and_live_switches_align_to_the_menu_edges() {
     let (_d, mut a, _) = on_carousel();
     fake_faces(&mut a);
     open_at(&mut a, QuickRow::FastForward);
@@ -925,8 +880,11 @@ fn labels_leave_room_for_the_pointer_and_values_end_thirty_two_pixels_in() {
         let [x, ..] = placed(&out, label(row, lit)).expect("a label was not drawn");
         assert_eq!(x + MENU_PAD as f32, QUICK_LABEL_X, "{row:?}'s label");
     }
-    let [x, _, w, _] = placed(&out, 4002).expect("rumble's switch");
-    assert_eq!(x + w - MENU_PAD as f32, right, "an unselected value");
+    let (x,w) = out.iter().find_map(|d| match d {
+        Draw::RoundRect { x, w: 60.0, h: 30.0, .. } => Some((*x,60.0)),
+        _ => None,
+    }).expect("a switch track");
+    assert_eq!(x + w, right, "switch track edge");
     let [x, _, w, _] = placed(&out, 301).expect("the right arrow");
     assert_eq!(x + w, right, "the arrow around the selected value");
 }
@@ -951,6 +909,7 @@ fn only_the_clock_from_the_menu_offers_b_back() {
     fake_faces(&mut first);
     first.set_clock_faces(TexId::from_raw(600), TexId::from_raw(601));
     first.set_clock_back_face((TexId::from_raw(602), 40));
+    first.update(1.0);
     let out = frame(&first);
     assert!(drawn(&out, 601), "the first boot clock lost its key");
     assert!(
@@ -960,7 +919,7 @@ fn only_the_clock_from_the_menu_offers_b_back() {
 }
 
 #[test]
-fn brightness_steps_from_one_to_nine_and_never_to_zero() {
+fn brightness_steps_from_zero_to_nine() {
     let (d, mut a, _) = on_carousel_with(SlotState {
         brightness: 3,
         ..SlotState::default()
@@ -970,7 +929,12 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
         a.quick_value(QuickRow::Brightness),
         Some(QuickValue::Level3)
     );
-    for (btn, want) in [(Btn::Left, 2), (Btn::Left, 1), (Btn::Left, 1)] {
+    for (btn, want) in [
+        (Btn::Left, 2),
+        (Btn::Left, 1),
+        (Btn::Left, 0),
+        (Btn::Left, 0),
+    ] {
         press(&mut a, btn);
         assert_eq!(a.brightness(), want, "{btn:?}");
     }
@@ -980,22 +944,6 @@ fn brightness_steps_from_one_to_nine_and_never_to_zero() {
     assert_eq!(a.brightness(), 9);
     a.flush_state();
     assert_eq!(read_slot_state(d.path()).brightness, 9);
-
-    let (_d, mut a, _) = on_carousel_with(SlotState {
-        brightness: 1,
-        ..SlotState::default()
-    });
-    a.apply(Action::BrightnessDown);
-    assert_eq!(a.brightness(), 0);
-    open_at(&mut a, QuickRow::Brightness);
-    assert_eq!(
-        a.quick_value(QuickRow::Brightness),
-        Some(QuickValue::Level0)
-    );
-    press(&mut a, Btn::Left);
-    assert_eq!(a.brightness(), 0, "Left at 0 moved the backlight");
-    press(&mut a, Btn::Right);
-    assert_eq!(a.brightness(), 1);
 }
 
 #[test]
@@ -1003,10 +951,10 @@ fn blue_light_steps_off_to_nine() {
     let (_d, mut a, _) = on_carousel();
     open_at(&mut a, QuickRow::BlueLight);
     assert_eq!(a.blue_light(), 0);
-    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Off));
+    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Warm0));
     press(&mut a, Btn::Right);
     assert_eq!(a.blue_light(), 1);
-    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Level1));
+    assert_eq!(a.quick_value(QuickRow::BlueLight), Some(QuickValue::Warm1));
     press(&mut a, Btn::Left);
     press(&mut a, Btn::Left);
     assert_eq!(a.blue_light(), 0);
@@ -1053,6 +1001,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
     let (_d, mut a) = on_own_wallpaper(slot_store::WallpaperTint::Off);
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: QuickRow::ALL
             .iter()
             .enumerate()
@@ -1127,29 +1076,20 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
 }
 
 #[test]
-fn the_about_label_sits_on_the_same_tinted_ground_as_the_menu() {
-    let (_d, mut a, _) = on_carousel();
+fn about_and_settings_keep_the_wallpaper_without_a_second_dark_backdrop() {
+    let (_d,mut a,_)=on_carousel();
     fake_faces(&mut a);
-    a.set_ground(TexId::from_raw(800));
-    a.set_blur(TexId::from_raw(801));
-    open_at(&mut a, QuickRow::About);
-    let menu = frame(&a);
-    press(&mut a, Btn::A);
-    assert!(matches!(a.phase(), Phase::About), "{:?}", a.phase());
-    let about = frame(&a);
-    assert!(
-        matches!(menu[0], Draw::Part { tex, .. } if tex == TexId::from_raw(801)),
-        "the menu is not on the blurred wallpaper"
-    );
-    assert!(
-        matches!(menu[1], Draw::Rect { colour, .. } if colour[..3] == [0.0; 3] && colour[3] > 0.5),
-        "the menu's wallpaper is not tinted"
-    );
-    assert_eq!(
-        about[..2],
-        menu[..2],
-        "the About label is not on the menu's tinted ground"
-    );
+    a.set_ground(TexId::from_raw(800));a.set_blur(TexId::from_raw(801));
+    open_at(&mut a,QuickRow::About);
+    let menu=frame(&a);
+    press(&mut a,Btn::A);
+    assert!(matches!(a.phase(),Phase::About));
+    let about=frame(&a);
+    for out in [&menu,&about] {
+        assert!(out.iter().any(|d|matches!(d,Draw::Lava{..})),"scene wallpaper missing");
+        assert!(!out.iter().any(|d|matches!(d,Draw::Part{tex,..}if *tex==TexId::from_raw(801))),"extra blur layer");
+        assert!(!out.iter().any(|d|matches!(d,Draw::Rect{colour,..}if colour[..3]==[0.0;3]&&colour[3]>0.5)),"extra dark backdrop");
+    }
 }
 
 fn on_own_wallpaper(tint: slot_store::WallpaperTint) -> (TempDir, App) {
@@ -1201,7 +1141,6 @@ fn wallpaper_tint_hides_until_a_wallpaper_of_your_own_is_picked() {
     press(&mut a, Btn::Up);
     for (pick, shown) in [
         (WallpaperPick::Static, false),
-        (WallpaperPick::Blur, false),
         (WallpaperPick::File("a.png".into()), true),
         (WallpaperPick::None, false),
         (WallpaperPick::Random, true),
@@ -1375,10 +1314,9 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
     open_at(&mut a, QuickRow::ShellColour);
     assert_eq!(
         a.quick_value(QuickRow::ShellColour),
-        Some(QuickValue::MatchTheme)
+        Some(QuickValue::Graphite)
     );
     for (colour, value) in [
-        (ShellColour::Graphite, QuickValue::Graphite),
         (ShellColour::Platinum, QuickValue::Platinum),
         (ShellColour::PearlBlue, QuickValue::PearlBlue),
         (ShellColour::PearlPink, QuickValue::PearlPink),
@@ -1388,9 +1326,10 @@ fn shell_colour_cycles_persists_and_stays_independent_of_text_theme() {
         assert_eq!(a.shell_colour(), colour);
         assert_eq!(read_slot_state(d.path()).shell_colour, colour);
     }
-    press(&mut a, Btn::Down); // Theme
-    press(&mut a, Btn::Right);
-    assert!(a.light());
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::ShellColour),Some(QuickValue::Graphite));
+    press(&mut a,Btn::Left);
+    assert!(!a.hidden_rows().contains(&QuickRow::Theme));
     assert_eq!(a.shell_colour(), ShellColour::PearlPink);
     let (b, _) = app_booting_at(d.path(), CLOCK_IS_SET);
     assert_eq!(b.shell_colour(), ShellColour::PearlPink);
@@ -1401,7 +1340,7 @@ fn clock_battery_and_audio_stay_at_the_top_on_carousel_and_settings_pages() {
     for page in [
         None,
         Some(QuickRow::General),
-        Some(QuickRow::Theme),
+        Some(QuickRow::ShellColour),
         Some(QuickRow::Bluetooth),
         Some(QuickRow::DateTime),
         Some(QuickRow::About),
@@ -1504,4 +1443,140 @@ fn control_pages_keep_the_selected_shell_and_compact_button_hints() {
     assert!(hints
         .iter()
         .all(|(y, h)| *h == slot_ui::MENU_HINT_H as f32 && y + h < OUT_H as f32 - MOUTH_H));
+}
+
+#[test]
+fn about_remains_present_and_opaque_while_back_reverses_its_travel() {
+    let (_d,mut a,_)=on_carousel();fake_faces(&mut a);
+    a.set_sticker_face(TexId::from_raw(9001));open_at(&mut a,QuickRow::About);
+    press(&mut a,Btn::A);a.update(0.06);
+    let incoming=frame(&a);assert!(drawn(&incoming,9001));
+    press(&mut a,Btn::B);a.update(0.0);
+    let outgoing=frame(&a);assert!(drawn(&outgoing,9001),"Back must retain the outgoing sheet");
+    assert!(outgoing.iter().filter_map(|d|match d {Draw::Tex{tex,alpha,..}|Draw::Part{tex,alpha,..} if *tex==TexId::from_raw(9001)=>Some(*alpha),_=>None}).all(|a|a==1.0));
+    a.update(1.0);assert!(!drawn(&frame(&a),9001));
+}
+
+#[test]
+fn full_menu_legends_stay_anchored_while_the_sheet_opens_and_closes() {
+    let (_d,mut a,_)=on_carousel();fake_faces(&mut a);a.apply(Action::QuickMenu);a.update(0.0);
+    let alpha=|out:&[Draw]|out.iter().find_map(|d|match d {Draw::Tex{tex,alpha,..} if *tex==TexId::from_raw(400)=>Some(*alpha),_=>None}).unwrap_or(0.0);
+    assert_eq!(alpha(&frame(&a)),0.0);
+    a.update(0.04);let arriving=frame(&a);let y=legend_box(&arriving,400).1;let first=alpha(&arriving);assert!(first>0.0&&first<1.0);
+    a.update(1.0);let resting=frame(&a);assert_eq!(legend_box(&resting,400).1,y);assert_eq!(alpha(&resting),1.0);
+    a.apply(Action::QuickMenu);a.update(0.04);let leaving=frame(&a);assert_eq!(legend_box(&leaving,400).1,y);assert!(alpha(&leaving)>0.0&&alpha(&leaving)<1.0);
+    a.update(1.0);assert!(!drawn(&frame(&a),400));
+}
+
+#[test]
+fn display_sliders_repeat_when_held_and_stop_on_release() {
+    for row in [QuickRow::Brightness,QuickRow::BlueLight] {
+        let (_,mut a,_)=on_carousel_with(SlotState{brightness:0,blue_light:0,..Default::default()});
+        open_at(&mut a,row);
+        a.apply(Action::GbaDown(Btn::Right));
+        for _ in 0..20 {a.update(0.05);}
+        let value=a.quick_value(row);
+        assert_ne!(value,Some(if row==QuickRow::Brightness{QuickValue::level(1)}else{QuickValue::temperature(1)}));
+        a.apply(Action::GbaUp(Btn::Right));
+        for _ in 0..20 {a.update(0.05);}
+        assert_eq!(a.quick_value(row),value);
+    }
+}
+
+#[test]
+fn both_sound_sliders_repeat_on_hold_and_stop_on_release() {
+    let (d,mut a,_)=on_carousel();
+    a.bluetooth=Some(slot::bluetooth::Manager::new(d.path().into(),false));
+    press(&mut a,Btn::Down);press(&mut a,Btn::Down);
+    a.apply(Action::GbaDown(Btn::Right));
+    for _ in 0..20 {a.update(0.05);}
+    let disconnect=a.bluetooth.as_ref().unwrap().disconnect_volume;
+    assert!(disconnect>5);
+    a.apply(Action::GbaUp(Btn::Right));
+    for _ in 0..20 {a.update(0.05);}
+    assert_eq!(a.bluetooth.as_ref().unwrap().disconnect_volume,disconnect);
+    press(&mut a,Btn::Up);press(&mut a,Btn::Up);
+    assert!(a.bluetooth.as_ref().unwrap().volume_selected());
+    a.apply(Action::GbaDown(Btn::Left));
+    let tapped=a.volume();
+    for _ in 0..20 {a.update(0.05);}
+    assert!(a.volume()<tapped);
+    a.apply(Action::GbaUp(Btn::Left));
+    let stopped=a.volume();
+    for _ in 0..20 {a.update(0.05);}
+    assert_eq!(a.volume(),stopped);
+}
+
+#[test]
+fn closing_main_menu_is_occluded_by_the_physical_slot() {
+    let (_d,mut a,_)=on_carousel();let back=TexId::from_raw(8001);let front=TexId::from_raw(8002);
+    a.set_slot_faces(back,front);a.set_ground(TexId::from_raw(8003));
+    a.apply(Action::QuickMenu);a.update(1.0);press(&mut a,Btn::B);a.update(0.016);
+    let mut out=vec![];a.draw(&mut out);
+    let bay=out.iter().rposition(|d|matches!(d,Draw::Part{tex,..}if *tex==front)).unwrap();
+    let scene=out.iter().rposition(|d|matches!(d,Draw::Lava{..})).unwrap();
+    assert!(bay>scene,"the menu was drawn on top of the cartridge bay");
+}
+
+#[test]
+fn wallpaper_stays_beneath_the_transparent_slot_edges_after_menu_settles() {
+    let (_d,mut a,_)=on_carousel();
+    a.set_ground(TexId::from_raw(8200));
+    a.set_slot_faces(TexId::from_raw(8201),TexId::from_raw(8202));
+    a.apply(Action::QuickMenu);
+    for dt in [0.0,0.016,0.1,1.0] {
+        a.update(dt);
+        assert!(frame(&a).iter().any(|d|matches!(d,Draw::Lava{w,h,..}if *w==a.canvas().w&&*h==480.0)),"wallpaper disappeared at {dt}");
+    }
+    press(&mut a,Btn::A);a.update(1.0);
+    assert!(frame(&a).iter().any(|d|matches!(d,Draw::Lava{..})));
+    press(&mut a,Btn::B);press(&mut a,Btn::B);a.update(0.016);
+    assert!(frame(&a).iter().any(|d|matches!(d,Draw::Lava{..})));
+}
+
+#[test]
+fn clock_and_carousel_choices_change_and_persist() {
+    let (d,mut a,_)=on_carousel();
+    open_at(&mut a,QuickRow::ClockFormat);
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::ClockFormat),Some(QuickValue::Hour12));
+    assert!(read_slot_state(d.path()).clock_12h);
+    press(&mut a,Btn::A);
+    assert_eq!(a.quick_value(QuickRow::ClockFormat),Some(QuickValue::Hour24));
+    press(&mut a,Btn::B);press(&mut a,Btn::B);
+    open_at(&mut a,QuickRow::CarouselMotion);
+    press(&mut a,Btn::Right);
+    assert_eq!(a.quick_value(QuickRow::CarouselMotion),Some(QuickValue::Classic));
+    assert!(!read_slot_state(d.path()).carousel_wheel);
+    press(&mut a,Btn::A);
+    assert_eq!(a.quick_value(QuickRow::CarouselMotion),Some(QuickValue::Wheel));
+}
+
+#[test]
+fn games_retreat_once_stay_offscreen_on_subpages_and_return_continuously(){
+    let (_d,mut app,_)=on_carousel();for shelf in 0..6{for i in 0..8{app.set_cart_face(shelf,i,TexId::from_raw(7900));}}
+    let y=|app:&App|frame(app).iter().filter_map(|d|match d{Draw::Tex{tex,y,..}|Draw::Part{tex,y,..}if *tex==TexId::from_raw(7900)=>Some(*y),_=>None}).fold(f32::INFINITY,f32::min);
+    let rest=y(&app);app.apply(Action::QuickMenu);app.update(0.06);let departing=y(&app);assert!(departing>rest);app.update(1.0);let parked=y(&app);assert!(parked>480.0);
+    press(&mut app,Btn::A);app.update(0.1);assert!((y(&app)-parked).abs()<0.1);press(&mut app,Btn::B);press(&mut app,Btn::B);app.update(0.06);let returning=y(&app);assert!(returning>rest&&returning<parked);app.update(1.0);assert!((y(&app)-rest).abs()<0.1);
+}
+
+#[test]
+fn the_hardware_bay_stays_present_on_every_settings_drawing_path() {
+    for row in [QuickRow::General,QuickRow::BootAnimation,QuickRow::Brightness,QuickRow::GbcShader,QuickRow::FastForward,QuickRow::LidClose,QuickRow::GameUp,QuickRow::ScSave,QuickRow::Bluetooth,QuickRow::Kids,QuickRow::DisplaySchedule,QuickRow::DateTime,QuickRow::About] {
+        let (_d,mut a,_)=on_carousel();fake_faces(&mut a);a.set_slot_faces(TexId::from_raw(77),TexId::from_raw(78));open_at(&mut a,row);
+        if matches!(row,QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::DateTime|QuickRow::About){press(&mut a,Btn::A);}
+        if let Some(menu)=&mut a.bluetooth {menu.face=Some(TexId::from_raw(9000));}
+        if let Some(menu)=&mut a.kid_menu {menu.face=Some(TexId::from_raw(9000));}
+        if let Some(menu)=&mut a.display_schedule {menu.face=Some(TexId::from_raw(9000));}
+        a.update(1.0);
+        for tex in [77,78] {assert!(drawn(&frame(&a),tex),"hardware bay missing on {row:?}");}
+    }
+}
+#[test]
+fn closing_settings_keeps_one_carousel_label_at_a_continuous_position() {
+    let (_d,mut a,_)=on_carousel_with(SlotState{show_titles:true,..Default::default()});fake_faces(&mut a);
+    a.set_shelf_title_face(TexId::from_raw(9500),120);a.update(1.0);a.apply(Action::QuickMenu);a.update(1.0);frame(&a);
+    a.apply(Action::QuickMenu);
+    let mut last=None;
+    for _ in 0..45 {a.update(1.0/60.0);let out=frame(&a);let labels:Vec<_>=out.iter().filter_map(|d|match d{Draw::Tex{y,tex,alpha,..}if *tex==TexId::from_raw(9500)=>Some((*y,*alpha)),_=>None}).collect();assert_eq!(labels.len(),1,"the returning carousel was drawn twice");let y=labels[0].0;if let Some(old)=last{assert!(y<=old+0.001,"carousel label reversed/jumped while returning");assert!(old-y<130.0,"carousel label snapped to its destination");}last=Some(y);}
 }

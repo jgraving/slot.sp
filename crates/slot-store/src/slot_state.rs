@@ -12,11 +12,14 @@ pub const VOLUME_MAX: u8 = 100;
 pub const UTC_OFFSET_MIN: i16 = -720;
 pub const UTC_OFFSET_MAX: i16 = 840;
 
-pub const FF_SPEEDS: [u8; 5] = [0, 2, 3, 4, 6];
+// Runtime speeds are measured in quarter frames; card files keep human-readable multipliers.
+pub const FF_SPEEDS: [u8; 6] = [0, 6, 8, 12, 16, 24];
+
+const FF_SPEED_TEXT: [&str; 6] = ["0", "1.5", "2", "3", "4", "6"];
 
 pub const LID_OFF_MIN: [u8; 6] = [1, 3, 5, 10, 15, 30];
 
-pub const FF_SPEED_DEFAULT: u8 = 6;
+pub const FF_SPEED_DEFAULT: u8 = 24;
 
 pub const RECENTS_MAX: usize = 10;
 
@@ -149,7 +152,7 @@ impl WallpaperPick {
             "random" => WallpaperPick::Random,
             "" | "default" => WallpaperPick::Default,
             "static_gradient" => WallpaperPick::Static,
-            "default_blur" => WallpaperPick::Blur,
+            "default_blur" => WallpaperPick::Default,
             other => WallpaperPick::File(other.to_string()),
         }
     }
@@ -213,6 +216,8 @@ pub struct SlotState {
     pub muted: bool,
     pub muted_hp: bool,
     pub clock_set: bool,
+    pub clock_12h: bool,
+    pub carousel_wheel: bool,
     pub utc_offset_min: i16,
     pub rumble: bool,
     pub ff_speed: u8,
@@ -235,6 +240,8 @@ pub struct SlotState {
     pub wallpaper_tint: WallpaperTint,
     pub show_recents: bool,
     pub show_titles: bool,
+    pub clean_titles: bool,
+    pub favorite_sort: crate::FavoriteSort,
     pub boot_animation: bool,
     pub carousel_sounds: bool,
     pub left_stick_dpad: bool,
@@ -362,6 +369,8 @@ impl Default for SlotState {
             muted: false,
             muted_hp: false,
             clock_set: false,
+            clock_12h: false,
+            carousel_wheel: true,
             utc_offset_min: 0,
             rumble: true,
             ff_speed: FF_SPEED_DEFAULT,
@@ -384,6 +393,8 @@ impl Default for SlotState {
             wallpaper_tint: WallpaperTint::Off,
             show_recents: false,
             show_titles: false,
+            clean_titles: true,
+            favorite_sort: crate::FavoriteSort::default(),
             boot_animation: true,
             carousel_sounds: true,
             left_stick_dpad: true,
@@ -463,7 +474,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.clock_set as u8,
         s.utc_offset_min,
         s.rumble as u8,
-        s.ff_speed,
+        ff_speed_text(s.ff_speed),
         s.ff_sound as u8,
         s.colour_correction_gba as u8,
         s.colour_correction_gb as u8,
@@ -477,6 +488,7 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
         s.appearance.name(),
         s.wallpaper.key()
     );
+    text.push_str(&format!("clock_12h={}\ncarousel_wheel={}\n",s.clock_12h as u8,s.carousel_wheel as u8));
     text.push_str(&format!(
         "colour_correction_gbc={}\n",
         s.colour_correction_gbc as u8
@@ -486,6 +498,8 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
     text.push_str(&format!("wallpaper_tint={}\n", s.wallpaper_tint.key()));
     text.push_str(&format!("show_recents={}\n", s.show_recents as u8));
     text.push_str(&format!("show_titles={}\n", s.show_titles as u8));
+    text.push_str(&format!("clean_titles={}\n", s.clean_titles as u8));
+    text.push_str(&format!("favorite_sort={}\n", s.favorite_sort.key()));
     text.push_str(&format!("boot_animation={}\n", s.boot_animation as u8));
     text.push_str(&format!("carousel_sounds={}\n", s.carousel_sounds as u8));
     text.push_str(&format!("left_stick_dpad={}\n", s.left_stick_dpad as u8));
@@ -526,6 +540,8 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut muted = None;
     let mut muted_hp = None;
     let mut clock_set = None;
+    let mut clock_12h = false;
+    let mut carousel_wheel = true;
     let mut utc_offset_min = None;
     let mut rumble = None;
     let mut ff_speed = None;
@@ -549,6 +565,8 @@ fn parse(text: &str) -> Option<SlotState> {
     let mut wallpaper_tint = None;
     let mut show_recents = None;
     let mut show_titles = None;
+    let mut clean_titles = None;
+    let mut favorite_sort = None;
     let mut boot_animation = None;
     let mut carousel_sounds = None;
     let mut left_stick_dpad = None;
@@ -582,6 +600,8 @@ fn parse(text: &str) -> Option<SlotState> {
             "volume_hp" => volume_hp = Some(level(value, VOLUME_MAX)?),
             "muted" => muted = Some(level(value, 1)? == 1),
             "muted_hp" => muted_hp = Some(level(value, 1)? == 1),
+            "clock_12h" => clock_12h = flag(value).unwrap_or(false),
+            "carousel_wheel" => carousel_wheel = flag(value).unwrap_or(true),
             "clock_set" => clock_set = Some(level(value, 1)? == 1),
             "utc_offset_min" => utc_offset_min = Some(offset(value)?),
             "rumble" => rumble = flag(value),
@@ -604,6 +624,8 @@ fn parse(text: &str) -> Option<SlotState> {
             "wallpaper_tint" => wallpaper_tint = WallpaperTint::parse(value),
             "show_recents" => show_recents = flag(value),
             "show_titles" => show_titles = flag(value),
+            "clean_titles" => clean_titles = flag(value),
+            "favorite_sort" => favorite_sort = crate::FavoriteSort::parse(value),
             "boot_animation" => boot_animation = flag(value),
             "carousel_sounds" => carousel_sounds = flag(value),
             "left_stick_dpad" => left_stick_dpad = flag(value),
@@ -635,6 +657,8 @@ fn parse(text: &str) -> Option<SlotState> {
         muted: muted?,
         muted_hp: muted_hp.or(muted)?,
         clock_set: clock_set?,
+        clock_12h,
+        carousel_wheel,
         utc_offset_min: utc_offset_min?,
         rumble: rumble.unwrap_or(fallback.rumble),
         ff_speed: ff_speed.unwrap_or(fallback.ff_speed),
@@ -664,6 +688,8 @@ fn parse(text: &str) -> Option<SlotState> {
         wallpaper_tint: wallpaper_tint.unwrap_or(fallback.wallpaper_tint),
         show_recents: show_recents.unwrap_or(fallback.show_recents),
         show_titles: show_titles.unwrap_or(fallback.show_titles),
+        clean_titles: clean_titles.unwrap_or(fallback.clean_titles),
+        favorite_sort: favorite_sort.unwrap_or_default(),
         boot_animation: boot_animation.unwrap_or(fallback.boot_animation),
         carousel_sounds: carousel_sounds.unwrap_or(fallback.carousel_sounds),
         left_stick_dpad: left_stick_dpad.unwrap_or(fallback.left_stick_dpad),
@@ -705,7 +731,15 @@ fn offset(value: &str) -> Option<i16> {
 }
 
 fn ff_speed_value(value: &str) -> Option<u8> {
-    value.parse().ok().filter(|n| FF_SPEEDS.contains(n))
+    FF_SPEED_TEXT
+        .iter()
+        .position(|t| *t == value)
+        .map(|i| FF_SPEEDS[i])
+}
+
+fn ff_speed_text(speed: u8) -> &'static str {
+    let at = |speed| FF_SPEEDS.iter().position(|s| *s == speed);
+    FF_SPEED_TEXT[at(speed).or(at(FF_SPEED_DEFAULT)).unwrap_or(0)]
 }
 
 fn level(value: &str, max: u8) -> Option<u8> {

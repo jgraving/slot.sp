@@ -120,6 +120,7 @@ precision mediump float;
 uniform sampler2D u_tex;
 uniform vec4 u_colour;
 uniform float u_lava;
+uniform vec3 u_round;
 uniform vec4 u_flow0;
 uniform vec4 u_flow1;
 uniform vec4 u_flow2;
@@ -139,7 +140,11 @@ vec2 eddy(vec2 p, vec4 flow) {
     return vec2(-q.y, q.x) / (0.06 + dot(q, q));
 }
 void main() {
-    if (u_lava < 0.5) {
+    if (u_round.z > 0.0) {
+        vec2 q = abs((v_uv - 0.5) * (u_round.xy + vec2(2.0))) - u_round.xy * 0.5 + u_round.z;
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - u_round.z;
+        FRAG_COLOR = vec4(u_colour.rgb, u_colour.a * (1.0 - smoothstep(-0.7, 0.7, d)));
+    } else if (u_lava < 0.5) {
         FRAG_COLOR = texture2D(u_tex, v_uv) * u_colour;
     } else {
         float calm = 1.0 - smoothstep(0.54, 0.90, v_uv.y);
@@ -161,7 +166,19 @@ void main() {
         vec3 glow = dye * min(field.x, 1.8) * 0.075;
         vec3 base = vec3(14.0, 21.0, 35.0) / 255.0;
         float grain = fract(dot(floor(v_uv * vec2(720.0, 480.0)), vec2(0.75487766, 0.56984029))) - 0.5;
-        FRAG_COLOR = vec4(base + calm * (glow + liquid * body) + grain * (0.8 / 255.0), 1.0);
+        vec3 colour = base + calm * (glow + liquid * body);
+        if (u_lava > 1.5) {
+            // The same convection in a light palette: mint, sky and lavender
+            // flow over a pale neutral base, including behind dark UI text.
+            vec3 pale = (vec3(0.57, 0.77, 0.68) * (a.x + e.x)
+                       + vec3(0.74, 0.64, 0.82) * (b.x + d.x + f.x)
+                       + vec3(0.57, 0.72, 0.85) * c.x) / max(field.x, 0.001);
+            vec3 paper = vec3(232.0, 227.0, 216.0) / 255.0;
+            float depth = body * (0.78 + 0.16 * (1.0 - diffuse));
+            colour = mix(paper, pale, calm * depth);
+            colour += calm * body * sheen * 0.012;
+        }
+        FRAG_COLOR = vec4(colour + grain * (0.8 / 255.0), 1.0);
     }
 }
 "#;

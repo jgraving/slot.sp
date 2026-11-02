@@ -154,9 +154,10 @@ fn the_offset_is_part_of_the_line_of_type() {
 fn confirming_persists_the_offset_and_sets_the_platform_to_utc() {
     let d = tmp_root_with_carts(&["Emerald"]);
     let (mut a, clock) = app_booting_at(d.path(), 1_700_000_000);
-    for _ in 0..8 {
-        a.apply(Action::GbaDown(Btn::Right));
-    }
+    a.apply(Action::GbaDown(Btn::Right));
+    a.apply(Action::GbaDown(Btn::Right));
+    a.apply(Action::GbaDown(Btn::Down));
+    a.apply(Action::GbaDown(Btn::A));
     for _ in 0..4 {
         a.apply(Action::GbaDown(Btn::Down));
     }
@@ -269,7 +270,7 @@ fn confirming_the_clock_untouched_leaves_it_where_it_is() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (_d, mut a, clock) = clock_screen(way);
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR,
@@ -283,13 +284,13 @@ fn confirming_the_clock_untouched_leaves_it_where_it_is() {
 fn changing_the_minute_moves_the_clock_by_exactly_that_minute() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (_d, mut a, clock) = clock_screen(way);
-        for _ in 0..4 {
-            a.apply(Action::GbaDown(Btn::Right));
-        }
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Down));
         assert_eq!(a.picker().expect("on the clock").cursor(), Field::Minute);
+        a.apply(Action::GbaDown(Btn::A));
         a.apply(Action::GbaDown(Btn::Up));
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR + 60,
@@ -304,12 +305,13 @@ fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (d, mut a, clock) = clock_screen(way);
         let before = a.picker().expect("on the clock").offset_min();
-        for _ in 0..5 {
-            a.apply(Action::GbaDown(Btn::Right));
-        }
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Right));
+        a.apply(Action::GbaDown(Btn::Down));
+        a.apply(Action::GbaDown(Btn::A));
         a.apply(Action::GbaDown(Btn::Down));
         clock.advance(OPEN_FOR);
-        a.apply(Action::GbaDown(Btn::A));
+        a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
             AT + OPEN_FOR + 30 * 60,

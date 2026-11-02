@@ -340,13 +340,17 @@ pub fn slot_name_y() -> f32 {
 }
 
 pub fn draw_slot_name(canvas: Canvas, name: Printed, alpha: f32, out: &mut Vec<Draw>) {
+    draw_slot_name_sized(canvas,name,HINT_H,alpha,out);
+}
+
+pub fn draw_slot_name_sized(canvas:Canvas,name:Printed,height:u32,alpha:f32,out:&mut Vec<Draw>) {
     let (Some(tex), true) = (name.face, alpha > 0.0) else {
         return;
     };
-    let (w, h) = (name.w as f32, HINT_H as f32);
+    let (w, h) = (name.w as f32, height as f32);
     out.push(Draw::Tex {
         x: canvas.centred(w),
-        y: slot_name_y(),
+        y: OUT_H as f32-MOUTH_H-h-SLOT_NAME_GAP,
         w,
         h,
         tex,

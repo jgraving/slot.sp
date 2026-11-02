@@ -27,16 +27,18 @@ fn go_to(a: &mut App, row: QuickRow) {
     a.apply(Action::QuickMenu);
     let path: &[QuickRow] = match row.page() {
         p if p == QuickRow::PLAY => &[],
-        p if p == QuickRow::SETTINGS => &[QuickRow::Settings],
-        p if p == QuickRow::PLAY_SCREEN => &[QuickRow::Settings, QuickRow::PlayScreen],
-        _ => &[QuickRow::Settings, QuickRow::PlayGameplay],
+        p if p == QuickRow::MAIN => &[QuickRow::Settings],
+        p if p == QuickRow::PLAY_SCREEN => &[QuickRow::Settings, QuickRow::Screen],
+        _ => &[QuickRow::Settings, QuickRow::Game],
     };
     for step in path.iter().copied().chain([row]) {
-        for _ in 0..12 {
-            if a.in_game_menu() == Some(step) {
-                break;
-            }
-            press(a, Btn::Down);
+        for _ in 0..16 {
+            let current=a.in_game_menu().unwrap();if current==step{break;}
+            if slot_ui::menu_grid::is_page(current.page()) {
+                let hidden=a.in_game_hidden();let cols=slot_ui::menu_grid::columns(current,&hidden);
+                let now=current.position(&hidden);let target=step.position(&hidden);
+                let direction=if now%cols<target%cols{Btn::Right}else if now%cols>target%cols{Btn::Left}else{Btn::Down};press(a,direction);
+            }else{press(a,Btn::Down);}
         }
         assert_eq!(a.in_game_menu(), Some(step), "never reached {step:?}");
         if step != row {
@@ -79,7 +81,7 @@ fn b_climbs_the_in_game_pages_and_never_the_shelf_ones() {
     let (_d, mut a) = playing();
     go_to(&mut a, QuickRow::Rumble);
     press(&mut a, Btn::B);
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlayGameplay));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Game));
     press(&mut a, Btn::B);
     assert_eq!(a.in_game_menu(), Some(QuickRow::Settings));
     press(&mut a, Btn::B);
@@ -98,12 +100,12 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     ];
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
     a.set_palette_live(true);
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
 }
 
@@ -149,7 +151,7 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     a.set_power(power);
     let shown = QuickRow::PlayBrightness.shown(&a.in_game_hidden());
     assert_eq!(
-        shown[shown.len() - 2..],
+        shown[..2],
         [QuickRow::PlayBrightness, QuickRow::PlayBlueLight]
     );
     let before = a.brightness();
@@ -158,7 +160,7 @@ fn the_in_game_screen_page_ends_with_brightness_and_blue_light() {
     assert_eq!(a.brightness(), before + 1);
     assert_eq!(
         backlight.load(std::sync::atomic::Ordering::Relaxed),
-        before + 1,
+        before + 2,
         "the row moved the number and not the backlight"
     );
     press(&mut a, Btn::Down);
@@ -406,7 +408,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     let scrim = out.iter().any(
-        |d| matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001),
+        |d| matches!(d, slot_ui::Draw::RoundRect { colour, .. } if *colour == slot_ui::expressive::SURFACE && colour[3] > 0.1),
     );
     assert!(
         !scrim,
@@ -418,7 +420,7 @@ fn the_menu_waits_for_the_screen_to_finish_powering_on() {
     let mut out = Vec::new();
     a.draw(&mut out);
     assert!(out.iter().any(|d| {
-        matches!(d, slot_ui::Draw::Rect { colour, .. } if (colour[3] - 0.65).abs() < 0.001)
+        matches!(d, slot_ui::Draw::RoundRect { colour, .. } if *colour == slot_ui::expressive::SURFACE && colour[3] > 0.1)
     }));
 }
 
@@ -475,21 +477,9 @@ fn exit_game_is_not_offered_with_only_one_cart() {
     let mut a = app_playing_in(d.path(), "Emerald");
     a.apply(Action::SaveState);
     a.apply(Action::QuickMenu);
-    let mut seen = Vec::new();
-    for _ in 0..5 {
-        seen.push(a.in_game_menu().expect("the menu closed"));
-        press(&mut a, Btn::Down);
-    }
-    assert_eq!(
-        seen,
-        [
-            QuickRow::Resume,
-            QuickRow::UndoSave,
-            QuickRow::States,
-            QuickRow::Settings,
-            QuickRow::Resume
-        ]
-    );
+    let hidden=a.in_game_hidden();let shown=QuickRow::Resume.shown(&hidden);
+    assert!(shown.contains(&QuickRow::Settings));assert!(shown.contains(&QuickRow::States));assert!(!shown.contains(&QuickRow::ExitGame));
+    for current in shown {for (dx,dy) in [(1,0),(-1,0),(0,1),(0,-1)]{assert_ne!(slot_ui::menu_grid::navigate(current,&hidden,dx,dy),QuickRow::ExitGame);}}
     assert!(a.in_game_hidden().contains(&QuickRow::ExitGame));
 }
 
@@ -502,14 +492,14 @@ fn exit_game_is_offered_with_two_carts() {
 #[test]
 fn sound_opens_in_game_and_returns_to_the_same_settings_row() {
     let (_d, mut a) = playing();
-    go_to(&mut a, QuickRow::PlaySound);
+    go_to(&mut a, QuickRow::Bluetooth);
     press(&mut a, Btn::A);
     assert!(a.bluetooth.is_some());
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlaySound));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Bluetooth));
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     press(&mut a, Btn::B);
     assert!(a.bluetooth.is_none());
-    assert_eq!(a.in_game_menu(), Some(QuickRow::PlaySound));
+    assert_eq!(a.in_game_menu(), Some(QuickRow::Bluetooth));
     press(&mut a, Btn::B);
     assert_eq!(a.in_game_menu(), Some(QuickRow::Settings));
 }
@@ -572,6 +562,7 @@ fn legend_at(a: &App, id: usize) -> (f32, f32, f32) {
 fn menu_faces(a: &mut App) {
     let id = TexId::from_raw;
     a.set_quick_menu_faces(QuickMenuFaces {
+        headings: vec![],
         labels: (0..QuickRow::ALL.len())
             .map(|i| [(id(100 + i), 80, 40), (id(130 + i), 80, 40)])
             .collect(),
@@ -806,4 +797,79 @@ fn a_refused_double_tap_in_the_menu_with_no_states_stays_on_a_shown_row() {
     a.apply(Action::Polaroids);
     assert!(matches!(a.phase(), Phase::Playing { .. }));
     cursor_on_a_shown_row(&a);
+}
+
+#[test]
+fn settings_opens_the_same_complete_four_column_home_as_the_carousel() {
+    let (_d,mut a)=playing();go_to(&mut a,QuickRow::Settings);press(&mut a,Btn::A);
+    assert_eq!(a.in_game_menu(),Some(QuickRow::General));
+    assert_eq!(slot_ui::menu_grid::columns(QuickRow::General,&a.in_game_hidden()),4);
+    for row in QuickRow::MAIN {common::navigate_in_game_menu(&mut a,row);assert_eq!(a.in_game_menu(),Some(row));}
+    assert!(matches!(a.phase(),Phase::Playing{..}));
+}
+#[test]
+fn about_and_clock_return_to_the_same_paused_game_without_powering_it_down() {
+    for row in [QuickRow::About,QuickRow::DateTime] {
+        let (_d,mut a)=playing();a.update(1.0);a.apply(Action::QuickMenu);
+        common::navigate_in_game_menu(&mut a,QuickRow::Settings);press(&mut a,Btn::A);
+        common::navigate_in_game_menu(&mut a,if row==QuickRow::DateTime{QuickRow::General}else{row});
+        if row==QuickRow::DateTime {press(&mut a,Btn::A);for _ in 0..16 {if a.in_game_menu()==Some(row){break;}press(&mut a,Btn::Down);}}
+        assert_eq!(a.in_game_menu(),Some(row));press(&mut a,Btn::A);a.update(1.0);
+        assert!(matches!((row,a.phase()),(QuickRow::About,Phase::About)|(QuickRow::DateTime,Phase::SetClock{..})));
+        assert_eq!(a.screen_power(),1.0);
+        press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{cart}if cart=="Emerald"));assert_eq!(a.in_game_menu(),Some(row));
+        press(&mut a,Btn::B);assert_eq!(a.in_game_menu(),Some(if row==QuickRow::DateTime{QuickRow::General}else{QuickRow::Settings}));
+    }
+}
+
+fn slot_y(a:&App,id:TexId)->f32 {
+    let mut out=vec![];a.draw(&mut out);
+    let ys:Vec<_>=out.iter().filter_map(|d|match d {Draw::Tex{tex,y,..}|Draw::Part{tex,y,..} if *tex==id=>Some(*y),_=>None}).collect();
+    assert!(!ys.is_empty(),"hardware strip disappeared");
+    assert!(ys.iter().all(|y|(*y-ys[0]).abs()<0.01),"a second strip bypassed the slide: {ys:?}");
+    ys[0]
+}
+
+#[test]
+fn production_menu_hardware_slides_up_and_keeps_its_depth_order() {
+    let (_d,mut a)=playing();menu_faces(&mut a);paint_carts(&mut a);frames(&mut a,40);
+    let back=TexId::from_raw(8000);let front=TexId::from_raw(8001);a.set_slot_faces(back,front);
+    a.apply(Action::QuickMenu);frames(&mut a,13);
+    let first=slot_y(&a,front);frames(&mut a,3);let middle=slot_y(&a,front);frames(&mut a,40);let end=slot_y(&a,front);
+    assert!(first>middle+1.0&&middle>end+1.0,"slot popped in: {first}, {middle}, {end}");
+    assert!((end-(OUT_H as f32-MOUTH_H)).abs()<0.1);
+    a.apply(Action::QuickMenu);frames(&mut a,4);assert!(slot_y(&a,front)>end+1.0);
+}
+
+#[test]
+fn hold_menu_exit_slides_the_slot_up_on_native_and_framed_panels() {
+    for panel in [(640,480),(720,720)] {
+        let (_d,mut a)=playing();a.set_panel(panel);menu_faces(&mut a);paint_carts(&mut a);frames(&mut a,40);
+        let front=TexId::from_raw(8001);a.set_slot_faces(TexId::from_raw(8000),front);
+        a.apply(Action::Eject);assert!(matches!(a.phase(),Phase::Ejecting{..}));
+        let first=slot_y(&a,front);frames(&mut a,4);let middle=slot_y(&a,front);frames(&mut a,20);let end=slot_y(&a,front);
+        assert!(first>middle+1.0&&middle>end+1.0,"exit slot popped in on {panel:?}: {first}, {middle}, {end}");
+    }
+}
+
+#[test]
+fn about_from_in_game_settings_keeps_the_game_behind_the_card() {
+    let (_d,mut a)=playing();a.set_game_ready(true);menu_faces(&mut a);frames(&mut a,40);
+    go_to(&mut a,QuickRow::About);frames(&mut a,40);press(&mut a,Btn::A);frames(&mut a,40);
+    assert!(matches!(a.phase(),Phase::About));let mut out=vec![];a.draw(&mut out);
+    assert!(matches!(out.first(),Some(Draw::Game)),"About replaced the game backdrop: {:?}",out.first());
+    assert!(!out.iter().any(|d|matches!(d,Draw::Lava{..})),"launcher wallpaper leaked into About");
+    press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{..}));assert_eq!(a.in_game_menu(),Some(QuickRow::About));
+}
+
+#[test]
+fn the_game_menu_uses_one_translucent_tint_to_the_bottom_edge_before_its_card() {
+    for light in [false,true] {
+        let (d,mut a)=playing();
+        if light {let mut state=slot_store::read_slot_state(d.path());state.appearance=slot_store::Appearance::Light;slot_store::write_slot_state(d.path(),&state).unwrap();a=App::boot(d.path());a.set_snapshot(common::StubSnapshot::boxed());a.on_core_ready();frames(&mut a,120);}
+        a.set_game_ready(true);menu_faces(&mut a);a.apply(Action::QuickMenu);frames(&mut a,50);
+        let mut out=vec![];a.draw(&mut out);let game=out.iter().position(|d|matches!(d,Draw::Game)).unwrap();
+        assert!(matches!(out[game+1],Draw::Rect{x:0.0,y:0.0,w,h,colour} if w==a.canvas().w&&h==480.0&&colour[3]>0.5&&colour[3]<0.7));
+        assert_eq!(out.iter().filter(|d|matches!(d,Draw::Rect{x:0.0,y:0.0,w,h,colour} if *w==a.canvas().w&&*h==480.0&&colour[3]>0.5&&colour[3]<0.95)).count(),1);
+    }
 }

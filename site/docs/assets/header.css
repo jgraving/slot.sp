@@ -1,0 +1,17 @@
+/* Keep desktop-mode phones on one row; smaller viewports retain wrapping. */
+.md-header__inner.md-grid{grid-template-columns:auto minmax(0,1fr) auto}
+.mast-tabs{justify-self:center}
+@media(min-width:960px) and (max-width:1219.98px){
+ .md-header__inner.md-grid{grid-template-columns:auto minmax(0,1fr) auto;gap:12px}
+ .md-header__inner>.mast-mark{grid-column:1;grid-row:1}
+ .md-header__inner>.mast-tabs{grid-column:2;grid-row:1;flex-wrap:nowrap}
+ .md-header__inner>.mast-end{grid-column:3;grid-row:1}
+ .md-header__inner[data-guide-topics=true]{grid-template-columns:auto auto minmax(0,1fr) auto}
+ .md-header__inner[data-guide-topics=true]>.mast-mark{grid-column:2}
+ .md-header__inner[data-guide-topics=true]>.mast-tabs{grid-column:3}
+ .md-header__inner[data-guide-topics=true]>.mast-end{grid-column:4}
+ .mast{grid-template-columns:auto minmax(0,1fr) auto}
+ .mast>.mast-brand{grid-column:1;grid-row:1}
+ .mast>.mast-links{grid-column:2;grid-row:1;flex-wrap:nowrap}
+ .mast>.mast-end{grid-column:3;grid-row:1}
+}

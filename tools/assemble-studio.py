@@ -26,10 +26,24 @@ script.write_text(text)
 # Studio CSS previously lived one directory below the website's font assets.
 for css in bundle.glob('*.css'):
     css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))
+# Both repositories must ship exactly the same navigation behavior and palette.
+for name in ['navigation.js', 'navigation.css', 'wordmark.png']:
+    assert (source / 'web' / name).read_bytes() == (ROOT / 'site/docs/assets' / name).read_bytes(), f'Shared website asset differs: {name}'
 html = (source / 'web/index.html').read_text()
-for name in ['studio.js', 'studio.css', 'slot-sp.css']:
+# Use the same header layout and page motion on the site and its pinned Studio.
+shared_styles = []
+for stem in ['header', 'page-motion']:
+    matches = list((ROOT / 'site/docs/assets/generated').glob(f'{stem}.*.css'))
+    assert len(matches) == 1, f'Prepare the shared {stem} stylesheet first'
+    shared_styles.append(f'<link rel="stylesheet" href="/slot.sp/assets/generated/{matches[0].name}">')
+navigation_link = '<link rel="stylesheet" href="navigation.css">'
+assert html.count(navigation_link) == 1, 'Studio navigation stylesheet is missing'
+html = html.replace(navigation_link, navigation_link + '\n' + '\n'.join(shared_styles))
+page_motion = (ROOT / 'site/overrides/partials/page-motion.js').read_text()
+html = html.replace('</head>', f'<script>{page_motion}</script>\n</head>')
+for name in ['studio.js', 'studio.css', 'slot-sp.css', 'navigation.js', 'navigation.css', 'wordmark.png']:
     html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
-html = html.replace('<p id="build"></p>', '<p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p><p id="build"></p>')
+html = html.replace('<div class="foot-meta">', '<div class="foot-meta"><p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p>')
 (target / 'index.html').write_text(html)
 shutil.copyfile(source / 'LICENSE', target / 'LICENSE')
 (target / 'build-info.json').write_text(json.dumps(dict(

@@ -34,10 +34,7 @@ fn in_game_at(a: &mut App, row: QuickRow) {
         if depth > 0 {
             press(a, Btn::A);
         }
-        let hidden = a.in_game_hidden();
-        for _ in 0..step.position(&hidden) {
-            press(a, Btn::Down);
-        }
+        common::navigate_in_game_menu(a,*step);
     }
     assert_eq!(a.in_game_menu(), Some(row));
 }
@@ -152,7 +149,10 @@ fn reset_all_on_the_shortcut_and_shelf_pages_resets_only_that_page() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -213,7 +213,7 @@ fn the_in_game_settings_have_no_save_changes_page() {
             QuickRow::PlaySound,
             QuickRow::PlayGameplay,
             QuickRow::PlayControls,
-            QuickRow::PlayReference
+            QuickRow::PlayReference,
         ]
     );
 }
@@ -268,7 +268,10 @@ fn the_controls_shelf_page_rebinds_shelf_switching_and_saves_at_once() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -341,7 +344,10 @@ fn shortcuts_are_set_from_the_main_menu_and_saved_for_every_game_at_once() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -387,7 +393,10 @@ fn in_game_buttons_are_set_from_the_main_menu_and_reach_a_game() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -464,7 +473,10 @@ fn turbo_b_moves_off_y_from_the_in_game_page() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -486,7 +498,10 @@ fn turbo_b_moves_off_y_from_the_in_game_page() {
 
 fn to_shortcuts(s: &mut Session, now: &mut Millis) {
     tap(s, now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(s, now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(s, now, Btn::Down);
     }
     tap(s, now, Btn::A);
@@ -692,7 +707,10 @@ fn a_shelf_key_is_only_checked_against_shelf_keys() {
     let d = shelf_card();
     let (mut s, mut now) = on_shelf(d.path());
     tap(&mut s, &mut now, Btn::Menu);
-    for _ in 0..QuickRow::Controls.position(&[]) {
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
         tap(&mut s, &mut now, Btn::Down);
     }
     tap(&mut s, &mut now, Btn::A);
@@ -830,6 +848,85 @@ fn brightness_on_a_shelf_key_does_both_on_the_shelf_and_is_flagged() {
 }
 
 #[test]
+fn held_display_shortcuts_clamp_and_save_the_active_preset_on_shelf_and_menu() {
+    use slot::display_settings::DisplaySettings;
+
+    fn hold(s: &mut Session, now: &mut Millis, direction: Btn) {
+        step(s, now, &[RawEvent::Down(Btn::Select)]);
+        step(s, now, &[RawEvent::Down(direction)]);
+        for _ in 0..120 {
+            step(s, now, &[]);
+        }
+        step(s, now, &[RawEvent::Up(Btn::Select)]);
+        let levels = (s.app().brightness(), s.app().blue_light());
+        for _ in 0..40 {
+            step(s, now, &[]);
+        }
+        assert_eq!((s.app().brightness(), s.app().blue_light()), levels);
+        step(s, now, &[RawEvent::Up(direction)]);
+    }
+
+    for in_menu in [false, true] {
+        let d = shelf_card();
+        DisplaySettings {
+            day: (4, 4),
+            ..Default::default()
+        }
+        .save(d.path())
+        .unwrap();
+        let (mut s, mut now) = on_shelf(d.path());
+        if in_menu {
+            tap(&mut s, &mut now, Btn::Menu);
+        }
+        let row = s.app().quick_menu();
+        hold(&mut s, &mut now, Btn::Down);
+        hold(&mut s, &mut now, Btn::Right);
+        assert_eq!((s.app().brightness(), s.app().blue_light()), (0, 9));
+        assert_eq!(
+            s.app().quick_menu(),
+            row,
+            "a display hold navigated the menu"
+        );
+        chord(&mut s, &mut now, Btn::Select, Btn::X);
+        hold(&mut s, &mut now, Btn::Up);
+        hold(&mut s, &mut now, Btn::Left);
+        assert_eq!((s.app().brightness(), s.app().blue_light()), (9, 0));
+        s.app_mut().settle_saves();
+        let saved = DisplaySettings::read(d.path(), &Default::default());
+        assert_eq!((saved.day, saved.bedtime), ((0, 9), (9, 0)));
+        assert!(saved.night);
+        let reboot = App::boot(d.path());
+        assert_eq!((reboot.brightness(), reboot.blue_light()), (9, 0));
+    }
+}
+
+#[test]
+fn opening_a_binding_recorder_stops_a_display_hold_without_waiting_for_key_up() {
+    let d = shelf_card();
+    let (mut s, mut now) = on_shelf(d.path());
+    tap(&mut s, &mut now, Btn::Menu);
+    for _ in 0..QuickRow::Controls.position(&[])%4 {
+        tap(&mut s, &mut now, Btn::Right);
+    }
+    for _ in 0..QuickRow::Controls.position(&[])/4 {
+        tap(&mut s, &mut now, Btn::Down);
+    }
+    tap(&mut s, &mut now, Btn::A);
+    tap(&mut s, &mut now, Btn::Down);
+    tap(&mut s, &mut now, Btn::A);
+    assert_eq!(s.app().quick_menu(), Some(QuickRow::ScSave));
+    step(&mut s, &mut now, &[RawEvent::Down(Btn::Select)]);
+    step(&mut s, &mut now, &[RawEvent::Down(Btn::Down)]);
+    let brightness = s.app().brightness();
+    press(s.app_mut(), Btn::A);
+    assert!(s.app().capturing());
+    for _ in 0..100 {
+        step(&mut s, &mut now, &[]);
+    }
+    assert_eq!(s.app().brightness(), brightness);
+}
+
+#[test]
 fn with_turbo_off_its_rows_are_hidden_and_never_flagged() {
     let mut keys = ShortcutKeys::default();
     keys.set(Shortcut::SaveState, Binding::plain(Device::X));
@@ -862,4 +959,26 @@ fn menu_x_in_game_is_the_screenshot_action() {
             button: Btn::X,
         }
         && e.action == Action::Screenshot));
+}
+
+#[test]
+fn binding_fast_forward_toggle_to_r2_takes_it_from_fast_forward_without_a_toast() {
+    let d = shelf_card();
+    let (mut s, mut now) = on_shelf(d.path());
+    to_shortcuts(&mut s, &mut now);
+    for _ in 0..QuickRow::ScFastForwardToggle.position(&[]) {
+        tap(&mut s, &mut now, Btn::Down);
+    }
+    assert_eq!(s.app().quick_menu(), Some(QuickRow::ScFastForwardToggle));
+    tap(&mut s, &mut now, Btn::A);
+    step(&mut s, &mut now, &[RawEvent::Down(Btn::R2)]);
+    step(&mut s, &mut now, &[RawEvent::Up(Btn::R2)]);
+    assert!(!s.app().capturing());
+    assert_eq!(s.app().toast(), None);
+    let keys = read_shortcuts(d.path());
+    assert_eq!(
+        keys.get(Shortcut::FastForwardToggle),
+        Binding::plain(Device::R2)
+    );
+    assert_eq!(keys.get(Shortcut::FastForward), None);
 }

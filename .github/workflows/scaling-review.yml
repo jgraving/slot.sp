@@ -28,5 +28,6 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: scaling-review
+          retention-days: 1
           path: /tmp/slot-feature-previews/*.png
           if-no-files-found: error

@@ -4,7 +4,6 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 from pathlib import Path
 import re
 import zipfile
@@ -53,9 +52,10 @@ def package(root: Path, output: Path, source: str) -> None:
                 raise ValueError(f'corrupt archive: {filename}')
             if 'System/slot' not in archive.namelist():
                 raise ValueError(f'incorrect archive layout: {filename}')
-    for suffix in ['System.zip', 'SD2.zip']:
-        shutil.copyfile(output / f'slot.sp-{suffix}', output / f'slot-{suffix}')
-    files = ['slot.sp-System.zip', 'slot.sp-SD2.zip', 'slot-System.zip', 'slot-SD2.zip', 'build-info.json']
+    # Remove aliases left by an earlier build when reusing an output directory.
+    for name in ('slot-System.zip', 'slot-SD2.zip'):
+        (output / name).unlink(missing_ok=True)
+    files = ['slot.sp-System.zip', 'slot.sp-SD2.zip', 'build-info.json']
     (output / 'SHA256SUMS').write_text(''.join(
         f'{hashlib.sha256((output / name).read_bytes()).hexdigest()}  {name}\n' for name in files
     ))
