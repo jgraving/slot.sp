@@ -35,8 +35,8 @@ export function mountSP(stage, video) {
 
   // Broad photographic softboxes, baked once into the reflection environment.
   const studio = new T.Scene();
-  studio.background = new T.Color('#858b91');
-  const room = new T.Mesh(new T.BoxGeometry(900,900,900),new T.MeshBasicMaterial({color:'#727980',side:T.BackSide}));
+  studio.background = new T.Color('#363c42');
+  const room = new T.Mesh(new T.BoxGeometry(900,900,900),new T.MeshBasicMaterial({color:'#363c42',side:T.BackSide}));
   studio.add(room);
   function softbox(w,h,x,y,z,strength) {
     const panel = new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({color:new T.Color(strength,strength,strength)}));
@@ -64,7 +64,7 @@ export function mountSP(stage, video) {
     const texture=track(new T.CanvasTexture(c)); texture.colorSpace=T.SRGBColorSpace;
     texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); return texture;
   }
-  const grain=textureCanvas(512,512,(ctx,w,h) => {
+  const grain=textureCanvas(256,256,(ctx,w,h) => {
     let seed=34; const pixels=ctx.createImageData(w,h);
     for(let i=0;i<pixels.data.length;i+=4) {
       seed=(Math.imul(seed,1664525)+1013904223)>>>0;
@@ -72,16 +72,16 @@ export function mountSP(stage, video) {
     }
     ctx.putImageData(pixels,0,0);
   });
-  grain.colorSpace=T.NoColorSpace; grain.wrapS=grain.wrapT=T.RepeatWrapping; grain.repeat.set(.1,.1);
-  const flakes=textureCanvas(512,512,(ctx,w,h)=>{
+  grain.colorSpace=T.NoColorSpace; grain.wrapS=grain.wrapT=T.RepeatWrapping; grain.repeat.set(.025,.025);
+  const flakes=textureCanvas(256,256,(ctx,w,h)=>{
     let seed=71;const pixels=ctx.createImageData(w,h);
     for(let i=0;i<pixels.data.length;i+=4){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const v=231+(seed>>>28);pixels.data.set([v,v,v,255],i);}
     ctx.putImageData(pixels,0,0);
   });
-  flakes.wrapS=flakes.wrapT=T.RepeatWrapping;flakes.repeat.set(.1,.1);
+  flakes.wrapS=flakes.wrapT=T.RepeatWrapping;flakes.repeat.set(.025,.025);
   // Pigmented metallic paint with fine flakes under a satin clear coat.
   // The shell is painted plastic, so avoid a mirror-chrome metal response.
-  const paint={metalness:.58,roughness:.37,map:flakes,bumpMap:grain,bumpScale:.012,clearcoat:.32,clearcoatRoughness:.3,envMapIntensity:.85};
+  const paint={metalness:.58,roughness:.3,map:flakes,bumpMap:grain,bumpScale:.04,clearcoat:.38,clearcoatRoughness:.23,envMapIntensity:.95};
   const shell=material({color:0xbfc3c4,...paint});
   const edge=material({color:0xaeb3b5,...paint});
   const button=material({color:0xb9bdc0,metalness:.2,roughness:.43,clearcoat:.18});
@@ -145,7 +145,11 @@ export function mountSP(stage, video) {
   wells.forEach(([x,y,r])=>circleHole(face,x,y,r));
   // The perforated skin has a square bore; a bevel wider than these holes
   // would fold their walls across each other. Keep its outer moulding separate.
-  mesh(extrusion(face.clone(),5.85,.65),shell,product,0,0,-5.35);
+  // Leave clearance behind the thin face skin. A bevel on a same-size bore
+  // otherwise intersects the sloping recess and creates a ragged metallic rim.
+  const innerBody=face.clone();innerBody.holes=[];
+  wells.forEach(([x,y,r])=>circleHole(innerBody,x,y,r+.9));
+  mesh(extrusion(innerBody,5.85,.65),shell,product,0,0,-5.35);
   const speaker=[];
   for(let row=0;row<4;row++)for(let col=0;col<4;col++) {
     const x=(col-1.5)*4, y=-53.5+(row-1.5)*4, r=.31;
@@ -228,7 +232,7 @@ export function mountSP(stage, video) {
   // Rear lid badge, visible when folded.
   const back=new T.Group();back.position.set(0,40.5,-6.21);back.rotation.y=Math.PI;lid.add(back);
   slab(back,16.6,3.6,.24,1.8,.1,chrome,0,29,.12);
-  slab(back,15.7,2.85,.1,1.4,.03,seam,0,29,.22);
+  slab(back,15.7,2.85,.1,1.4,.03,material({color:0x13161a,roughness:.22,metalness:.05,clearcoat:.8}),0,29,.22);
   // The rear is flipped around both axes when shut; keep the badge upright.
   engraving('ANBERNIC',back,0,29,.3,14,2,'#c8cdd0').rotation.z=Math.PI;
 
