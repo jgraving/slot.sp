@@ -1,0 +1,78 @@
+{
+  "source_commit": "49fe989f0f9ad2d980a200599316df4458c41e72",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41490287336",
+  "capture": "previews/interactive_hero.rs",
+  "dimensions": [
+    720,
+    480
+  ],
+  "fps": 60,
+  "rendering": "Production Frontend, carousel springs, slot occlusion and boot compositor. Recorder-only App stepping omits emulator execution and fixes the wallpaper phase for continuous action endpoints. Synthetic headers and repository sample artwork; no playable games.",
+  "files": [
+    {
+      "path": "previews/interactive/graphite.mp4",
+      "bytes": 1666618,
+      "sha256": "b1cdeb11984871f671a793c4c34e3b1307356bef923f930784ba894910fe8e25"
+    },
+    {
+      "path": "previews/interactive/graphite.png",
+      "bytes": 218406,
+      "sha256": "d7c8755f0ca9f7e067b056777d27993a44b84884247be420f7d3e1db84a0d8d6"
+    },
+    {
+      "path": "previews/interactive/graphite.webp",
+      "bytes": 178794,
+      "sha256": "573edcb5e3772b1de7a6e18b6e1df87c241d7cc7a7a97c4dd7fb2073a59e3bf4"
+    },
+    {
+      "path": "previews/interactive/pearl_blue.mp4",
+      "bytes": 1675694,
+      "sha256": "3b531518e71f3f071aec87ff49e3dd83ffde022b14f0f4a206f69679516330c8"
+    },
+    {
+      "path": "previews/interactive/pearl_blue.png",
+      "bytes": 221057,
+      "sha256": "5d326c59c282f302524fb6a8b851f14b39684931606f7bbada794374bc7265fd"
+    },
+    {
+      "path": "previews/interactive/pearl_blue.webp",
+      "bytes": 180618,
+      "sha256": "f37c01eab7e71e0e1277f1430e1926c7858cce890b040c616cc604b05c40b215"
+    },
+    {
+      "path": "previews/interactive/pearl_pink.mp4",
+      "bytes": 1681652,
+      "sha256": "89f0a19a81ca3644342ca49d14935046c137143ba4529bf40630c3b6f4faab20"
+    },
+    {
+      "path": "previews/interactive/pearl_pink.png",
+      "bytes": 221106,
+      "sha256": "49ed976d660e291b5128f5a5e8834a94c5b91e5f574aeafc7671999666c69570"
+    },
+    {
+      "path": "previews/interactive/pearl_pink.webp",
+      "bytes": 181316,
+      "sha256": "015894d736e8ae2326185056b372d822ba3765adc9e280f61afb0ed9cc068c74"
+    },
+    {
+      "path": "previews/interactive/platinum.mp4",
+      "bytes": 1669420,
+      "sha256": "89a58e1e33805d49b124a6edafb494645e461e0d968f9e0ef645156940ccd368"
+    },
+    {
+      "path": "previews/interactive/platinum.png",
+      "bytes": 219126,
+      "sha256": "61207f0d8e0748a3368093bfd6d8841c112d525f1fc8ac1ac0aae933aec79b28"
+    },
+    {
+      "path": "previews/interactive/platinum.webp",
+      "bytes": 178536,
+      "sha256": "75e147924e15058ee4063d0388d0ac725690bc42897d22ca243ff1b88ce9278d"
+    },
+    {
+      "path": "previews/interactive/timeline.json",
+      "bytes": 515,
+      "sha256": "ebd739737d4c4225e0566ec62ca2a460f2f5a21113a2e243f3e59850c31ad623"
+    }
+  ]
+}

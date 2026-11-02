@@ -42,7 +42,8 @@
         document.querySelectorAll('[data-shell]').forEach(other => other.setAttribute('aria-pressed',String(other === button)));
         document.querySelector('.finish-name').textContent = button.getAttribute('aria-label');
         try { localStorage.setItem('slot.sp:hardware-finish',button.dataset.shell); } catch { /* Color switching also works without storage. */ }
-        changePreview(button);
+        screenFinish = button.dataset.shell;
+        player?.setColor(screenFinish);
         document.querySelector('.sp-stage')?.dispatchEvent(new CustomEvent('sp:finish',{detail:button.dataset.shell}));
       });
     });
@@ -52,14 +53,10 @@
     const toggle = document.querySelector('.preview-toggle');
     if (!preview || !toggle) return;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    let wanted = !reduced.matches && !navigator.connection?.saveData;
-    stage.dataset.opening=String(wanted);
+    let player = null, screenFinish = 'platinum';
+    const waitingInputs = [];
+    const screen = document.getElementById('hero-screen');
     let visible = false;
-    let finish = 'platinum';
-    let request = 0;
-    let position = 0;
-    let segment = null;
-    let segmentFrame = null;
     const media = new URL(preview.dataset.media, document.baseURI);
     const modelMedia = new URL(stage.dataset.renderMedia, document.baseURI);
     const still = stage.querySelector('.model-poster img');
@@ -104,7 +101,6 @@
       fold.title = closed ? 'Open lid' : 'Close lid';
       stage.querySelectorAll('[data-hardware]').forEach(button => { button.hidden = !ready || next !== 'open'; });
       sync();
-      state();
     }
     async function finishMotion(current = motionRequest) {
       if (current !== motionRequest || !motionTarget) return;
@@ -177,95 +173,43 @@
     }
     updateStill(pose === 'open');
     setPose(pose);
-    function changePreview(button) {
-      const next = button.dataset.shell.replaceAll(' ', '_');
-      if (next === finish) return;
-      segment = null;
-      finish = next;
-      if (preview.readyState > 0) position = preview.currentTime;
-      const current = ++request;
-      preview.pause();
-      preview.poster = new URL(`hero-dark-${finish}.png`, media).href;
-      preview.setAttribute('aria-label', `Watch a cartridge enter the slot, eject and return to the carousel, ${button.getAttribute('aria-label')} finish`);
-      preview.addEventListener('loadedmetadata', () => {
-        if (current !== request) return;
-        preview.currentTime = Math.min(position, Math.max(0, preview.duration - .01));
-        sync();
-      }, {once:true});
-      preview.src = new URL(`hero-dark-${finish}.mp4`, media).href;
-      preview.load();
-      state();
-    }
     function sync() {
-      if (!pageReady()) { motion.pause(); preview.pause(); return; }
+      const awake = pageReady() && visible && !document.hidden;
       if (busy()) {
         const current = motionRequest;
-        if (visible && !document.hidden) motion.play().catch(() => finishMotion(current)); else motion.pause();
+        if (awake) motion.play().catch(() => finishMotion(current)); else motion.pause();
       }
-      if (wanted && visible && !document.hidden && pose === 'open' && ready) preview.play().catch(() => {});
-      else preview.pause();
+      player?.setActive(awake && pose === 'open' && ready);
     }
-    function state() {
-      const playing = wanted && pose === 'open';
-      toggle.setAttribute('aria-pressed', String(playing));
-      toggle.querySelector('span').textContent = playing ? 'Pause preview' : 'Play preview';
+    function send(action) {
+      if (player) player.input(action);
+      else { waitingInputs.push(action); if (waitingInputs.length > 5) waitingInputs.shift(); }
     }
-    preview.addEventListener('play',state);
-    preview.addEventListener('pause',state);
-    toggle.addEventListener('click',() => { segment = null; wanted = pose === 'open' ? !wanted : true; if (pose === 'closed' && ready) flipLid(true); sync(); state(); });
-    // Use the existing native clip, including the slot's real occlusion.
-    // These controls scrub a preview; no game or emulation runs in the page.
-    function playSegment(start, end) {
-      const current = ++request;
-      function begin() {
-        if (current !== request) return;
-        if (segmentFrame !== null) preview.cancelVideoFrameCallback(segmentFrame);
-        segmentFrame = null;
-        preview.currentTime = Math.min(start, preview.duration - .01);
-        segment = end;
-        wanted = end > start;
-        sync();
-        state();
-        if (wanted) watchSegment();
-      }
-      if (preview.readyState > 0) begin();
-      else {
-        preview.addEventListener('loadedmetadata', begin, {once:true});
-        preview.load();
-      }
-    }
-    function stopAtSegment(time) {
-      if (segment === null || time < segment) return false;
-      const end = segment;
-      segment = null;
-      preview.pause();
-      preview.currentTime = end;
-      wanted = false;
-      state();
-      return true;
-    }
-    function watchSegment() {
-      if (segmentFrame !== null || segment === null || !preview.requestVideoFrameCallback) return;
-      segmentFrame = preview.requestVideoFrameCallback((now, frame) => {
-        segmentFrame = null;
-        if (!stopAtSegment(frame.mediaTime) && !preview.paused) watchSegment();
-      });
-    }
-    preview.addEventListener('playing', watchSegment);
-    preview.addEventListener('timeupdate', () => {
-      // Hidden DOM video can stop delivering frame callbacks while its texture plays.
-      stopAtSegment(preview.currentTime);
+    toggle.addEventListener('click', () => {
+      if (pose === 'closed' && ready) { flipLid(true); player?.play(); return; }
+      player?.toggle();
     });
+    import(new URL('hero-player.js', assets).href).then(({createHero}) => {
+      player = createHero(preview, screen, {media, reduced, onState:({moving,paused,active,failed}) => {
+        const playing = moving && !paused && active;
+        toggle.setAttribute('aria-pressed', String(playing));
+        toggle.querySelector('span').textContent = playing ? 'Pause preview' : moving ? 'Play preview' : 'Replay startup';
+        toggle.disabled = failed;
+      }});
+      if (screenFinish !== 'platinum') player.setColor(screenFinish);
+      waitingInputs.splice(0).forEach(action => player.input(action));
+      sync();
+    }).catch(error => console.warn('Interactive preview unavailable.', error));
     document.querySelectorAll('[data-hardware]').forEach(button => {
-      button.addEventListener('click', () => {
-        switch (button.dataset.hardware) {
-          case 'insert': playSegment(.45, 1.10); break;
-          case 'eject': playSegment(1.12, 3.0); break;
-          case 'boot': playSegment(7.4, 9.25); break;
-          case 'left': playSegment(5.15, 7.38); break;
-          case 'right': playSegment(3.02, 5.13); break;
-        }
-      });
+      button.addEventListener('click', () => send(button.dataset.hardware));
+    });
+    // Keyboard controls belong to the focused handheld, never page navigation.
+    document.querySelector('.sp-preview').addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey ||
+          event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
+      const action = {ArrowLeft:'left',ArrowRight:'right',a:'insert',b:'eject',m:'boot'}[event.key];
+      if (!action || pose !== 'open') return;
+      event.preventDefault();send(action);
     });
     // A small, opt-in old-console secret. Normal typing and shortcuts are untouched.
     const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
@@ -291,13 +235,14 @@
       notice.replaceChildren(topicIcon('kid-mode', 'secret-icon'), document.createTextNode('You found the gold shell.'));
       clearTimeout(noticeTimer);
       noticeTimer = setTimeout(() => notice.replaceChildren(), 4000);
-      playSegment(7.4, 9.25);
+      player?.setColor('gold');
+      send('boot');
     });
     reduced.addEventListener('change', () => {
       if (reduced.matches) {
-        wanted = false; introPending = false;
+        introPending = false;
         if (busy()) finishMotion();
-        sync(); state();
+        sync();
       }
     });
     new IntersectionObserver(entries => {
@@ -309,7 +254,6 @@
       if (visible && ready && introPending) flipLid(true); else sync();
     });
     document.addEventListener('visibilitychange',sync);
-    state();
     try {
       const saved = localStorage.getItem('slot.sp:hardware-finish');
       if (saved && finishes[saved]) [...document.querySelectorAll('[data-shell]')].find(button => button.dataset.shell === saved)?.click();

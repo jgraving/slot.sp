@@ -115,6 +115,8 @@ pub enum QuickRow {
     DisplaySchedule,
     ClockFormat,
     CarouselMotion,
+    Scaling,
+    FrameBlending,
 }
 
 impl QuickRow {
@@ -124,7 +126,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 104] = [
+    pub const ALL: [QuickRow; 106] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -229,6 +231,8 @@ impl QuickRow {
         QuickRow::DisplaySchedule,
         QuickRow::ClockFormat,
         QuickRow::CarouselMotion,
+        QuickRow::Scaling,
+        QuickRow::FrameBlending,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -362,13 +366,15 @@ impl QuickRow {
         QuickRow::PlayReference,
     ];
 
-    pub const PLAY_SCREEN: [QuickRow; 6] = [
+    pub const PLAY_SCREEN: [QuickRow; 8] = [
         QuickRow::PlayBrightness,
         QuickRow::PlayBlueLight,
         QuickRow::Shader,
         QuickRow::Bezel,
         QuickRow::Palette,
         QuickRow::ColourCorrection,
+        QuickRow::Scaling,
+        QuickRow::FrameBlending,
     ];
 
     pub fn index(self) -> usize {
@@ -386,7 +392,7 @@ impl QuickRow {
             | QuickRow::ScreenGbc
             | QuickRow::ScreenGb => &QuickRow::SCREEN,
             QuickRow::Brightness | QuickRow::BlueLight | QuickRow::DisplaySchedule => &QuickRow::SCREEN,
-            QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
+            QuickRow::Scaling | QuickRow::FrameBlending | QuickRow::PlayBrightness | QuickRow::PlayBlueLight => &QuickRow::PLAY_SCREEN,
 
             QuickRow::GbaShader | QuickRow::GbaColourCorrection | QuickRow::GbaBezel => {
                 &QuickRow::SCREEN_GBA
@@ -552,6 +558,8 @@ impl QuickRow {
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
             QuickRow::Reference | QuickRow::PlayReference => "Buttons & Shortcuts",
+            QuickRow::Scaling => "Scaling",
+            QuickRow::FrameBlending => "Frame Blending",
             QuickRow::Bluetooth | QuickRow::PlaySound => "Sound",
             QuickRow::GbaShader => "Shader",
             QuickRow::GbShader => "Shader",
@@ -804,10 +812,15 @@ pub enum QuickValue {
     Hour24,
     Classic,
     Wheel,
+    Actual,
+    Stretch,
+    Fit,
+    Integer,
+    Mix,
 }
 
 impl QuickValue {
-    pub const ALL: [QuickValue; 62] = [
+    pub const ALL: [QuickValue; 67] = [
         QuickValue::Speed1_5,
         QuickValue::Speed2,
         QuickValue::Speed3,
@@ -870,6 +883,11 @@ impl QuickValue {
         QuickValue::Hour24,
         QuickValue::Classic,
         QuickValue::Wheel,
+        QuickValue::Actual,
+        QuickValue::Stretch,
+        QuickValue::Fit,
+        QuickValue::Integer,
+        QuickValue::Mix,
     ];
 
     pub const LEVELS: [QuickValue; 10] = [
@@ -963,6 +981,11 @@ impl QuickValue {
             QuickValue::Alphabetical => "Alphabetically",
             QuickValue::MostUsed => "Most used",
             QuickValue::RecentlyUsed => "Recently used",
+            QuickValue::Actual => "Actual",
+            QuickValue::Stretch => "Stretch",
+            QuickValue::Fit => "Fit",
+            QuickValue::Integer => "Integer",
+            QuickValue::Mix => "Mix",
 
         }
     }

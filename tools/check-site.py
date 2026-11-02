@@ -119,7 +119,8 @@ assert 'site-theme-toggle' not in home and 'ui-theme-picker' not in home
 assert 'detail-pair' not in home and 'motion-section' not in home
 assert home.count('<video') == 2, 'Keep the native screen and recorded 3D opening inside the handheld'
 assert 'pose-hero' not in home and 'lidArt' not in home, 'The homepage must not flash the old SVG opening'
-assert f'hero-dark-platinum.mp4' in home
+assert 'id="hero-screen"' in home and 'media/fork/interactive/' in home
+assert 'hero-dark-platinum.mp4' not in home, 'Homepage buttons must not seek around the old loop'
 assert hero_manifest['sequence']==['insert','eject','browse','boot']
 assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 and t['visible_game_frames']==0 and t['omitted_test_pattern'] for t in hero_manifest['timelines'])
 for theme in ['dark','light']:

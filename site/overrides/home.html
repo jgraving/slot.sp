@@ -2,7 +2,7 @@
 {% macro icon(name) -%}<img class="feature-icon" src="{{ ('assets/icons/' ~ name ~ '.svg') | url }}" width="48" height="48" alt="" aria-hidden="true">{%- endmacro %}
 {% block content %}
 {% set model_media = 'media/fork/sp-model/' ~ config.extra.sp_model_revision ~ '/' %}
-{% set hero_media = 'media/fork/homepage/' ~ config.extra.homepage_media_revision ~ '/' %}
+{% set hero_media = 'media/fork/interactive/' ~ config.extra.interactive_revision ~ '/' %}
 <div class="home">
   <section class="intro" aria-labelledby="intro-title">
     <div class="intro-copy">
@@ -23,7 +23,9 @@
             <img src="{{ (model_media ~ 'platinum-closed.png') | url }}" width="720" height="900" alt="Silver RG SP with metallic paint">
           </picture>
           <video class="model-opening" muted playsinline preload="none" aria-hidden="true"></video>
-          <video id="hero-preview" class="hero-screen" width="720" height="480" muted playsinline loop preload="none" data-media="{{ hero_media | url }}" poster="{{ (hero_media ~ 'hero-dark-platinum.png') | url }}" aria-label="Watch a cartridge enter the slot, eject and return to the carousel, Platinum finish"><source src="{{ (hero_media ~ 'hero-dark-platinum.mp4') | url }}" type="video/mp4"></video>
+          <img class="hero-screen hero-screen-poster" src="{{ (hero_media ~ 'platinum.png') | url }}" width="720" height="480" alt="Cartridge carousel">
+          <canvas id="hero-screen" class="hero-screen" width="720" height="480" role="img" aria-label="Interactive cartridge carousel"></canvas>
+          <video id="hero-preview" class="hero-source" muted playsinline preload="none" data-media="{{ hero_media | url }}" aria-hidden="true"></video>
           <button class="hardware-button hardware-a" type="button" data-hardware="insert" aria-label="A: insert cartridge preview" title="Insert cartridge"></button>
           <button class="hardware-button hardware-b" type="button" data-hardware="eject" aria-label="B: eject cartridge preview" title="Eject cartridge"></button>
           <button class="hardware-button hardware-menu" type="button" data-hardware="boot" aria-label="MENU: replay startup" title="Replay startup"></button>
