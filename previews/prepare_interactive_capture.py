@@ -16,12 +16,13 @@ text = text.replace(anchor, '''    pub fn preview_step(&mut self, action:Option<
     }
 
 ''' + anchor)
-anchor = '        compositor.draw_list(&self.draws);'
+anchor = '        if let Some((motion,ms))=intro {app.compose_boot_intro(motion,ms,&mut self.draws);}'
 assert text.count(anchor) == 1
 # A fixed wallpaper phase makes independently captured actions join seamlessly.
 # Cartridge, slot and boot motion all use the unchanged production code.
-text = text.replace(anchor, '''        for draw in &mut self.draws {
+text = text.replace(anchor, anchor + '''
+        for draw in &mut self.draws {
             if let Draw::Lava{phase,..}=draw {*phase=0.0;}
         }
-''' + anchor)
+''')
 path.write_text(text)
