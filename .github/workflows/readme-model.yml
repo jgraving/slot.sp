@@ -1,8 +1,8 @@
-name: Capture illustrated README hero
+name: Capture 3D hardware and README motion
 on:
   push:
     branches: ['docs/readme-*']
-    paths: ['tools/capture-readme-model.cjs', 'previews/collect_readme_model.py', 'previews/extract_model_frames.py', '.github/workflows/readme-model.yml', 'site/overrides/home.html', 'site/overrides/partials/device.svg', 'site/docs/assets/device.css', 'site/docs/assets/slot.css', 'site/docs/assets/wordmark.png', 'tools/build-web-wordmark.py', 'crates/slot-ui/assets/fonts/display.ttf', 'previews/homepage/**']
+    paths: ['tools/capture-readme-model.cjs', 'previews/collect_readme_model.py', 'previews/extract_model_frames.py', '.github/workflows/readme-model.yml', 'site/overrides/home.html', 'site/overrides/partials/device.svg', 'site/docs/assets/device.css', 'site/docs/assets/sp-model.js', 'site/docs/assets/slot.css', 'site/docs/assets/wordmark.png', 'tools/build-web-wordmark.py', 'crates/slot-ui/assets/fonts/display.ttf', 'previews/homepage/**']
   workflow_dispatch:
 permissions:
   contents: write
@@ -10,7 +10,7 @@ jobs:
   capture:
     if: github.repository == 'jgraving/slot.sp'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
