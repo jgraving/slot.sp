@@ -1,0 +1,88 @@
+{
+  "source_commit": "2f351210dd6e65c6a1802acfa8ec424c7bcb9848",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41373862599",
+  "revision": "ed70d9ece175",
+  "model_sha256": "ed70d9ece175c58591765253d73b4a57073378532fbe2e35569c373d4eb429b3",
+  "files": [
+    {
+      "path": "previews/sp-model/ed70d9ece175/gold-closed.png",
+      "bytes": 232894,
+      "sha256": "99ee23e79e505110b131049981f45e51fbf1c1a1f463fa326f28b6a9d52664e7"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/gold-open.png",
+      "bytes": 290137,
+      "sha256": "51423d52f2a99e38565f53a4e97bbfc932d9d94b0540dc7e7f4378240ff493ab"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/gold-opening.mp4",
+      "bytes": 233968,
+      "sha256": "7c1f8eca6fed5743cc8fe6a4627d95cacfbd950e61c62a4432918eb7fc71a0cf"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/graphite-closed.png",
+      "bytes": 193719,
+      "sha256": "34008f0bfe9b49367d5b4798b9f2eb724f9a0b6c6d36206692c7567c5caa86a0"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/graphite-open.png",
+      "bytes": 235310,
+      "sha256": "4be290955f03163e8a80bbc94efcbad77dfd4593bb599787b852028828044ad2"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/graphite-opening.mp4",
+      "bytes": 208696,
+      "sha256": "e5d9727926105c9b7b060e7335f4fe322e7fc2c4c4a52ff9249f614dd404ba0b"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_blue-closed.png",
+      "bytes": 231838,
+      "sha256": "7c0b4ff2a539b107af73639f72d2589df60fd8d1d4311e94d047b74121005d59"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_blue-open.png",
+      "bytes": 287090,
+      "sha256": "765da56a89174d7686eeaf7505b16b962b46278b63877d7756b672304c5bb786"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_blue-opening.mp4",
+      "bytes": 228651,
+      "sha256": "9ec4af3a75ecf5b3db13eabeac96314faf5f3b85197580bd1f35755b337bff28"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_pink-closed.png",
+      "bytes": 230462,
+      "sha256": "6eca83a6fc5117b615956865c36f861976637cd9b8db281ca78187b0bc399ca1"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_pink-open.png",
+      "bytes": 289466,
+      "sha256": "be14c3fcf0545998f72b169ee704157f817cc6c98433276a058466ad1316b04b"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/pearl_pink-opening.mp4",
+      "bytes": 222232,
+      "sha256": "663fb317730bc1bd2bd0bf7a3c77511c8dc9654c8b62ebc471f02199f0c954b8"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/platinum-closed.png",
+      "bytes": 221832,
+      "sha256": "a911b2e25c84a7bc6c9a23cd29b19916a52046e2d355f679bc123fd21bf63642"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/platinum-open.png",
+      "bytes": 283099,
+      "sha256": "438f7d2ed890d617bf0355d64a4653cee1d7c08bfc9f14ea5a8569d221e5aa16"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/platinum-opening.mp4",
+      "bytes": 223513,
+      "sha256": "c801f608364a50ae91c37b3fb2edb77c60f49135a499d1d04225b0c185cff91f"
+    },
+    {
+      "path": "previews/sp-model/ed70d9ece175/projection.json",
+      "bytes": 745,
+      "sha256": "2d1abc79a5ba8f40a0450a8e6bedc6213a0fd390f812ebea5bc1cbe45dee9299"
+    }
+  ]
+}

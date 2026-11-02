@@ -42,8 +42,8 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     await opening.locator('.model-poster img').evaluate(img=>img.decode());
     await opening.locator('.sp-stage').screenshot({path:path.join(out,'loading-3d-model.png')});
     releaseModel();
-    await opening.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='opening',{},{timeout:45000});
-    assert(await opening.evaluate(()=>document.getElementById('hero-preview').paused),'Hold native playback while the model opens');
+    const intro=await opening.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='opening'&&{paused:document.getElementById('hero-preview').paused},{},{timeout:45000});
+    assert((await intro.jsonValue()).paused,'Hold native playback while the model opens');
     await opening.locator('.sp-stage').screenshot({path:path.join(out,'opening-3d-model.png')});
     await opening.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='open');
     assert.equal(await opening.locator('.sp-stage').getAttribute('data-opening'),'false');
@@ -165,6 +165,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     await recorded.locator('.fallback-opening').waitFor({timeout:15000});
     await recorded.locator('.sp-stage').screenshot({path:path.join(out,'recorded-3d-opening.png')});
     await recorded.waitForFunction(()=>document.querySelector('.sp-stage').dataset.opening==='false');
+    assert(await recorded.locator('.model-opening').evaluate(video=>video.currentTime>.9&&!video.error),'The recorded 3D opening must actually play');
     assert(await recorded.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
     await recorded.locator('.sp-stage').screenshot({path:path.join(out,'recorded-3d-open.png')});await recorded.close();
     fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
