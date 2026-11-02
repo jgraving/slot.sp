@@ -117,7 +117,8 @@ for theme in ['dark','light']:
         assert (ROOT/f'media/fork/current/{revision}/{theme}/{scene}.mp4').is_file(),scene
 assert 'site-theme-toggle' not in home and 'ui-theme-picker' not in home
 assert 'detail-pair' not in home and 'motion-section' not in home
-assert home.count('<video') == 1, 'Keep homepage media inside the illustrated SP preview'
+assert home.count('<video') == 2, 'Keep the native screen and recorded 3D opening inside the handheld'
+assert 'pose-hero' not in home and 'lidArt' not in home, 'The homepage must not flash the old SVG opening'
 assert f'hero-dark-platinum.mp4' in home
 assert hero_manifest['sequence']==['insert','eject','browse','boot']
 assert all(t['insert_frame']==48 and t['visible_insertion_frames']>=24 and t['visible_game_frames']==0 and t['omitted_test_pattern'] for t in hero_manifest['timelines'])
@@ -125,13 +126,14 @@ for theme in ['dark','light']:
     for scene in ['screenshots-full','screenshots-zoom','screenshots-select']:
         with Image.open(ROOT/f'media/fork/current/{revision}/{theme}/{scene}.png') as image:assert image.size==(720,480)
 for video in (ROOT / 'media/fork').rglob('*.mp4'):
+    expected = (720, 900) if '/sp-model/' in str(video) else (720, 480)
     with av.open(str(video)) as container:
         assert container.duration and container.duration > 0, video
         assert any(s.codec_context.name == 'h264'
-                   and s.codec_context.width == 720 and s.codec_context.height == 480
+                   and (s.codec_context.width, s.codec_context.height) == expected
                    for s in container.streams.video), video
         frame = next(container.decode(video=0))
-        assert (frame.width, frame.height) == (720, 480), video
+        assert (frame.width, frame.height) == expected, video
 
 if errors:
     raise SystemExit('\n'.join(sorted(set(errors))))

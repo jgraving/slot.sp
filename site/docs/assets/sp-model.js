@@ -4,11 +4,11 @@
  * This is a handcrafted reconstruction, not a photogrammetry scan. */
 import * as T from './vendor/three-r180.min.js';
 
-export function mountSP(stage, video) {
+export function mountSP(stage, video, options={}) {
   if (!stage || stage.dataset.modelReady) return;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const renderer = new T.WebGLRenderer({alpha:true, antialias:true, powerPreference:'low-power'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  renderer.setPixelRatio(options.capture ? 1.5 : Math.min(devicePixelRatio, 1.75));
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .95;
@@ -81,7 +81,7 @@ export function mountSP(stage, video) {
   flakes.wrapS=flakes.wrapT=T.RepeatWrapping;flakes.repeat.set(.025,.025);
   // Pigmented metallic paint with fine flakes under a satin clear coat.
   // The shell is painted plastic, so avoid a mirror-chrome metal response.
-  const paint={metalness:.58,roughness:.3,map:flakes,bumpMap:grain,bumpScale:.04,clearcoat:.38,clearcoatRoughness:.23,envMapIntensity:.95};
+  const paint={metalness:.72,roughness:.27,map:flakes,bumpMap:grain,bumpScale:.035,clearcoat:.55,clearcoatRoughness:.18,envMapIntensity:1.15};
   const shell=material({color:0xbfc3c4,...paint});
   const edge=material({color:0xaeb3b5,...paint});
   const button=material({color:0xb9bdc0,metalness:.2,roughness:.43,clearcoat:.18});
@@ -90,6 +90,35 @@ export function mountSP(stage, video) {
   const seam=material({color:0x5d656d,metalness:.32,roughness:.6});
   const bezel=track(new T.MeshBasicMaterial({color:0x080b10,toneMapped:false}));
   const chrome=material({color:0xaab0b5,metalness:.8,roughness:.27});
+  // Sparse metallic flakes have their own micro-facet normals. Their highlights
+  // move with the shell, instead of baking bright dots into the color texture.
+  for(const mat of [shell,edge]) {
+    mat.onBeforeCompile=shader=>{
+      shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vPaintUV;')
+        .replace('#include <begin_vertex>','#include <begin_vertex>\nvPaintUV = uv;');
+      shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
+        varying vec2 vPaintUV;
+        float flakeHash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+      `).replace('#include <lights_fragment_end>',`#include <lights_fragment_end>
+        vec2 cell = floor(vPaintUV * 4.8);
+        float seed = flakeHash(cell);
+        vec2 dotUV = fract(vPaintUV * 4.8) - .5;
+        float footprint = max(length(fwidth(vPaintUV * 4.8)), .01);
+        float dotMask = (1.0 - smoothstep(.14, .24 + footprint, length(dotUV))) * min(1.0, .42 / footprint);
+        vec3 baseN = normalize(vNormal);
+        vec3 tangent = normalize(abs(baseN.z)<.95 ? cross(baseN,vec3(0,0,1)) : cross(baseN,vec3(0,1,0)));
+        vec3 bitangent = cross(baseN,tangent);
+        float azimuth = flakeHash(cell+19.7)*6.283185;
+        float tilt = (flakeHash(cell+7.3)-.5)*1.15;
+        vec3 flakeN = normalize(baseN + tilt*(cos(azimuth)*tangent+sin(azimuth)*bitangent));
+        vec3 halfLight = normalize(normalize(vViewPosition)+normalize(vec3(-.45,.65,1.0)));
+        float glint = pow(max(dot(flakeN,halfLight),0.0),72.0);
+        float sparse = smoothstep(.90,.95,seed);
+        reflectedLight.directSpecular += mix(vec3(.9),diffuseColor.rgb,.25)*glint*dotMask*sparse*2.2;
+      `);
+    };
+    mat.customProgramCacheKey=()=> 'sp-metal-flake-v2';
+  }
 
   function rr(w,h,r,cx=0,cy=0,Type=T.Shape) {
     const s=new Type(), x=cx-w/2,y=cy-h/2;
@@ -283,8 +312,10 @@ export function mountSP(stage, video) {
   }
   // L1/R1 wrap around the corners. L2/R2 sit higher and slightly inset.
   for(const [x,label,high]of [[-36,'L1',false],[-24,'L2',true],[24,'R2',true],[36,'R1',false]]) {
-    slab(rear,high?7.8:8.6,high?6.3:7.1,1.1,1.1,.28,dark,x,3,.8);
-    slab(rear,high?7.2:8.1,high?5.8:6.6,high?2.4:1.5,1,.3,button,x,3,high?2.5:1.6);
+    // Recessed mounting pockets and long skirts bury the caps in the shell.
+    slab(rear,high?9.2:10.4,high?7.8:8.8,4.2,1.8,.4,shell,x,3,.9);
+    slab(rear,high?7.8:8.7,high?6.3:7.2,2.6,1.2,.2,dark,x,3,1.02);
+    slab(rear,high?7.2:8.1,high?5.8:6.6,high?5.4:4.5,1,.3,button,x,3,high?2.5:1.6);
     engraving(label,rear,x,3,high?2.55:1.65,3.7,2.8);
   }
   const front=surface(0,-79.03,-8.2,Math.PI/2);
@@ -325,10 +356,10 @@ export function mountSP(stage, video) {
   const observer=new MutationObserver(loadPoster);observer.observe(video,{attributes:true,attributeFilter:['poster']});
 
   const palettes={
-    platinum:[0xbfc3c4,0xaeb3b5,0xb9bdc0,.58],
-    graphite:[0x242629,0x202225,0x35383a,.44],
-    'pearl blue':[0x91c7cb,0x7baeb3,0xb9bec0,.52],
-    'pearl pink':[0xdcaec0,0xc898aa,0xbebbc0,.5],
+    platinum:[0xcbd0d2,0xb7bec2,0xb9bdc0,.74],
+    graphite:[0x42474b,0x31363a,0x45494d,.63],
+    'pearl blue':[0x9cd6d9,0x80b6bd,0xb9bec0,.69],
+    'pearl pink':[0xe9bacd,0xcfa1b6,0xbebbc0,.67],
     gold:[0xcfad67,0xa78039,0xbd9d5c,.65]
   };
   function finish(name) {
@@ -341,19 +372,21 @@ export function mountSP(stage, video) {
   stage.addEventListener('sp:finish',onFinish);
 
   const defaultAngle=150,defaultYaw=-.38,defaultPitch=-.16;
+  let opening=!reduced.matches&&!options.capture,introStart=null;
   let yaw=defaultYaw,pitch=defaultPitch,roll=-.08,targetYaw=yaw,targetPitch=pitch;
   // 180° is flat. The earlier negative rotation incorrectly went past flat.
-  let angle=defaultAngle,closed=false,hinge=T.MathUtils.degToRad(180-angle),targetHinge=hinge;
+  let angle=defaultAngle,closed=false,targetHinge=T.MathUtils.degToRad(180-angle),hinge=opening?Math.PI:targetHinge;
   let pointer=null,lastFrame=0,lastRendered=0,frame=0,visible=true,disposed=false;
   let pressUntil=0,pressed=null;
   const hardware=[...stage.querySelectorAll('[data-hardware]')];
-  const fallback=stage.querySelector('.device');
+  const fallback=stage.querySelector('.sp-render-fallback');
   const videoParent=video.parentElement,videoNext=video.nextSibling;
   const originals=hardware.map(element=>({element,parent:element.parentElement,next:element.nextSibling}));
   const fold=stage.closest('.sp-preview').querySelector('.model-fold');
   const lidInput=stage.closest('.sp-preview').querySelector('.model-angle input');
   const lidOutput=stage.closest('.sp-preview').querySelector('.model-angle output');
-  function setLid(value) {
+  function setLid(value,manual=true) {
+    if(manual&&opening){opening=false;stage.dataset.opening='false';}
     angle=T.MathUtils.clamp(Number(value),0,180);closed=angle<12;
     targetHinge=T.MathUtils.degToRad(180-angle);
     hardware.forEach(element=>{element.hidden=angle<45;});
@@ -375,7 +408,7 @@ export function mountSP(stage, video) {
       const anchor=controls.get(element.dataset.hardware);
       anchor.getWorldPosition(project);
       normal.set(0,0,1).applyQuaternion(product.quaternion);toCamera.copy(camera.position).sub(project).normalize();
-      element.hidden=angle<45||normal.dot(toCamera)<.2;
+      element.hidden=opening||(180-T.MathUtils.radToDeg(hinge))<45||normal.dot(toCamera)<.2;
       project.project(camera);
       element.style.left=`${(project.x*.5+.5)*100}%`;
       element.style.top=`${(-project.y*.5+.5)*100}%`;
@@ -395,18 +428,24 @@ export function mountSP(stage, video) {
     const dt=Math.min((now-lastFrame)/1000,.05)||.016;lastFrame=now;
     const ease=reduced.matches?1:1-Math.exp(-12*dt);
     const poseChanged=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.0001;
-    yaw+=(targetYaw-yaw)*ease;pitch+=(targetPitch-pitch)*ease;hinge+=(targetHinge-hinge)*ease;
+    yaw+=(targetYaw-yaw)*ease;pitch+=(targetPitch-pitch)*ease;
+    if(opening) {
+      introStart??=now;const t=T.MathUtils.clamp((now-introStart-80)/900,0,1);
+      hinge=T.MathUtils.lerp(Math.PI,targetHinge,1-Math.pow(1-t,3));
+      if(t===1){opening=false;stage.dataset.opening='false';stage.dispatchEvent(new CustomEvent('sp:lid'));}
+    } else hinge+=(targetHinge-hinge)*ease;
     product.rotation.set(pitch,yaw,roll);lid.rotation.x=hinge;
     product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
     if(pressed && now>pressUntil){pressed.position.z+=.45;pressed=null;}
     updateScreen();placeButtons();
-    renderer.shadowMap.needsUpdate=poseChanged||!!pressed||!stage.dataset.modelReady;
+    renderer.shadowMap.needsUpdate=opening||poseChanged||!!pressed||!stage.dataset.modelReady;
     renderer.render(scene,camera);
     stage.dataset.modelReady='true';
-    stage.dataset.pose=Math.abs(hinge-targetHinge)<.002 ? (closed?'closed':angle===180?'flat':'open') : 'moving';
+    stage.dataset.pose=opening?'opening':Math.abs(hinge-targetHinge)<.002 ? (closed?'closed':angle===180?'flat':'open') : 'moving';
+    stage.dataset.renderedAngle=String(180-T.MathUtils.radToDeg(hinge));
     stage.dataset.viewYaw=String(yaw);stage.dataset.viewPitch=String(pitch);
     const moving=Math.abs(yaw-targetYaw)+Math.abs(pitch-targetPitch)+Math.abs(hinge-targetHinge)>.001;
-    if(moving||pressed||(!video.paused&&video.readyState>=2))wake();
+    if(opening||moving||pressed||(!video.paused&&video.readyState>=2))wake();
   }
   function down(event) {
     if(event.target.closest('button')||event.button!==0)return;
@@ -461,9 +500,10 @@ export function mountSP(stage, video) {
     stage.removeEventListener('sp:finish',onFinish);stage.removeEventListener('keydown',keydown);stage.removeEventListener('click',press);fold.removeEventListener('click',foldLid);lidInput.removeEventListener('input',adjustLid);
     for(const {element,parent,next}of originals){parent.insertBefore(element,next?.parentElement===parent?next:null);element.removeAttribute('style');element.hidden=false;}
     videoParent.insertBefore(video,videoNext?.parentElement===videoParent?videoNext:null);
-    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.dispatchEvent(new CustomEvent('sp:lid'));stage.removeAttribute('tabindex');stage.removeAttribute('role');stage.removeAttribute('aria-label');delete stage.dataset.pose;
+    stage.classList.remove('model-ready');delete stage.dataset.modelReady;delete stage.dataset.screenReady;delete stage.dataset.lid;stage.removeAttribute('tabindex');stage.removeAttribute('role');stage.removeAttribute('aria-label');delete stage.dataset.pose;
     for(const key of ['lidAngle','viewYaw','viewPitch','finish'])delete stage.dataset[key];
     canvas.remove();poster?.dispose();for(const item of disposables)item.dispose();renderer.dispose();
+    stage.dispatchEvent(new CustomEvent('sp:fallback'));
   }
   // Commit only after the first complete render. Failure leaves the original
   // accessible HTML/video controls intact, including on devices without WebGL.
@@ -472,10 +512,27 @@ export function mountSP(stage, video) {
     product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
     const {width,height}=stage.getBoundingClientRect();renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
     renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);
-    stage.append(canvas,video,...hardware);stage.classList.add('model-ready');setLid(defaultAngle);
+    stage.append(canvas,video,...hardware);stage.classList.add('model-ready');stage.dataset.opening=String(opening);setLid(defaultAngle,false);
     stage.tabIndex=0;stage.setAttribute('role','group');stage.setAttribute('aria-label','3D RG SP. Drag or use arrow keys to turn. Home resets the view.');
-    resizeObserver.observe(stage);visibilityObserver.observe(stage);loadPoster();resize();
-    finish(fallback.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
+    resizeObserver.observe(stage);visibilityObserver.observe(stage);if(!options.capture)loadPoster();resize();
+    finish(fallback?.classList.contains('secret-finish') ? 'gold' : (document.querySelector('[data-shell][aria-pressed="true"]')?.dataset.shell || 'platinum'));
   } catch(error) { cleanup();throw error; }
+  if(options.capture) {
+    visible=false;cancelAnimationFrame(frame);frame=0;observer.disconnect();resizeObserver.disconnect();visibilityObserver.disconnect();
+    let capturedAngle=null;
+    cleanup.captureFrame=async({lidAngle=150,color='platinum',source=null}={})=>{
+      finish(color);setLid(lidAngle);hinge=targetHinge;
+      if(source){const texture=await new T.TextureLoader().loadAsync(source);texture.colorSpace=T.SRGBColorSpace;poster?.dispose();poster=texture;}
+      screenMat.map=source?poster:null;screenMat.color.setHex(source?0xffffff:0x080b10);screenMat.needsUpdate=true;
+      product.rotation.set(defaultPitch,defaultYaw,roll);lid.rotation.x=hinge;product.position.y=(79-Math.max(4,77*Math.cos(hinge)))/2-2;
+      product.updateMatrixWorld(true);renderer.shadowMap.needsUpdate=capturedAngle!==lidAngle;renderer.render(scene,camera);capturedAngle=lidAngle;
+      const {width,height}=stage.getBoundingClientRect();
+      const point=object=>{object.getWorldPosition(project);project.project(camera);return {x:(project.x*.5+.5)*width,y:(-.5*project.y+.5)*height};};
+      const screenQuad=[[-36.15,24.1],[36.15,24.1],[36.15,-24.1],[-36.15,-24.1]].map(([x,y])=>{
+        project.set(x,y,0);screen.localToWorld(project);project.project(camera);return {x:(project.x*.5+.5)*width,y:(-.5*project.y+.5)*height};
+      });
+      return {screenQuad,controls:Object.fromEntries([...controls].map(([name,anchor])=>[name,point(anchor)]))};
+    };
+  }
   return cleanup;
 }

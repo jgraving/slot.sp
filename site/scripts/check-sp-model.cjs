@@ -32,6 +32,23 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     });return page;
   }
   try {
+    const opening=await pageFor(1366,{reducedMotion:'no-preference'});
+    let releaseModel;
+    const delayedModel=new Promise(resolve=>releaseModel=resolve);
+    await opening.route('**/sp-model.*.js',async route=>{await delayedModel;await route.fallback();});
+    await opening.goto(origin,{waitUntil:'domcontentloaded'});
+    await opening.locator('.sp-stage').scrollIntoViewIfNeeded();
+    assert.equal(await opening.locator('.pose-hero,.device').count(),0,'Never show the old illustrated opening');
+    await opening.locator('.model-poster img').evaluate(img=>img.decode());
+    await opening.locator('.sp-stage').screenshot({path:path.join(out,'loading-3d-model.png')});
+    releaseModel();
+    const intro=await opening.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='opening'&&{paused:document.getElementById('hero-preview').paused},{},{timeout:45000});
+    assert((await intro.jsonValue()).paused,'Hold native playback while the model opens');
+    await opening.locator('.sp-stage').screenshot({path:path.join(out,'opening-3d-model.png')});
+    await opening.waitForFunction(()=>document.querySelector('.sp-stage').dataset.pose==='open');
+    assert.equal(await opening.locator('.sp-stage').getAttribute('data-opening'),'false');
+    assert(Math.abs(Number(await opening.locator('.sp-stage').getAttribute('data-rendered-angle'))-150)<.1);
+    await opening.close();
     for(const width of [1366,390,320]) {
       const page=await pageFor(width);const errors=[];
       page.on('pageerror',e=>errors.push(e.message));
@@ -126,17 +143,31 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:get.call(this,type,...args);};});
       await fallback.goto(origin,{waitUntil:'networkidle'});
       await fallback.locator('.sp-stage').scrollIntoViewIfNeeded();
-      assert(await fallback.locator('.device').isVisible());assert(await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
+      await fallback.locator('.fallback-ready').waitFor();
+      assert(await fallback.locator('.model-poster').isVisible());assert(await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
+      assert.equal(await fallback.locator('.pose-hero,.device').count(),0);
+      await fallback.getByRole('button',{name:'A: insert cartridge preview',exact:true}).click();
+      await fallback.waitForFunction(()=>{const v=document.getElementById('hero-preview');return v.paused&&Math.abs(v.currentTime-1.1)<.08;},{},{timeout:15000});
       assert(!(await fallback.locator('.model-fold').isVisible()));
       assert(!(await fallback.locator('.model-angle').isVisible()));
       await fallback.getByRole('button',{name:'Pearl Blue',exact:true}).click();
       assert.equal(await fallback.locator('.finish-name').textContent(),'Pearl Blue');
+      assert((await fallback.locator('.model-poster img').getAttribute('src')).includes('pearl_blue-open.png'));
       await fallback.locator('.preview-controls').scrollIntoViewIfNeeded();
       const uncovered=await fallback.locator('.preview-toggle,[data-shell]').evaluateAll(nodes=>nodes.every(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;}));
       assert(uncovered,`${width}: fallback covers its playback or color controls`);
       assert(await fallback.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Fallback overflow');
       await fallback.screenshot({path:path.join(out,`no-webgl-${width}.png`)});await fallback.close();
     }
+    const recorded=await pageFor(390,{reducedMotion:'no-preference'});
+    await recorded.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return type.startsWith('webgl')?null:get.call(this,type,...args);};});
+    await recorded.goto(origin,{waitUntil:'domcontentloaded'});await recorded.locator('.sp-stage').scrollIntoViewIfNeeded();
+    await recorded.locator('.fallback-opening').waitFor({timeout:15000});
+    await recorded.locator('.sp-stage').screenshot({path:path.join(out,'recorded-3d-opening.png')});
+    await recorded.waitForFunction(()=>document.querySelector('.sp-stage').dataset.opening==='false');
+    assert(await recorded.locator('.model-opening').evaluate(video=>video.currentTime>.9&&!video.error),'The recorded 3D opening must actually play');
+    assert(await recorded.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible());
+    await recorded.locator('.sp-stage').screenshot({path:path.join(out,'recorded-3d-open.png')});await recorded.close();
     fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
     console.log('PASS: desktop/mobile, native clip actions, all four finishes and persistence, 150° default and 180° limit, fold, full rotation, reduced motion and WebGL fallback');
   }finally{await browser.close();}

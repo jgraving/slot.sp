@@ -1,38 +1,26 @@
 {
-  "frames": 117,
+  "frames": 148,
   "frame_ms": 80,
-  "duration": 9.383333,
-  "bounds": [
-    {
-      "x": 638.7586669921875,
-      "y": 21.846284866333008,
-      "right": 937.53076171875,
-      "bottom": 335.5303363800049
-    },
-    {
-      "x": 573.961669921875,
-      "y": 292.2513732910156,
-      "right": 909.1978149414062,
-      "bottom": 673.832275390625
-    }
-  ],
+  "duration": 11.84,
+  "poster_index": 15,
+  "model_sha256": "ed70d9ece175c58591765253d73b4a57073378532fbe2e35569c373d4eb429b3",
   "browser_version": "156.0.8078.47",
   "logo_sha256": "a3f3f9b12c0e3a924161572723948f67a382abb954c985e49fc658b7f4058a6c",
   "logo_font_sha256": "4459a82bdff1f86a4c64996826fb5cdd1c6573cd9900881cd5ea184058a538f4",
   "logo_font_profile": "display",
   "native_sha256": "7d00e6e64a1d1fccb88b441098e8f4618257ad2efe7c9c1cfaaccf80e88a165a",
-  "source_commit": "18d836d680dfa8b40e625b63caa40a9e9cb3122f",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41354522838",
+  "source_commit": "2f351210dd6e65c6a1802acfa8ec424c7bcb9848",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41373862599",
   "files": [
     {
-      "path": "previews/readme-model/hero-rounded.gif",
-      "bytes": 2428127,
-      "sha256": "2dc7cc47beacc362768658a2b0009983540b7e89a4b63fb90d017ac6ab69fd51"
+      "path": "previews/readme-model/hero-3d.gif",
+      "bytes": 2594610,
+      "sha256": "df7e7b84c8734a11d2c1bd52d60ef3e5917b02523c00abb9f930bf569592a78c"
     },
     {
-      "path": "previews/readme-model/hero-rounded.png",
-      "bytes": 201130,
-      "sha256": "5845be0efba1384ba1f42a6ae58afe7900514ff77f0d9fdc5c9042122eed1873"
+      "path": "previews/readme-model/hero-3d.png",
+      "bytes": 155763,
+      "sha256": "a0b3296c0d5b7f68f1cc36844c04cd5d4eb303364a481c5f444cc343da4cb7c5"
     }
   ]
 }
