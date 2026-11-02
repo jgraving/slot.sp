@@ -76,3 +76,18 @@ The fork already leaves CPU governor selection to the kernel, matching upstream'
 Deferred the clock/city/DST/12-hour rewrite and its first-boot follow-up (`5edec20`, `34cd2ff`) until it can be integrated with scheduled display overrides, play history and kid-time limits. Deferred the GBA Video platform and directory addition (`db1e370`, `546d565`) until device and Cart Studio platform support can be updated together. Upstream typography/legend changes and whole-workspace formatting are not included. Scaling, related bezels and frame blending remain held for review, and ZIP support remains unmerged.
 
 Validation covers device-feature compilation, input gestures, settings persistence, fractional fast-forward, route-aware headphone holds, restart shutdown ordering, brightness/night/sleep behavior, kid controls, link hints, existing high-refresh/native-game pacing, and the fork's menu rendering. Native ARM64 packaging and release regressions run on the integration branch before merging. Electrical noise and final screen behavior still require handheld verification.
+
+
+## 2026-11-02: mGBA Game Boy LCD-enable fix
+
+Integrated BrandonKowalski/slot `c7a79b9a52e67b07bd911596365ac91b8780816b`
+by Brandon T. Kowalski as a separate emulator bug-fix review. Keep mGBA's first
+Game Boy frame blank after LCD enable, matching hardware behavior and fixing
+reported screen flashes (upstream issue #169). The patch only raises a lower
+frameskip counter to one at that transition; it does not change the core pin,
+GBA rendering, frontend pacing or user settings.
+
+The existing mGBA build stamp includes every patch hash, so this change forces
+a rebuild. Release packaging includes the patch and its provenance as before.
+Native ARM64 build, device regressions, binary and source-material checks run
+on the integration branch. Final Game Boy display behavior needs handheld review.
