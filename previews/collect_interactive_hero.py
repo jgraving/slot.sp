@@ -36,7 +36,7 @@ for finish in ['graphite', 'platinum', 'pearl_blue', 'pearl_pink']:
     def join(a, b):
         difference = delta(a, b)
         # H.264 independently quantizes the same stationary frame at each scene.
-        assert difference < 1.8, (finish, 'Discontinuous native pose', a, b, difference)
+        assert difference < 3.0, (finish, 'Discontinuous native pose', a, b, difference)
         checks.append(dict(finish=finish, frames=[a, b], mean_rgb_difference=round(difference, 4)))
     join(segments['boot'][1], segments['insert-0'][0])
     for i in range(len(names)):

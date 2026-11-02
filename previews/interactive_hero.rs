@@ -17,7 +17,7 @@ impl Platform for Device {
 struct Film { child: Child, pipe: Option<ChildStdin>, frames: u32, entries: Vec<String> }
 impl Film {
     fn new(path:&Path)->Self {
-        let mut child=Command::new("ffmpeg").args(["-nostdin","-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-an","-c:v","libx264","-threads","2","-preset","slow","-crf","20","-g","15","-bf","0","-pix_fmt","yuv420p","-movflags","+faststart"]).arg(path).stdin(Stdio::piped()).spawn().unwrap();
+        let mut child=Command::new("ffmpeg").args(["-nostdin","-v","error","-y","-f","rawvideo","-pix_fmt","rgba","-s","720x480","-r","60","-i","-","-an","-c:v","libx264","-threads","2","-preset","slow","-crf","24","-g","30","-bf","0","-pix_fmt","yuv420p","-movflags","+faststart"]).arg(path).stdin(Stdio::piped()).spawn().unwrap();
         let pipe=child.stdin.take();Self{child,pipe,frames:0,entries:vec![]}
     }
     fn push(&mut self,g:&Compositor){self.pipe.as_mut().unwrap().write_all(&g.read_frame()).unwrap();self.frames+=1;}
