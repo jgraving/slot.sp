@@ -6,13 +6,13 @@ html{scrollbar-gutter:stable}
  min-height:64px;margin-inline:auto;padding:0 28px;gap:24px;
 }
 .mast{display:block;padding:0;min-height:0;background:var(--page);border-bottom:1px solid var(--rule)}
-.md-header__inner>.mast-mark,.mast-inner>.mast-brand{grid-column:1;grid-row:1;justify-self:start;margin:0}
+.md-header__inner.md-grid>.mast-mark,.mast-inner>.mast-brand{grid-column:1;grid-row:1;justify-self:start;margin:0}
 .mast-inner>.mast-brand{align-items:center;min-width:0}
 .mast .mast-sub,.mast .menu-btn{display:none}
 .mast-tabs,.mast .mast-links{
  display:flex;position:relative;inset:auto;grid-column:2;grid-row:1;justify-self:center;
  flex-direction:row;flex-wrap:nowrap;justify-content:center;gap:4px;max-width:100%;
- margin:0;padding:0;border:0;box-shadow:none;list-style:none;
+ margin:0;padding:0;border:0;background:transparent;box-shadow:none;list-style:none;
 }
 .mast-tabs .mast-item{margin:0;padding:0;border:0}
 .mast-tabs .mast-link,.mast .mast-links .mast-link{

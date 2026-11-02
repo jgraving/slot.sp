@@ -63,6 +63,18 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
     },time);
     assert.equal(position.opacity,'1',`${label}: pill opacity at ${time}ms`);
     assert(position.width>20&&position.height>=44,`${label}: pill retains its shape throughout travel`);
+    const headerHeight=await page.locator('.md-header,.mast').evaluate(el=>Math.ceil(el.getBoundingClientRect().height));
+    const png=await page.screenshot({path:path.join(out,`${label}-pill-${time}.png`),clip:{x:0,y:0,width:page.viewportSize().width,height:headerHeight}});
+    execFileSync('python3',['-c',`import io,json,sys
+from PIL import Image
+im=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert('RGB');p=json.loads(sys.argv[1])
+point=(round(p['x']+8),round(p['y']+p['height']/2));actual=im.getpixel(point)
+assert max(abs(a-b) for a,b in zip(actual,(51,79,82)))<5, ('Pill disappeared in rendered pixels',point,actual,sys.argv[2])
+if sys.argv[3]=='420':
+ box=(round(p['x']),round(p['y']),round(p['x']+p['width']),round(p['y']+p['height']))
+ ink=sum(r>130 and g>150 and b>150 for r,g,b in im.crop(box).getdata())
+ assert ink>12, ('Shared pill covers its label',ink,sys.argv[2])
+`,JSON.stringify(position),label,String(time)],{input:png});
     positions.push(position);
    }
    assert(Math.abs(positions[0].x-positions.at(-1).x)>2||Math.abs(positions[0].y-positions.at(-1).y)>2,`${label}: indicator must travel, not be recreated at the destination: ${JSON.stringify(positions)}`);
