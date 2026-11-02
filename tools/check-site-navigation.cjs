@@ -26,6 +26,7 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         await page.goto(origin+route, {waitUntil:'domcontentloaded'});
         await page.locator('header .slot-selector[data-selector-ready]').waitFor();
         await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() => Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-height')) - document.querySelector('.md-header,.mast').getBoundingClientRect().height) < 1);
         const info = await page.evaluate(() => {
           const header=document.querySelector('.md-header,.mast'), box=header.getBoundingClientRect();
           const links=[...header.querySelectorAll('.mast-tabs a,.mast-links a')];

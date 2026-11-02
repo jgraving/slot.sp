@@ -74,6 +74,7 @@
     new ResizeObserver(fitModel).observe(stage);
     fitModel();
     const canAnimate = () => !reduced.matches && !navigator.connection?.saveData;
+    const pageReady = () => document.documentElement.dataset.pageTransition !== 'active';
     let shell = 'platinum', ready = false, introPending = canAnimate();
     let pose = introPending ? 'closed' : 'open', motionTarget = null, motionRequest = 0, posterRequest = 0;
     const busy = () => pose === 'opening' || pose === 'closing';
@@ -175,7 +176,7 @@
         stage.dataset.ready = 'true';
         stage.dataset.finish = shell;
         setPose(pose);
-        if (introPending && visible) flipLid(true); else sync();
+        if (introPending && visible && pageReady()) flipLid(true); else sync();
       } catch (error) {
         introPending = false;
         updateStill(true);
@@ -205,6 +206,7 @@
       state();
     }
     function sync() {
+      if (!pageReady()) { motion.pause(); preview.pause(); return; }
       if (busy()) {
         const current = motionRequest;
         if (visible && !document.hidden) motion.play().catch(() => finishMotion(current)); else motion.pause();
@@ -309,9 +311,12 @@
     });
     new IntersectionObserver(entries => {
       visible = entries[0].isIntersecting;
-      if (visible && ready && introPending) flipLid(true); else sync();
+      if (visible && ready && introPending && pageReady()) flipLid(true); else sync();
     }, {threshold:.08}).observe(stage);
     prepareModel();
+    document.addEventListener('slot:page-ready', () => {
+      if (visible && ready && introPending) flipLid(true); else sync();
+    });
     document.addEventListener('visibilitychange',sync);
     state();
     try {
