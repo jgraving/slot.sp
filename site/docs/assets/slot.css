@@ -150,11 +150,12 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-render-fallback{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;border:0;border-radius:0;aspect-ratio:4/5;object-fit:fill}
 .model-poster{background-size:100% 100%;background-repeat:no-repeat}
-.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;filter:url(#sp-video-matte);z-index:4;transition:opacity 160ms var(--motion-effects)}
+.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;transition:opacity 160ms var(--motion-effects)}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
 .sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:scale(var(--model-scale,1)) var(--fallback-screen);opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
 .sp-stage[data-ready=true][data-pose=open] .hero-screen{opacity:1}
-.sp-render-fallback .hardware-button{position:absolute;display:block;visibility:hidden;width:max(24px,calc(40px * var(--model-scale,1)));height:max(24px,calc(40px * var(--model-scale,1)));transform:none;pointer-events:auto;z-index:3}
+.sp-render-fallback .hardware-button{position:absolute;display:block;visibility:hidden;width:max(24px,calc(40px * var(--model-scale,1)));height:max(24px,calc(40px * var(--model-scale,1)));transform:none;clip-path:circle(50%);pointer-events:auto;z-index:3}
+.sp-render-fallback .hardware-button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--teal);background:#54c2b81c}
 .sp-stage[data-ready=true][data-pose=open] .hardware-button{visibility:visible}
 .sp-render-fallback .hardware-button[hidden]{display:none}
 .preview-controls{display:flex;align-items:center;justify-content:center;gap:20px;min-height:74px;padding:8px 0}

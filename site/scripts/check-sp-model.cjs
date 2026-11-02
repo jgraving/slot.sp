@@ -111,8 +111,8 @@ print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{st
       const brand=page.locator('.intro-wordmark');assert(await brand.isVisible());
       assert((await brand.boundingBox()).width>=190,'Prominent homepage wordmark');
       for(const name of ['A: insert cartridge preview','B: eject cartridge preview','MENU: replay startup','D-pad left: previous cartridge preview','D-pad right: next cartridge preview']) {
-        const hit=await page.getByRole('button',{name,exact:true}).evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;});
-        assert(hit,`${width}: ${name} is obscured`);
+        const hit=await page.getByRole('button',{name,exact:true}).evaluate(el=>{const r=el.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {correct:top===el,rect:r.toJSON(),target:top?.outerHTML.slice(0,240),scale:getComputedStyle(document.querySelector('.sp-stage')).getPropertyValue('--model-scale')};});
+        assert(hit.correct,`${width}: ${name} is obscured: ${JSON.stringify(hit)}`);
       }
       for(const [action,end]of width===1366?[['insert',1.1],['eject',3],['right',5.13],['left',7.38],['boot',9.25]]:[['insert',1.1]]) {
         await page.locator(`[data-hardware=${action}]`).click();
