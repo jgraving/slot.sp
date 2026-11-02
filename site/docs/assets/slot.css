@@ -145,12 +145,15 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 
 /* One fixed projection from first paint through every lid transition. */
 .md-typeset .sp-preview{width:100%;margin:0;padding:0;min-width:0;max-width:none}
-.sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;overflow:hidden;touch-action:pan-y}
-.motion-filters{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;background:var(--page);overflow:hidden;touch-action:pan-y}
 .sp-render-fallback{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .sp-render-fallback .model-poster,.sp-render-fallback .model-poster img,.sp-render-fallback .model-opening{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;border:0;border-radius:0;aspect-ratio:4/5;object-fit:fill}
 .model-poster{background-size:100% 100%;background-repeat:no-repeat}
-.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;transition:opacity 160ms var(--motion-effects)}
+.sp-render-fallback .model-opening{display:block;opacity:0;background:transparent;pointer-events:none;z-index:4;mix-blend-mode:lighten}
+/* H.264's navy matte decodes slightly below the page color. Native blending
+   removes it without an SVG video filter or per-frame pixel processing.
+   Hide the still while blending so its closed lid cannot ghost through. */
+.sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-poster{visibility:hidden}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
 .md-typeset .sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:scale(var(--model-scale,1)) var(--fallback-screen);opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
 .sp-stage[data-ready=true][data-pose=open] .hero-screen{opacity:1}

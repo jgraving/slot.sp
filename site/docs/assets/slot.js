@@ -63,10 +63,6 @@
     const picture = still.parentElement;
     const motion = stage.querySelector('.model-opening');
     const fold = document.querySelector('.model-fold');
-    const matteSample = document.createElement('canvas');
-    matteSample.width = matteSample.height = 1;
-    const matteContext = matteSample.getContext('2d', {willReadFrequently:true});
-    const matteChannels = ['R','G','B'].map(channel => document.querySelector(`#sp-video-matte feFunc${channel}`));
     function fitModel() { stage.style.setProperty('--model-scale', String(stage.getBoundingClientRect().width / 480)); }
     new ResizeObserver(fitModel).observe(stage);
     fitModel();
@@ -134,18 +130,13 @@
     motion.addEventListener('error', () => finishMotion());
     motion.addEventListener('loadeddata', () => {
       if (!busy()) return;
-      try {
-        // H.264 can shift a flat RGB background during YUV conversion. Match
-        // the decoded frame to the page before revealing its rectangular layer.
-        matteContext.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--page').trim();
-        matteContext.fillRect(0,0,1,1);
-        const target = Array.from(matteContext.getImageData(0,0,1,1).data);
-        matteContext.drawImage(motion,0,0,1,1,0,0,1,1);
-        const source = matteContext.getImageData(0,0,1,1).data;
-        matteChannels.forEach((channel,index) => channel.setAttribute('intercept', String((target[index] - source[index]) / 255)));
-        motion.style.filter = `url(${JSON.stringify(new URL('#sp-video-matte', document.baseURI).href)})`;
-        stage.dataset.motionReady = 'true';
-      } catch { finishMotion(); }
+      const current = motionRequest;
+      const reveal = () => {
+        if (current === motionRequest && busy()) stage.dataset.motionReady = 'true';
+      };
+      // Reveal a presented frame, never the video's transparent loading poster.
+      if (motion.requestVideoFrameCallback) motion.requestVideoFrameCallback(reveal);
+      else requestAnimationFrame(reveal);
     });
     fold.addEventListener('click', () => flipLid(pose === 'closed'));
     stage.addEventListener('sp:finish', event => {

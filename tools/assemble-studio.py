@@ -26,10 +26,15 @@ script.write_text(text)
 # Studio CSS previously lived one directory below the website's font assets.
 for css in bundle.glob('*.css'):
     css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))
-# Both repositories must ship exactly the same navigation behavior and palette.
-for name in ['navigation.js', 'navigation.css', 'wordmark.png']:
+# Keep the pinned artwork; bundled navigation comes from the website build.
+for name in ['wordmark.png']:
     assert (source / 'web' / name).read_bytes() == (ROOT / 'site/docs/assets' / name).read_bytes(), f'Shared website asset differs: {name}'
 html = (source / 'web/index.html').read_text()
+# Keep the same inner width, centered tabs and fixed brand as every site page.
+assert html.count('<header class="mast">') == 1
+html = html.replace('<header class="mast">', '<header class="mast"><div class="mast-inner">')
+html, count = re.subn(r'</header>(\s*<main)', r'</div></header>\1', html, count=1)
+assert count == 1, 'Studio header boundary is missing'
 # Use the same header layout and page motion on the site and its pinned Studio.
 shared_styles = []
 for stem in ['header', 'page-motion']:
@@ -39,6 +44,14 @@ for stem in ['header', 'page-motion']:
 navigation_link = '<link rel="stylesheet" href="navigation.css">'
 assert html.count(navigation_link) == 1, 'Studio navigation stylesheet is missing'
 html = html.replace(navigation_link, navigation_link + '\n' + '\n'.join(shared_styles))
+# Use the exact fingerprinted assets the other pages use. The Studio app pin
+# remains independent of website layout and navigation fixes.
+for name in ['navigation.css', 'navigation.js']:
+    stem, suffix = name.rsplit('.', 1)
+    matches = list((ROOT / 'site/docs/assets/generated').glob(f'{stem}.*.{suffix}'))
+    assert len(matches) == 1, f'Prepare the shared {name} asset first'
+    html = html.replace(f'"{name}"', f'"/slot.sp/assets/generated/{matches[0].name}"')
+html = html.replace('</head>', '<link rel="preload" href="/slot.sp/assets/fonts/google-sans-flex.woff2" as="font" type="font/woff2" crossorigin>\n</head>')
 page_motion = (ROOT / 'site/overrides/partials/page-motion.js').read_text()
 html = html.replace('</head>', f'<script>{page_motion}</script>\n</head>')
 for name in ['studio.js', 'studio.css', 'slot-sp.css', 'navigation.js', 'navigation.css', 'wordmark.png']:

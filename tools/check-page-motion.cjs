@@ -27,26 +27,72 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
     if(!event.viewTransition)return;
     event.viewTransition.finished.then(()=>{sample.finished=true;});
     event.viewTransition.ready.then(()=>{
-     const animations=window.__pageAnimations=document.getAnimations().filter(a=>/^slot-page-(in|out)$/.test(a.animationName));
+     const animations=window.__pageAnimations=document.getAnimations().filter(a=>/^slot-page-/.test(a.animationName)||a.animationName?.includes('view-transition'));
      animations.forEach(a=>{a.pause();a.currentTime=32;});
      const style=getComputedStyle(document.documentElement,'::view-transition-new(root)');
-     Object.assign(sample,{ready:true,direction:document.documentElement.dataset.pageDirection,animation:style.animationName,x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),headerAnimation:getComputedStyle(document.documentElement,'::view-transition-new(site-header)').animationName,count:animations.length});
+     const pill=getComputedStyle(document.documentElement,'::view-transition-group(site-nav-pill)');
+     const surface=getComputedStyle(document.documentElement,'::view-transition-new(site-nav-pill)');
+     Object.assign(sample,{ready:true,direction:document.documentElement.dataset.pageDirection,animation:style.animationName,x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),headerAnimation:getComputedStyle(document.documentElement,'::view-transition-new(site-header)').animationName,pillAnimation:pill.animationName,pillDuration:pill.animationDuration,pillOpacity:surface.opacity,count:animations.length});
     }).catch(error=>{sample.error=error.message;});
    });
   });
   return page;
  }
  async function transition(page,action,route,direction,label,capture=false){
+  // Start each navigation from the active destination rather than a lingering
+  // mouse hover left behind by the previous scripted click/history action.
+  await page.mouse.move(8,850);
+  await page.waitForFunction(()=>{
+   const root=document.querySelector('header .slot-selector'),active=root.querySelector('a[aria-current]'),pill=root.querySelector('.selector-surface');
+   if(!active)return getComputedStyle(pill).opacity==='0';
+   const a=active.getBoundingClientRect(),p=pill.getBoundingClientRect();
+   return Math.abs(a.x-p.x)<.2&&Math.abs(a.y-p.y)<.2&&Math.abs(a.width-p.width)<.2;
+  });
   await action();
   await page.waitForURL(origin+route);
   await page.waitForFunction(()=>window.__pageMotion?.ready||window.__pageMotion?.error,{},{timeout:10000});
   const sample=await page.evaluate(()=>window.__pageMotion);
   assert(sample.native&&!sample.error,`${label}: native transition: ${JSON.stringify(sample)}`);
   assert.equal(sample.direction,direction,`${label}: history direction`);
-  assert.equal(sample.animation,'slot-page-in');
-  assert(sample.count===2&&sample.opacity>0&&sample.opacity<1,`${label}: both sliding layers are animated`);
+  assert(sample.animation.includes('slot-page-in'));
+  assert(sample.count>=4&&sample.opacity>0&&sample.opacity<1,`${label}: spatial slides and effects are animated separately`);
   assert(direction==='back'?sample.x<0:sample.x>0,`${label}: incoming page slides from the correct side: ${sample.x}`);
   assert.equal(sample.headerAnimation,'none',`${label}: header stays anchored`);
+  if(route){
+   assert.notEqual(sample.pillAnimation,'none',`${label}: one shared pill must animate between its captured positions`);
+   assert.equal(sample.pillDuration,'0.42s',`${label}: expressive fast spatial spring`);
+   assert.equal(sample.pillOpacity,'1',`${label}: the shared pill never fades away`);
+   const positions=[];
+   for(const time of [0,100,210,420]){
+    const position=await page.evaluate(time=>{
+     window.__pageAnimations.forEach(a=>{a.currentTime=time;});
+     const group=getComputedStyle(document.documentElement,'::view-transition-group(site-nav-pill)');
+     const surface=getComputedStyle(document.documentElement,'::view-transition-new(site-nav-pill)');
+     return {x:new DOMMatrix(group.transform).m41,y:new DOMMatrix(group.transform).m42,width:parseFloat(group.width),height:parseFloat(group.height),opacity:surface.opacity};
+    },time);
+    assert.equal(position.opacity,'1',`${label}: pill opacity at ${time}ms`);
+    assert(position.width>20&&position.height>=44,`${label}: pill retains its shape throughout travel`);
+    const headerHeight=await page.locator('.md-header,.mast').evaluate(el=>Math.ceil(el.getBoundingClientRect().height));
+    const png=await page.screenshot({path:path.join(out,`${label}-pill-${time}.png`),clip:{x:0,y:0,width:page.viewportSize().width,height:headerHeight}});
+    execFileSync('python3',['-c',`import io,json,sys
+from PIL import Image
+im=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert('RGB');p=json.loads(sys.argv[1])
+box=(round(p['x']),round(p['y']),round(p['x']+p['width']),round(p['y']+p['height']))
+pixels=list(im.crop(box).get_flattened_data())
+surface=sum(max(abs(a-b) for a,b in zip(pixel,(51,79,82)))<5 for pixel in pixels)
+# Rounded corners and text interrupt the fill; a disappearing pill cannot
+# retain most of its solid surface. Avoid sampling an antialiased letter.
+assert surface>len(pixels)*.45, ('Pill disappeared in rendered pixels',surface,len(pixels),sys.argv[2])
+if sys.argv[3]=='420':
+ ink=sum(r>130 and g>150 and b>150 for r,g,b in pixels)
+ assert ink>12, ('Shared pill covers its label',ink,sys.argv[2])
+`,JSON.stringify(position),label,String(time)],{input:png});
+    positions.push(position);
+   }
+   assert(Math.abs(positions[0].x-positions.at(-1).x)>2||Math.abs(positions[0].y-positions.at(-1).y)>2,`${label}: indicator must travel, not be recreated at the destination: ${JSON.stringify(positions)}`);
+   sample.pillPositions=positions;
+   await page.evaluate(()=>window.__pageAnimations.forEach(a=>{a.currentTime=32;}));
+  }
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${label}: horizontal overflow`);
   if(!route){
    await page.locator('.sp-stage[data-ready=true]').waitFor();
@@ -54,15 +100,15 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
   }
   if(capture){
    const frames=path.join(out,label);fs.mkdirSync(frames,{recursive:true});
-   for(let i=0;i<=8;i++){
-    await page.evaluate(time=>window.__pageAnimations.forEach(a=>{a.currentTime=time;}),i*40);
+   for(let i=0;i<=13;i++){
+    await page.evaluate(time=>window.__pageAnimations.forEach(a=>{a.currentTime=time;}),i*50);
     await page.screenshot({path:path.join(frames,`${String(i).padStart(2,'0')}.png`)});
    }
    execFileSync('python',['-c',`from PIL import Image
 from pathlib import Path
 import sys
 p=Path(sys.argv[1]);frames=[Image.open(f).convert('RGB') for f in sorted(p.glob('*.png'))]
-frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],duration=[500]+[40]*7+[700],loop=0,optimize=True)
+frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],duration=[500]+[50]*12+[700],loop=0,optimize=True)
 `,frames]);
   }else await page.screenshot({path:path.join(out,`${label}.png`)});
   await page.evaluate(()=>window.__pageAnimations.forEach(a=>a.play()));
@@ -78,13 +124,14 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Update',exact:true}).click(),'updating/','forward',`${width}-forward`,width===980);
    await transition(page,()=>page.goBack({waitUntil:'domcontentloaded'}),'installing/','back',`${width}-back`);
    await transition(page,()=>page.goForward({waitUntil:'domcontentloaded'}),'updating/','forward',`${width}-history-forward`);
-   await transition(page,()=>page.locator('header').getByRole('link',{name:'Cart Studio',exact:true}).click(),'studio/','forward',`${width}-studio`);
-   await transition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','forward',`${width}-guide`);
+   await transition(page,()=>page.locator('header').getByRole('link',{name:'Cart Studio',exact:true}).click(),'studio/','forward',`${width}-studio`,width===980);
+   await transition(page,()=>page.locator('header').getByRole('link',{name:'About',exact:true}).click(),'questions/','forward',`${width}-about`);
+   await transition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','back',`${width}-guide`);
    const reveals=await page.evaluate(()=>window.__pageReveals);
    await page.locator('.md-typeset a.headerlink[href="#find-a-feature"]').click();
    assert(new URL(page.url()).hash==='#find-a-feature');
    assert.equal(await page.evaluate(()=>window.__pageReveals),reveals,'Section anchors keep ordinary in-page navigation');
-   await transition(page,()=>page.locator('header .mast-mark').click(),'','forward',`${width}-home`);
+   await transition(page,()=>page.locator('header .mast-mark').click(),'','back',`${width}-home`);
    await page.close();
   }
   const reduced=await open(980,'reduce');

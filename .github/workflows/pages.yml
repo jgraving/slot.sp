@@ -57,7 +57,9 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/model-browser/node_modules
         run: |
           npm install --prefix "$RUNNER_TEMP/model-browser" playwright@1.62.1
+          "$RUNNER_TEMP/model-browser/node_modules/.bin/playwright" install --with-deps webkit
           node site/scripts/check-sp-model.cjs "$RUNNER_TEMP/sp-model-review"
+          node site/scripts/check-sp-video.cjs "$RUNNER_TEMP/sp-model-review/video"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
