@@ -62,6 +62,9 @@
   }
   function watchIncoming() {
     if (root.dataset.pageFallback !== 'incoming') return;
+    // Focus/history restoration can retain a horizontal offset from a moving
+    // document. These layouts have no horizontal scroll; keep the header fixed.
+    if (scrollX) scrollTo({left:0,top:scrollY,behavior:'instant'});
     const current = generation;
     requestAnimationFrame(() => {
       const animations = document.getAnimations?.().filter(animation => animation.animationName === 'slot-fallback-in') || [];

@@ -31,7 +31,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
      if(document.documentElement.dataset.pageFallback!=='incoming')return;
      requestAnimationFrame(()=>{
       const animations=window.__fallbackAnimations=document.getAnimations().filter(a=>a.animationName==='slot-fallback-in');
-      animations.forEach(a=>{a.pause();a.currentTime=32;});
+      if(sessionStorage.getItem('slot-test-live-film')!=='1')animations.forEach(a=>{a.pause();a.currentTime=32;});
       const content=document.querySelector('.md-container,body>.wrap'),style=getComputedStyle(content);
       window.__fallbackMotion={ready:true,direction:document.documentElement.dataset.pageDirection,x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),count:animations.length};
      });
@@ -60,6 +60,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
  async function fallbackTransition(page,action,route,direction,label,film=false){
   let recording;
   if(film){
+   await page.evaluate(()=>sessionStorage.setItem('slot-test-live-film','1'));
    const folder=path.join(out,label+'-film');fs.mkdirSync(folder,{recursive:true});
    const cdp=await page.context().newCDPSession(page),frames=[];
    cdp.on('Page.screencastFrame',frame=>{
@@ -79,25 +80,27 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm
   assert.equal(sample.opacity,1,label+': page remains opaque');
   assert(direction==='back'?sample.x<0:sample.x>0,label+': entry direction');
   const positions=[];
+  let lastTime=0;
   for(const time of [0,100,300,650]){
-   const position=await page.evaluate(time=>{
-    window.__fallbackAnimations.forEach(a=>a.currentTime=time);
+   if(film&&time>lastTime)await page.waitForTimeout(time-lastTime);
+   lastTime=time;
+   const position=await page.evaluate(({time,film})=>{
+    if(!film)window.__fallbackAnimations.forEach(a=>a.currentTime=time);
     const style=getComputedStyle(document.querySelector('.md-container,body>.wrap'));
     const header=document.querySelector('.md-header,.mast'),pill=header.querySelector('.selector-surface');
-    return {x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),headerX:header.getBoundingClientRect().x,pillOpacity:getComputedStyle(pill).opacity};
-   },time);
+    return {x:new DOMMatrix(style.transform).m41,opacity:Number(style.opacity),headerX:header.getBoundingClientRect().x,scrollX:window.scrollX,pillOpacity:getComputedStyle(pill).opacity};
+   },{time,film});
    assert.equal(position.opacity,1,label+': no transparent content');
    assert.equal(position.headerX,0,label+': header must not slide with the content');
    if(route)assert.equal(position.pillOpacity,'1',label+': pill stays visible on the new document');
    positions.push(position);
   }
-  assert(Math.abs(positions[0].x)>=48&&Math.abs(positions.at(-1).x)<1,label+': actual spatial travel');
+  assert(Math.abs(film?sample.x:positions[0].x)>=48&&Math.abs(positions.at(-1).x)<1,label+': actual spatial travel');
   await page.screenshot({path:path.join(out,label+'.png')});
-  // Replay in real time for the recording; no paused-frame GIF can prove the
-  // document handoff is smooth in a browser without native view transitions.
-  await page.evaluate(()=>window.__fallbackAnimations.forEach(a=>{a.currentTime=0;a.play();}));
+  if(!film)await page.evaluate(()=>window.__fallbackAnimations.forEach(a=>{a.currentTime=0;a.play();}));
   await page.waitForFunction(()=>document.documentElement.dataset.pageTransition!=='active');
   if(recording){
+   await page.evaluate(()=>sessionStorage.removeItem('slot-test-live-film'));
    await recording.cdp.send('Page.stopScreencast');await recording.cdp.detach();
    fs.writeFileSync(path.join(recording.folder,'frames.json'),JSON.stringify(recording.frames));
    execFileSync('python3',['-c',`from PIL import Image

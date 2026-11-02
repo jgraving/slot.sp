@@ -44,6 +44,7 @@
  /* Older browsers keep normal document navigation and receive a real slide.
     Keep opacity at one so the device and page never become translucent. */
  :root[data-page-fallback]{overflow-x:clip}
+ :root[data-page-motion=fallback] body{overflow-x:clip}
  :root[data-page-fallback=incoming] :is(.md-container,body>.wrap,body>.site-foot){animation:slot-fallback-in var(--motion-slow-spatial-duration) var(--motion-slow-spatial) both}
  @keyframes slot-fallback-in{from{transform:translate3d(var(--fallback-enter-x),0,0)}to{transform:translate3d(0,0,0)}}
 }
