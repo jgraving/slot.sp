@@ -37,8 +37,9 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
   async function fitsStage(page,label) {
     const sizes=await page.locator('.sp-stage').evaluate(stage=>{
       const box=stage.getBoundingClientRect(),image=stage.querySelector('.sp-render-fallback').getBoundingClientRect();
-      return {width:box.width,height:box.height,imageWidth:image.width,imageHeight:image.height};
+      return {width:box.width,height:box.height,imageWidth:image.width,imageHeight:image.height,decoderDisplay:getComputedStyle(stage.querySelector('.hero-source')).display};
     });
+    assert.equal(sizes.decoderDisplay,'none',`${label}: decoder must never appear behind the handheld`);
     assert(Math.abs(sizes.height-sizes.width*1.25)<1,`${label}: preserve the complete 4:5 render`);
     assert(Math.abs(sizes.width-sizes.imageWidth)<1&&Math.abs(sizes.height-sizes.imageHeight)<1,`${label}: render must fit without cropping`);
   }
