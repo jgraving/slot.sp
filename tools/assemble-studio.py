@@ -30,6 +30,13 @@ for css in bundle.glob('*.css'):
 for name in ['navigation.js', 'navigation.css', 'wordmark.png']:
     assert (source / 'web' / name).read_bytes() == (ROOT / 'site/docs/assets' / name).read_bytes(), f'Shared website asset differs: {name}'
 html = (source / 'web/index.html').read_text()
+# Use the same responsive header layout on the website and its pinned Studio.
+header_styles = list((ROOT / 'site/docs/assets/generated').glob('header.*.css'))
+assert len(header_styles) == 1, 'Prepare the shared header stylesheet first'
+navigation_link = '<link rel="stylesheet" href="navigation.css">'
+assert html.count(navigation_link) == 1, 'Studio navigation stylesheet is missing'
+html = html.replace(navigation_link, navigation_link +
+                    f'\n<link rel="stylesheet" href="/slot.sp/assets/generated/{header_styles[0].name}">')
 for name in ['studio.js', 'studio.css', 'slot-sp.css', 'navigation.js', 'navigation.css', 'wordmark.png']:
     html = html.replace(f'"{name}"', f'"{assets_base}{name}"')
 html = html.replace('<div class="foot-meta">', '<div class="foot-meta"><p><a href="/slot.sp/impressum/">Impressum</a> · <a href="/slot.sp/datenschutz/">Datenschutz</a></p>')

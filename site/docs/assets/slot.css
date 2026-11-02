@@ -178,7 +178,6 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .model-fold svg{transition:transform 420ms var(--motion-spatial)}
 .model-fold[aria-expanded=false] svg{transform:rotate(-10deg)}
 .model-fold:focus-visible,.preview-toggle:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
-.md-typeset .model-hint{margin:8px 0 0;text-align:center;color:var(--muted);font-size:13px;font-style:normal;line-height:20px}
 .md-typeset .intro-wordmark{display:block;width:clamp(200px,20vw,260px);height:auto;max-width:100%;margin:0 0 28px}
 .intro{gap:clamp(40px,5vw,72px);padding:40px 0 48px}
 .md-typeset .intro h1{font-size:clamp(40px,4.7vw,60px);margin-bottom:20px}

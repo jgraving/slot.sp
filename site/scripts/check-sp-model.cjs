@@ -32,7 +32,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await route.fulfill({path:file,contentType});
     });return page;
   }
-  const boxes=page=>page.evaluate(()=>Object.fromEntries(['.intro-wordmark','.intro h1','.sp-stage','.preview-controls','.model-hint','.features'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return [selector,{x:r.x,y:r.y+scrollY,width:r.width,height:r.height}];})));
+  const boxes=page=>page.evaluate(()=>Object.fromEntries(['.intro-wordmark','.intro h1','.sp-stage','.preview-controls','.features'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return [selector,{x:r.x,y:r.y+scrollY,width:r.width,height:r.height}];})));
   function stable(before,after,label){for(const selector of Object.keys(before))for(const property of ['x','y','width','height'])assert(Math.abs(before[selector][property]-after[selector][property])<1,`${label}: ${selector} ${property} shifted`);}
   async function fitsStage(page,label) {
     const sizes=await page.locator('.sp-stage').evaluate(stage=>{

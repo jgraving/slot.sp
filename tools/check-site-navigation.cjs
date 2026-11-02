@@ -13,8 +13,8 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
   const browser = await chromium.launch({executablePath:process.env.CHROME_BIN || '/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
   const results = [];
   try {
-    for (const width of [1366,1100,820,390,320]) {
-      const page = await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'});
+    for (const width of [1366,1100,980,960,959,820,390,320]) {
+      const page = await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce',hasTouch:width===980});
       await page.route(origin+'**', async route => {
         let file = path.resolve(root, decodeURIComponent(new URL(route.request().url()).pathname.slice('/slot.sp/'.length)));
         if (!file.startsWith(root+path.sep) && file!==root) return route.fulfill({status:403});
@@ -29,9 +29,12 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         const info = await page.evaluate(() => {
           const header=document.querySelector('.md-header,.mast'), box=header.getBoundingClientRect();
           const links=[...header.querySelectorAll('.mast-tabs a,.mast-links a')];
-          return {headerHeight:box.height,overflow:document.documentElement.scrollWidth>innerWidth+1,
+          const brand=header.querySelector('.mast-mark').getBoundingClientRect();
+          return {headerHeight:box.height,brandCenter:brand.y+brand.height/2,overflow:document.documentElement.scrollWidth>innerWidth+1,
             links:links.map(link => {const r=link.getBoundingClientRect();return {text:link.textContent.trim(),href:link.href,active:link.hasAttribute('aria-current') || !!link.closest('.md-tabs__item--active'),fits:r.left>=0 && r.right<=innerWidth+1 && r.top>=box.top && r.bottom<=box.bottom+1,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===link}}),
             overflowItems:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width && (r.right>innerWidth+1 || r.left< -1)}).slice(0,12).map(el=>({tag:el.tagName,class:el.className,rect:el.getBoundingClientRect().toJSON()})),
+            githubHit:(()=>{const link=header.querySelector('.mast-gh'),r=link.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===link;})(),
+            searchHit:(()=>{const controls=[...header.querySelectorAll('.md-search__button,label[for="__search"]')],button=controls.find(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});if(!controls.length)return null;if(!button)return false;const r=button.getBoundingClientRect();return button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})(),
             palette:getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),
             columns:document.querySelector('.feature-list') ? getComputedStyle(document.querySelector('.feature-list')).gridTemplateColumns.split(/\s+/).length : null,
             headerMeasured:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-height'))};
@@ -39,6 +42,14 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         assert.deepEqual(info.links.map(x=>x.text),names,`${width} ${route}: destinations`);
         assert.deepEqual(info.links.filter(x=>x.active).map(x=>x.text),active?[active]:[],`${width} ${route}: active destination`);
         assert(info.links.every(x=>x.fits && x.hit),`${width} ${route}: header link covered or out of bounds: ${JSON.stringify(info)}`);
+        assert(info.githubHit,`${width} ${route}: GitHub control is obscured`);
+        if (route!=='studio/') assert(info.searchHit,`${width} ${route}: search control is obscured`);
+        if (width>=960) {
+          assert(info.headerHeight<=66,`${width} ${route}: unnecessary second header row (${info.headerHeight}px)`);
+          const centers=await page.locator('header .mast-link').evaluateAll(links=>links.map(link=>{const r=link.getBoundingClientRect();return r.y+r.height/2;}));
+          assert(centers.every(y=>Math.abs(y-info.brandCenter)<2),`${width} ${route}: navigation must share the brand's row`);
+        }
+        if (!route) assert.equal(await page.locator('.model-hint').count(),0,'Keep the button interactions unadvertised');
         if(info.overflow) await page.screenshot({path:path.join(output,`${width}-overflow.png`)});
         assert(!info.overflow,`${width} ${route}: horizontal overflow: ${JSON.stringify(info.overflowItems)}`);
         assert.equal(info.palette,'#0e1423');
@@ -57,11 +68,11 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
           assert(!(await page.locator('#__drawer').isChecked()),`${width}: guide drawer did not close`);
         }
         results.push({width,route,...info});
-        if ((width===1366 || width===390) && ['', 'features/guide/', 'studio/'].includes(route)) await page.screenshot({path:path.join(output,`${width}-${route.replaceAll('/','-')||'home'}.png`)});
+        if ([1366,980,390].includes(width) && ['', 'features/guide/', 'studio/'].includes(route)) await page.screenshot({path:path.join(output,`${width}-${route.replaceAll('/','-')||'home'}.png`)});
       }
       await page.close();
     }
     fs.writeFileSync(path.join(output,'navigation.json'),JSON.stringify(results,null,2));
-    console.log('PASS: 30 page/viewport combinations; five global destinations, active tabs, feature columns, unobstructed links and guide drawers');
+    console.log('PASS: 48 page/viewport combinations; compact desktop headers, Android desktop width, five global destinations, active tabs, feature columns, unobstructed links and guide drawers');
   } finally { await browser.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1});
