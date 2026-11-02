@@ -179,7 +179,7 @@ export function createHero(video, canvas, {media, reduced, onState}) {
     input,setColor,takeControl,
     setActive(value){if(active===value)return;active=value;if(!active){clearDemoTimer();stopFrames();}else if(clip)resume();else pump();state();},
     play(){demo=animate();paused=false;if(clip)resume();else pump();state();},
-    toggle(){if(demo&&!paused){takeControl();paused=true;stopFrames();}else{demo=animate();paused=false;if(clip)resume();else pump();}state();},
+    toggle(){if((demo||clip||bootPending)&&!paused){takeControl();paused=true;stopFrames();}else{demo=animate();paused=false;if(clip)resume();else pump();}state();},
     dispose(){disposed=true;++operation;clearDemoTimer();stopFrames();reduced.removeEventListener('change',motionChange);for(const value of films.values())value.then(URL.revokeObjectURL).catch(()=>{});}
   };
 }

@@ -266,6 +266,7 @@
     });
     document.querySelector('.sp-preview').addEventListener('keyup',event=>{if(event.key.toLowerCase()==='m')releaseMenu();});
     window.addEventListener('blur',releaseMenu);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseMenu();});
     // A small, opt-in old-console secret. Normal typing and shortcuts are untouched.
     const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
     let codeIndex = 0;

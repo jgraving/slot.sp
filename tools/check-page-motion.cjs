@@ -181,7 +181,9 @@ if sys.argv[3]=='420':
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${label}: horizontal overflow`);
   if(!route){
    await page.locator('.sp-stage[data-ready=true]').waitFor();
-   assert.notEqual(await page.locator('.sp-stage').getAttribute('data-pose'),'opening','Wait for the page slide before starting the lid intro');
+   const stage=page.locator('.sp-stage');
+   if(await stage.getAttribute('data-model-ready'))assert.equal(Number(await stage.getAttribute('data-rendered-angle')),0,'Keep the live lid closed until the page slide finishes');
+   else assert.notEqual(await stage.getAttribute('data-pose'),'opening','Wait for the page slide before starting the lid intro');
   }
   if(capture){
    const frames=path.join(out,label);fs.mkdirSync(frames,{recursive:true});
