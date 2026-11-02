@@ -122,7 +122,7 @@ def main():
     config = config.replace('homepage_media_revision = "prepared"',
                             f'homepage_media_revision = "{revision}"')
     model_name = None
-    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/header.css', 'assets/navigation.js', 'assets/slot.js']:
+    for relative in ['assets/sp-model.js', 'assets/device.css', 'assets/slot.css', 'assets/navigation.css', 'assets/header.css', 'assets/page-motion.css', 'assets/navigation.js', 'assets/slot.js']:
         source = DOCS / relative
         content = source.read_text()
         if source.name == 'sp-model.js':
