@@ -34,6 +34,7 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
             links:links.map(link => {const r=link.getBoundingClientRect();return {text:link.textContent.trim(),href:link.href,active:link.hasAttribute('aria-current') || !!link.closest('.md-tabs__item--active'),fits:r.left>=0 && r.right<=innerWidth+1 && r.top>=box.top && r.bottom<=box.bottom+1,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===link}}),
             overflowItems:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width && (r.right>innerWidth+1 || r.left< -1)}).slice(0,12).map(el=>({tag:el.tagName,class:el.className,rect:el.getBoundingClientRect().toJSON()})),
             githubHit:(()=>{const link=header.querySelector('.mast-gh'),r=link.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('a')===link;})(),
+            searchHit:(()=>{const controls=[...header.querySelectorAll('.md-search__button,label[for="__search"]')],button=controls.find(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;});if(!controls.length)return null;if(!button)return false;const r=button.getBoundingClientRect();return button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})(),
             palette:getComputedStyle(document.documentElement).getPropertyValue('--page').trim(),
             columns:document.querySelector('.feature-list') ? getComputedStyle(document.querySelector('.feature-list')).gridTemplateColumns.split(/\s+/).length : null,
             headerMeasured:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--site-header-height'))};
@@ -42,6 +43,7 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         assert.deepEqual(info.links.filter(x=>x.active).map(x=>x.text),active?[active]:[],`${width} ${route}: active destination`);
         assert(info.links.every(x=>x.fits && x.hit),`${width} ${route}: header link covered or out of bounds: ${JSON.stringify(info)}`);
         assert(info.githubHit,`${width} ${route}: GitHub control is obscured`);
+        if (route!=='studio/') assert(info.searchHit,`${width} ${route}: search control is obscured`);
         if (width>=960) {
           assert(info.headerHeight<=66,`${width} ${route}: unnecessary second header row (${info.headerHeight}px)`);
           const centers=await page.locator('header .mast-link').evaluateAll(links=>links.map(link=>{const r=link.getBoundingClientRect();return r.y+r.height/2;}));
