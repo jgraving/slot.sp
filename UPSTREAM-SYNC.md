@@ -76,3 +76,23 @@ The fork already leaves CPU governor selection to the kernel, matching upstream'
 Deferred the clock/city/DST/12-hour rewrite and its first-boot follow-up (`5edec20`, `34cd2ff`) until it can be integrated with scheduled display overrides, play history and kid-time limits. Deferred the GBA Video platform and directory addition (`db1e370`, `546d565`) until device and Cart Studio platform support can be updated together. Upstream typography/legend changes and whole-workspace formatting are not included. Scaling, related bezels and frame blending remain held for review, and ZIP support remains unmerged.
 
 Validation covers device-feature compilation, input gestures, settings persistence, fractional fast-forward, route-aware headphone holds, restart shutdown ordering, brightness/night/sleep behavior, kid controls, link hints, existing high-refresh/native-game pacing, and the fork's menu rendering. Native ARM64 packaging and release regressions run on the integration branch before merging. Electrical noise and final screen behavior still require handheld verification.
+
+
+## 2026-11-02: RetroArch compressed battery-save compatibility
+
+Adapted BrandonKowalski/slot `e5e0ac8e1f0f0daab4329ebe2851d54e185f16e4`
+by Brandon T. Kowalski. RZIP v1 (zlib) battery saves in `.sav` or `.srm` now
+load as raw save RAM. This is battery-save decoding, unrelated to ZIP ROM support.
+The existing `.sav` precedence, atomic writes and untrusted-save handling remain.
+An unchanged compressed save is left intact; later gameplay changes use the existing
+raw `.sav` format, leaving an imported `.srm` untouched.
+
+The adaptation validates headers, chunk boundaries, decompressed lengths, zlib
+completion/checksums and trailing bytes. Decoded battery saves are limited to
+16 MiB. Unknown RZIP versions and damaged saves report a read error, and direct
+save writes also refuse to overwrite unreadable data. `flate2` was already in
+the lockfile through PNG; it is now a direct dependency. No emulator inputs change.
+
+Regression coverage includes multi-chunk saves, `.srm` imports, unchanged files,
+normal writes after an import, malformed headers, unsupported compression,
+truncated streams, checksum errors, excessive sizes and overwrite refusal.
