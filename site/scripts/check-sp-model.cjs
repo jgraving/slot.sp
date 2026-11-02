@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
+const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../public');
 const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
@@ -33,6 +34,29 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
   }
   const boxes=page=>page.evaluate(()=>Object.fromEntries(['.intro-wordmark','.intro h1','.sp-stage','.preview-controls','.model-hint','.features'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return [selector,{x:r.x,y:r.y+scrollY,width:r.width,height:r.height}];})));
   function stable(before,after,label){for(const selector of Object.keys(before))for(const property of ['x','y','width','height'])assert(Math.abs(before[selector][property]-after[selector][property])<1,`${label}: ${selector} ${property} shifted`);}
+  async function fitsStage(page,label) {
+    const sizes=await page.locator('.sp-stage').evaluate(stage=>{
+      const box=stage.getBoundingClientRect(),image=stage.querySelector('.sp-render-fallback').getBoundingClientRect();
+      return {width:box.width,height:box.height,imageWidth:image.width,imageHeight:image.height};
+    });
+    assert(Math.abs(sizes.height-sizes.width*1.25)<1,`${label}: preserve the complete 4:5 render`);
+    assert(Math.abs(sizes.width-sizes.imageWidth)<1&&Math.abs(sizes.height-sizes.imageHeight)<1,`${label}: render must fit without cropping`);
+  }
+  async function blendedEdges(page,label) {
+    const background=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--page').trim());
+    const png=await page.locator('.sp-stage').screenshot({path:path.join(out,`${label}-opening.png`)});
+    // Compare actual composited edge pixels, including H.264 color conversion.
+    execFileSync('python3',['-c',`import io,sys
+from PIL import Image,ImageColor
+image=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert('RGB')
+expected=ImageColor.getrgb(sys.argv[1]);w,h=image.size
+points=[(x,y) for x in [0,w-1] for y in [0,h//4,h//2,3*h//4,h-1]]
+points += [(x,y) for y in [0,h-1] for x in [w//4,w//2,3*w//4]]
+for point in points:
+    actual=image.getpixel(point)
+    assert max(abs(a-b) for a,b in zip(actual,expected)) <= 1, (point,actual,expected)
+`,background],{input:png});
+  }
   try {
     for(const width of [1366,390,320]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
@@ -47,9 +71,16 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await page.evaluate(()=>document.fonts.ready);
       await page.locator('[data-pose=opening]').waitFor();
       assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Hold screen playback during opening');
+      assert.equal(await page.locator('.model-opening').evaluate(v=>getComputedStyle(v).opacity),'0','Keep the poster visible until the first flip frame decodes');
+      await fitsStage(page,`${width}: first load`);
       const before=await boxes(page);
       if(width===1366)await page.screenshot({path:path.join(out,'first-load.png')});
       release();
+      await page.waitForFunction(()=>{
+        const v=document.querySelector('.model-opening');
+        return document.querySelector('.sp-stage').dataset.motionReady==='true'&&v.currentTime>.2;
+      });
+      await blendedEdges(page,String(width));
       await page.locator('[data-pose=open]').waitFor();
       await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
       stable(before,await boxes(page),`${width}: first opening`);
@@ -81,6 +112,7 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
       await page.goto(origin,{waitUntil:'networkidle'});
       const stage=page.locator('.sp-stage');await stage.scrollIntoViewIfNeeded();
       await page.locator('[data-ready=true][data-pose=open]').waitFor();
+      await fitsStage(page,`${width}: reduced motion`);
       await page.evaluate(()=>document.fonts.ready);
       assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Reduced motion stays paused');
       assert.equal(await page.locator('.model-opening').getAttribute('src'),null,'Reduced motion never downloads the opening');
@@ -131,3 +163,4 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     console.log('PASS: fixed angle, stable first load and lid controls, matching opening/closing, all finishes and persistence, native cartridge endpoints, prominent wordmark, responsive layout and reduced motion');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

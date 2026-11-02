@@ -117,6 +117,7 @@
       introPending = false;
       const current = ++motionRequest;
       motion.pause();
+      stage.dataset.motionReady = 'false';
       motionTarget = open ? 'open' : 'closed';
       if (!animate || !canAnimate()) { await finishMotion(current); return; }
       motion.poster = asset(`${colorToken()}-${open ? 'closed' : 'open'}.png`);
@@ -125,6 +126,9 @@
       setPose(open ? 'opening' : 'closing');
       if (visible && !document.hidden) motion.play().catch(() => finishMotion(current));
     }
+    motion.addEventListener('loadeddata', () => {
+      if (busy() && motion.readyState >= 2) stage.dataset.motionReady = 'true';
+    });
     motion.addEventListener('ended', () => finishMotion());
     motion.addEventListener('error', () => finishMotion());
     fold.addEventListener('click', () => flipLid(pose === 'closed'));
@@ -143,10 +147,16 @@
         const dy1=p1.y-p2.y,dy2=p3.y-p2.y,dy3=p0.y-p1.y+p2.y-p3.y,den=dx1*dy2-dx2*dy1;
         const g=(dx3*dy2-dx2*dy3)/den,h=(dx1*dy3-dx3*dy1)/den;
         const matrix=[(p1.x-p0.x+g*p1.x)/720,(p1.y-p0.y+g*p1.y)/720,0,g/720,(p3.x-p0.x+h*p3.x)/480,(p3.y-p0.y+h*p3.y)/480,0,h/480,0,0,1,0,p0.x,p0.y,0,1];
-        stage.style.setProperty('--fallback-screen', `matrix3d(${matrix.join(',')})`);
+        function fitScreen() {
+          const scale = stage.getBoundingClientRect().width / 480;
+          const fitted = matrix.map((value, index) => [0,1,4,5,12,13].includes(index) ? value * scale : value);
+          stage.style.setProperty('--fallback-screen', `matrix3d(${fitted.join(',')})`);
+        }
+        fitScreen();
+        new ResizeObserver(fitScreen).observe(stage);
         stage.querySelectorAll('[data-hardware]').forEach(button => {
           const point = projection.controls[button.dataset.hardware];
-          button.style.left = point.x + 'px'; button.style.top = point.y + 'px';
+          button.style.left = (point.x / 480 * 100) + '%'; button.style.top = (point.y / 600 * 100) + '%';
         });
         ready = true;
         stage.dataset.ready = 'true';
@@ -302,3 +312,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
 })();
+
