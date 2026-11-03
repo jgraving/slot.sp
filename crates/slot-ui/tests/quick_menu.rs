@@ -202,11 +202,7 @@ fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     assert_eq!(QuickRow::ShellColour.position(&hidden), 5);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
     assert_eq!(QuickRow::ShellColour.position(&[]), 6);
-    assert_eq!(
-        slot_ui::quick_row_top(QuickRow::ShellColour, &hidden)
-            - slot_ui::quick_row_top(QuickRow::Wallpaper, &hidden),
-        slot_ui::QUICK_PITCH
-    );
+    assert_eq!(QuickRow::ShellColour.position(&hidden) - QuickRow::Wallpaper.position(&hidden), 1);
 }
 
 #[test]
