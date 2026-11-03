@@ -134,3 +134,9 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 - Strengthened automatic PIN checking: newest input is prioritized, with intermediate typed prefixes retained for silent verification. This ensures a correct PIN cannot be skipped if extra presses arrive while Argon2 is running. Still one bounded worker request at a time; stale results are ignored after cancellation/deletion.
 - Added a regression for fast input containing the correct PIN followed by extra presses while checking. Shortened deletion warnings using “unencrypted copy” rather than jargon.
 - Next: rerun all required checks, then inspect native output. All changes remain in draft PR #186.
+
+### Parent PIN visual regression checkpoint
+
+- 5824739 passes all 134 slot library tests, including automatic PIN prefixes/cancellation, storage failure paths and manual audio destination volume/mute.
+- The broader run reached parent UI coverage and caught one pixel test still sampling the old 64px button-keycap slots. Updated it to sample the shared 32px masked-dot positions, and explicitly compare the parent/system PIN card bodies.
+- No runtime change needed for that failure. Next CI run should continue into the UI meter/notice tests and native renders.

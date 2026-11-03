@@ -458,12 +458,14 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
         assert!(menu.lines()[1].contains(&format!("{} of 4", i + 1)));
         assert_ne!(menu.screen_face().rgba, empty);
         let face = menu.screen_face();
-        let x0 = (face.w - 256) / 2 + i as u32 * 64;
-        let visible = (200..256).any(|y| (x0..x0 + 64).any(|x| {
+        let x0 = (face.w - 4*32) / 2 + i as u32 * 32 + 7;
+        let visible = (222..240).any(|y| (x0..x0 + 18).any(|x| {
             let at = ((y * face.w + x) * 4) as usize;
             face.rgba[at + 3] > 0 && face.rgba[at..at + 3].iter().any(|c| *c > 150)
         }));
-        assert!(visible, "entered button slot {i} is transparent or invisible");
+        assert!(visible, "entered PIN dot {i} is transparent or invisible");
+        let system=slot_ui::masked_pin_face_on(slot_ui::Canvas{w:face.w as f32,h:480.0},"Security PIN","Choose a PIN",i+1,8);
+        for y in 140..260 {let row=(y*face.w*4)as usize;assert_eq!(&face.rgba[row..row+face.w as usize*4],&system.rgba[row..row+system.w as usize*4],"parent and system PIN body must match");}
         preview_menu(&s, &format!("parent-code-{}.png", i + 1));
     }
     raw_tap(&mut s, &mut time, Btn::X);
