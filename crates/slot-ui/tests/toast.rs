@@ -191,14 +191,14 @@ fn a_toast_takes_the_band_from_the_bar() {
     h.show(HudKind::Volume, 50, false, 0);
     let mut bar_only = Vec::new();
     h.draw(Canvas::FRAMED, 0, &mut bar_only);
-    let bars = bar_only.len();
+    assert!(bar_only.iter().any(|d|matches!(d,Draw::RoundRect{w:176.0,h:52.0,..})));
 
     h.toast(Toast::StateSaved, 0);
     let mut both = Vec::new();
     h.draw(Canvas::FRAMED, 200, &mut both);
     assert!(
-        both.len() < bars,
-        "the bar is still drawn underneath the toast"
+        !both.iter().any(|d|matches!(d,Draw::RoundRect{y,w:176.0,h:52.0,..} if *y<64.0)),
+        "the meter is still drawn underneath the toast"
     );
 }
 

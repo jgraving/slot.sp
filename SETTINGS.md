@@ -26,8 +26,7 @@ Short PINs get a yellow triangle warning; Unencrypted storage needs confirmation
 a red alert warning. Switching to Encrypted deletes its plaintext copy after saving.
 
 **Startup access** can require the PIN to use the launcher or allow games while
-credentials stay locked. Skipping optional startup unlock shows an unavailable
-notification. The SD card and games remain accessible; only credentials are encrypted.
+credentials stay locked. Skipping optional startup unlock shows “Saved credentials are locked.” The SD card and games remain accessible; only credentials are encrypted.
 Parental controls can use this PIN or a separate four-button parent code.
 See [PIN setup, storage and reset](RETROACHIEVEMENTS.md#security-pin-and-saved-credentials).
 

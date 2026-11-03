@@ -31,7 +31,7 @@ to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** 
 - **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
   Choose a long, unpredictable sequence or passphrase for stronger protection.
 
-PINs shorter than eight button presses get a yellow warning-triangle notification because they
+PINs shorter than eight button presses get a yellow triangle notification because they
 are easier to guess. There is no recovery copy of the device PIN on the card.
 
 **Credentials** is an inline Left/Right picker shared by Wi-Fi and
@@ -41,7 +41,7 @@ RetroAchievements:
   device PIN. If one is needed, the Security PIN page opens directly with a pill
   explaining that this sets a device PIN for encrypted credentials.
 - **Session only** keeps credentials in memory and forgets them at power-off.
-- **Unencrypted** saves readable credentials on the SD card. A red **!** warning
+- **Unencrypted** saves readable credentials on the SD card. A red circled alert
   explains this. Nothing is written until you select the confirmation row and
   press **A**. The red warning also appears after confirming the change.
 
