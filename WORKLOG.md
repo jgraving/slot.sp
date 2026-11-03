@@ -344,3 +344,7 @@ Record before implementation:
 ### Automatic time / time-zone correction
 
 Before edits: user reports automatic time is wrong for their location and points out it still needs a time-zone choice. SNTP sets UTC only; existing implementation preserves an arbitrary old fixed offset. Add an explicit Time zone selector alongside Automatic time in General, persist the selected offset and apply it immediately without changing UTC or the automatic-time switch. Use clear UTC offsets and short location examples; do not guess the user's location. Document fixed-offset/daylight-saving limits in the guide. Include regression and native review coverage.
+
+### Wi-Fi stability and immediate time changes
+
+Before edits: user reports repeated Wi-Fi disconnects and RA restarting/blinking; investigate radio readiness and service lifecycle before choosing a fix. Also clarifies the existing UTC offset control is discoverable but requiring Start to save is inconsistent. Make time-zone/offset changes apply and persist immediately; preserve manual date/time editing semantics where needed, and remove misleading Save hints for controls that auto-apply. No logs from the handheld are available, so distinguish source defects/reproductions from unverified radio causes.
