@@ -2,7 +2,7 @@
 
 Updated 2026-11-03. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.
 
-## Merged and verified
+## Merged; final main CI double-check in progress
 
 The user authorized merging after passing tests. Both PRs are merged:
 - [#190: RA and code UI](https://github.com/jgraving/slot.sp/pull/190): 169ad506577db458f690dd613402feea07430f5a.
@@ -33,3 +33,7 @@ Confirm real heat/radio/RTC behavior, RA background progress when closing settin
 Optional manually dispatched **RetroAchievements live smoke test** reads GitHub Actions secrets RA_TEST_USERNAME and RA_TEST_PASSWORD for login, read-only lookup and public artwork only. It performs no award or game-session requests; ordinary PR checks use mocks.
 
 Next-chat prompt: Continue jgraving/slot.sp from main. Read CURRENT_WORK.md and WORKLOG.md first. PRs #190 and #191 are merged; preserve completed behavior and log new work before editing.
+
+## Latest check status
+
+User accepted that the unchanged code had passed, and requested a second check because GitHub showed the later documentation head without green CI. The agent reverified all six source suites and the Markdown-only difference to actual merged main 356c307. Automatic main push checks are running: launcher 41735091909, build/release 41735092008, pages 41735092013. This documentation update uses normal CI; wait for its applicable checks before merging it. No new runtime edits or manual release dispatch were made.
