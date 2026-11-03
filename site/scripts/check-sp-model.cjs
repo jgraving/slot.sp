@@ -136,13 +136,23 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       await page.evaluate(()=>document.fonts.ready);
       const before=await boxes(page);await fitsStage(page,`${width}: first paint`);
       assert(await page.locator('.model-poster').isVisible(),'Reserve a complete model while WebGL loads');
+      // Observe boot while it happens. Software WebGL can delay the next
+      // automation round trip beyond a fixed video timestamp.
+      await page.evaluate(()=>{
+        const canvas=document.getElementById('hero-screen'),video=document.getElementById('hero-preview');
+        let first=null;
+        const frame=()=>{
+          if(video.paused||canvas.dataset.state!=='boot')return;
+          const pixels=canvas.toDataURL('image/jpeg',.1);
+          if(first===null)first=pixels;
+          else if(first!==pixels){window.__nativeBootChanged=true;canvas.removeEventListener('hero:frame',frame);}
+        };
+        canvas.addEventListener('hero:frame',frame);
+      });
       release();
       await page.locator('.sp-stage.model-ready[data-pose=open]').waitFor({timeout:60000});
       if(width!==1366)await keyButton(page,'b').click();
-      await page.waitForFunction(()=>{const v=document.getElementById('hero-preview');return !v.paused&&v.currentTime>0&&document.getElementById('hero-screen').dataset.state==='boot';});
-      const first=await page.locator('#hero-screen').evaluate(c=>c.toDataURL());
-      await page.waitForFunction(()=>document.getElementById('hero-preview').currentTime>.7);
-      assert.notEqual(await page.locator('#hero-screen').evaluate(c=>c.toDataURL()),first,'Native boot paints into the model');
+      await page.waitForFunction(()=>window.__nativeBootChanged===true);
       assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false');
       stable(before,await boxes(page),`${width}: renderer handoff`);
       assert(requests.some(url=>url.includes('/vendor/three')),'The live 3D model must load');
