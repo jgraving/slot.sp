@@ -79,3 +79,15 @@ Previous chat reported 128/129 library tests initially; the single parent-PIN fa
 - Live-account tests remain: login and acceptance of deferred/offline awards. Do not claim offline award acceptance is guaranteed.
 - Final native GLES and desktop GL light/dark captures independently reviewed in this takeover. These are simulated-device renders, not evidence of real radio/network/account behavior.
 - Keep PR draft for device testing. No merge or release requested in this takeover.
+
+## Active follow-up: simpler UI (2026-11-03)
+
+User requested:
+- Short warning text with graphical severity icons. Skipped unlock notice should describe locked credentials generally, without naming services.
+- Remove persistent button-PIN explanations; show allowed button icons in a notification only on invalid input.
+- Filled volume, brightness, color-temperature and kid-time HUD pills; adaptive foreground contrast as fill changes. Keep these at the top and keep settings sliders unchanged.
+- Settings label "Color temp." or "Color temperature" if it fits. Preview color temperature while its night-display slider is selected; restore configured scheduling behavior when leaving it.
+- Ensure in-game screenshot/gallery second-row items are easy to reach with the D-pad.
+- Rename Wi-Fi submenu to Network.
+
+Current step: recover a local checkout and inspect rendering/input paths. No runtime edits yet. Continue existing PR #186; do not merge or release.
