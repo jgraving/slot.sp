@@ -105,3 +105,7 @@ Intentional output changes do not trigger this pause, and link play keeps runnin
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Kid mode](KID-MODE.md) · [Sleep & power](POWER-OPTIONS.md)
+
+Choosing an output in Sound restores that output's saved volume and mute state. **Volume on disconnect**
+applies to an unexpected Bluetooth connection loss, headphone unplug or USB removal; manually choosing
+another output does not apply the disconnect volume.

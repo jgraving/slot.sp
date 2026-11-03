@@ -113,3 +113,11 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 - Incomplete grid rows now accept vertical D-pad movement from every column, choosing the nearest visible tile. Network naming and wider antialiased Wi-Fi arcs applied.
 - Added/updated regression coverage for async PIN editing/cancellation, complete grid-row navigation, severity symbols, meter geometry/contrast, native preview generators and warmth restoration.
 - Next: push implementation through GitHub connector (native Git push lacks authentication here), run existing CI, fix failures, inspect fresh native captures, then update PR/test-build link. Runtime changes not yet validated by Rust compiler in this environment.
+
+### Audio steering and first CI checkpoint
+
+- UI implementation pushed as 6d1132e46ba99420d639c7d67eb27143ef32ecb5. All six existing workflows started; results pending.
+- User additionally requested manual output selection restore the destination's saved volume, rather than applying Volume on disconnect.
+- Found two causes: Bluetooth treated a cleared manual route as a lost device, and USB applied disconnect volume even when unplugged=false. Limited fallback-volume handling to actual connection loss/removal; added regression for speaker/headphone/USB/Bluetooth levels and mute restoration.
+- Parent PIN cards now share the system PIN layout, per additional user steering. Guide and test labels updated.
+- Next: publish audio correction and inspect compile/test outcomes. Keep PR draft.

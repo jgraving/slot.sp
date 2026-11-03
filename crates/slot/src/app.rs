@@ -1704,8 +1704,11 @@ impl App {
         let lost = self.bluetooth_connected && !active;
         let previous_address = self.bluetooth_route.clone();
         self.bluetooth_route = address.clone();
-        if lost {
-            if address.is_some() && address == previous_address { self.pause_after_disconnect(); }
+        if lost && address.is_some() && address == previous_address {
+            // The monitor reports a lost connection with its old address. A
+            // cleared route is an explicit output choice: restore that output's
+            // own saved level/mute, without overwriting it with the fallback.
+            self.pause_after_disconnect();
             self.apply_disconnect_volume(self.headphones);
             if let (Some(root), Some(address)) = (self.root.clone(), previous_address) {
                 crate::bluetooth::fallback_to_local(root, address);
@@ -1758,7 +1761,7 @@ impl App {
         self.usb_active = active;
         self.hud.set_usb(active);
         self.vol_before.clear();
-        if !active && !self.bluetooth_connected {
+        if !active && unplugged && !self.bluetooth_connected {
             self.apply_disconnect_volume(self.headphones);
         }
         let now = self.now();
@@ -7638,7 +7641,7 @@ mod bluetooth_tests {
         app.bluetooth_state(address.clone(), true);
         assert_eq!(app.output_volume(), 35);
         app.bluetooth_state(None, false); // manually select local output
-        assert_eq!(app.output_volume(), 0);
+        assert_eq!(app.output_volume(), 15);
         app.bluetooth_state(address, true);
         assert_eq!(app.output_volume(), 35);
     }
@@ -7663,7 +7666,7 @@ mod bluetooth_tests {
         assert!(restarted.muted());
         assert_eq!(restarted.state.volume_hp, 30);
         restarted.bluetooth_state(None, false);
-        assert_eq!(restarted.volume(), 0);
+        assert_eq!(restarted.volume(), 20);
         assert_eq!(restarted.state.volume_bt, Some(65));
     }
 
@@ -7690,6 +7693,25 @@ mod bluetooth_tests {
         app.usb_state(false, true);
         assert_eq!(app.state.volume_hp, 10);
         assert!(app.wired_audio_active());
+    }
+
+    #[test]
+    fn manual_audio_choices_restore_destination_levels_and_mute() {
+        let mut app=App::new(vec![]);
+        app.state.volume=55;app.state.volume_hp=35;app.state.volume_bt=Some(65);app.state.volume_usb=45;
+        app.state.muted_hp=true;app.disconnect_volume=10;
+        let address=Some("AA:BB:CC:DD:EE:FF".to_owned());
+        app.bluetooth_state(address.clone(),true);assert_eq!(app.volume(),65);
+        app.bluetooth_state(None,false);assert_eq!(app.volume(),55);
+        assert_eq!(app.state.volume,55,"manual choice must preserve speaker memory");
+        app.headphones=true;
+        app.bluetooth_state(address.clone(),true);app.bluetooth_state(None,false);
+        assert_eq!(app.volume(),35);assert!(app.muted(),"destination mute is restored too");
+        app.usb_state(true,false);assert_eq!(app.volume(),45);
+        app.usb_state(false,false);assert_eq!(app.volume(),35);assert!(app.muted());
+        app.usb_state(true,false);app.bluetooth_state(address,true);app.usb_state(false,false);
+        assert_eq!(app.volume(),65);assert_eq!(app.state.volume_usb,45);
+        assert_eq!(app.state.volume_hp,35);assert_eq!(app.state.volume,55);
     }
 
     #[test]
