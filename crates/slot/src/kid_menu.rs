@@ -71,7 +71,7 @@ impl Menu {
             rejected: None,
             repeat: None,
             start_after_code: false,use_device_pin,device_pin_attempted:false,switch_to_separate:false,
-            status: if page == Page::Unlock {
+            status: if page == Page::Unlock && !use_device_pin {
                 "Recovery: Config/kids/parent-code.txt".into()
             } else {
                 String::new()
@@ -346,7 +346,7 @@ impl Menu {
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
             ];
             let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
-            let mut face = settings_face(canvas, &rows, self.selected, 0, status, 0.0);
+            let mut face = settings_face(canvas, &rows, self.selected, if self.selected==1 {11}else{0}, status, 0.0);
             let heading=slot_ui::quick_heading_face("Parental controls");
             let x=face.w.saturating_sub(heading.w)/2;
             blit(&mut face,&heading,x,0);

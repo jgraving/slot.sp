@@ -1353,6 +1353,11 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        11 => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_pair(ButtonLegend::Left,ButtonLegend::Right), "Method", hint, false),
+            with_hint(button_face(ButtonLegend::A), "Set", hint, false),
+        ],
         9 => vec![
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
