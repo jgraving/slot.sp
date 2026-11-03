@@ -33,7 +33,7 @@ Favorites contains every game you star. Sort it by name, total recorded playtime
 
 ### Does Light mode change at night?
 
-The menu theme and display presets are separate. **General → UI theme** selects Light or Dark. **Screen → Night mode** manages brightness and screen warmth, with optional day and night start times. See [Day & night](features/night-display.md).
+The menu theme and display presets are separate. **Display → UI theme** selects Light or Dark. **Display → Night mode** manages brightness and screen warmth, with optional day and night start times. See [Day & night](features/night-display.md).
 
 ### Can I change settings during a game?
 

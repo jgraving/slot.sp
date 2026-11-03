@@ -177,7 +177,6 @@ impl QuickRow {
         QuickRow::Kids,
         QuickRow::LidClose,
         QuickRow::SleepTimeout,
-        QuickRow::BootAnimation,
         QuickRow::SleepNow,
         QuickRow::ShutDown,
         QuickRow::ShellColour,
