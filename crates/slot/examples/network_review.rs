@@ -47,7 +47,7 @@ fn main(){
     assert_eq!(a.f.app().quick_menu(),Some(QuickRow::Achievements));a.save("gameplay-achievements-first");a.tap(Btn::A);a.save("achievements-off");a.tap(Btn::A);a.save("achievements-on-shared-unlock");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.save("achievements-startup-unlock");a.code();a.wait_io();
     a.home();a.nav(QuickRow::Wifi);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::Down);a.tap(Btn::Right);a.save("unencrypted-confirm");
-    assert!(!root.join("Config/network-credentials.json").exists());a.tap(Btn::Down);a.tap(Btn::A);a.wait_io();a.save("unencrypted-enabled");
+    assert!(!root.join("Config/network-credentials.json").exists());a.tap(Btn::A);a.wait_io();a.save("unencrypted-enabled");
     assert!(root.join("Config/network-credentials.json").exists());a.tap(Btn::Left);a.wait_io();a.save("unencrypted-deleted");assert!(!root.join("Config/network-credentials.json").exists());
     a.home();a.nav(QuickRow::General);a.tap(Btn::A);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::SecurityPin));a.tap(Btn::A);
     a.tap(Btn::Down);a.tap(Btn::Down);a.tap(Btn::Right);a.save("startup-lock-setting");

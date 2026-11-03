@@ -288,7 +288,8 @@ pub(crate) fn run(
     let mut last_award = 0;
     let mut library = crate::library::pending(&root, &dir, now());
     let mut library_total = library.len();
-    let mut library_failed = false;
+    let mut library_failed = 0usize;
+    let mut problem = "";
     let mut rescanned = Instant::now();
     let mut badges = crate::badges::Queue::new(&dir);
     loop {
@@ -338,22 +339,14 @@ pub(crate) fn run(
         // Metadata preparation and badge downloads each occupy half of a cache refresh.
         status.pending.store(
             !library.is_empty()
-                || library_failed
+                || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
                 || active.as_ref().is_some_and(|game| !game.ready),
             std::sync::atomic::Ordering::Release,
         );
-        status.progress.store(
-            cache_progress(
-                library_total,
-                library.len(),
-                badges.pending(),
-                badges.percent(),
-            )
-            .map_or(0, |percent| percent + 1),
-            std::sync::atomic::Ordering::Release,
-        );
+        publish_detail(&status, verified, library_total, library.len(), library_failed,
+            &badges, &store, next_attempt, problem);
         if status
             .reconnect
             .swap(false, std::sync::atomic::Ordering::AcqRel)
@@ -363,10 +356,10 @@ pub(crate) fn run(
         if Instant::now() < next_attempt {
             continue;
         }
-        if rescanned.elapsed() >= Duration::from_secs(300) {
+        if should_rescan(rescanned.elapsed(), library.len()) {
             library = crate::library::pending(&root, &dir, now());
             library_total = library.len();
-            library_failed = false;
+            library_failed = 0;
             badges.scan();
             rescanned = Instant::now();
         }
@@ -380,6 +373,8 @@ pub(crate) fn run(
         {
             status.set(SyncStatus::Syncing);
         }
+        publish_detail(&status, verified, library_total, library.len(), library_failed,
+            &badges, &store, next_attempt, problem);
         let result = (|| -> Result<(), Failure> {
             if !verified {
                 let logged_in = login(&mut http, &config, auth.as_ref()).map_err(|e| {
@@ -493,16 +488,16 @@ pub(crate) fn run(
                         }
                         Err(Failure::Network) => return Err(Failure::Network),
                         Err(error) => {
-                            library_failed = true;
+                            library_failed += 1;
                             deferred_error = Some(error);
                         }
                     }
                 } else {
-                    library_failed = true;
+                    library_failed += 1;
                 }
                 // Removed/unreadable ROMs are reconsidered on the next library scan.
                 library.pop_front();
-                if library.is_empty() && !library_failed && !badges.pending() {
+                if library.is_empty() && library_failed == 0 && !badges.pending() {
                     let _ = notices.send(Notice::status(0, "Offline achievement cache ready"));
                 }
             }
@@ -511,25 +506,19 @@ pub(crate) fn run(
         })();
         status.pending.store(
             !library.is_empty()
-                || library_failed
+                || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
                 || active.as_ref().is_some_and(|game| !game.ready),
             std::sync::atomic::Ordering::Release,
         );
-        status.progress.store(
-            cache_progress(
-                library_total,
-                library.len(),
-                badges.pending(),
-                badges.percent(),
-            )
-            .map_or(0, |percent| percent + 1),
-            std::sync::atomic::Ordering::Release,
-        );
+        publish_detail(&status, verified, library_total, library.len(), library_failed,
+            &badges, &store, next_attempt, problem);
         match result {
             Ok(()) => {
-                status.set(if library_failed || badges.waiting {
+                problem = if library_failed > 0 { "Some games could not be prepared" }
+                    else if badges.waiting { "Artwork will retry" } else { "" };
+                status.set(if library_failed > 0 || badges.waiting {
                     SyncStatus::Attention
                 } else if !library.is_empty()
                     || badges.pending()
@@ -544,6 +533,10 @@ pub(crate) fn run(
                 next_attempt = Instant::now() + Duration::from_secs(1);
             }
             Err(error) => {
+                problem = match error { Failure::Network => "Connection lost",
+                    Failure::Authentication => "Check username or password",
+                    Failure::Rejected => "Server rejected a request",
+                    Failure::Invalid => "Game data or storage error" };
                 status.set(if error == Failure::Network {
                     SyncStatus::Offline
                 } else {
@@ -572,6 +565,8 @@ pub(crate) fn run(
                 delay = (delay * 2).min(300);
             }
         }
+        publish_detail(&status, verified, library_total, library.len(), library_failed,
+            &badges, &store, next_attempt, problem);
     }
 }
 
@@ -727,37 +722,46 @@ mod presence_tests {
     }
 }
 
-// A fixed phase split keeps newly discovered badges from moving progress backwards.
-fn cache_progress(
-    total: usize,
-    remaining: usize,
-    badges_pending: bool,
-    badge_percent: u8,
-) -> Option<u8> {
-    if remaining > 0 {
-        Some((total.saturating_sub(remaining) as u64 * 50 / total.max(1) as u64) as u8)
-    } else if badges_pending {
-        Some(if total > 0 {
-            50 + badge_percent / 2
-        } else {
-            badge_percent
-        })
-    } else {
-        None
-    }
+// Never discard the remaining work and reset its denominator during an active pass.
+fn should_rescan(elapsed: Duration, remaining: usize) -> bool {
+    remaining == 0 && elapsed >= Duration::from_secs(300)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining: usize,
+    failed: usize, badges: &crate::badges::Queue, store: &Arc<Mutex<Store>>,
+    next_attempt: Instant, problem: &'static str) {
+    let (badges_done, badges_total) = badges.counts();
+    let detail = crate::SyncDetail {
+        status: status.get(), authenticated, games_done: total.saturating_sub(remaining),
+        games_total: total, games_failed: failed, badges_done, badges_total,
+        pending_awards: store.lock().unwrap().unlocks.values().filter(|u| !u.synced).count(),
+        retry_seconds: if matches!(status.get(), SyncStatus::Offline | SyncStatus::Attention) {
+            next_attempt.saturating_duration_since(Instant::now()).as_secs()
+        } else { 0 }, problem,
+    };
+    *status.detail.lock().unwrap() = detail;
 }
 
 #[cfg(test)]
-mod cache_progress_tests {
-    use super::cache_progress;
+mod progress_tests {
+    use super::*;
     #[test]
-    fn progress_covers_metadata_then_badges_and_hides_when_finished() {
-        assert_eq!(cache_progress(10, 10, false, 100), Some(0));
-        assert_eq!(cache_progress(10, 5, true, 20), Some(25));
-        assert_eq!(cache_progress(10, 1, true, 10), Some(45));
-        assert_eq!(cache_progress(10, 0, true, 20), Some(60));
-        assert_eq!(cache_progress(10, 0, false, 100), None);
-        assert_eq!(cache_progress(0, 0, true, 62), Some(62));
-        assert_eq!(cache_progress(0, 0, false, 100), None);
+    fn a_large_library_keeps_its_active_pass_after_five_minutes() {
+        assert!(!should_rescan(Duration::from_secs(900), 850));
+        assert!(!should_rescan(Duration::from_secs(299), 0));
+        assert!(should_rescan(Duration::from_secs(300), 0));
+    }
+    #[test]
+    fn game_counts_do_not_depend_on_newly_discovered_artwork() {
+        let mut d = crate::SyncDetail { games_done: 60, games_total: 900,
+            badges_done: 2, badges_total: 3, ..Default::default() };
+        assert_eq!(d.progress(), Some(("Game data", 60, 900)));
+        d.badges_total = 9000;
+        assert_eq!(d.progress(), Some(("Game data", 60, 900)));
+        d.games_done = 900;
+        assert_eq!(d.progress(), Some(("Artwork", 2, 9000)));
+        d.badges_done = 9000;
+        assert_eq!(d.progress(), None);
     }
 }

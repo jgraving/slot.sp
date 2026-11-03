@@ -32,7 +32,7 @@ impl SettingsNotice {
     }
     fn motion_at(&self, now:u64)->crate::expressive::Spring {
         let mut spring=self.motion;
-        let deadline=self.shown.saturating_add(2400);
+        let deadline=if self.observed.as_ref().is_some_and(|(_,s)|s=="CONFIRM_UNENCRYPTED") {u64::MAX}else{self.shown.saturating_add(2400)};
         if self.observed.is_some() && self.tick<deadline && now>deadline {
             spring.step(1.0,(deadline-self.tick) as f32/1000.0,800.0,1.0);
             spring.step(0.0,(now-deadline) as f32/1000.0,800.0,1.0);
@@ -118,6 +118,7 @@ pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace 
     settings_notice_face_toned_on(message,canvas,light,NoticeTone::Neutral)
 }
 pub fn settings_notice_face_toned_on(message:&str,canvas:Canvas,light:bool,tone:NoticeTone)->UndoFace {
+    if message=="CONFIRM_UNENCRYPTED" {return unencrypted_confirmation_face();}
     if message=="PIN_BUTTONS" || message=="PIN_BUTTONS_MIN" {return pin_buttons_notice_face(light,message=="PIN_BUTTONS_MIN");}
     let prefix=if tone==NoticeTone::Neutral {0}else{36};
     if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent,light);}
@@ -197,6 +198,32 @@ fn pin_buttons_notice_face(light:bool,minimum:bool)->UndoFace {
         let rgba=if light {slot_gfx::ui_palette::light_texture(&glyph.rgba)}else{glyph.rgba};
         crate::plate::blit(&mut face.rgba,width,&rgba,glyph.w,glyph.h,x,(48-glyph.h)/2);
         x+=glyph.w+8;
+    }
+    face
+}
+
+/// A pending choice stays on its selector until a deliberate confirm or cancellation.
+fn unencrypted_confirmation_face() -> UndoFace {
+    let (w,h)=(424,76);
+    let mut face=UndoFace{rgba:vec![0;(w*h*4)as usize],w,h};
+    let font=text::font(text::Role::Detail).expect("confirmation font");
+    let ink=[45,33,8];
+    let title=text::Layout{lines:vec!["Store unencrypted?".into()],px:20.0,tracking:0.0,role:text::Role::Detail};
+    let mut line=vec![0;(w*32*4)as usize];
+    text::draw_centred(&mut line,w,32,&title,ink);
+    crate::plate::blit(&mut face.rgba,w,&line,w,32,0,2);
+    let mut x=64;
+    for (button,label) in [(crate::bitmaps::ButtonLegend::A,"Confirm"),(crate::bitmaps::ButtonLegend::B,"Cancel")] {
+        let glyph=crate::quick_menu::controller_button_face(button,28);
+        let rgba=slot_gfx::ui_palette::light_texture(&glyph.rgba);
+        crate::plate::blit(&mut face.rgba,w,&rgba,glyph.w,glyph.h,x,40);
+        x+=glyph.w+8;
+        let tw=text::line_width(font,label,18.0,0.0).ceil()as u32+2;
+        let mut words=vec![0;(tw*32*4)as usize];
+        let layout=text::Layout{lines:vec![label.into()],px:18.0,tracking:0.0,role:text::Role::Detail};
+        text::draw_centred(&mut words,tw,32,&layout,ink);
+        crate::plate::blit(&mut face.rgba,w,&words,tw,32,x,38);
+        x+=tw+28;
     }
     face
 }

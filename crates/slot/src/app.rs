@@ -354,6 +354,7 @@ pub struct App {
     quick_card:quick_controls::QuickCard,
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
+    pub ra_sync_indicator: Option<TexId>,
     pub wifi_indicator: Option<TexId>,
     pub hud_wifi_indicator: Option<TexId>,
     pub audio_indicator: Option<TexId>,
@@ -623,6 +624,7 @@ impl App {
             quick_card:Default::default(),
             bluetooth_supported: false,
             kid_status_icon: None,
+            ra_sync_indicator: None,
             wifi_indicator: None,
             hud_wifi_indicator: None,
             audio_indicator: None,
@@ -5568,6 +5570,10 @@ impl App {
             out,
         );
         if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
+            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+            slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+        }
+        if let Some(tex) = self.ra_sync_indicator {
             let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
         }

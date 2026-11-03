@@ -26,10 +26,11 @@ pub enum Icon {
     Usb,
     UsbMuted,
     Camera,
+    Gamepad,
 }
 
 impl Icon {
-    pub const ALL: [Icon; 17] = [
+    pub const ALL: [Icon; 18] = [
         Icon::Volume,
         Icon::VolumeZero,
         Icon::VolumeMuted,
@@ -47,6 +48,7 @@ impl Icon {
         Icon::Usb,
         Icon::UsbMuted,
         Icon::Camera,
+        Icon::Gamepad,
     ];
 
     pub fn index(self) -> usize {
@@ -70,6 +72,7 @@ impl Icon {
             Icon::Bluetooth | Icon::BluetoothMuted => '\u{f294}',
             Icon::Usb | Icon::UsbMuted => '\u{f287}',
             Icon::Camera => '\u{f030}',
+            Icon::Gamepad => '\u{f11b}',
         }
     }
 }
@@ -112,6 +115,7 @@ const MUTED_SPEAKER: &str = r#"<path d="M3 9h3l6 6v5l-6-5H3zM12 4 8 8l4 4zM14 7.
 /// Flat status glyphs share the floating volume pill's native glyph size.
 pub fn status_icon_face(icon:Icon,ink:[u8;3])->CartFace {
     let path=match icon {
+        Icon::Gamepad=>r#"<path fill-rule="evenodd" d="M7 6h10c2.6 0 3.6 2.1 4.2 4.8l1.1 5c.5 2.7-1.5 4-3.3 2.2l-2.1-2H7.1L5 18c-1.8 1.8-3.8.5-3.3-2.2l1.1-5C3.4 8.1 4.4 6 7 6zM6 9v2H4v2h2v2h2v-2h2v-2H8V9zm10 1a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm3 3a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/>"#,
         Icon::Bluetooth|Icon::BluetoothMuted=>r#"<path fill-rule="evenodd" d="M11 1 20 9l-5 3 5 3-9 8V14l-5 5-2-2 6-5-6-5 2-2 5 5z M14 6v4l2-2z M14 14v4l2-2z"/>"#,
         Icon::VolumeMuted|Icon::VolumeZero|Icon::Volume=>MUTED_SPEAKER,
         Icon::Headphones|Icon::HeadphonesMuted=>r#"<path d="M3 12a9 9 0 0 1 18 0v9h-6v-9h3a6 6 0 0 0-12 0h3v9H3z"/>"#,

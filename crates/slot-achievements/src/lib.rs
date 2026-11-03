@@ -40,6 +40,34 @@ pub enum SyncStatus {
     Attention,
 }
 
+/// A small copy published by the HTTP worker. UI reads never wait for HTTP or disk.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SyncDetail {
+    pub status: SyncStatus,
+    pub authenticated: bool,
+    pub games_done: usize,
+    pub games_total: usize,
+    pub games_failed: usize,
+    pub badges_done: usize,
+    pub badges_total: usize,
+    pub pending_awards: usize,
+    pub retry_seconds: u64,
+    pub problem: &'static str,
+}
+impl Default for SyncDetail {
+    fn default() -> Self { Self { status: SyncStatus::Disabled, authenticated: false,
+        games_done: 0, games_total: 0, games_failed: 0, badges_done: 0, badges_total: 0,
+        pending_awards: 0, retry_seconds: 0, problem: "" } }
+}
+impl SyncDetail {
+    /// Each phase has its own honest denominator; artwork is discovered during game lookup.
+    pub fn progress(&self) -> Option<(&'static str, usize, usize)> {
+        if self.games_done < self.games_total { Some(("Game data", self.games_done, self.games_total)) }
+        else if self.badges_done < self.badges_total { Some(("Artwork", self.badges_done, self.badges_total)) }
+        else { None }
+    }
+}
+
 #[derive(Default)]
 struct Status {
     stopped: AtomicBool,
@@ -47,8 +75,7 @@ struct Status {
     network: AtomicU8,
     unsaved: AtomicBool,
     reconnect: AtomicBool,
-    // Zero means unknown; otherwise percent + 1, keeping Default valid.
-    progress: AtomicU8,
+    detail: Mutex<SyncDetail>,
     pending: AtomicBool,
     // Shared only by the evaluator and HTTP workers, never gameplay/UI.
     presence: Mutex<Option<(u64, String)>>,
@@ -203,8 +230,12 @@ impl Service {
         }
     }
 
+    pub fn sync_detail(&self) -> Option<SyncDetail> {
+        self.status.detail.try_lock().ok().map(|d| *d)
+    }
     pub fn sync_progress(&self) -> Option<u8> {
-        self.status.progress.load(Ordering::Acquire).checked_sub(1)
+        let (_, done, total) = self.sync_detail()?.progress()?;
+        Some((done as u64 * 100 / total.max(1) as u64).min(100) as u8)
     }
 
     pub fn sync_pending(&self) -> bool {

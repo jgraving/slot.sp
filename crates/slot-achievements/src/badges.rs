@@ -123,6 +123,9 @@ impl Queue {
         }
     }
 
+    pub fn counts(&self) -> (usize, usize) {
+        (self.known.len().saturating_sub(self.pending.len()), self.known.len())
+    }
     pub fn percent(&self) -> u8 {
         if self.known.is_empty() {
             return 100;

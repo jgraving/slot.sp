@@ -73,6 +73,7 @@ pub struct Menu {
     notice: String,
     wifi_on: bool,
     last_wifi: wifi::WifiView,
+    last_sync: slot_achievements::SyncDetail,
     pub service: Option<slot_achievements::Service>,
     toast: Option<(String, Instant)>,
 }
@@ -98,7 +99,7 @@ impl Menu {
             forget_pin: false, pending_storage: None, confirm_unencrypted:false, short_pin:false,
             notice_tone:slot_ui::NoticeTone::Neutral,toast_tone:slot_ui::NoticeTone::Neutral,
             startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false,encrypt_after_setup:false, notice: String::new(),
-            wifi_on: false, last_wifi: Default::default(), service: None, toast: None,
+            wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None,
         }
     }
     pub fn requires_startup_lock(&self)->bool {self.encrypted && self.prefs.lock_device}
@@ -138,6 +139,9 @@ impl Menu {
     pub fn wifi_connected(&self) -> bool {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
+    pub fn achievements_busy(&self) -> bool {
+        self.service.as_ref().is_some_and(|s| s.sync_status() == slot_achievements::SyncStatus::Syncing)
+    }
     pub fn show_progress(&self) -> bool {
         self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle)
     }
@@ -158,9 +162,13 @@ impl Menu {
     fn say(&mut self, message: impl Into<String>) { self.notice_tone=slot_ui::NoticeTone::Neutral;self.notice = message.into(); self.changed(); }
     fn warn(&mut self,message:&str,tone:slot_ui::NoticeTone) {self.say(message);self.notice_tone=tone;}
     pub fn notice_tone(&self)->slot_ui::NoticeTone {
+        if self.confirm_unencrypted { return slot_ui::NoticeTone::Warning; }
         if self.visible {self.notice_tone}else{self.toast_tone}
     }
-    pub fn notice_text(&self) -> Option<&str> { (!self.notice.is_empty()).then_some(self.notice.as_str()) }
+    pub fn notice_text(&self) -> Option<&str> {
+        if self.confirm_unencrypted { Some("CONFIRM_UNENCRYPTED") }
+        else { (!self.notice.is_empty()).then_some(self.notice.as_str()) }
+    }
     pub fn page_key(&self) -> u64 {
         if let Some(field) = self.code { return 4030 + field as u64; }
         if let Some((field, _)) = self.keyboard { return 4010 + field as u64; }
@@ -193,7 +201,7 @@ impl Menu {
         } else if self.encrypted && self.remembers() && !self.locked {self.submit(Job::Save(self.secrets.clone()));}
     }
     fn start_tracking(&mut self) {
-        self.service = None;
+        self.service = None; self.last_sync = Default::default();
         if self.prefs.achievements && !self.secrets.username.is_empty() {
             self.service = Some(slot_achievements::Service::configured(self.root.clone(), slot_achievements::Config {
                 enabled: true, username: self.secrets.username.clone(), password: self.secrets.password.clone(), token: self.secrets.token.clone(),
@@ -270,6 +278,9 @@ impl Menu {
                 }
             }
         }
+        if let Some(detail) = self.service.as_ref().and_then(|s| s.sync_detail()) {
+            if detail != self.last_sync { self.last_sync = detail; self.face = None; }
+        }
         self.try_button_unlock();
         if self.pending_jobs == 0 { if let Some((username, token)) = self.service.as_ref().and_then(|s| s.take_token()) {
             self.secrets.username = username; self.secrets.token = token; self.secrets.password.zeroize();
@@ -332,10 +343,13 @@ impl Menu {
         if storage==Storage::Encrypted && !self.encrypted {self.encrypt_after_setup=true;self.setup_pin();return;}
         if self.encrypted && self.locked {self.unlock(Some(AfterUnlock::Storage(storage)));return;}
         if storage==Storage::Unencrypted {
-            self.confirm_unencrypted=true;self.forget_pin=false;self.forget_confirmation=Some(false);
-            self.warn("Credentials readable on SD card",slot_ui::NoticeTone::Danger);
+            self.confirm_unencrypted=true; self.forget_pin=false; self.notice.clear(); self.changed();
         } else if storage==Storage::Session {
-            self.confirm_unencrypted=false;self.forget_pin=false;self.forget_confirmation=Some(false);self.changed();
+            self.confirm_unencrypted=false;
+            if self.encrypted { self.pending_storage=Some(Storage::Session); self.submit(Job::Save(Secrets::default())); }
+            else if remove_plain(&self.root).is_ok() {
+                self.prefs.unencrypted=false;self.prefs.remember=Some(false);self.store_preferences();self.say("Session only");
+            } else { self.warn("Could not delete unencrypted credentials",slot_ui::NoticeTone::Danger); }
         } else {
             self.pending_storage=Some(Storage::Encrypted);self.submit(Job::Save(self.secrets.clone()));
         }
@@ -438,6 +452,22 @@ impl Menu {
                 self.changed();
             }
             return;
+        }
+        if self.confirm_unencrypted {
+            match action {
+                Action::GbaDown(Btn::A) => { self.confirm_unencrypted=false; self.use_unencrypted(); }
+                Action::QuickMenu | Action::GbaDown(Btn::B | Btn::Up | Btn::Down) => {
+                    self.confirm_unencrypted=false; self.notice.clear();
+                    if self.storage()!=Storage::Encrypted { self.set_storage(Storage::Encrypted); }
+                    if self.keyboard.is_none() && self.code.is_none() && matches!(action, Action::GbaDown(Btn::Up | Btn::Down)) { self.input(action); }
+                }
+                Action::GbaDown(Btn::Left | Btn::Right) => {
+                    self.confirm_unencrypted=false;
+                    self.set_storage(Storage::Unencrypted.next(if action==Action::GbaDown(Btn::Left) {-1} else {1}));
+                }
+                _ => {},
+            }
+            self.changed(); return;
         }
         if let Some(yes) = self.forget_confirmation.as_mut() {
             match action {
@@ -544,16 +574,9 @@ impl Menu {
         if let Some(yes) = self.forget_confirmation {
             return vec![("Keep current storage".into(),String::new(),false),(if self.confirm_unencrypted {"Store unencrypted"} else if self.forget_pin {"Forget Security PIN"}else{"Use session only"}.into(),if yes {"Confirm with A"}else{""}.into(),false)];
         }
-        let storage = self.storage().label().to_string();
-        let status = self.service.as_ref().map(|s| {
-            if let Some(p) = s.sync_progress() { format!("Preparing {p}%") }
-            else if s.sync_pending() { "Unlocks waiting to sync".into() }
-            else { match s.sync_status() {
-                slot_achievements::SyncStatus::Disabled=>"Disabled", slot_achievements::SyncStatus::Ready=>"Up to date",
-                slot_achievements::SyncStatus::Syncing=>"Preparing / syncing", slot_achievements::SyncStatus::Offline=>"Waiting for internet",
-                slot_achievements::SyncStatus::Attention=>"Needs attention",
-            }.into() }
-        }).unwrap_or_else(|| if self.locked {"Unlock to use account"} else if self.prefs.achievements {"Account needed"} else {"Disabled"}.into());
+        let storage = if self.confirm_unencrypted {Storage::Unencrypted}else{self.storage()}.label().to_string();
+        let status = if self.service.is_some() { sync_label(self.last_sync) }
+            else { if self.locked {"Unlock to use account"} else if self.prefs.achievements {"Account needed"} else {"Disabled"}.into() };
         let mut rows = match self.page {
             Page::Security => vec![
                 ("Unlock with".into(),match self.creating_method {Method::Buttons=>"Button code",Method::Passphrase=>"Passphrase"}.into(),true),
@@ -576,6 +599,16 @@ impl Menu {
                 ("Credentials".into(), storage, true),
             ],
         };
+        if self.page == Page::Achievements && self.service.is_some() {
+            let d = self.last_sync;
+            rows.extend([
+                ("Game data".into(), format!("{} / {}", d.games_done, d.games_total), false),
+                ("Artwork".into(), format!("{} / {}", d.badges_done, d.badges_total), false),
+                ("Uploads waiting".into(), d.pending_awards.to_string(), false),
+                ("Games to retry".into(), d.games_failed.to_string(), false),
+            ]);
+            if !d.problem.is_empty() {rows.push(("Status".into(),d.problem.into(),false));}
+        }
         if self.page == Page::Wifi { for n in &self.last_wifi.networks {
             rows.push((n.ssid.chars().take(22).collect(), n.encryption.clone(), false));
         }}
@@ -623,12 +656,33 @@ impl Menu {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
             slot_ui::wifi_settings_face_on(canvas, &rows, selected, 5, &signals)
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
+        if self.page == Page::Achievements && self.forget_confirmation.is_none() && self.service.is_some() {
+            if let Some((phase, done, total)) = self.last_sync.progress() {
+                let label = format!("{phase} {done} / {total}");
+                let meter = slot_ui::filled_meter_face(&label, Some(slot_ui::Icon::Gamepad),
+                    done as f32 / total.max(1) as f32, _light, 400, 28);
+                blit(&mut face, &meter, (canvas.w as u32 - meter.w)/2, 350);
+            }
+        }
         let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {if self.confirm_unencrypted {"Store unencrypted?"}else if self.forget_pin {"Forget Security PIN?"} else {"Use session only?"}} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Security PIN"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
 
         face
     }
     pub fn flush_ready(&self) -> bool { self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
+}
+fn sync_label(d: slot_achievements::SyncDetail) -> String {
+    use slot_achievements::SyncStatus::*;
+    match d.status {
+        Disabled => "Starting…".into(),
+        Offline | Attention => if d.retry_seconds > 0 { format!("Retry in {}s", d.retry_seconds) }
+            else if !d.problem.is_empty() { d.problem.into() } else { "Retry needed".into() },
+        Ready => if d.authenticated { "Signed in · up to date" } else { "Signing in…" }.into(),
+        Syncing => if !d.authenticated { "Signing in…".into() }
+            else if d.pending_awards > 0 { format!("Uploading {} unlocks", d.pending_awards) }
+            else if let Some((phase, done, total)) = d.progress() { format!("{phase} {done}/{total}") }
+            else { "Syncing…".into() },
+    }
 }
 fn plain_path(root:&std::path::Path)->PathBuf {root.join("Config/network-credentials.json")}
 fn read_plain(root:&std::path::Path)->Option<Secrets> {
@@ -809,8 +863,7 @@ mod tests {
     fn session_storage_erases_saved_secrets_but_keeps_the_shared_pin() {
         let root=tempfile::tempdir().unwrap();saved_wifi(root.path());
         let mut menu=Menu::new(root.path().into());menu.open_wifi();menu.selected=2;menu.input(Action::GbaDown(Btn::Left));
-        submit_code(&mut menu,&CODE);wait(&mut menu);assert!(menu.forget_confirmation.is_some());
-        menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));wait(&mut menu);
+        submit_code(&mut menu,&CODE);wait(&mut menu);assert!(menu.forget_confirmation.is_none());
         assert_eq!(menu.secrets.wifi_password,"password");assert!(!menu.remembers());
         let mut restarted=Menu::new(root.path().into());assert!(restarted.encrypted);assert!(!restarted.remembers());
         restarted.unlock(None);submit_code(&mut restarted,&CODE);wait(&mut restarted);
@@ -860,10 +913,13 @@ mod tests {
         assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Warning);
         menu.secrets.wifi_password="plain-fixture-password".into();
         menu.set_storage(Storage::Unencrypted);
-        assert_eq!(menu.forget_confirmation,Some(false));assert!(!plain_path(root.path()).exists());
-        assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Danger);
-        menu.input(Action::GbaDown(Btn::A));assert!(!plain_path(root.path()).exists());
-        menu.set_storage(Storage::Unencrypted);menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));
+        assert!(menu.confirm_unencrypted);assert!(menu.forget_confirmation.is_none());assert!(!plain_path(root.path()).exists());
+        assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Warning);
+        let page=menu.page_key();
+        assert_eq!(menu.notice_text(),Some("CONFIRM_UNENCRYPTED"));
+        menu.input(Action::GbaDown(Btn::B));assert!(!plain_path(root.path()).exists());
+        assert_eq!(menu.storage(),Storage::Encrypted);assert_eq!(menu.page_key(),page);
+        menu.set_storage(Storage::Unencrypted);menu.input(Action::GbaDown(Btn::A));
         assert_eq!(menu.storage(),Storage::Unencrypted);
         assert_eq!(read_plain(root.path()).unwrap().wifi_password,"plain-fixture-password");
         let restarted=Menu::new(root.path().into());assert_eq!(restarted.secrets.wifi_password,"plain-fixture-password");drop(restarted);
@@ -930,7 +986,7 @@ mod tests {
     fn missing_pin_setup_finishes_the_requested_plaintext_to_encrypted_migration() {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();
         menu.secrets.wifi_password="migration-fixture".into();menu.set_storage(Storage::Unencrypted);
-        menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));assert!(plain_path(root.path()).exists());
+        menu.input(Action::GbaDown(Btn::A));assert!(plain_path(root.path()).exists());
         menu.set_storage(Storage::Encrypted);assert_eq!(menu.page,Page::Security);
         menu.input(Action::GbaDown(Btn::A));submit_code(&mut menu,&CODE);submit_code(&mut menu,&CODE);wait(&mut menu);
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
@@ -940,7 +996,7 @@ mod tests {
     fn failed_encryption_keeps_the_unencrypted_copy_and_reports_the_failure() {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
         menu.secrets.wifi_password="still-needed".into();menu.set_storage(Storage::Unencrypted);
-        menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));
+        menu.input(Action::GbaDown(Btn::A));
         let vault=network_vault::vault_path(root.path());std::fs::remove_file(&vault).unwrap();std::fs::create_dir(&vault).unwrap();
         menu.set_storage(Storage::Encrypted);wait(&mut menu);
         assert_eq!(menu.storage(),Storage::Unencrypted);assert_eq!(read_plain(root.path()).unwrap().wifi_password,"still-needed");

@@ -132,3 +132,13 @@ Yellow triangle pills indicate a caution, such as a short PIN. Red circled alert
 condition, such as credentials saved without encryption. Short messages stay in the interface; this guide
 explains the consequences. The wider Wi-Fi arcs show signal strength in network lists and a connection
 in the status bar.
+
+## Preparation and background sync
+
+Signing in and preparing games are separate steps. The first pass checks each GBA ROM in `Games/GBA`, caches its achievement rules and server unlocks, and downloads badge artwork. A library of hundreds of games can take a long time: work is deliberately paced and requests can time out. The game-data and artwork phases show their own counts; artwork totals grow as games are discovered. Opening Settings does not restart preparation.
+
+The controller in the status bar means RetroAchievements is working in the background. The settings page shows game data, artwork, pending uploads and games that need another attempt. A connection or account error shows retry status rather than pretending preparation is still moving. Preparation continues on the shelf and during play while slot is running. It pauses when the device sleeps, shuts down, or loses internet; downloaded data and earned unlocks persist. Signing out or turning achievements off stops the worker. A restart uses cached data and prepares remaining or changed games; it also refreshes old data weekly. Newly played games take priority over the background library.
+
+Completed game preparation makes cached tracking available offline. It does not mean every game has achievements, and it is separate from whether the server accepts deferred unlock uploads.
+
+Credentials stays an inline selector. Choosing Unencrypted asks for **A: Confirm** or **B: Cancel** in a pill; no plaintext file is created before confirmation. Cancel returns to Encrypted (PIN setup is required if none exists). Session only removes saved credentials while keeping the current session signed in.

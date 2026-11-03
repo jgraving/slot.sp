@@ -1443,8 +1443,8 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
     face
 }
 pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
-    let mut paths=String::from(r#"<circle cx="14" cy="24" r="1.9"/>"#);
-    for (level,path) in [(1,"M10 18.6Q14 15.2 18 18.6"),(2,"M6 13.2Q14 6.6 22 13.2"),(3,"M2 7.5Q14-2 26 7.5")] {
+    let mut paths=String::from(r#"<circle cx="14" cy="21" r="1.6"/>"#);
+    for (level,path) in [(1,"M9.8 16.8Q14 13.6 18.2 16.8"),(2,"M6 12.8Q14 6.8 22 12.8"),(3,"M2.3 8.8Q14 .2 25.7 8.8")] {
         if bars>=level {paths.push_str(&format!(r#"<path d="{path}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>"#));}
     }
     let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}">{paths}</g></svg>"##,ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);

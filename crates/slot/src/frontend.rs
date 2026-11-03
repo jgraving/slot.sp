@@ -46,6 +46,7 @@ pub struct Frontend {
     bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
     spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
+    ra_sync_icon: Option<TexId>,
     wifi_icon: Option<TexId>,
     hud_wifi_icon: Option<TexId>,
     audio_icon: Option<TexId>,
@@ -221,6 +222,7 @@ impl Frontend {
                 std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
                 rx
             }),
+            ra_sync_icon: None,
             wifi_icon: None,
             hud_wifi_icon: None,
             audio_icon: None,
@@ -696,6 +698,13 @@ impl Frontend {
             self.session.app_mut().wifi_indicator=None;
             self.session.app_mut().hud_wifi_indicator=None;
         }
+        if self.session.app().network.as_ref().is_some_and(|m| m.achievements_busy()) {
+            if self.ra_sync_icon.is_none() {
+                let f = slot_ui::status_icon_face(Icon::Gamepad, HUD_INK);
+                upload(compositor, &mut self.ra_sync_icon, UndoFace {rgba:f.rgba,w:f.w,h:f.h});
+            }
+            self.session.app_mut().ra_sync_indicator = self.ra_sync_icon;
+        } else { self.session.app_mut().ra_sync_indicator = None; }
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
