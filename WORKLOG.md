@@ -2,10 +2,23 @@
 
 Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `feat/fork-ota-time`
-Active PR: https://github.com/jgraving/slot.sp/pull/191
+Active branch: `main`
+Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
 Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
-Status: draft, not merged or released.
+Status: merged into main; automatic main build release published.
+
+## Merged handoff — 2026-11-03
+
+User authorized merging both follow-ups once tests passed, superseding earlier draft-only instructions. Rechecked all six workflows on both tested runtimes; every workflow succeeded. Later changes were recovery Markdown only.
+
+- PR #190 merged into main as 169ad506577db458f690dd613402feea07430f5a.
+- PR #191 retargeted from fix/ra-background-progress to main and merged as 356c30749a98d103c249af1f95355047b25c5818, preserving ancestry.
+- Verified combined source: 92c2e8a470c30ca3add237780d1b32fc932a8156. CI: 141 core tests, 31 achievement tests, 18 updater/time/SNTP tests, complete launcher/UI regression checks, both bundled cores, production native light/dark walkthroughs, website, scaling, blending and shortcuts all pass.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591.
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404.
+- CURRENT_WORK.md on main is the recovery entry point. Continue new work from main; do not reopen the merged drafts or repeat implementation. Earlier draft/retarget instructions below are historical and superseded.
+- Physical handheld heat/radio/RTC, live RA/deferred-award acceptance and real firmware interruption/recovery remain testing notes. No live secrets were used, no firmware was installed, and no release was published.
+- This post-merge documentation PR records the actual results without changing runtime source.
 
 ## Current verified follow-up
 
@@ -421,3 +434,27 @@ All six workflows pass on combined source 92c2e8a470c30ca3add237780d1b32fc932a81
 ### Merge authorized by user — 2026-11-03
 
 Before merging: user explicitly authorizes merging both PRs if tests pass, superseding earlier draft-only instructions. Rechecked all six workflows on shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f and combined runtime 92c2e8a470c30ca3add237780d1b32fc932a8156: all success. Compared current heads f8932a8ddf855f7e378ac267948dabba81682aba / a3d707db65dc69ff009b129f7ebcc03e0e534d4b against those tested runtimes; later differences are only CURRENT_WORK.md and WORKLOG.md. Plan: ready/merge #190 preserving ancestry, retarget #191 to main, ready/merge #191, then record actual merge SHAs in main through a documentation PR. Hardware/live-account caveats remain testing notes, not an approval block; no release or firmware installation requested.
+
+### CI display clarification and requested double-check
+
+The latest documentation heads used CI-skip markers, so GitHub did not display green checks on those heads. The user questioned this, then clarified that passing tests on identical code is acceptable and requested a double-check. Reverified: all six suites pass on source 285cfa1 / 92c2e8a; all subsequent differences, including actual merged main 356c30749a98d103c249af1f95355047b25c5818, are CURRENT_WORK.md / WORKLOG.md only. Do not describe this as untested code or user-provided verification: the agent verified the recorded Actions results. The configured main push workflows are running automatically on 356c307: Launcher quality-of-life 41735091909, Build and release 41735092008, pages 41735092013. No extra release dispatch was issued. Wait for actual results, preserve failures if any, and use normal CI for this pending documentation PR without a skip marker.
+
+### Issue reply requested; recipient verified
+
+User requests an RA issue reply tagging the user after the CI double-check. Verified the sole matching open request: #182, Request: Retroachievements support, authored by @demifiend9; issue/comments re-read before drafting, no competing recipient or existing reply. Authorized reply should link merged support, GBA softcore scope, cached/offline evaluation and queued reconnect uploads, current guide and a verified build. Wait for configured main checks before posting; record actual comment URL afterward. Main ARM64 workflow 41735092008 is pending behind earlier main release build 41735010181 because release-main concurrency is serialized. No CI failure has been reported at this point; no additional runtime changes or manual workflow/release dispatch made.
+
+### Website CI scope requested — 2026-11-04 (Europe/Zurich)
+
+Before edits: user asks why OS changes trigger full 3D website checks. pages.yml broadly matches all root *.md (including recovery notes), and every website run unconditionally starts model/video checks. Narrow root triggers to actual guides consumed by prepare-site.py, and gate model/video checks to homepage/model/shared assets/templates/config/test changes. Guide-only edits must retain website build/link/navigation checks without 3D renders; OS-only and recovery-log-only edits must not start website CI. Manual runs and CI-scope changes should exercise all website jobs. Preserve deployment only after successful build and any required model check; explicitly handle an intentionally skipped model dependency. Add meaningful classifier/deployment-condition regression coverage; no device runtime changes. Main verification and the authorized @demifiend9 reply to issue #182 remain outstanding; post only after verified main membership and main CI double-check.
+
+### Website CI scoping implementation ready
+
+Replaced wildcard root Markdown triggers with the 15 published guide inputs from prepare-site.py. Added a change-classification job; guide changes run build/link/navigation only, while homepage/model/media/shared template/style/font/config changes also run model/video checks. OS sources and recovery notes trigger no website workflow. Manual dispatch and CI classifier/workflow changes run everything. Deployment explicitly accepts an intentionally skipped model job after successful website build, but blocks a failed required model or failed build. Six local routing/integration regressions pass and the workflow YAML parses. This website-workflow change will exercise full website CI once; device runtime is unchanged.
+
+### Merged-main double-check and RA reply completed — 2026-11-04 (Europe/Zurich)
+
+Actual main 356c30749a98d103c249af1f95355047b25c5818 passed all configured push workflows: Launcher/native 41735091909, ARM64 build/release and device regressions 41735092008, website 41735092013. This is fresh CI on the real merged commit, in addition to the six passing premerge source suites. The serialized first-merge build also passed. Automatic release: https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.03-356c307. No manual release dispatch was issued.
+
+After rechecking main membership, all three results and the issue's author/comments, posted the authorized reply to #182 tagging @demifiend9: https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916. Reply covers merged GBA softcore support, initial internet preparation, cached offline tracking/queued reconnect uploads, current exclusions, guide and the verified main build. The posted body and tag were read back successfully. No issue closure requested or performed.
+
+Website CI routing helpers/tests live under site/scripts so they also fit the existing website-only exclusions in the device release workflow. This avoids causing an OS release build just for the new website CI helper. Six routing/integration regressions pass after relocation and YAML validation passes. PR #192 changes only website CI and recovery notes; it must pass its normal applicable latest-head checks before merging. No skip marker is used on its final implementation commit. CI-scope/workflow changes deliberately exercise all website jobs once; future OS-only/recovery edits trigger no website jobs, and guide-only edits skip 3D checks. Keep remaining physical/live-account caveats as testing notes, not unmerged feature work.
