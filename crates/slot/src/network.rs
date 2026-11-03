@@ -67,6 +67,7 @@ pub struct Menu {
     return_to_shelf: bool,
     parent_unlock: bool,
     parent_authenticated: bool,
+    encrypt_after_setup: bool,
     notice: String,
     wifi_on: bool,
     last_wifi: wifi::WifiView,
@@ -81,7 +82,8 @@ impl Menu {
         let method = network_vault::method(&root);
         if prefs.remember.is_none() { prefs.remember = Some(true); }
         // Recover an interrupted plaintext-to-encrypted migration after deletion.
-        if prefs.unencrypted && !plain_path(&root).exists() && encrypted { prefs.unencrypted=false;prefs.remember=Some(true); }
+        if plain_path(&root).is_file() {prefs.unencrypted=true;prefs.remember=Some(false);}
+        if prefs.unencrypted && !plain_path(&root).exists() && encrypted && remove_plain(&root).is_ok() {prefs.unencrypted=false;prefs.remember=Some(true);}
         let secrets=if prefs.unencrypted {read_plain(&root).unwrap_or_default()}else{Secrets::default()};
         Self {
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
@@ -93,7 +95,7 @@ impl Menu {
             pending_jobs: 0, after_unlock: None, forget_confirmation: None,
             forget_pin: false, pending_storage: None, confirm_unencrypted:false, short_pin:false,
             notice_tone:slot_ui::NoticeTone::Neutral,toast_tone:slot_ui::NoticeTone::Neutral,
-            startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false, notice: String::new(),
+            startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false,encrypt_after_setup:false, notice: String::new(),
             wifi_on: false, last_wifi: Default::default(), service: None, toast: None,
         }
     }
@@ -224,6 +226,9 @@ impl Menu {
                     self.encrypted = true; self.locked = false; self.method = Some(method);
                     if self.short_pin {self.warn("Short PIN: easy to guess if someone copies the SD card",slot_ui::NoticeTone::Warning);}
                     else {self.say("Security PIN set; shared by Wi-Fi and achievements");}
+                    if std::mem::take(&mut self.encrypt_after_setup) {
+                        self.pending_storage=Some(Storage::Encrypted);self.submit(Job::Save(self.secrets.clone()));
+                    }
                 }
                 Ok(Response::Forgotten) => {
                     self.encrypted = false; self.locked = false; self.method = None;
@@ -238,15 +243,18 @@ impl Menu {
                         } else {
                             let was_plain=self.prefs.unencrypted;
                             self.prefs.unencrypted=false;self.prefs.remember=Some(storage==Storage::Encrypted);self.store_preferences();
-                            if was_plain && storage==Storage::Encrypted {self.say("Unencrypted credentials deleted; encrypted storage enabled");}
+                            if was_plain && storage==Storage::Encrypted {
+                                if self.short_pin {self.warn("Unencrypted credentials deleted. Short PINs are easy to guess",slot_ui::NoticeTone::Warning);}
+                                else {self.say("Unencrypted credentials deleted; encrypted storage enabled");}
+                            }
                             else {self.say(if storage==Storage::Encrypted {"Credentials saved encrypted"}else{"Saved credentials deleted; session only"});}
                         }
                     } else { self.changed(); }
                 },
                 Err(message) => {
-                    self.pending_storage = None;
+                    let leaving_plain=self.pending_storage.take().is_some() && self.prefs.unencrypted;
                     if reply.operation == Operation::Unlock { self.prompt(Field::Unlock); }
-                    self.say(message);
+                    if leaving_plain {self.warn(message,slot_ui::NoticeTone::Danger);}else{self.say(message);}
                 }
             }
         }
@@ -293,6 +301,7 @@ impl Menu {
         if self.locked { self.unlock(None); false } else { true }
     }
     fn cancel_editor(&mut self) {
+        self.encrypt_after_setup=false;
         if self.parent_unlock {self.parent_unlock=false;self.visible=false;}
         if self.return_to_shelf && self.prefs.lock_device {
             self.code_text.zeroize();self.prompt(Field::Unlock);self.say("Enter your Security PIN to unlock the device");return;
@@ -307,7 +316,7 @@ impl Menu {
     }
     fn storage(&self) -> Storage {if self.prefs.unencrypted {Storage::Unencrypted}else if self.remembers() {Storage::Encrypted}else{Storage::Session}}
     fn set_storage(&mut self, storage: Storage) {
-        if storage==Storage::Encrypted && !self.encrypted {self.setup_pin();return;}
+        if storage==Storage::Encrypted && !self.encrypted {self.encrypt_after_setup=true;self.setup_pin();return;}
         if self.encrypted && self.locked {self.unlock(Some(AfterUnlock::Storage(storage)));return;}
         if storage==Storage::Unencrypted {
             self.confirm_unencrypted=true;self.forget_pin=false;self.forget_confirmation=Some(false);
@@ -421,10 +430,10 @@ impl Menu {
             self.changed(); return;
         }
         let Action::GbaDown(btn) = action else {
-            if action == Action::QuickMenu { self.visible = false; }
+            if action == Action::QuickMenu {self.encrypt_after_setup=false; self.visible = false; }
             return;
         };
-        if btn == Btn::B { self.visible = false; self.notice.clear(); self.changed(); return; }
+        if btn == Btn::B {self.encrypt_after_setup=false; self.visible = false; self.notice.clear(); self.changed(); return; }
         if matches!(btn, Btn::Up | Btn::Down) {
             let count = self.rows().len(); self.selected = (self.selected + if btn==Btn::Down {1} else {count-1}) % count;
             self.notice.clear(); self.changed(); return;
@@ -614,6 +623,15 @@ fn write_plain(root:&std::path::Path,secrets:&Secrets)->std::io::Result<()> {
     slot_store::atomic_write(&plain_path(root),&bytes)
 }
 fn remove_plain(root:&std::path::Path)->std::io::Result<()> {
+    // Include interrupted atomic writes of this credential file, not unrelated files.
+    let config=root.join("Config");
+    if let Ok(entries)=std::fs::read_dir(&config) {
+        for entry in entries {
+            let entry=entry?;let name=entry.file_name();let name=name.to_string_lossy();
+            let suffix=name.strip_prefix(".network-credentials.json.").and_then(|n|n.strip_suffix(".tmp"));
+            if suffix.is_some_and(|s|{let parts:Vec<_>=s.split('.').collect();parts.len()==2&&parts.iter().all(|p|!p.is_empty()&&p.bytes().all(|b|b.is_ascii_digit()))}) {std::fs::remove_file(entry.path())?;}
+        }
+    }
     match std::fs::remove_file(plain_path(root)) {Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(()),result=>result}
 }
 fn blit(dst: &mut UndoFace, src: &UndoFace, x: u32, y: u32) {
@@ -830,7 +848,8 @@ mod tests {
         assert_eq!(menu.storage(),Storage::Unencrypted);
         assert_eq!(read_plain(root.path()).unwrap().wifi_password,"plain-fixture-password");
         let restarted=Menu::new(root.path().into());assert_eq!(restarted.secrets.wifi_password,"plain-fixture-password");drop(restarted);
-        menu.set_storage(Storage::Encrypted);assert!(plain_path(root.path()).exists());wait(&mut menu);
+        let stale=root.path().join("Config/.network-credentials.json.123.4.tmp");std::fs::write(&stale,b"plain-fixture-password").unwrap();
+        menu.set_storage(Storage::Encrypted);assert!(plain_path(root.path()).exists());wait(&mut menu);assert!(!stale.exists());
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
         assert!(menu.notice_text().unwrap().contains("Unencrypted credentials deleted"));
         let reader=Worker::new(root.path());reader.jobs.send(Job::Unlock(Zeroizing::new("acgj".into()))).unwrap();
@@ -874,7 +893,7 @@ mod tests {
     fn shared_parent_pin_is_verified_even_if_credentials_are_already_unlocked() {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
         std::fs::create_dir_all(root.path().join("Config/kids")).unwrap();std::fs::write(root.path().join("Config/kids/use-device-pin"),b"1\n").unwrap();
-        let mut app=crate::app::App::new(vec![]);app.network=Some(menu);
+        menu.visible=false;let mut app=crate::app::App::new(vec![]);app.network=Some(menu);
         app.kid_menu=Some(crate::kid_menu::Menu::new(root.path().into(),crate::kid_policy::Policy::default()));
         app.apply(Action::GbaDown(Btn::A));assert!(app.network.as_ref().unwrap().parent_unlock);
         for b in [Btn::A;4] {app.apply(Action::GbaDown(b));}app.apply(Action::GbaDown(Btn::Start));
@@ -884,6 +903,27 @@ mod tests {
         for b in CODE {app.apply(Action::GbaDown(b));}app.apply(Action::GbaDown(Btn::Start));
         while app.network.as_ref().unwrap().pending_jobs>0 {now+=10;app.tick_ms(now);std::thread::sleep(Duration::from_millis(5));assert!(now<20000);}
         assert!(!app.network.as_ref().unwrap().visible);assert!(app.kid_menu.as_ref().unwrap().focus_info().is_some());
+    }
+
+    #[test]
+    fn missing_pin_setup_finishes_the_requested_plaintext_to_encrypted_migration() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();
+        menu.secrets.wifi_password="migration-fixture".into();menu.set_storage(Storage::Unencrypted);
+        menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));assert!(plain_path(root.path()).exists());
+        menu.set_storage(Storage::Encrypted);assert_eq!(menu.page,Page::Security);
+        menu.input(Action::GbaDown(Btn::A));submit_code(&mut menu,&CODE);submit_code(&mut menu,&CODE);wait(&mut menu);
+        assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
+        assert!(menu.notice_text().unwrap().contains("Unencrypted credentials deleted"));
+    }
+    #[test]
+    fn failed_encryption_keeps_the_unencrypted_copy_and_reports_the_failure() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
+        menu.secrets.wifi_password="still-needed".into();menu.set_storage(Storage::Unencrypted);
+        menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));
+        let vault=network_vault::vault_path(root.path());std::fs::remove_file(&vault).unwrap();std::fs::create_dir(&vault).unwrap();
+        menu.set_storage(Storage::Encrypted);wait(&mut menu);
+        assert_eq!(menu.storage(),Storage::Unencrypted);assert_eq!(read_plain(root.path()).unwrap().wifi_password,"still-needed");
+        assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Danger);assert!(!menu.notice_text().unwrap().contains("deleted"));
     }
 
 }

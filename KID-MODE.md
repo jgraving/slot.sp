@@ -72,6 +72,21 @@ Your full Favorites and Recents lists are kept. Turning kid mode off shows them 
 
 ## The parent code
 
+## Choose a parent unlock method
+
+In the parental controls card, **Parent code** is a Left/Right picker:
+
+- **Separate code** keeps the four-button parent code described below. Press A on
+  the row to set or change it.
+- **Device PIN** uses **General → Security PIN**. Set that PIN first. Opening parent
+  settings asks for the full device PIN or passphrase, even if credentials were
+  already unlocked for this session. Nothing stores a second copy of the device PIN.
+
+Changing back to Separate code requires a separate code to exist or be set first.
+The separate-code recovery file below applies only to that method. A forgotten
+device PIN cannot be recovered from the card. Choose Separate code before using
+Forget Security PIN in General.
+
 Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd>, the D-pad, or <kbd>L1</kbd>, <kbd>R1</kbd>, <kbd>L2</kbd> and <kbd>R2</kbd>. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
 
 ![Setting and confirming a four-button parent code](previews/current/light/parent-code.gif)

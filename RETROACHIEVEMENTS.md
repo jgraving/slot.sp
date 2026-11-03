@@ -20,48 +20,60 @@ then nearby networks. Each network has a signal icon and its detected security t
 Scanning uses the same progress indicator as Bluetooth. WPA3-only, enterprise, WEP
 and enhanced-open networks are shown but cannot be joined in this build.
 
-**General → Security PIN** sets the shared unlock secret for Wi-Fi and
-RetroAchievements. Choose **Button code** or **Passphrase**, then **Set Security PIN**:
+**General → Security PIN** is the first General setting. It sets the device PIN used
+to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** or
+**Passphrase**, then **Set Security PIN**:
 
-- **Button code:** enter four presses using A/B/X/Y, the D-pad and shoulder buttons,
-  then repeat them. The last press submits automatically. Select deletes a press;
-  Menu cancels. Held buttons do not repeat into the code. The dots hide your sequence.
+- **Button code:** enter four or more presses using A/B/X/Y, the D-pad and shoulder
+  buttons. You choose the length; press **Start** to finish, then repeat the sequence
+  and press Start again. Select deletes a press; Menu cancels. Held buttons do not
+  repeat. Only masked dots and the number of presses are shown, even for long PINs.
 - **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
-  A long, hard-to-guess passphrase gives stronger protection than the short button PIN.
+  Choose a long, unpredictable sequence or passphrase for stronger protection.
 
-This Security PIN is separate from the four-button parental-controls code. No recovery
-copy is written to the card. Remember it or keep it somewhere safe yourself.
+PINs shorter than eight button presses get a yellow **!** notification because they
+are easier to guess. There is no recovery copy of the device PIN on the card.
 
-**Credential storage** is an inline Left/Right picker in both Wi-Fi and
-RetroAchievements. The choice is shared:
+**Credential storage** is an inline Left/Right picker shared by Wi-Fi and
+RetroAchievements:
 
-- **Session only** is the default. Wi-Fi passwords and account credentials stay in
-  memory and disappear on power-off.
-- **Encrypted** saves them under your Security PIN. Set the PIN in General first;
-  choosing Encrypted without one shows that instruction. Creating a PIN alone does
-  not enable credential saving.
+- **Encrypted** is the default for a new setup. Credentials are saved under the
+  device PIN. If one is needed, the Security PIN page opens directly with a pill
+  explaining that this sets a device PIN for encrypted credentials.
+- **Session only** keeps credentials in memory and forgets them at power-off.
+- **Unencrypted** saves readable credentials on the SD card. A red **!** warning
+  explains this. Nothing is written until you select the confirmation row and
+  press **A**. The red warning also appears after confirming the change.
 
-After a restart with Wi-Fi or RetroAchievements enabled and encrypted credentials
-saved, an unlock card appears after startup. One successful unlock covers both
-features for that session. Wi-Fi reconnects after the code is accepted; there is no
-second Connect press. Turning on Wi-Fi, choosing Reconnect, or enabling achievements
-also prompts if the saved credentials are locked. Menu cancels the card and leaves
-the connection waiting. Nothing connects using locked credentials.
+Switching from Unencrypted to Encrypted saves the encrypted copy first, deletes the
+plaintext file, and shows a pill confirming deletion. If saving or deletion fails,
+the change reports the error instead of claiming success. Deleting a file on flash
+storage is not a guarantee of forensic erasure of older data.
 
-Switching back to Session only asks before removing the saved credential copy. It
-keeps your Security PIN and the current session. **General → Security PIN → Forget
-Security PIN** removes the PIN and its saved credentials after confirmation; this is
-also the reset path if you forget the code. Pending achievements and game saves are
-kept. Enter the Wi-Fi/account details again afterward.
+After a restart with either feature enabled and encrypted credentials saved, an
+animated unlock card appears. One successful unlock covers both features for that
+session and resumes the requested connection or account action.
 
-Both features share one encrypted file. Its key is never stored on the card. The
-supplicant receives passwords through its Unix control socket and never saves them
-to the card. The vault uses Argon2id and authenticated ChaCha20-Poly1305 encryption.
-The four-button PIN is convenient, but has few possible combinations: someone who
-copies the card can try every combination outside the device. It does not provide
-strong protection against that attack. Choose a long passphrase for stronger
-protection of a removed card. Neither option protects a device that is already
-running and unlocked.
+**Startup access** under Security PIN chooses between **Allow games without PIN**
+(the default) and **Require PIN**. With games allowed, Menu skips startup unlock and
+a pill says Wi-Fi and RetroAchievements are unavailable until unlocked. With Require
+PIN, the launcher stays on the unlock card until the correct PIN or passphrase is
+entered, even when Wi-Fi and achievements are off. This is a launcher access lock:
+the SD card, games and saves remain readable. Only the saved credentials are encrypted.
+The startup lock does not protect against modified software or physical tampering.
+
+Switching to Session only asks before deleting saved credentials; the PIN and current
+session are kept. **Forget Security PIN** removes the vault and saved credentials
+after confirmation. If parental controls use the device PIN, choose a separate parent
+code first. Pending achievements and game saves are kept.
+
+The key is never stored on the card. Argon2id derives it from the entered secret;
+authenticated ChaCha20-Poly1305 encrypts the vault. A short PIN is a convenience lock:
+four presses from 12 buttons give only 20,736 combinations, which a person with a
+copy of the card can try offline. Longer unpredictable secrets make guessing harder.
+Neither option protects credentials on a device that is already running and unlocked.
+The supplicant receives passwords through its control socket and does not save them.
+A Wi-Fi status icon appears beside the audio indicators while actually connected.
 
 Link play takes ownership of the radio and turns home Wi-Fi off. Reconnect manually
 after link play. Cached achievements can continue during gpSP link play, but the
