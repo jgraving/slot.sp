@@ -4,17 +4,19 @@ Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `feat/fork-ota-time`
 Active PR: https://github.com/jgraving/slot.sp/pull/191
-Current implementation revision: `16ac0826febc8cc800c0de6d8f24fdee64a1c7b3`
+Current implementation revision: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`
 Status: draft, not merged or released.
 
-## Current state — PR #191 validation
+## Current state — PR #191 final checks
 
-PR #186 is merged. PR #190 contains the current requested follow-ups: phase-specific RA progress/counts and controller status, stable library passes, flatter Wi-Fi arcs, encrypted-only credentials with six-plus button PIN creation and legacy upgrade/migration, neutral adaptive adjustment/kid-time pills, and no stale “Credentials unlocked” notification on page entry. Separate four-button parent codes are unchanged.
+This is the separate OTA/time draft, stacked on PR #190. Current runtime: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`. PR #190 is fully verified on 16ac082; the OTA branch includes its final encrypted-only/six-button PIN, RA progress/icon, neutral meters, Wi-Fi and quiet-unlock changes.
 
-- Runtime revision: 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3. Full launcher regression step passed; light/dark native walkthroughs and the ARM64 build are still running. Scaling, blending and shortcut checks passed. Final workflow/artifact results must be verified before handoff.
-- Local: 27 achievement tests passed (one deliberate public-endpoint test ignored); targeted UI/icon/meter/notice tests pass. Core tests pass except an unchanged control-socket test blocked by the local sandbox; it remains enabled in CI.
-- Separate OTA/time draft: https://github.com/jgraving/slot.sp/pull/191 on feat/fork-ota-time, based on this PR. Automatic time is opt-in; updates target this fork's releases and preserve Config/games/saves. Physical BaseOS/recovery tests remain outstanding.
-- No follow-up PR is merged; #186 was merged with user authorization. Detailed chronological checkpoints below include superseded requests; this section states the final requested behavior.
+- OTA downloads target jgraving/slot.sp releases and validate integrity, embedded identity and forward ancestry. BaseOS is a separate explicit model-matched update with compatibility and power gates. Automatic time is opt-in and preserves UTC offset/manual settings.
+- Five of six workflows currently pass: ARM64/package and both bundled cores, website, scaling, blending and shortcuts. Launcher core/UI regressions pass; final production native renders are still running. Verify live results before claiming every workflow green.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576 (present/unexpired when checked).
+- Local light/GLES and dark/desktop-GL walkthroughs pass; Updates, disconnected feedback and automatic-time off/on pages reviewed. Final selected-row highlight was also visually verified. Interrupted-install simulation preserved executable mode, custom System files, Config, Games and Saves.
+- No physical firmware installation was executed. Real BaseOS installation/recovery and live handheld networking/time remain device-test gates; keep this PR draft. Retarget main after #190 merges.
+- Recovery entry point: CURRENT_WORK.md on fix/ra-background-progress. Historical checkpoints below retain superseded requests; final behavior is encrypted-only with six-plus new button PINs and separate four-button parent codes.
 
 ## Previous completed follow-up
 
@@ -315,3 +317,7 @@ Local OTA source/default checks pass; full CI is running. This branch includes P
 - Clean native OTA light/GLES walkthrough now passes end to end, including the parent-method marker assertion. Updated restart-action regression passes locally. Final change is UI/status and test-fixture cleanup; rerun required CI on this revision.
 
 - Final visual review also found the new Updates page was absent from the shared custom-list focus range. Included its page key so the normal selected-row highlight and motion render there. This is a one-range UI correction; no update-install logic changed. The interrupted-install simulation also passed, preserving executable mode, custom System files, Config, Games and Saves.
+
+### Final packaging checkpoint
+
+Current runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd has a successful ARM64 package/bundled-core run 41692152351, System artifact 13257574576. The last pending workflow is launcher native rendering (41692152466). No runtime changes should follow unless a new failure is found. Update completion evidence and CURRENT_WORK.md when that run finishes.
