@@ -34,7 +34,7 @@ to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** 
 PINs shorter than eight button presses get a yellow **!** notification because they
 are easier to guess. There is no recovery copy of the device PIN on the card.
 
-**Credential storage** is an inline Left/Right picker shared by Wi-Fi and
+**Credentials** is an inline Left/Right picker shared by Wi-Fi and
 RetroAchievements:
 
 - **Encrypted** is the default for a new setup. Credentials are saved under the

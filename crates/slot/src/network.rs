@@ -536,7 +536,7 @@ impl Menu {
             Page::Wifi => vec![
                 ("Wi-Fi".into(), if self.wifi_on {"On"} else {"Off"}.into(), true),
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
-                ("Credential storage".into(), storage, true),
+                ("Credentials".into(), storage, true),
                 ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
             ],
@@ -545,7 +545,7 @@ impl Menu {
                 ("Account".into(), if self.secrets.username.is_empty() {"Not signed in".into()} else {self.secrets.username.chars().take(16).collect()}, false),
                 ("Password".into(), if !self.secrets.token.is_empty() {"Signed in"} else if self.secrets.password.is_empty() {"Enter password"} else {"Entered"}.into(), false),
                 ("Sign in / sync".into(), status, false), ("Sign out".into(), String::new(), false),
-                ("Credential storage".into(), storage, true),
+                ("Credentials".into(), storage, true),
             ],
         };
         if self.page == Page::Wifi { for n in &self.last_wifi.networks {
