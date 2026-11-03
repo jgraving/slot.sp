@@ -417,3 +417,7 @@ Do not infer actual hardware cooling, live RA-account success or firmware instal
 ### Final all-green handoff
 
 All six workflows pass on combined source 92c2e8a470c30ca3add237780d1b32fc932a8156. Exact evidence/build/native links are at the top and in CURRENT_WORK.md. Final checkpoint only updates Markdown and carries latest #190 documentation ancestry. Verify docs-only compare and both draft PR mergeability before ending. Remaining work is physical handheld/live-account testing; no follow-up merge/release requested.
+
+### Merge authorized by user — 2026-11-03
+
+Before merging: user explicitly authorizes merging both PRs if tests pass, superseding earlier draft-only instructions. Rechecked all six workflows on shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f and combined runtime 92c2e8a470c30ca3add237780d1b32fc932a8156: all success. Compared current heads f8932a8ddf855f7e378ac267948dabba81682aba / a3d707db65dc69ff009b129f7ebcc03e0e534d4b against those tested runtimes; later differences are only CURRENT_WORK.md and WORKLOG.md. Plan: ready/merge #190 preserving ancestry, retarget #191 to main, ready/merge #191, then record actual merge SHAs in main through a documentation PR. Hardware/live-account caveats remain testing notes, not an approval block; no release or firmware installation requested.
