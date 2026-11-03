@@ -16,7 +16,21 @@ test('never touch active, unknown, future-dated or invalid-dated artifacts',()=>
 test('completed Pages uploads are disposable; incomplete deployments remain for 24 hours',()=>{
  const items=[artifact(1,'github-pages',1000),artifact(2,'github-pages',2000)];
  const selected=planArtifacts(items,new Map([finished(1),finished(2,{conclusion:'failure'})]),[],now);
+ assert.deepEqual(selected.map(a=>a.id),[1]);
  assert.equal(selected.find(a=>a.id===1).reason,'completed Pages bundle');
+});
+test('a newer successful PR check cannot delete the bundle needed to retry a failed Pages deployment',()=>{
+ const path='.github/workflows/pages.yml';
+ const runs=new Map([
+  finished(1,{id:1,path,event:'push',head_branch:'main',conclusion:'failure'}),
+  finished(2,{id:2,path,event:'pull_request'}),
+  finished(3,{id:3,path,event:'push',head_branch:'main',conclusion:'cancelled'}),
+ ]);
+ const items=[artifact(1,'github-pages',1000),artifact(2,'website-navigation-review',500),artifact(3,'github-pages',2000)];
+ assert.deepEqual(planArtifacts(items,runs,[],now,new Set([path])),[]);
+ const selected=planArtifacts(items,runs,[],now+DAY,new Set([path]));
+ assert.deepEqual(selected.map(a=>a.id),[1,2,3]);
+ assert(selected.every(a=>a.reason==='older than 24 hours'));
 });
 test('only matching complete published releases make fresh build downloads redundant',()=>{
  const assets=['slot.sp-System.zip','slot.sp-SD2.zip','SHA256SUMS','build-info.json'].map(name=>({name,size:1}));
