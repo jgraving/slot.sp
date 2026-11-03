@@ -217,7 +217,7 @@ fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
 #[test]
 fn the_main_grid_wraps_within_rows_and_columns() {
     let (_d,mut a,_)=on_carousel();a.apply(Action::QuickMenu);
-    for (button,want) in [(Btn::Up,QuickRow::Power),(Btn::Down,QuickRow::General),(Btn::Left,QuickRow::Game),(Btn::Right,QuickRow::General),(Btn::Right,QuickRow::Screen),(Btn::Down,QuickRow::Controls),(Btn::Right,QuickRow::Kids),(Btn::Right,QuickRow::About),(Btn::Down,QuickRow::Game)] {
+    for (button,want) in [(Btn::Up,QuickRow::Power),(Btn::Down,QuickRow::General),(Btn::Left,QuickRow::Game),(Btn::Right,QuickRow::General),(Btn::Right,QuickRow::Screen),(Btn::Down,QuickRow::Controls),(Btn::Right,QuickRow::Kids),(Btn::Right,QuickRow::Wifi),(Btn::Down,QuickRow::Game)] {
         press(&mut a,button);assert_eq!(a.quick_menu(),Some(want));
     }
 }

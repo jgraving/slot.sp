@@ -345,6 +345,7 @@ struct FavoriteRemoval {
 pub struct App {
     pub kids: crate::kid_policy::Policy,
     pub kid_menu: Option<crate::kid_menu::Menu>,
+    pub network: Option<crate::network::Menu>,
     pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
@@ -611,6 +612,7 @@ impl App {
         App {
             kids: crate::kid_policy::Policy::default(),
             kid_menu: None,
+            network: None,
             display_schedule: None,
             kid_error: false,
             catalog,
@@ -826,6 +828,7 @@ impl App {
         crate::boot_time::mark("scan");
         let mut app = App::new(carts);
         app.root = Some(root.to_path_buf());
+        app.network = Some(crate::network::Menu::new(root.to_path_buf()));
         app.bluetooth_probe = crate::bluetooth::probe(root);
         app.disconnect_volume = crate::bluetooth::disconnect_volume(root);
         app.pause_on_disconnect = crate::bluetooth::pause_on_disconnect(root);
@@ -1025,6 +1028,7 @@ impl App {
     }
 
     fn repeats(&self, btn: Btn) -> bool {
+        if self.network.as_ref().is_some_and(|m|m.visible) { return true; }
         if self.display_schedule.is_some() { return true; }
         let vertical = matches!(btn, Btn::Up | Btn::Down);
         if let Some(menu)=&self.bluetooth {return !menu.busy() && (vertical || menu.slider_selected());}
@@ -1404,6 +1408,8 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
+            | QuickRow::Wifi
+            | QuickRow::Achievements
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -3013,6 +3019,10 @@ impl App {
             Action::PowerOff => return,
             _ => {}
         }
+        if self.network.as_ref().is_some_and(|m|m.visible) && !matches!(self.phase, Phase::Doze { .. }) {
+            self.network.as_mut().unwrap().input(action);
+            return;
+        }
         if self.display_schedule.is_some() && !matches!(self.phase, Phase::Doze { .. }) {
             let clock_set = self.state.clock_set && self.utc_clock_valid();
             let menu = self.display_schedule.as_mut().unwrap();
@@ -3293,7 +3303,7 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::About => {
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
@@ -3368,6 +3378,11 @@ impl App {
             }
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
+            }
+            QuickRow::Wifi | QuickRow::Achievements => {
+                if let Some(menu) = &mut self.network {
+                    if row == QuickRow::Wifi { menu.open_wifi(); } else { menu.open_achievements(); }
+                }
             }
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
@@ -3652,6 +3667,8 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
+            | QuickRow::Wifi
+            | QuickRow::Achievements
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -4183,7 +4200,7 @@ impl App {
         let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
-        let selection=self.kid_menu.as_ref().and_then(|m|m.focus_info()).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
+        let selection=self.network.as_ref().filter(|m|m.visible).map(|m|m.focus_info()).or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info())).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
         self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
         self.menu_title_motion.borrow_mut().advance(dt);self.menu_hint_motion.borrow_mut().advance(dt);
         if let Some(menu)=&self.kid_menu {self.kid_surface.update(menu.in_game_card(),dt);}else{self.kid_surface.advance(dt);}
@@ -4420,6 +4437,8 @@ impl App {
     }
 
     fn timers(&mut self) {
+        let linking=self.link_active();
+        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();}
         self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
@@ -4918,7 +4937,8 @@ impl App {
     fn draw_scene(&self, out: &mut Vec<Draw>) {
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) && self.draw_quick_controls(out) {return;}
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
-            if let Some(tex) = self.display_schedule.as_ref().and_then(|m| m.face)
+            if let Some(tex) = self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face)
+                .or_else(||self.display_schedule.as_ref().and_then(|m| m.face))
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
                     self.push_game(out);
@@ -5331,7 +5351,8 @@ impl App {
     }
 
     fn custom_menu_key(&self) -> Option<u64> {
-        self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.page_key())
+        self.network.as_ref().filter(|m|m.visible).map(|m|m.page_key())
+            .or_else(|| self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(||self.bluetooth.as_ref().map(|m|m.page_key()))
             .or_else(||match self.phase {Phase::About=>Some(5000),Phase::SetClock{..}=>Some(5001),_=>None})
@@ -5340,12 +5361,14 @@ impl App {
         self.display_schedule.as_ref().map(|m|m.visible_sliders()).or_else(||self.kid_menu.as_ref().map(|m|m.visible_sliders())).or_else(||self.bluetooth.as_ref().map(|m|m.visible_sliders())).unwrap_or_default()
     }
     fn visible_custom_switches(&self) -> Vec<slot_ui::MenuSwitch> {
+        if let Some(menu)=self.network.as_ref().filter(|m|m.visible) {return menu.switches();}
         self.display_schedule.as_ref().map(|m|m.visible_switches())
             .or_else(||self.kid_menu.as_ref().map(|m|m.visible_switches()))
             .or_else(||self.bluetooth.as_ref().map(|m|m.visible_switches())).unwrap_or_default()
     }
     pub fn note_custom_menu_face(&mut self) {
-        let face=self.display_schedule.as_ref().and_then(|m|m.face)
+        let face=self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face)
+            .or_else(||self.display_schedule.as_ref().and_then(|m|m.face))
             .or_else(||self.kid_menu.as_ref().and_then(|m|m.face))
             .or_else(||self.bluetooth.as_ref().and_then(|m|m.face));
         let now=self.custom_menu_key().zip(face);
@@ -5391,7 +5414,7 @@ impl App {
         match key {
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
-            1000..=1999|2000|2002|2011|2012|3000|3001=>{
+            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4003=>{
                 let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
                 slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
@@ -5428,11 +5451,11 @@ impl App {
         }
         if !over_game {slot_ui::expressive::draw_card(self.canvas(),out);}
         self.draw_outgoing_menu(over_game,out);
-        if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}
+        if !self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard()) {if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}}
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
-        let scroll=self.bluetooth.as_ref().map(|m|m.scroll_info()).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
+        let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
         if let Some((_,total,_,visible))=scroll {slot_ui::expressive::draw_scrollbar(self.canvas(),slot_ui::expressive::ROW_TOP,visible,total,frame.window_start,out);}
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
@@ -7276,7 +7299,12 @@ impl App {
         if let Some(at)=self.charging_notice_at.filter(|at|self.now().saturating_sub(*at)<2400) {
             if let Some(b)=self.battery {return Some((0xC0000000 ^ at,format!("Charging: {}%",b.percent)));}
         }
-        let (page,message)=if let Some(menu)=&self.display_schedule {
+        if let Some(menu)=self.network.as_ref().filter(|m|!m.visible) {
+            if let Some(message)=menu.take_toast() {return Some((0xA0000000,message.into()));}
+        }
+        let (page,message)=if let Some(menu)=self.network.as_ref().filter(|m|m.visible) {
+            (menu.page_key(),menu.notice_text()?.to_string())
+        } else if let Some(menu)=&self.display_schedule {
             (menu.page_key(),menu.notice_text()?.to_string())
         } else if let Some(menu)=&self.kid_menu {
             (menu.page_key(),menu.notice_text()?.to_string())

@@ -732,6 +732,7 @@ impl Worker {
             if speed != Speed::Fast {
                 owed = 0;
             }
+            core.achievement_tracking(!rewinding);
             if rewinding {
                 if let Some(state) = rewind.pop() {
                     if let Err(e) = core.unserialize(&state) {

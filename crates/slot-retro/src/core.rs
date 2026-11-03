@@ -76,6 +76,10 @@ impl From<std::io::Error> for CoreError {
 }
 
 pub trait RetroCore: Send {
+    /// Only committed forward play is eligible for achievements.
+    fn achievement_tracking(&mut self, _on: bool) {}
+    /// Copy GBA RAM on the owning thread; unsupported cores return no valid regions.
+    fn achievement_memory(&self, _ram: &mut [u8]) -> [usize; 3] { [0; 3] }
     fn load(&mut self, rom: &Path) -> Result<(), CoreError>;
     fn run_frame(&mut self, input: ButtonMask);
     fn run_frame_linked(&mut self, p1: ButtonMask, _p2: ButtonMask) {

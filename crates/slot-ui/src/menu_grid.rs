@@ -51,6 +51,7 @@ pub fn tile_face_label(row:QuickRow,lit:bool,label_override:Option<&str>)->UndoF
         QuickRow::Game|QuickRow::PlayGameplay=>("Gameplay",r##"<path fill-rule="evenodd" d="M14 12h20q7 0 9 9l3 14q1 7-5 7-2 0-7-6H14q-5 6-7 6-6 0-5-7l3-14q2-9 9-9z M12 19v4H8v4h4v4h4v-4h4v-4h-4v-4z M31 20a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M38 27a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>"##),
         QuickRow::Power=>("Power & lid",r##"<path d="M22 3h4v20h-4zM16 9v5a14 14 0 1 0 16 0V9a19 19 0 1 1-16 0"/>"##),
         QuickRow::Controls|QuickRow::PlayControls=>("Device\ncontrols",r##"<path fill-rule="evenodd" d="M17 4h14v13h13v14H31v13H17V31H4V17h13z M21 21v6h6v-6z"/>"##),
+        QuickRow::Wifi=>("Wi-Fi",r##"<path d="M3 16q21-21 42 0l-4 5q-17-17-34 0zM11 25q13-13 26 0l-4 5q-9-9-18 0zM19 35q5-5 10 0l-5 7z"/>"##),
         QuickRow::Kids=>("Parental\ncontrols",crate::icon::SMILEY_PATH),
         QuickRow::Resume=>("Resume",r##"<path d="M15 6q-3-2-3 2v32q0 4 3 2l27-16q3-2 0-4z"/>"##),
         QuickRow::ExitGame=>("Exit game",r##"<path d="M7 5h18v5H12v28h13v5H7zM30 13l13 11-13 11v-8H18v-6h12z"/>"##),

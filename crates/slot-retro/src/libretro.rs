@@ -23,6 +23,7 @@ enum PixelFormat {
 }
 
 struct Host {
+    memory_map: Vec<crate::memory::MemoryDescriptor>,
     video: Vec<u8>,
     format: PixelFormat,
     audio: Vec<i16>,
@@ -75,6 +76,9 @@ unsafe extern "C" fn set_rumble_state(port: c_uint, effect: c_uint, strength: u1
 
 unsafe extern "C" fn environment(cmd: c_uint, data: *mut c_void) -> bool {
     match cmd {
+        crate::memory::SET_MEMORY_MAPS | crate::memory::SET_MEMORY_MAPS_PLAIN => {
+            with_host(|h| h.memory_map = crate::memory::descriptors(data)).is_some()
+        }
         GET_CAN_DUPE => {
             if data.is_null() {
                 return false;
@@ -470,6 +474,7 @@ impl LibretroCore {
             return Err(CoreError::Unsupported(format!("libretro api {version}")));
         }
         let mut host = Box::new(Host {
+            memory_map: Vec::new(),
             video: vec![0; VIDEO_BYTES],
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),
@@ -560,6 +565,27 @@ impl Drop for LibretroCore {
 }
 
 impl RetroCore for LibretroCore {
+    fn achievement_memory(&self, ram: &mut [u8]) -> [usize; 3] {
+        if ram.len() < 0x58000 { return [0; 3]; }
+        let mut valid = [0; 3];
+        for (i, (start, dest, capacity)) in [(0x03000000, 0, 0x8000), (0x02000000, 0x8000, 0x40000), (0x0e000000, 0x48000, 0x10000)].into_iter().enumerate() {
+            if let Some(d) = self.host.memory_map.iter().find(|d| d.start == start && d.ptr != 0 && d.disconnect == 0) {
+                let n = d.len.min(capacity);
+                if let Some(ptr) = d.ptr.checked_add(d.offset) {
+                    // Libretro owns and guarantees descriptor pointers on this core's thread.
+                    let data = unsafe { std::slice::from_raw_parts(ptr as *const u8, n) };
+                    ram[dest..dest+n].copy_from_slice(data); valid[i] = n;
+                }
+            }
+        }
+        if valid[2] == 0 {
+            if let Some(data) = self.memory(MEMORY_SAVE_RAM) {
+                let n = data.len().min(0x10000); ram[0x48000..0x48000+n].copy_from_slice(&data[..n]); valid[2] = n;
+            }
+        }
+        valid
+    }
+
     fn set_option(&mut self, key: &str, value: &str) {
         LibretroCore::set_option(self, key, value);
     }
@@ -716,6 +742,7 @@ mod tests {
 
     fn host_with(options: HashMap<String, CString>, options_dirty: bool) -> Box<Host> {
         Box::new(Host {
+            memory_map: Vec::new(),
             video: vec![0; VIDEO_BYTES],
             format: PixelFormat::Xrgb8888,
             audio: Vec::new(),

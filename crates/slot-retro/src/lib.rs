@@ -6,6 +6,7 @@ macro_rules! eprintln {
 }
 
 mod core;
+mod memory;
 mod ffi;
 mod libretro;
 mod link;

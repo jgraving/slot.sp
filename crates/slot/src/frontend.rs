@@ -37,6 +37,7 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
+    network_tex: Option<TexId>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
@@ -203,6 +204,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
+            network_tex: None,
             bluetooth_tex: None,
             bluetooth_old_tex: None,
             bluetooth_page: None,
@@ -776,6 +778,10 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
+        let network_light=self.session.app().light();
+        if let Some(menu) = self.session.app_mut().network.as_mut().filter(|m|m.visible) {
+            if menu.face.is_none() { menu.face=Some(upload_menu_face(compositor,&mut self.network_tex,&mut self.menu_chrome_cache,menu.screen_face_on(sound_canvas,network_light),&mut chrome_updates)); }
+        }
         if let Some(menu) = &mut self.session.app_mut().display_schedule {
             if self.schedule_page != Some(menu.page_key()) {
                 std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
@@ -1047,7 +1053,7 @@ impl Frontend {
     }
 
     pub fn powering_off(&self) -> bool {
-        self.session.app().ready_to_power_off()
+        self.session.app().ready_to_power_off() && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restarting(&self) -> bool {

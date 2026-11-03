@@ -11,6 +11,10 @@ host = ["dep:winit", "dep:cpal", "dep:gilrs", "slot-gfx/host"]
 device = ["slot-gfx/device"]
 
 [dependencies]
+slot-achievements = { path = "../slot-achievements" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+argon2 = "0.5"
 slot-gfx = { path = "../slot-gfx", default-features = false }
 slot-input = { path = "../slot-input" }
 slot-power = { path = "../slot-power" }

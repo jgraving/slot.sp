@@ -1,0 +1,46 @@
+name: Network and achievements test build
+on:
+  pull_request:
+    paths: ['crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', '.github/workflows/network-review.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: network-review-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  device:
+    if: github.repository == 'jgraving/slot.sp'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    container: rust:1-bullseye
+    env:
+      SLOT_SILENT: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install build dependencies
+        run: |
+          sed -i '/bullseye-security/d' /etc/apt/sources.list
+          apt-get -o Acquire::Check-Valid-Until=false update
+          apt-get install -y --no-install-recommends zip cmake libasound2 python3
+          curl -fsSL https://taskfile.dev/install.sh | sh -s -- -b /usr/local/bin
+      - name: Check device and test credential storage and offline tracking
+        run: |
+          cargo check --locked -p slot --no-default-features --features device
+          cargo test --locked -p slot-achievements -p slot-retro --lib
+          cargo test --locked -p slot --no-default-features --lib --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code -- --test-threads=1
+          cargo test --locked -p slot-ui --lib --test quick_menu
+          sh card/test-slotlink.sh
+          python3 card/test-wifi-security.py
+      - name: Build test System folder
+        run: task dist:device OUT=dist-network
+      - name: Package test build
+        run: |
+          cd dist-network
+          zip -qr ../slot.sp-network-System.zip System
+      - uses: actions/upload-artifact@v7
+        with:
+          name: slot.sp-network-System
+          retention-days: 7
+          path: slot.sp-network-System.zip
+          if-no-files-found: error

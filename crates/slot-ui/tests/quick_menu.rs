@@ -82,7 +82,7 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "About"]
+        ["General", "Screen", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Wi-Fi"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -98,7 +98,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Carousel Sounds",
             "Carousel motion",
             "Clock format",
-            "Date & Time"
+            "Date & Time",
+            "About"
         ]
     );
     assert_eq!(
@@ -139,7 +140,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Rumble",
             "Left Stick as D-Pad",
             "Load State on Insert",
-            "Save State on Eject"
+            "Save State on Eject",
+            "RetroAchievements"
         ]
     );
     let opens: Vec<QuickRow> = QuickRow::ALL.into_iter().filter(|r| r.opens()).collect();
@@ -179,7 +181,9 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::PlayReference,
             QuickRow::GameDetails,
             QuickRow::PlayDetails,
-            QuickRow::DisplaySchedule
+            QuickRow::DisplaySchedule,
+            QuickRow::Wifi,
+            QuickRow::Achievements
         ]
     );
     for page in [
@@ -206,7 +210,7 @@ fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     let hidden = [QuickRow::WallpaperTint];
     assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::ShellColour);
     assert_eq!(QuickRow::ShellColour.up(&hidden), QuickRow::Wallpaper);
-    assert_eq!(QuickRow::Wallpaper.up(&hidden), QuickRow::DateTime);
+    assert_eq!(QuickRow::Wallpaper.up(&hidden), QuickRow::About);
     assert_eq!(QuickRow::ShellColour.position(&hidden), 1);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
     assert_eq!(QuickRow::ShellColour.position(&[]), 2);

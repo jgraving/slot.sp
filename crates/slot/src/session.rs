@@ -771,7 +771,11 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         let (core, rom, sav, resume) = (
-            loaded.opened.core,
+            if loaded.platform == Platform::Gba && loaded.player.is_none() {
+                match self.app.network.as_ref().and_then(|m|m.service.as_ref()) {
+                    Some(service)=>service.wrap(loaded.opened.core), None=>loaded.opened.core,
+                }
+            } else {loaded.opened.core},
             loaded.rom,
             sav.flatten(),
             resume.flatten(),

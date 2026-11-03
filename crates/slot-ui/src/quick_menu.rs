@@ -117,6 +117,8 @@ pub enum QuickRow {
     CarouselMotion,
     Scaling,
     FrameBlending,
+    Wifi,
+    Achievements,
 }
 
 impl QuickRow {
@@ -126,7 +128,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 106] = [
+    pub const ALL: [QuickRow; 108] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -233,6 +235,8 @@ impl QuickRow {
         QuickRow::CarouselMotion,
         QuickRow::Scaling,
         QuickRow::FrameBlending,
+        QuickRow::Wifi,
+        QuickRow::Achievements,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -243,7 +247,7 @@ impl QuickRow {
         QuickRow::Power,
         QuickRow::Controls,
         QuickRow::Kids,
-        QuickRow::About,
+        QuickRow::Wifi,
     ];
 
     pub const POWER: [QuickRow; 4] = [
@@ -253,7 +257,7 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 12] = [
+    pub const GENERAL: [QuickRow; 13] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
@@ -266,6 +270,7 @@ impl QuickRow {
         QuickRow::CarouselMotion,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
+        QuickRow::About,
     ];
 
     pub const CONTROL_PAGES: [QuickRow; 4] = [
@@ -345,7 +350,7 @@ impl QuickRow {
         QuickRow::GbBezel,
     ];
 
-    pub const GAME: [QuickRow; 8] = [
+    pub const GAME: [QuickRow; 9] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
@@ -354,6 +359,7 @@ impl QuickRow {
         QuickRow::LeftStick,
         QuickRow::AutoLoad,
         QuickRow::EjectSave,
+        QuickRow::Achievements,
     ];
 
     pub const PLAY: [QuickRow; 7] = [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
@@ -383,6 +389,7 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
+            QuickRow::Achievements => &QuickRow::GAME,
             QuickRow::LidClose
             | QuickRow::SleepTimeout
             | QuickRow::SleepNow
@@ -412,7 +419,7 @@ impl QuickRow {
             | QuickRow::LeftStick
             | QuickRow::AutoLoad
             | QuickRow::EjectSave => &QuickRow::GAME,
-            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
+            QuickRow::About | QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
             | QuickRow::WallpaperTint
             | QuickRow::DateTime
             | QuickRow::ShellColour
@@ -554,6 +561,8 @@ impl QuickRow {
             QuickRow::ClockFormat => "Clock format",
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
+            QuickRow::Wifi => "Wi-Fi",
+            QuickRow::Achievements => "RetroAchievements",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -652,6 +661,8 @@ impl QuickRow {
                 | QuickRow::Bluetooth
                 | QuickRow::PlaySound
                 | QuickRow::About
+                | QuickRow::Wifi
+                | QuickRow::Achievements
                 | QuickRow::Reference
                 | QuickRow::PlayReference
                 | QuickRow::DisplaySchedule
