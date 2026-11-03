@@ -1,37 +1,43 @@
 # Current development handoff
 
-Updated 2026-11-03 (Europe/Zurich). Read this entry point first; historical worklogs contain superseded requests.
+Updated 2026-11-03. Read this first, then each branch's WORKLOG.md and live PR checks. Historical worklog sections contain superseded requests.
 
-## Ready for device testing
+## Current follow-up: final CI in progress
 
-PR #186 is merged as 6d499951289899fbf2314ecee04d0f69a03a2b28. Follow-ups remain separate drafts:
+PR #186 merged as 6d499951289899fbf2314ecee04d0f69a03a2b28. Follow-ups remain drafts:
 
-| PR | Branch | Verified runtime | Status |
+| PR | Branch | Current runtime | Verification |
 | --- | --- | --- | --- |
-| [#190: RA/UI/security](https://github.com/jgraving/slot.sp/pull/190) | fix/ra-background-progress | 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3 | All six workflows pass; 135 core tests; native renders and ARM64 package |
-| [#191: OTA/time](https://github.com/jgraving/slot.sp/pull/191) | feat/fork-ota-time | 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd | All six workflows pass; 137 core tests plus 18 update/time tests; native renders and ARM64 package |
+| [#190: RA / Device code / Parent code](https://github.com/jgraving/slot.sp/pull/190) | fix/ra-background-progress | 285cfa1e586dabffe1720b3cdcd13f1047230d4f | ARM64/package, website, scaling, blending and shortcuts pass; launcher/native run 41730841530 pending |
+| [#191: General update/time tools](https://github.com/jgraving/slot.sp/pull/191) | feat/fork-ota-time | 92c2e8a470c30ca3add237780d1b32fc932a8156 | Scaling/blending/shortcuts pass; device 41731781331, launcher 41731781266 and website 41731781278 pending |
 
-- [Combined test build, including both PRs](https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576).
-- [UI-only test build](https://github.com/jgraving/slot.sp/actions/runs/41686624422/artifacts/13257020164).
-- [Combined native captures](https://github.com/jgraving/slot.sp/actions/runs/41692152466/artifacts/13259275746).
-- [PR #190 worklog](https://github.com/jgraving/slot.sp/blob/fix/ra-background-progress/WORKLOG.md).
-- [PR #191 worklog](https://github.com/jgraving/slot.sp/blob/feat/fork-ota-time/WORKLOG.md).
+The runtime source is frozen unless a check fails. Later recovery commits are documentation only. Do not repeat implementation.
 
-Artifacts were present/unexpired at handoff. Recheck before sharing later. Later handoff commits modify documentation only.
+## Implemented behavior
 
-## Final requested behavior
+- Use **Device code** and **Parent code** consistently. Credentials are always encrypted; new controller device codes need six presses, separate parent codes stay four. Legacy short device codes unlock for upgrade. Typed passphrases remain supported.
+- Code cards start with zero dots. Device setup/confirmation dims Done until six presses; early Done shakes without clearing and gives the minimum in a short pill. Silent variable-length unlock remains automatic; no stored-length hint is exposed.
+- Menu cancellation of a parental device-code prompt returns immediately to the prior adult menu or child settings, without a blank unlock card.
+- RA keeps game, artwork and upload progress separate. Cached games count after restart; initial reading states use words instead of 0/0. The controller remains visible for queued/retrying work. The neutral progress pill floats outside the card and includes retry countdowns. Up to date requires all queued work to finish.
+- Cached artwork discovery/full PNG checks run in bounded worker batches. Shared unchanged badges are not repeatedly inflated; requests are paced, artwork retries back off, and ordinary download failures preserve account auth. Actual expired/invalid credentials still request reauthentication.
+- General starts Device code, Updates, Automatic time, Time zone. Disconnected update/time rows are grey; A opens Network with a feature-specific Wi-Fi-needed pill and B returns to the original row. Time zone opens the offset directly; clock/offset edits apply immediately and preserve UTC.
+- OTA targets jgraving/slot.sp releases with integrity/identity/ancestry checks and explicit restart. BaseOS remains separate, target/compatibility/power gated. Automatic time is opt-in. No upstream plaintext Wi-Fi setup is imported.
+- Volume, brightness, warmth and kid-time meters remain neutral/adaptive; charging stays green. Wider Wi-Fi arcs and quiet normal unlocks are retained.
 
-- RA prepares the GBA library and uploads unlocks while slot is awake, on the shelf or during gameplay. The old five-minute rescan could reset an unfinished pass and its denominator; that is fixed. Settings show separate game-data/artwork counts, pending uploads, failures and retries. A controller indicates active syncing.
-- Credentials are always encrypted; no Unencrypted or Session only selector. Wi-Fi/RA require a PIN and unlocked vault. New button PINs require six or more presses; older short PINs decrypt for upgrade before network access. Old plaintext migrates only after successful encrypted save. Separate parent codes stay four buttons.
-- Volume, brightness, warmth and kid-time capsules are neutral with adaptive ink. Charging stays green. Wi-Fi arcs are wider and flatter.
-- The random Credentials unlocked message was stale UI feedback, not evidence that Wi-Fi disconnected. Page entry clears it; normal unlock succeeds quietly.
-- OTA targets jgraving/slot.sp releases, verifies integrity, embedded identity and forward ancestry, and stages System files for explicit restart. Config, games and saves are preserved. BaseOS is separate and model/compatibility/power gated.
-- Automatic time is opt-in, works after actual Wi-Fi connection, and preserves the chosen UTC offset and existing manual clock UI.
+## Evidence and next steps
 
-## Remaining gates
+Local: 140 combined core tests pass with one ignored native fixture and the sandbox-blocked Unix socket test excluded; clock 19/19, launcher quick-menu 58/58, UI library/quick-menu 61/61, achievements 31/31. The Unix socket test remains enabled in CI. Shared ARM64 CI passed, including both bundled cores.
 
-No physical firmware installation was performed. Test actual BaseOS installation/recovery and launcher update interruption on the handheld before merging #191. Confirm live Wi-Fi/RTC behavior and deferred RA award acceptance; do not promise fully offline awards. Local interrupted-install simulation preserved executable mode, custom System files, Config, Games and Saves.
+Production light/GLES and dark/GL captures were reviewed for floating RA phases/retry/completion, disabled General tools, immediate UTC offset, zero/partial/ready code entry and direct parent cancellation/reopen. Final dark walkthrough passed with 47 valid PNGs. A prior local run had incomplete PNG output and a final fixture-marker failure; a clean traced rerun passed, confirmed synchronous removal at the expected root, and tracing was removed. Keep native assertions.
 
-#191 is stacked on #190; retarget main after #190 merges. Both drafts are mergeable after documentation synchronization. No follow-up merge/release was requested. Keep the branch worklogs current and push checkpoints. Never log actual secrets.
+- Current shared System artifact: [13276730948](https://github.com/jgraving/slot.sp/actions/runs/41730841353/artifacts/13276730948), present/unexpired when checked. Prefer a new combined artifact once #191 passes.
+- [RA worklog](https://github.com/jgraving/slot.sp/blob/fix/ra-background-progress/WORKLOG.md).
+- [OTA/time worklog](https://github.com/jgraving/slot.sp/blob/feat/fork-ota-time/WORKLOG.md).
 
-Next-chat prompt: Continue jgraving/slot.sp PRs #190 and #191. Read CURRENT_WORK.md on fix/ra-background-progress, then the linked worklogs and live checks.
+Next: verify all six workflows on both exact runtime SHAs, inspect completed device logs and artifact IDs, update PR validation/build links, then checkpoint final evidence in this index and both logs. Recheck artifact availability before sharing. Carry the latest parent documentation into #191 to keep the stacked PR mergeable.
+
+No live account secrets were used. Optional manual RA smoke workflow uses RA_TEST_USERNAME and RA_TEST_PASSWORD only for login, read-only lookup and public artwork, without awards or game sessions. It is not part of ordinary PR checks.
+
+Hardware heat/radio/RTC behavior, live deferred-award acceptance and real BaseOS installation/interruption/recovery still need handheld testing. No physical firmware installation ran. Do not claim these are verified or merge/release without a new request.
+
+Next-chat prompt: Continue jgraving/slot.sp PRs #190 and #191. Read CURRENT_WORK.md on fix/ra-background-progress, then the branch worklogs and live checks.
