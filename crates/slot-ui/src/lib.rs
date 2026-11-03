@@ -25,7 +25,7 @@ pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
 mod settings_notice;
-pub use settings_notice::{settings_notice_face_on,SettingsNotice,settings_notice_face};
+pub use settings_notice::{settings_notice_face_on,SettingsNotice, NoticeTone, settings_notice_face_toned_on,settings_notice_face};
 mod icon;
 mod link_art;
 mod material;
@@ -77,7 +77,7 @@ pub use cart::{
 pub use clock::{clock_text, date_time_format, clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    draw_corner_audio, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
+    draw_corner_audio, draw_corner_indicator, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
     draw_status,
     Printed, FOOTER_Y,
 };
@@ -143,7 +143,7 @@ pub use sticker::{
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
 
 mod button_code;
-pub use button_code::{button_code_face, credential_code_face_on};
+pub use button_code::{button_code_face, credential_code_face_on, credential_code_face_with_lock_on};
 
 mod loading;
 pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};

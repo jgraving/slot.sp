@@ -261,11 +261,11 @@ impl QuickRow {
     ];
 
     pub const GENERAL: [QuickRow; 6] = [
+        QuickRow::SecurityPin,
         QuickRow::Recents,
         QuickRow::FavoriteSort,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
-        QuickRow::SecurityPin,
         QuickRow::About,
     ];
 
@@ -472,7 +472,7 @@ impl QuickRow {
             QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
-            QuickRow::Recents => Some(QuickRow::General),
+            QuickRow::SecurityPin => Some(QuickRow::General),
             QuickRow::CarouselSounds => Some(QuickRow::Bluetooth),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
@@ -1353,6 +1353,15 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        9 => vec![
+            with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
+            with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
+        ],
+        8 => vec![
+            with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
+            with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
+            with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
+        ],
         7 => vec![with_hint(button_face(ButtonLegend::B), "Back", hint, true)],
         6 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),

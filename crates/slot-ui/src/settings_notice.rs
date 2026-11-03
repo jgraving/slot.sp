@@ -1,6 +1,9 @@
 //! Transient settings feedback, cached as text and animated without re-rasterising.
 use crate::{text, Canvas, Draw, TexId, UndoFace, MOUTH_H};
 
+#[derive(Clone,Copy,Debug,Default,PartialEq,Eq)]
+pub enum NoticeTone { #[default] Neutral, Warning, Danger }
+
 #[derive(Default)]
 pub struct SettingsNotice {
     source: Option<(u64, String)>,
@@ -8,8 +11,11 @@ pub struct SettingsNotice {
     observed: Option<(u64,String)>,
     motion: crate::expressive::Spring,
     tick: u64,
+    tone: NoticeTone,
 }
 impl SettingsNotice {
+    pub fn set_tone(&mut self,tone:NoticeTone) {self.tone=tone;}
+    pub fn tone(&self)->NoticeTone {self.tone}
     /// A stable status expires once; another input attempt can supply a new key.
     pub fn observe(&mut self, source: Option<(u64, String)>, now: u64) {
         self.motion=self.motion_at(now); self.tick=now;
@@ -73,7 +79,7 @@ impl SettingsNotice {
         let y=base+(1.0-alpha)*(canvas.h-base+original_h+16.0)-(h-original_h)/2.0;
         let begin=out.len();
         let colours=crate::battery::charge_colours(light);
-        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {colours.track}else{[0.10, 0.12, 0.14, 1.0]});
+        crate::expressive::rounded(out, x, y, w, h, h / 2.0, if charging {colours.track}else{match self.tone {NoticeTone::Neutral=>[0.10,0.12,0.14,1.0],NoticeTone::Warning=>[0.98,0.77,0.24,1.0],NoticeTone::Danger=>[0.65,0.08,0.12,1.0]}});
         if charging {
             let level=self.text().and_then(|s|s.strip_prefix("Charging: ")).and_then(|s|s.trim_end_matches('%').parse::<f32>().ok()).unwrap_or(0.0).clamp(0.0,100.0)/100.0;
             let mut fill=vec![];
@@ -109,6 +115,11 @@ impl SettingsNotice {
 
 pub fn settings_notice_face(message: &str, canvas: Canvas) -> UndoFace {settings_notice_face_on(message,canvas,false)}
 pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace {
+    settings_notice_face_toned_on(message,canvas,light,NoticeTone::Neutral)
+}
+pub fn settings_notice_face_toned_on(message:&str,canvas:Canvas,light:bool,tone:NoticeTone)->UndoFace {
+    let warning;
+    let message=if tone!=NoticeTone::Neutral {warning=format!("! {message}");warning.as_str()}else{message};
     if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent,light);}
     let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
@@ -131,7 +142,7 @@ pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace 
         w,
         h,
     };
-    text::draw_centred(&mut face.rgba, w, h, &layout, if light {slot_gfx::ui_palette::INK}else{[246,244,239]});
+    text::draw_centred(&mut face.rgba,w,h,&layout,match tone {NoticeTone::Warning=>[45,33,8],NoticeTone::Danger=>[255,248,245],NoticeTone::Neutral=>if light {slot_gfx::ui_palette::INK}else{[246,244,239]}});
     face
 }
 

@@ -33,6 +33,9 @@ pub struct Menu {
     rejected: Option<f32>,
     repeat: Option<(Btn, f32)>,
     start_after_code: bool,
+    use_device_pin: bool,
+    device_pin_attempted: bool,
+    switch_to_separate: bool,
     status: String,
     pub visible: bool,
     pub twelve: bool,
@@ -50,7 +53,8 @@ pub struct Menu {
 impl Menu {
     pub fn new(root: PathBuf, policy: Policy) -> Self {
         let gate = Gate::new(Policy::directory(&root).join("code"));
-        let page = if gate.enabled() || policy.active {
+        let use_device_pin=root.join("Config/kids/use-device-pin").exists();
+        let page = if gate.enabled() || policy.active || use_device_pin {
             Page::Unlock
         } else {
             Page::Home
@@ -66,7 +70,7 @@ impl Menu {
             time_selected: 0,
             rejected: None,
             repeat: None,
-            start_after_code: false,
+            start_after_code: false,use_device_pin,device_pin_attempted:false,switch_to_separate:false,
             status: if page == Page::Unlock {
                 "Recovery: Config/kids/parent-code.txt".into()
             } else {
@@ -142,11 +146,28 @@ impl Menu {
         if self.page==Page::ChildSound {return vec![("Volume".into(),format!("{}%",self.child_volume),true)];}
         vec![("Brightness".into(),format!("{}%",self.child_brightness),true)]
     }
+    pub fn take_device_pin_request(&mut self)->bool {
+        if self.use_device_pin && self.page==Page::Unlock && !self.device_pin_attempted {self.device_pin_attempted=true;true}else{false}
+    }
+    pub fn authorize_device_pin(&mut self) {self.page=Page::Home;self.clear_code();self.status.clear();self.face=None;}
+    fn switch_parent_method(&mut self) {
+        let marker=self.root.join("Config/kids/use-device-pin");
+        if self.use_device_pin {
+            if !self.gate.enabled() {self.switch_to_separate=true;self.page=Page::Set;self.clear_code();return;}
+            if std::fs::remove_file(marker).is_err() {self.status="Could not change parent code mode".into();return;}
+            self.use_device_pin=false;
+        } else {
+            if !crate::network_vault::vault_path(&self.root).exists() {self.status="Set a Security PIN in General first".into();return;}
+            if std::fs::create_dir_all(Policy::directory(&self.root)).and_then(|_|slot_store::atomic_write(&marker,b"1\n")).is_err() {self.status="Could not change parent code mode".into();return;}
+            self.use_device_pin=true;
+        }
+        self.status.clear();self.face=None;
+    }
     pub fn entered_buttons(&self) -> &[u8] {
         &self.code
     }
     pub fn entering_code(&self) -> bool {
-        matches!(self.page, Page::Set | Page::Confirm | Page::Unlock)
+        matches!(self.page, Page::Set | Page::Confirm) || (self.page==Page::Unlock && !self.use_device_pin)
     }
     fn code_instruction(&self) -> &str {
         match self.page {
@@ -198,7 +219,7 @@ impl Menu {
             };
             let rows = [
                 format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
-                "Set parent code".into(),
+                format!("Parent code: {}",if self.use_device_pin {"Device PIN"}else{"Separate code"}),
                 self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
             ];
@@ -308,6 +329,10 @@ impl Menu {
             let mut face=settings_face(canvas,&self.child_rows(),0,0,"",0.0);
             let title=slot_ui::quick_heading_face(if self.page==Page::ChildSound{"Sound"}else{"Screen"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);return face;
         }
+        if self.page==Page::Unlock && self.use_device_pin {
+            let mut face=settings_face(canvas,&[("Unlock with device PIN".into(),String::new(),false)],0,0,"",0.0);
+            let title=slot_ui::quick_heading_face("Parental controls");let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);return face;
+        }
         if self.page == Page::Home {
             let kind = match self.draft.rule { Rule::Daily => "Daily", Rule::Session => "Duration", Rule::Until => "Bedtime" };
             let time = if self.draft.rule == Rule::Until {
@@ -315,7 +340,7 @@ impl Menu {
             } else { duration_label(self.draft.minutes) };
             let rows = vec![
                 ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
-                ("Set parent code".into(), String::new(), false),
+                ("Parent code".into(),if self.use_device_pin {"Device PIN"}else{"Separate code"}.into(),true),
                 ("Play limit".into(), kind.into(), true),
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
@@ -411,6 +436,10 @@ impl Menu {
                     return;
                 }
                 if self.gate.set(&self.code).and_then(|_| self.draft.save(&self.root)).is_ok() {
+                    if self.switch_to_separate {
+                        if std::fs::remove_file(self.root.join("Config/kids/use-device-pin")).is_err() {self.status="Could not change parent code mode".into();return;}
+                        self.switch_to_separate=false;self.use_device_pin=false;
+                    }
                     self.page = Page::Home;
                     self.status.clear();
                     if self.start_after_code {
@@ -474,7 +503,7 @@ impl Menu {
                 self.status = if next.approved.is_empty() { "Mark games with X on the carousel".into() } else { e.to_string() };
                 return;
             }
-            if !self.gate.enabled() {
+            if !self.gate.enabled() && !self.use_device_pin {
                 self.start_after_code = true;
                 self.page = Page::Set;
                 self.status.clear();
@@ -486,6 +515,10 @@ impl Menu {
     }
     pub fn input(&mut self, action: Action, wall: i64) {
         self.face = None;
+        if self.page==Page::Unlock && self.use_device_pin {
+            match action {Action::GbaDown(Btn::A)=>self.device_pin_attempted=false,Action::GbaDown(Btn::B)|Action::QuickMenu=>self.visible=false,_=>{}}
+            return;
+        }
         match action {
             Action::GbaDown(button @ (Btn::Left | Btn::Right))
                 if self.page == Page::Time || (self.page == Page::Home && matches!(self.selected,3|4)) || matches!(self.page,Page::ChildSound|Page::ChildScreen) => {
@@ -541,7 +574,7 @@ impl Menu {
                     0=>{self.page=Page::ChildSound;self.selected=0;},
                     1=>{self.page=Page::ChildScreen;self.selected=0;},
                     2=>{self.page=Page::Reference;self.reference_at=0;self.reference_child=true;},
-                    _=>{self.page=Page::Unlock;self.selected=0;self.code.clear();self.status.clear();}
+                    _=>{self.page=Page::Unlock;self.device_pin_attempted=false;self.selected=0;self.code.clear();self.status.clear();}
                 },_=>{}
             }return;
         }
@@ -580,6 +613,7 @@ impl Menu {
                 Action::GbaDown(Btn::Up) => self.selected = (self.selected + 4) % 5,
                 Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % 5,
                 Action::GbaDown(Btn::Left) | Action::GbaDown(Btn::Right) => {
+                    if self.selected==1 {self.switch_parent_method();return;}
                     if self.selected == 0 {
                         self.toggle_mode(wall);
                         return;
@@ -610,6 +644,7 @@ impl Menu {
                     2 | 4 => self.input(Action::GbaDown(Btn::Right), wall),
                     3 => { self.time_selected = 0; self.page = Page::Time; },
                     1 => {
+                        if self.use_device_pin {self.status="Change the device PIN in General → Security PIN".into();return;}
                         self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();

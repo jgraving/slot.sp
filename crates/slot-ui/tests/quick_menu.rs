@@ -86,7 +86,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
-        ["Recents", "Sort Favorites", "Clock format", "Date & Time", "Security PIN", "About"]
+        ["Security PIN", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
@@ -493,6 +493,7 @@ fn appearance_options_share_the_display_page_and_return_to_its_tile() {
     assert_eq!(QuickRow::BootAnimation.parent(), Some(QuickRow::Power));
     assert_eq!(QuickRow::CarouselSounds.parent(), Some(QuickRow::Bluetooth));
     assert_eq!(QuickRow::SecurityPin.parent(), Some(QuickRow::General));
+    assert_eq!(QuickRow::General.child(),Some(QuickRow::SecurityPin));
 }
 
 #[test]

@@ -354,6 +354,8 @@ pub struct App {
     quick_card:quick_controls::QuickCard,
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
+    pub wifi_indicator: Option<TexId>,
+    pub hud_wifi_indicator: Option<TexId>,
     pub audio_indicator: Option<TexId>,
     pub hud_audio_indicator: Option<TexId>,
     pub mute_indicator: Option<TexId>,
@@ -621,6 +623,8 @@ impl App {
             quick_card:Default::default(),
             bluetooth_supported: false,
             kid_status_icon: None,
+            wifi_indicator: None,
+            hud_wifi_indicator: None,
             audio_indicator: None,
             hud_audio_indicator: None,
             mute_indicator: None,
@@ -4445,7 +4449,7 @@ impl App {
 
     /// Startup credential prompts wait for the boot intro and other modal pages.
     pub fn startup_network(&mut self) {
-        if self.kids.active || self.link_active() || self.kid_menu.is_some()
+        if (self.kids.active && !self.network.as_ref().is_some_and(|m|m.requires_startup_lock())) || self.link_active() || self.kid_menu.is_some()
             || self.bluetooth.is_some() || self.display_schedule.is_some()
             || !matches!(self.phase, Phase::Shelf | Phase::Playing { .. }) {
             return;
@@ -4460,7 +4464,8 @@ impl App {
 
     fn timers(&mut self) {
         let linking=self.link_active();
-        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();}
+        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();
+            if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}}
         self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
@@ -5564,6 +5569,10 @@ impl App {
             },
             out,
         );
+        if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
+            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+            slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+        }
         if self.kids.active {
             if let Some(tex)=self.kid_status_icon {
                 let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
@@ -7323,6 +7332,11 @@ impl App {
         self.hud.set_icons(faces);
     }
 
+    pub fn settings_notice_tone(&self)->slot_ui::NoticeTone {
+        if self.charging_notice_at.is_some_and(|at|self.now().saturating_sub(at)<2400) {return slot_ui::NoticeTone::Neutral;}
+        self.network.as_ref().filter(|m|if m.visible {m.notice_text().is_some()}else{m.take_toast().is_some()})
+            .map_or(slot_ui::NoticeTone::Neutral,|m|m.notice_tone())
+    }
     pub fn settings_notice(&self) -> Option<(u64,String)> {
         if self.shutting_down() || matches!(self.phase,Phase::Doze{..}) { return None; }
         if let Some(at)=self.charging_notice_at.filter(|at|self.now().saturating_sub(*at)<2400) {

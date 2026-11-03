@@ -12,7 +12,7 @@ use zeroize::{Zeroize, Zeroizing};
 const MAGIC: &[u8; 8] = b"SLOTNET1";
 const BUTTON_MAGIC: &[u8; 8] = b"SLOTBTN1";
 const MAX_FILE: usize = 32 * 1024;
-pub const CODE_LEN: usize = 4;
+pub const MIN_CODE_LEN: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Method { Buttons, Passphrase }
@@ -26,8 +26,8 @@ impl Method {
     }
     fn validate(self, secret: &str) -> Result<(), &'static str> {
         match self {
-            Self::Buttons if secret.len() == CODE_LEN && secret.bytes().all(|b| (b'a'..=b'l').contains(&b)) => Ok(()),
-            Self::Buttons => Err("Use exactly 4 button presses"),
+            Self::Buttons if secret.len() >= MIN_CODE_LEN && secret.bytes().all(|b| (b'a'..=b'l').contains(&b)) => Ok(()),
+            Self::Buttons => Err("Use at least 4 button presses"),
             Self::Passphrase if secret.chars().count() >= 12 => Ok(()),
             Self::Passphrase => Err("Use at least 12 characters"),
         }
@@ -227,7 +227,8 @@ mod tests {
         let root=tempfile::tempdir().unwrap();let path=vault_path(root.path());
         let code="acgj";
         Method::Buttons.validate(code).unwrap();assert!(Method::Buttons.validate("abc").is_err());
-        assert!(Method::Buttons.validate("abcde").is_err());
+        assert!(Method::Buttons.validate("abcde").is_ok());
+        Method::Buttons.validate(&"abcdefghijkl".repeat(32)).unwrap();
         assert!(Method::Buttons.validate("abcz").is_err());
         let mut secrets=Secrets::default();secrets.wifi_password="network-password".into();
         let key=derive_for(code,[2;16],Method::Buttons).unwrap();encrypt(&path,&key,&secrets).unwrap();

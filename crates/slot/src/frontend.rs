@@ -45,6 +45,8 @@ pub struct Frontend {
     bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
     spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
+    wifi_icon: Option<TexId>,
+    hud_wifi_icon: Option<TexId>,
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
     audio_icon_key: Option<(u8, bool)>,
@@ -218,6 +220,8 @@ impl Frontend {
                 std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
                 rx
             }),
+            wifi_icon: None,
+            hud_wifi_icon: None,
             audio_icon: None,
             hud_audio_icon: None,
             audio_icon_key: None,
@@ -680,6 +684,17 @@ impl Frontend {
         }
         self.session.app_mut().mute_indicator = self.mute_icon;
         self.session.app_mut().hud_mute_indicator = self.hud_mute_icon;
+        if self.session.app().network.as_ref().is_some_and(|m|m.wifi_connected()) {
+            if self.wifi_icon.is_none() {
+                upload(compositor,&mut self.wifi_icon,slot_ui::wifi_signal_face(3,HUD_INK));
+                upload(compositor,&mut self.hud_wifi_icon,slot_ui::wifi_signal_face(3,HUD_INK));
+            }
+            self.session.app_mut().wifi_indicator=self.wifi_icon;
+            self.session.app_mut().hud_wifi_indicator=self.hud_wifi_icon;
+        } else {
+            self.session.app_mut().wifi_indicator=None;
+            self.session.app_mut().hud_wifi_indicator=None;
+        }
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
@@ -819,7 +834,7 @@ impl Frontend {
         self.session.app_mut().set_footer_contrast(footer);
         compositor.set_backdrop_light(header);
         compositor.set_hint_light(footer);
-        for tex in [self.mute_icon,self.audio_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
+        for tex in [self.mute_icon,self.audio_icon,self.wifi_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
@@ -896,11 +911,13 @@ impl Frontend {
         self.session.app().draw(&mut self.draws);
         let app=self.session.app();
         let (now,canvas)=(app.now(),app.canvas());
-        self.settings_notice.observe(app.settings_notice(),now);
+        let source=app.settings_notice();
+        if source.is_some() {self.settings_notice.set_tone(app.settings_notice_tone());}
+        self.settings_notice.observe(source,now);
         if let Some(message)=self.settings_notice.text() {
-            let key=format!("{light}:{message}");
+            let key=format!("{light}:{:?}:{message}",self.settings_notice.tone());
             if key!=self.settings_notice_text {
-                let face=slot_ui::settings_notice_face_on(message,canvas,light);
+                let face=slot_ui::settings_notice_face_toned_on(message,canvas,light,self.settings_notice.tone());
                 let (w,h)=(face.w,face.h);
                 let tex=upload_rgba(compositor,&mut self.settings_notice_tex,face.w,face.h,&face.rgba);
                 self.settings_notice_face=Some((tex,w,h));
