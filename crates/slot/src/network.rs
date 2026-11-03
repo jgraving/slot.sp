@@ -283,7 +283,12 @@ impl Menu {
     fn choose_network(&mut self, network: wifi::Network) {
         if network.security == wifi::Security::Unsupported { self.say("This network type is not supported"); return; }
         if self.remembers() && !self.unlocked() { return; }
-        if self.secrets.ssid == network.ssid && (network.security == wifi::Security::Open || !self.secrets.wifi_password.is_empty()) {
+        let saved_security_matches = match network.security {
+            wifi::Security::Open => self.secrets.wifi_password.is_empty(),
+            wifi::Security::Personal => !self.secrets.wifi_password.is_empty(),
+            wifi::Security::Unsupported => false,
+        };
+        if self.secrets.ssid == network.ssid && saved_security_matches {
             self.connect(); return;
         }
         match network.security {
@@ -678,6 +683,11 @@ mod tests {
         let mut restarted=Menu::new(root.path().into());assert!(restarted.encrypted);assert!(!restarted.remembers());
         restarted.unlock(None);buttons(&mut restarted,&CODE);wait(&mut restarted);
         assert!(restarted.secrets.wifi_password.is_empty());
+        let reader=Worker::new(root.path());
+        reader.jobs.send(Job::Unlock(Zeroizing::new("abcdefghijklacgj".into()))).unwrap();
+        let reply=reader.results.recv_timeout(Duration::from_secs(10)).unwrap();
+        match reply.result.unwrap() {Response::Unlocked(secrets)=>assert!(secrets.wifi_password.is_empty()),_=>panic!("expected unlocked payload")}
+
     }
     #[test]
     fn held_buttons_cannot_fill_the_pin_and_scans_use_progress() {

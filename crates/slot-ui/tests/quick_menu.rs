@@ -99,6 +99,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Carousel motion",
             "Clock format",
             "Date & Time",
+            "Security PIN",
             "About"
         ]
     );
@@ -133,6 +134,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::GAME.map(QuickRow::label),
         [
+            "RetroAchievements",
             "Fast Forward",
             "Fast Forward Sound",
             "Rewind",
@@ -140,8 +142,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             "Rumble",
             "Left Stick as D-Pad",
             "Load State on Insert",
-            "Save State on Eject",
-            "RetroAchievements"
+            "Save State on Eject"
         ]
     );
     let opens: Vec<QuickRow> = QuickRow::ALL.into_iter().filter(|r| r.opens()).collect();
@@ -183,7 +184,8 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::PlayDetails,
             QuickRow::DisplaySchedule,
             QuickRow::Wifi,
-            QuickRow::Achievements
+            QuickRow::Achievements,
+            QuickRow::SecurityPin
         ]
     );
     for page in [
@@ -390,7 +392,7 @@ fn in_game_pages_climb_back_through_settings() {
         QuickRow::PlayBrightness.parent_in_game(),
         Some(QuickRow::Screen)
     );
-    assert_eq!(QuickRow::PlayGameplay.child(), Some(QuickRow::FastForward));
+    assert_eq!(QuickRow::PlayGameplay.child(), Some(QuickRow::Achievements));
     assert_eq!(
         QuickRow::Shader.parent_in_game(),
         Some(QuickRow::Screen)
@@ -486,7 +488,7 @@ fn screen_opens_a_page_per_console_and_each_backs_out_to_its_console() {
 
 #[test]
 fn screen_rows_in_game_fill_the_normal_menu_from_the_top() {
-    let first=slot_ui::quick_row_top(QuickRow::PlayBrightness,&[]);assert_eq!(first,slot_ui::expressive::ROW_TOP);assert_eq!(slot_ui::quick_row_top(QuickRow::PlayBlueLight,&[])-first,slot_ui::QUICK_PITCH);assert_eq!(first,slot_ui::quick_row_top(QuickRow::FastForward,&[]));
+    let first=slot_ui::quick_row_top(QuickRow::PlayBrightness,&[]);assert_eq!(first,slot_ui::expressive::ROW_TOP);assert_eq!(slot_ui::quick_row_top(QuickRow::PlayBlueLight,&[])-first,slot_ui::QUICK_PITCH);assert_eq!(first,slot_ui::quick_row_top(QuickRow::Achievements,&[]));
 }
 
 #[test]

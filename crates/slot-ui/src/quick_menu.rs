@@ -1412,13 +1412,15 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
     let mut face = parent_settings_face_animated_on(canvas, &labels, selected, 0, "", 0.0);
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible/2).min(rows.len().saturating_sub(visible));
-    for (i, (name, _, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network) {
+    for (i, (name, value, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network) {
         let lit=i==selected; let ink=if lit {MENU_INK}else{DIM_INK};
         let y=crate::expressive::ROW_TOP+(i-start) as f32*QUICK_PITCH+TYPE_DROP;
         let icon=wifi_signal_face(signals.get(i-first_network).copied().unwrap_or(1),ink);
         parent_blit(&mut face,&icon,QUICK_LABEL_X,y+6.0);
         if let Some(font)=text::font(if lit {text::Role::Focus}else{text::Role::Menu}) {
-            let layout=text::fit_preserving_case(font,name,canvas.w-322.0,1,26.0,26.0);
+            let reserved=quick_value_face(value,lit).w as f32;
+            let width=(canvas.w-2.0*QUICK_EDGE-34.0-reserved-16.0).max(80.0);
+            let layout=text::fit_preserving_case(font,name,width,1,26.0,26.0);
             let w=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking)).ceil() as u32+2*MENU_PAD;
             let mut label=UndoFace{rgba:vec![0;(w*MENU_H*4)as usize],w,h:MENU_H};
             text::draw_centred(&mut label.rgba,w,MENU_H,&layout,ink);
