@@ -52,6 +52,8 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
   const keyButton=(page,key)=>page.locator(`[data-hardware=${key}]`);
   const holdMenu=async page=>{await keyButton(page,'menu').click({delay:1100});};
   async function silhouette(page,label) {
+    // The keyboard focus outline belongs to the stage, not the model silhouette.
+    await page.locator('.model-fold').focus();
     const file=path.join(out,`${label}.png`);await page.locator('.sp-stage').screenshot({path:file});
     execFileSync('python3',['-c',`from PIL import Image,ImageChops
 import sys

@@ -180,8 +180,8 @@ if sys.argv[3]=='420':
   }
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${label}: horizontal overflow`);
   if(!route){
-   await page.locator('.sp-stage[data-ready=true]').waitFor();
    const stage=page.locator('.sp-stage');
+   await stage.waitFor();
    if(await stage.getAttribute('data-model-ready'))assert.equal(Number(await stage.getAttribute('data-rendered-angle')),0,'Keep the live lid closed until the page slide finishes');
    else assert.notEqual(await stage.getAttribute('data-pose'),'opening','Wait for the page slide before starting the lid intro');
   }
@@ -200,6 +200,7 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
   }else await page.screenshot({path:path.join(out,`${label}.png`)});
   await page.evaluate(()=>window.__pageAnimations.forEach(a=>a.play()));
   await page.waitForFunction(()=>window.__pageMotion.finished&&document.documentElement.dataset.pageTransition!=='active');
+  if(!route)await page.locator('.sp-stage[data-ready=true]').waitFor();
   assert.equal(await page.locator('h1').count(),1,`${label}: destination rendered normally`);
   results.push({label,...sample});
  }
