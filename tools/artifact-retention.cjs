@@ -24,6 +24,9 @@ function planArtifacts(artifacts, runs, releases, now = Date.now(), activePaths 
     // PR build for its first 24 hours, including runs superseded by newer commits.
     const prBuild = run.event === 'pull_request' || run.event === 'pull_request_target';
     if (prBuild && age < DAY) return [];
+    // A failed build/check can be retried without rebuilding a successful Pages
+    // upload. A newer PR check does not make that undeployed bundle disposable.
+    if (a.name === 'github-pages' && run.conclusion !== 'success' && age < DAY) return [];
     const published = a.name === 'release-downloads' && run.head_branch === 'main' && releases.some(r => completeRelease(r)
       && (r.target_commitish === run.head_sha || r.tag_name.endsWith('-' + run.head_sha.slice(0, 7))));
     const deployed = a.name === 'github-pages' && run.conclusion === 'success';
