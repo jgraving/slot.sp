@@ -4,7 +4,7 @@ Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `fix/ra-background-progress`
 Active PR: https://github.com/jgraving/slot.sp/pull/190
-Current implementation revision: `16ac0826febc8cc800c0de6d8f24fdee64a1c7b3`
+Current implementation revision: `285cfa1e586dabffe1720b3cdcd13f1047230d4f`
 Status: draft, not merged or released.
 
 ## Current state — PR #190 validation
