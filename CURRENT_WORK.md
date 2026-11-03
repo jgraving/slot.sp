@@ -1,6 +1,6 @@
 # Current development handoff
 
-Updated 2026-11-03. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.
+Updated 2026-11-04. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.
 
 ## Merged and double-checked
 
@@ -40,4 +40,4 @@ Fresh CI on actual merged main 356c307 passed launcher/native 41735091909, ARM64
 
 [Replied to RA request #182](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916), tagging its verified author @demifiend9, after main checks passed. No issue closure was requested.
 
-Website CI scoping in [#192](https://github.com/jgraving/slot.sp/pull/192): OS/recovery-only changes do not start website jobs; published guides retain build/link/navigation checks without 3D; model/homepage/shared assets/templates/config changes run 3D/video checks too. Manual dispatch and CI-routing changes exercise everything. Deployment allows an intentionally unnecessary model job to skip while blocking build/required-model failures. Six local routing regressions and YAML validation pass; use the PR's latest-head Actions as the merge condition. No new device runtime changes are part of this CI/docs follow-up.
+Website CI scoping in [#192](https://github.com/jgraving/slot.sp/pull/192): OS/recovery-only changes do not start website jobs; published guides retain build/link/navigation checks without 3D; model/homepage/shared assets/templates/config changes run 3D/video checks too. Manual dispatch and CI-routing changes exercise everything. Deployment allows an intentionally unnecessary model job to skip while blocking build/required-model failures. Six local routing regressions and YAML validation pass. PR #192 passed workflow 41737516993 on exact head 883cb577b89bd49537abf09d56bcee45b99b8618 and merged as cff3899aa51cb67f6090ef2775a674fe21785d79. One unchanged boot-video observation timed out initially; its single-job retry passed without relaxing the assertion. No new device runtime changes are part of this CI/docs follow-up.
