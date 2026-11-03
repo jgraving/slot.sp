@@ -217,7 +217,7 @@ fn appearance_uses_shell_and_wallpaper_without_an_unfinished_theme_selector() {
 #[test]
 fn the_main_grid_wraps_within_rows_and_columns() {
     let (_d,mut a,_)=on_carousel();a.apply(Action::QuickMenu);
-    for (button,want) in [(Btn::Up,QuickRow::Power),(Btn::Down,QuickRow::General),(Btn::Left,QuickRow::Game),(Btn::Right,QuickRow::General),(Btn::Right,QuickRow::Screen),(Btn::Down,QuickRow::Controls),(Btn::Right,QuickRow::Kids),(Btn::Right,QuickRow::About),(Btn::Down,QuickRow::Game)] {
+    for (button,want) in [(Btn::Up,QuickRow::Power),(Btn::Down,QuickRow::General),(Btn::Left,QuickRow::Game),(Btn::Right,QuickRow::General),(Btn::Right,QuickRow::Screen),(Btn::Down,QuickRow::Controls),(Btn::Right,QuickRow::Kids),(Btn::Right,QuickRow::Wifi),(Btn::Down,QuickRow::Game)] {
         press(&mut a,button);assert_eq!(a.quick_menu(),Some(want));
     }
 }
@@ -352,16 +352,11 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     open_at(&mut a, QuickRow::Screen);
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::Brightness));
-    for want in [
-        QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
-        QuickRow::Brightness,QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
-    ] {
+    let hidden=a.hidden_rows();
+    let rows: Vec<_> = QuickRow::SCREEN.into_iter().filter(|r|!hidden.contains(r)).collect();
+    for want in rows.iter().skip(1).chain(rows.iter()) {
         press(&mut a, Btn::Down);
-        assert_eq!(
-            a.quick_menu(),
-            Some(want),
-            "the page did not wrap on itself"
-        );
+        assert_eq!(a.quick_menu(), Some(*want), "the display page did not wrap on itself");
     }
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::GbShader));
@@ -600,6 +595,7 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
         .map(|i| TexId::from_raw(700 + i))
         .collect();
     a.set_icon_faces(icons.clone());
+    let meter=[TexId::from_raw(9010),TexId::from_raw(9011)];a.set_hud_meter_faces(meter);
     open_at(&mut a, QuickRow::FastForward);
     let before = read_slot_state(d.path());
     a.apply(Action::BrightnessUp);
@@ -618,8 +614,8 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
     let out = frame(&a);
     assert!(
         out.iter()
-            .any(|d| matches!(*d, Draw::Tex { tex, .. } if icons.contains(&tex))),
-        "the level's bar is not drawn over the menu"
+            .any(|d| matches!(*d, Draw::Tex { tex, .. } | Draw::Part { tex, .. } if meter.contains(&tex))),
+        "the level capsule is not drawn over the menu"
     );
 }
 
@@ -747,7 +743,8 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
     assert!(!drawn(&open, 403), "Resume is on the carousel menu");
     for _ in 0..3 {press(&mut a,Btn::Right);}
     press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::FastForward));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
+    press(&mut a, Btn::Down);
     for _ in 0..30 {
         a.update(1.0 / 60.0);
     }

@@ -151,9 +151,10 @@ fn edited_night_warmth_is_shared_by_schedule_shortcut_and_reboot() {
     a.display_schedule=Some(display_schedule::Menu::new(DisplaySettings::read(d.path(),&Default::default())));
     let press=|a:&mut App,b|{a.apply(Action::GbaDown(b));a.apply(Action::GbaUp(b));};
     for _ in 0..3 {press(&mut a,Btn::Down);}
-    press(&mut a,Btn::Left);assert_eq!(a.blue_light(),1,"editing the night preset must leave day warmth alone");
+    assert_eq!(a.blue_light(),8,"focusing warmth previews the night preset");
+    press(&mut a,Btn::Left);assert_eq!(a.blue_light(),7,"editing previews without changing day warmth");
     assert_eq!(DisplaySettings::read(d.path(),&Default::default()).bedtime.1,7);
-    press(&mut a,Btn::B);
+    press(&mut a,Btn::B);assert_eq!(a.blue_light(),1,"leaving restores day warmth");
     clock.advance(3600);a.update(0.1);assert!(a.night_mode());assert_eq!(a.blue_light(),7);
     a.display_schedule=Some(display_schedule::Menu::new(DisplaySettings::read(d.path(),&Default::default())));
     for _ in 0..3 {press(&mut a,Btn::Down);}press(&mut a,Btn::Left);

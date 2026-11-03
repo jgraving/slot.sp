@@ -36,7 +36,7 @@ Keep all three options lowercase. A line slot.sp can't read is skipped.
 
 ## Wallpapers
 
-Put a PNG in `Wallpapers/` and choose it in **Menu → General → Wallpaper**. **Random** picks one of these images at startup.
+Put a PNG in `Wallpapers/` and choose it in **Menu → Display → Wallpaper**. **Random** picks one of these images at startup.
 
 | Device | Suggested Size |
 | --- | --- |
@@ -63,7 +63,7 @@ GBA bezels only show on the 640×480 devices, where the game is 640×427 at 0, 2
 
 ## Boot logo
 
-Put a BMP at `Config/bootlogo.bmp` to replace the still image shown when the device powers on. The separate **General → Boot Animation** setting controls the moving slot.sp logo that follows.
+Put a BMP at `Config/bootlogo.bmp` to replace the still image shown when the device powers on. The separate **Power & lid → Boot Animation** setting controls the moving slot.sp logo that follows.
 
 slot.sp copies the file as it is, without resizing it, so make it the same size and format as the logo your device already shows.
 

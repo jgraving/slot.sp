@@ -24,8 +24,10 @@ pub use expressive::{MenuFrame, MenuMotion};
 pub use favorite::{draw_star, draw_kid};
 pub use favorite_remove::{draw_favorite_remove, favorite_remove_face, kid_remove_face, FAVORITE_REMOVE_MS};
 mod hud;
+mod meter;
+pub use meter::{filled_meter_face,METER_W,METER_H};
 mod settings_notice;
-pub use settings_notice::{settings_notice_face_on,SettingsNotice,settings_notice_face};
+pub use settings_notice::{settings_notice_face_on,SettingsNotice, NoticeTone, settings_notice_face_toned_on,settings_notice_face};
 mod icon;
 mod link_art;
 mod material;
@@ -35,6 +37,9 @@ mod power_menu;
 mod shot_viewer;
 pub use material::{shell_link_port, shell_rgb, shell_slot_faces};
 mod quick_menu;
+mod keyboard;
+mod page;
+pub use keyboard::{Keyboard, KeyInput, KeyOutcome};
 pub mod menu_grid;
 mod rebuild;
 mod refusal;
@@ -74,7 +79,7 @@ pub use cart::{
 pub use clock::{clock_text, date_time_format, clock_label, date_time_text, hhmm, set_clock_hint_face, ClockPicker, Field};
 pub use draw::{Canvas, Draw, TexId, OUT_H, OUT_W};
 pub use footer::{
-    draw_corner_audio, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
+    draw_corner_audio, draw_corner_indicator, draw_corner_kid, draw_corner_connection, draw_corners, draw_footer, draw_footer_connection,
     draw_status,
     Printed, FOOTER_Y,
 };
@@ -109,7 +114,7 @@ pub use quick_menu::{
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
     reference_face, reference_binding_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, quick_controls_legends, carousel_name_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
-    kid_time_text, kid_time_meter, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, QuickMenu, QuickMenuFaces, QuickRow,
+    kid_time_text, kid_time_meter, kid_time_meter_on, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, wifi_settings_face_on, wifi_signal_face, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
     QUICK_VISIBLE_ROWS,
 };
@@ -140,7 +145,7 @@ pub use sticker::{
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
 
 mod button_code;
-pub use button_code::button_code_face;
+pub use button_code::{masked_pin_face_on,button_code_face, credential_code_face_on, credential_code_face_with_lock_on};
 
 mod loading;
 pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};

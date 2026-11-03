@@ -155,6 +155,10 @@ pub fn draw_corner_audio(
 }
 
 pub fn draw_corner_kid(canvas:Canvas,battery:Option<Battery>,percent:Printed,icon:TexId,preceding:usize,out:&mut Vec<Draw>) {
+    draw_corner_indicator(canvas,battery,percent,icon,preceding,out);
+}
+
+pub fn draw_corner_indicator(canvas:Canvas,battery:Option<Battery>,percent:Printed,icon:TexId,preceding:usize,out:&mut Vec<Draw>) {
     draw_connection(canvas,battery,percent,Some(icon),CORNER_MARGIN+STATUS_STEP*preceding as f32,(PLATE_H-crate::STATUS_ICON_SIZE as f32)/2.0,out);
 }
 
@@ -235,5 +239,23 @@ mod connection_tests {
         assert!(
             matches!(draws[0], Draw::Tex { x, w, h, .. } if w==crate::STATUS_ICON_SIZE as f32 && h==crate::STATUS_ICON_SIZE as f32 && x > 500.0)
         );
+    }
+}
+
+#[cfg(test)]
+mod status_tests {
+    use super::*;
+    #[test]
+    fn wifi_audio_mute_and_parent_indicators_share_the_corner_without_overlap() {
+        for width in [640.0,720.0] {for percent in [Printed::default(),Printed::new(TexId::from_raw(9),36)] {
+            let canvas=Canvas{w:width,h:480.0};let battery=Some(Battery{percent:100,charge:slot_power::Charge::Charging});let mut draws=vec![];
+            draw_corner_audio(canvas,battery,percent,Some(TexId::from_raw(1)),Some(TexId::from_raw(2)),&mut draws);
+            draw_corner_indicator(canvas,battery,percent,TexId::from_raw(3),2,&mut draws);
+            draw_corner_kid(canvas,battery,percent,TexId::from_raw(4),3,&mut draws);
+            let boxes:Vec<_>=draws.iter().filter_map(|d|if let Draw::Tex{x,y,w,h,..}=d {Some((*x,*y,*w,*h))}else{None}).collect();
+            assert_eq!(boxes.len(),4);
+            for pair in boxes.windows(2) {assert!(pair[1].0+pair[1].2<=pair[0].0);assert_eq!(pair[1].1,pair[0].1);}
+            assert!(boxes.iter().all(|(x,y,w,h)|*x>=16.0&&x+w<width-16.0&&*y>=0.0&&y+h<=PLATE_H));
+        }}
     }
 }

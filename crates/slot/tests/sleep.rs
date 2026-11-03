@@ -133,8 +133,9 @@ fn menu_sleep_uses_deep_sleep_and_never_timer_without_shutting_down() {
         a.apply(Action::GbaDown(Btn::Down));
     }
     a.apply(Action::GbaDown(Btn::A));
-    a.apply(Action::GbaDown(Btn::Down));
-    a.apply(Action::GbaDown(Btn::Down));
+    for _ in 0..QuickRow::SleepNow.position(&a.hidden_rows()) {
+        a.apply(Action::GbaDown(Btn::Down));
+    }
     assert_eq!(a.quick_menu(), Some(QuickRow::SleepNow));
     a.apply(Action::GbaDown(Btn::A));
     assert!(a.suspend_requested());

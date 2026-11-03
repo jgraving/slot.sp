@@ -17,7 +17,7 @@ Choose which games children can play, set a daily allowance, session timer or be
 
 ![Parent settings with time and volume limits](previews/current/light/parent-settings.png)
 
-You can also set the code separately through **Set parent code**. Kid mode is off by default.
+You can also choose **Parent code → Separate code** and press A to set the code separately. Kid mode is off by default.
 
 ## The kid menu
 
@@ -72,6 +72,23 @@ Your full Favorites and Recents lists are kept. Turning kid mode off shows them 
 
 ## The parent code
 
+### Choose a parent unlock method
+
+In the parental controls card, **Parent code** is a Left/Right picker:
+
+- **Separate code** keeps the four-button parent code described below. Press A on
+  the row to set or change it.
+- **Device PIN** uses **General → Security PIN**. Set that PIN first. Opening parent
+  settings asks for the full device PIN or passphrase, even if credentials were
+  already unlocked for this session. Nothing stores a second copy of the device PIN.
+
+Changing back to Separate code requires a separate code to exist or be set first.
+The separate-code recovery file below applies only to that method. A forgotten
+device PIN cannot be recovered from the card. Choose Separate code before using
+Forget Security PIN in General.
+
+### Separate code
+
 Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd>, the D-pad, or <kbd>L1</kbd>, <kbd>R1</kbd>, <kbd>L2</kbd> and <kbd>R2</kbd>. Each press shows its button picture on screen. The fourth button checks the code automatically. A correct code opens parent settings. An incorrect code shakes the icons, then clears them for another try.
 
 ![Setting and confirming a four-button parent code](previews/current/light/parent-code.gif)
@@ -82,7 +99,7 @@ Use four presses from <kbd>A</kbd>, <kbd>B</kbd>, <kbd>X</kbd>, <kbd>Y</kbd>, th
 | <kbd>SELECT</kbd> | Delete the last entry. |
 | <kbd>MENU</kbd> | Cancel code entry. |
 
-To change the code, open **Parental controls**, unlock it and choose **Set parent code**. Enter and confirm the new code. If the two entries differ, enter the confirmation again.
+To change the code, open **Parental controls**, unlock it, choose **Separate code** on the **Parent code** row and press A. Enter and confirm the new code. If the two entries differ, enter the confirmation again.
 
 ### Turn kid mode off
 
@@ -101,3 +118,8 @@ The recovery file contains the four buttons in plain text. Keep access to the ca
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Games & artwork](LIBRARY.md) · [Audio & headphones](BLUETOOTH.md)
+
+Parent-code entry uses the same masked PIN card as the system PIN. A separate parent code still has
+four button presses; the shared device PIN keeps its chosen length. Remaining play time appears in a
+filled capsule: the filled portion tracks the remaining allowance, and text/icon contrast changes at
+the fill boundary.

@@ -58,9 +58,16 @@ impl App {
         let mut menu = crate::kid_menu::Menu::new(root, self.kids.clone());
         menu.set_remaining(self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget())));
         self.kid_menu = Some(menu);
+        self.request_parent_device_pin();
     }
 
+    fn request_parent_device_pin(&mut self) {
+        if self.kid_menu.as_mut().is_some_and(|m|m.take_device_pin_request()) {
+            if let Some(menu)=&mut self.network {menu.unlock_for_parent();}
+        }
+    }
     pub(super) fn kid_input(&mut self, action: Action) -> bool {
+        if self.network.as_ref().is_some_and(|m|m.visible) {return false;}
         match action {
             Action::GbaUp(Btn::X) => {
                 if let Some(pending) = &mut self.kid_removal { pending.released = true; }
@@ -122,6 +129,7 @@ impl App {
             if let Some(action) = child_action {
                 if action == Action::Eject { self.apply(action); } else { self.adjust(action); }
             }
+            self.request_parent_device_pin();
             let volume = self.volume();
             let brightness = ((u16::from(self.brightness()) * 100 + u16::from(BRIGHTNESS_MAX)/2) / u16::from(BRIGHTNESS_MAX)) as u8;
             let time_left = self.kids.active.then(|| (self.kids.remaining(self.wall_secs()), self.kids.time_budget()));

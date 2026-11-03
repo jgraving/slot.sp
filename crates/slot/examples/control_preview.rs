@@ -160,6 +160,8 @@ fn main() {
     let mut hud = Hud::new();
     hud.set_icons(icons);
     hud.show(HudKind::Volume, 65, false, 0);
+    let faces=[0.0,1.0].map(|fraction|{let f=filled_meter_face("65%",Some(Icon::Volume),fraction,false,METER_W,METER_H);gpu.create_texture(f.w,f.h,&f.rgba)});
+    hud.set_meter_faces(faces);
     for ms in [0, 50, 100, 300, 1300, 1400, 1490] {
         let mut out = vec![];
         draw_menu_ground(canvas, Some((ground, 720)), &mut out);
@@ -173,6 +175,8 @@ fn main() {
         );
     }
     hud.show(HudKind::Volume,65,true,0);
+    let faces=[0.0,1.0].map(|fraction|{let f=filled_meter_face("65%",Some(Icon::VolumeMuted),fraction,false,METER_W,METER_H);gpu.create_texture(f.w,f.h,&f.rgba)});
+    hud.set_meter_faces(faces);
     let mut out=vec![];draw_menu_ground(canvas,Some((ground,720)),&mut out);hud.draw(canvas,300,&mut out);
     let f=status_icon_face(Icon::VolumeMuted,[246,244,239]);let tex=gpu.create_texture(f.w,f.h,&f.rgba);
     out.push(Draw::Tex{x:canvas.w-48.0,y:64.0,w:f.w as f32,h:f.h as f32,tex,alpha:1.0});

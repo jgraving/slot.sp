@@ -50,13 +50,13 @@ fn main(){
     }
     g.set_light_ui(false);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut g);f.render(&mut g,(width,480));let mut a=Review{f,g,now:0,dir,width};
-    a.save("dark-carousel");a.tap(Btn::Menu);a.save("dark-grid");a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Theme);a.save("dark-theme-row");a.tap(Btn::Right);assert!(a.f.app().light());a.save("light-theme-row");
+    a.save("dark-carousel");a.tap(Btn::Menu);a.save("dark-grid");a.nav(QuickRow::Screen);a.tap(Btn::A);a.nav(QuickRow::Theme);a.save("dark-theme-row");a.tap(Btn::Right);assert!(a.f.app().light());a.save("light-theme-row");
     assert!(slot_store::read_slot_state(&root).appearance.light());
     a.tap(Btn::B);a.save("light-grid");a.nav(QuickRow::Bluetooth);a.tap(Btn::A);
     for i in 0..42 {a.frame(vec![]);if [0,1,2,5,9,20,41].contains(&i){a.capture(&format!("sound-entry-{i:02}"));}let mut out=vec![];a.f.app().draw(&mut out);for d in out{if let Draw::RoundRect{x,y,w,h,colour,..}=d{if colour==slot_ui::expressive::SELECTED{assert!(x>=55.9&&x+w<=width as f32-55.9&&y>=55.9&&y+h<=366.1,"focus escaped card: {x},{y},{w},{h}");if (h-slot_ui::expressive::ROW_H).abs()<0.1 {assert!((x+w/2.0-width as f32/2.0).abs()<0.1&& (w-(width as f32-168.0)).abs()<0.1,"submenu focus slid in horizontally");}}}}}
     a.save("light-sound");a.exit_review("sound");a.nav(QuickRow::Kids);a.tap(Btn::A);a.save("light-parent-settings");a.exit_review("parent");a.nav(QuickRow::Kids);a.tap(Btn::A);a.settle();a.tap(Btn::Down);a.tap(Btn::A);a.tap(Btn::L1);a.tap(Btn::R1);a.tap(Btn::L2);a.save("light-parent-code");a.tap(Btn::Menu);a.tap(Btn::B);
-    assert!(matches!(a.f.app().phase(),Phase::Shelf));a.save("light-carousel");a.tap(Btn::Menu);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Theme);a.tap(Btn::Left);assert!(!a.f.app().light());a.save("dark-restored");
-    a.g.set_light_ui(true);let badge=slot_ui::kid_time_meter(3600,3600);let tex=a.g.create_ui_texture(badge.w,badge.h,&badge.rgba);a.g.begin_frame();a.g.draw_list(&[Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.90,0.93,0.93,1.0]},Draw::Tex{x:(width-badge.w)as f32/2.0,y:190.0,w:badge.w as f32,h:badge.h as f32,tex,alpha:1.0}]);a.capture("light-time-badge");a.g.set_light_ui(false);
+    assert!(matches!(a.f.app().phase(),Phase::Shelf));a.save("light-carousel");a.tap(Btn::Menu);a.nav(QuickRow::Screen);a.tap(Btn::A);a.nav(QuickRow::Theme);a.tap(Btn::Left);assert!(!a.f.app().light());a.save("dark-restored");
+    a.g.set_light_ui(true);let badge=slot_ui::kid_time_meter_on(3600,3600,true);let tex=a.g.create_texture(badge.w,badge.h,&badge.rgba);a.g.begin_frame();a.g.draw_list(&[Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.90,0.93,0.93,1.0]},Draw::Tex{x:(width-badge.w)as f32/2.0,y:190.0,w:badge.w as f32,h:badge.h as f32,tex,alpha:1.0}]);a.capture("light-time-badge");a.g.set_light_ui(false);
     // Fractional positions exposed the cropped off-state thumb. Check the
     // actual GLES/GL raster at both saved endpoints and a transition midpoint.
     for (index,t) in [0.0,0.5,1.0].into_iter().enumerate(){let mut draws=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:[0.09,0.115,0.125,1.0]}];slot_ui::draw_switch(&mut draws,100.0,100.0,t,1.0);a.g.begin_frame();a.g.draw_list(&draws);let pixels=a.g.read_frame();let mut ys=vec![];for y in 95..140 {for x in 95..170 {let p=&pixels[((y*width+x)*4)as usize..][..4];if p[0]>230&&p[1]>230&&p[2]>230{ys.push(y);}}}assert!(!ys.is_empty());let lo=*ys.iter().min().unwrap();let hi=*ys.iter().max().unwrap();assert!((lo+hi)as i32>=228&&(lo+hi)as i32<=230,"switch thumb is not vertically centered");for y in 100..130 {let count=|row:u32|(95..170).filter(|x|{let p=&pixels[((row*width+x)*4)as usize..][..3];p.iter().all(|&v|v>230)}).count();assert!(count(y).abs_diff(count(229-y))<=2,"asymmetric switch thumb at row {y}");}a.capture(&format!("switch-{index}"));}
@@ -131,7 +131,11 @@ fn main(){
         let mut hud_out=vec![Draw::Rect{x:0.0,y:0.0,w:width as f32,h:480.0,colour:if light {slot_gfx::ui_palette::BACKDROP}else{[0.04,0.06,0.08,1.0]}}];
         let icons:Vec<_>=slot_ui::Icon::ALL.into_iter().map(|icon|{let f=slot_ui::control_icon_face(icon,24,slot_ui::HUD_INK);a.g.create_ui_texture(f.w,f.h,&f.rgba)}).collect();
         for (i,(kind,value,muted)) in [(slot_ui::HudKind::Volume,60,false),(slot_ui::HudKind::Volume,0,true),(slot_ui::HudKind::Brightness,6,false),(slot_ui::HudKind::BlueLight,5,false)].into_iter().enumerate(){
-            let mut hud=slot_ui::Hud::new();hud.set_icons(icons.clone());hud.show(kind,value,muted,0);let start=hud_out.len();hud.draw(a.f.app().canvas(),300,&mut hud_out);
+            let mut hud=slot_ui::Hud::new();hud.set_icons(icons.clone());hud.show(kind,value,muted,0);
+            let max=if matches!(kind,slot_ui::HudKind::Brightness|slot_ui::HudKind::BlueLight){9}else{100};
+            let label=format!("{}%",(u32::from(value)*100+max/2)/max);
+            let faces=[0.0,1.0].map(|fraction|{let face=slot_ui::filled_meter_face(&label,Some(hud.glyph()),fraction,light,slot_ui::METER_W,slot_ui::METER_H);a.g.create_texture(face.w,face.h,&face.rgba)});hud.set_meter_faces(faces);
+            let start=hud_out.len();hud.draw(a.f.app().canvas(),300,&mut hud_out);
             for d in &mut hud_out[start..] {match d {Draw::Rect{y,..}|Draw::RoundRect{y,..}|Draw::Tex{y,..}|Draw::Part{y,..}=>*y+=70.0+i as f32*80.0,_=>{}}}
         }
         a.g.begin_frame();a.g.draw_list(&hud_out);a.capture(if light{"light-hud-controls"}else{"dark-hud-controls"});

@@ -141,3 +141,21 @@ fn charging_energy_flows_towards_the_bolt_then_settles_inside_the_pill() {
         }
     }
 }
+
+#[test]
+fn warning_severity_uses_different_graphical_symbols_and_short_pills() {
+    use slot_ui::{NoticeTone,settings_notice_face_toned_on};
+    for light in [false,true] {
+        let warning=settings_notice_face_toned_on("Short PIN: easy to guess",Canvas::FRAMED,light,NoticeTone::Warning);
+        let danger=settings_notice_face_toned_on("Credentials stored unencrypted",Canvas::FRAMED,light,NoticeTone::Danger);
+        assert_eq!(warning.h,44);assert_eq!(danger.h,44);
+        let icon=|f:&slot_ui::UndoFace|(0..f.h).flat_map(|y|{(14..40).map(move |x|f.rgba[((y*f.w+x)*4+3)as usize])}).collect::<Vec<_>>();
+        assert_ne!(icon(&warning),icon(&danger));
+        for face in [&warning,&danger] {assert!(icon(face).iter().any(|&a|a>200));}
+        let allowed=settings_notice_face_toned_on("PIN_BUTTONS",Canvas::FRAMED,light,NoticeTone::Neutral);
+        assert!(allowed.w<=576&&allowed.h==48);
+        assert!(allowed.rgba.chunks_exact(4).any(|p|p[3]>200));
+        let minimum=settings_notice_face_toned_on("PIN_BUTTONS_MIN",Canvas::FRAMED,light,NoticeTone::Neutral);
+        assert!(minimum.w<=576&&minimum.h==48);
+    }
+}

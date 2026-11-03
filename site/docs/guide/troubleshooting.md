@@ -6,7 +6,7 @@ Check the section that matches the problem. Before changing card files, back up 
 
 - Is it unzipped? slot.sp doesn't read `.zip` or `.7z`.
 - Is it right in `Games/GBA`, `Games/GB` or `Games/GBC`, and not in a nested directory?
-- Did slot.sp boot since you added it? Restart from Settings → About.
+- Did slot.sp boot since you added it? Restart from Settings → General → About.
 - Does it end in `.gba`, `.gb` or `.gbc`? GBA games only show up in `Games/GBA`.
 
 ## My save / save state is missing
@@ -37,7 +37,7 @@ Read the short error message at the bottom of the screen. Wake the headphones an
 
 ## Light mode and night mode seem different
 
-They control different things. **General → UI theme** selects Light or Dark menus. **Screen → Night mode** controls saved brightness and warmth, including an optional schedule. See [Day & night](../features/night-display.md).
+They control different things. **Display → UI theme** selects Light or Dark menus. **Display → Night mode** controls saved brightness and warmth, including an optional schedule. See [Day & night](../features/night-display.md).
 
 ## Reporting a bug
 

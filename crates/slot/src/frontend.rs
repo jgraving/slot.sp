@@ -36,12 +36,18 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
-    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
+    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
+    hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
+    network_tex: Option<TexId>,
+    network_old_tex: Option<TexId>,
+    network_page: Option<u64>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
     spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
+    wifi_icon: Option<TexId>,
+    hud_wifi_icon: Option<TexId>,
     audio_icon: Option<TexId>,
     hud_audio_icon: Option<TexId>,
     audio_icon_key: Option<(u8, bool)>,
@@ -202,7 +208,10 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
-            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
+            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
+            network_tex: None,
+            network_old_tex: None,
+            network_page: None,
             bluetooth_tex: None,
             bluetooth_old_tex: None,
             bluetooth_page: None,
@@ -212,6 +221,8 @@ impl Frontend {
                 std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
                 rx
             }),
+            wifi_icon: None,
+            hud_wifi_icon: None,
             audio_icon: None,
             hud_audio_icon: None,
             audio_icon_key: None,
@@ -674,6 +685,17 @@ impl Frontend {
         }
         self.session.app_mut().mute_indicator = self.mute_icon;
         self.session.app_mut().hud_mute_indicator = self.hud_mute_icon;
+        if self.session.app().network.as_ref().is_some_and(|m|m.wifi_connected()) {
+            if self.wifi_icon.is_none() {
+                upload(compositor,&mut self.wifi_icon,slot_ui::wifi_signal_face(3,HUD_INK));
+                upload(compositor,&mut self.hud_wifi_icon,slot_ui::wifi_signal_face(3,HUD_INK));
+            }
+            self.session.app_mut().wifi_indicator=self.wifi_icon;
+            self.session.app_mut().hud_wifi_indicator=self.hud_wifi_icon;
+        } else {
+            self.session.app_mut().wifi_indicator=None;
+            self.session.app_mut().hud_wifi_indicator=None;
+        }
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
@@ -719,18 +741,19 @@ impl Frontend {
             .bluetooth
             .as_ref()
             .is_some_and(|m| m.show_progress()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.show_progress());
+        let network_busy=self.session.app().network.as_ref().is_some_and(|m|m.show_progress());
         if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
             self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
             self.spinner_frames=None;
         }
-        let progress = if sound_busy {
+        let progress = if sound_busy || network_busy {
             self.bluetooth_spinner
                 .get((self.start.elapsed().as_millis() / slot_ui::LOADING_FRAME_MS % slot_ui::LOADING_FRAMES as u128) as usize)
                 .copied()
         } else {
             None
         };
-        self.session.app_mut().set_quick_control_progress(progress);
+        self.session.app_mut().set_quick_control_progress(if sound_busy {progress}else{None});
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         let mut chrome_updates=vec![];
@@ -739,7 +762,7 @@ impl Frontend {
                 std::mem::swap(&mut self.bluetooth_tex, &mut self.bluetooth_old_tex);
                 self.bluetooth_page=Some(menu.page_key()); menu.face=None;
             }
-            menu.progress_face = progress;
+            menu.progress_face = if sound_busy {progress}else{None};
             let lines = menu.lines();
             if lines != self.bluetooth_lines || menu.face.is_none() {
                 let face=crate::bluetooth::screen_face_without_switches(&lines,sound_footer_ink,sound_canvas);
@@ -776,6 +799,15 @@ impl Frontend {
             crate::latency::taken();
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
+        let network_light=self.session.app().light();
+        if let Some(menu) = self.session.app_mut().network.as_mut().filter(|m|m.visible) {
+            if self.network_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.network_tex,&mut self.network_old_tex);
+                self.network_page=Some(menu.page_key()); menu.face=None;
+            }
+            menu.progress_face=if network_busy {progress}else{None};
+            if menu.face.is_none() { menu.face=Some(upload_menu_face(compositor,&mut self.network_tex,&mut self.menu_chrome_cache,menu.screen_face_on(sound_canvas,network_light),&mut chrome_updates)); }
+        }
         if let Some(menu) = &mut self.session.app_mut().display_schedule {
             if self.schedule_page != Some(menu.page_key()) {
                 std::mem::swap(&mut self.schedule_tex,&mut self.schedule_old_tex);
@@ -803,7 +835,7 @@ impl Frontend {
         self.session.app_mut().set_footer_contrast(footer);
         compositor.set_backdrop_light(header);
         compositor.set_hint_light(footer);
-        for tex in [self.mute_icon,self.audio_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
+        for tex in [self.mute_icon,self.audio_icon,self.wifi_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);
@@ -867,24 +899,39 @@ impl Frontend {
             },
             &mut self.switcher,
         );
-        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter());
+        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter()).map(|(s,b)|(s,b,light));
         if self.kid_meter_key!=meter {
-            if let Some((seconds,budget))=meter {
-                let face=slot_ui::kid_time_meter(seconds,budget);let size=(face.w,face.h);
-                let tex=upload(compositor,&mut self.kid_meter_tex,face);
+            if let Some((seconds,budget,light))=meter {
+                let face=slot_ui::kid_time_meter_on(seconds,budget,light);let size=(face.w,face.h);
+                let tex=upload_rgba(compositor,&mut self.kid_meter_tex,face.w,face.h,&face.rgba);
                 self.session.app_mut().set_kid_meter_face((tex,size.0,size.1));
             }
             self.kid_meter_key=meter;
+        }
+        let (kind,value,icon)=self.session.app().hud_meter_key();
+        let meter_key=Some((kind,value,icon,light));
+        if self.hud_meter_key!=meter_key {
+            let max=if kind==slot_ui::HudKind::Brightness || kind==slot_ui::HudKind::BlueLight {9}else{100};
+            let label=format!("{}%",(u32::from(value)*100+max/2)/max);
+            let mut faces=vec![];
+            for (i,fraction) in [0.0,1.0].into_iter().enumerate() {
+                let face=slot_ui::filled_meter_face(&label,Some(icon),fraction,light,slot_ui::METER_W,slot_ui::METER_H);
+                faces.push(upload_rgba(compositor,&mut self.hud_meter_tex[i],face.w,face.h,&face.rgba));
+            }
+            self.session.app_mut().set_hud_meter_faces([faces[0],faces[1]]);
+            self.hud_meter_key=meter_key;
         }
         self.draws.clear();
         self.session.app().draw(&mut self.draws);
         let app=self.session.app();
         let (now,canvas)=(app.now(),app.canvas());
-        self.settings_notice.observe(app.settings_notice(),now);
+        let source=app.settings_notice();
+        if source.is_some() {self.settings_notice.set_tone(app.settings_notice_tone());}
+        self.settings_notice.observe(source,now);
         if let Some(message)=self.settings_notice.text() {
-            let key=format!("{light}:{message}");
+            let key=format!("{light}:{:?}:{message}",self.settings_notice.tone());
             if key!=self.settings_notice_text {
-                let face=slot_ui::settings_notice_face_on(message,canvas,light);
+                let face=slot_ui::settings_notice_face_toned_on(message,canvas,light,self.settings_notice.tone());
                 let (w,h)=(face.w,face.h);
                 let tex=upload_rgba(compositor,&mut self.settings_notice_tex,face.w,face.h,&face.rgba);
                 self.settings_notice_face=Some((tex,w,h));
@@ -1007,6 +1054,7 @@ impl Frontend {
         if self.rebuild.is_some() {
             return;
         }
+        if self.boot_intro.is_none() || self.boot_intro_cancelled { self.session.app_mut().startup_network(); }
         self.session.feed(events, now);
         let dt = self.last.elapsed().as_secs_f32();
         self.last = Instant::now();
@@ -1038,6 +1086,7 @@ impl Frontend {
         self.boot_intro_cancelled |= events
             .iter()
             .any(|event| matches!(event, slot_input::RawEvent::Down(_)));
+        if self.boot_intro.is_none() || self.boot_intro_cancelled { self.session.app_mut().startup_network(); }
         self.session.feed(events, now);
         self.session.update(dt);
     }
@@ -1047,7 +1096,7 @@ impl Frontend {
     }
 
     pub fn powering_off(&self) -> bool {
-        self.session.app().ready_to_power_off()
+        self.session.app().ready_to_power_off() && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restarting(&self) -> bool {

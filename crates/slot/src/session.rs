@@ -231,10 +231,10 @@ impl Session {
             self.entries = entries;
         }
         for ev in events {
-            // Parent controls are literal button entry, never game shortcuts or
+            // Code and keyboard editors use literal buttons, never game shortcuts or
             // delayed modifier gestures. Apply each edge before the next event.
             let button = match ev { RawEvent::Down(b) | RawEvent::Up(b) => b };
-            if self.app.parent_controls_open()
+            if self.app.literal_menu_buttons()
                 && !self.dozing()
                 && !matches!(button, Btn::Power | Btn::Lid | Btn::VolUp | Btn::VolDown)
             {
@@ -274,7 +274,7 @@ impl Session {
                 self.act(action);
             }
         }
-        if self.app.capturing() || self.app.parent_controls_open() || self.dozing() {
+        if self.app.capturing() || self.app.literal_menu_buttons() || self.dozing() {
             self.gestures.cancel_display_ramps();
         }
         actions.extend(self.gestures.tick(now));
@@ -626,6 +626,7 @@ impl Session {
 
     fn held(&self) -> bool {
         self.app.parent_controls_open()
+            || self.app.network.as_ref().is_some_and(|m|m.visible)
             || self.app.game_menu_open()
             || self.app.in_game_menu().is_some()
             || self.app.repair_prompt()
@@ -771,7 +772,11 @@ impl Session {
         let resume = self.app.card_read("resume", loaded.resume);
         let (sav_unread, resume_unread) = (sav.is_none(), resume.is_none());
         let (core, rom, sav, resume) = (
-            loaded.opened.core,
+            if loaded.platform == Platform::Gba && loaded.player.is_none() {
+                match self.app.network.as_ref().and_then(|m|m.service.as_ref()) {
+                    Some(service)=>service.wrap(loaded.opened.core), None=>loaded.opened.core,
+                }
+            } else {loaded.opened.core},
             loaded.rom,
             sav.flatten(),
             resume.flatten(),

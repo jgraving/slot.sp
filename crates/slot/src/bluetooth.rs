@@ -109,6 +109,7 @@ pub struct Manager {
     pub disconnect_volume: u8,
     pub current_volume: u8,
     pub pause_on_disconnect: bool,
+    pub carousel_sounds: bool,
     pub disconnect_notice: bool,
     pub route_choice: Option<String>,
     choosing_route: bool,
@@ -139,6 +140,7 @@ impl Manager {
             disconnect_volume,
             current_volume:50,
             pause_on_disconnect,
+            carousel_sounds: slot_store::read_slot_state(&root).carousel_sounds,
             bluetooth_available,
             root,
             page: Page::Home,
@@ -337,6 +339,7 @@ impl Manager {
     fn pair_row(&self) -> usize { self.device_start() + self.device_indices().len() + self.usb_devices.len() }
     fn disconnect_row(&self) -> usize { self.pair_row() + usize::from(self.bluetooth_available) }
     fn pause_row(&self) -> usize { self.disconnect_row() + 1 }
+    fn carousel_row(&self) -> usize { self.pause_row() + 1 }
     pub fn slider_selected(&self)->bool {self.volume_selected() || (self.page==Page::Home && self.selected==self.disconnect_row())}
     pub fn volume_selected(&self)->bool {self.page==Page::Home && self.selected==0}
 
@@ -403,6 +406,7 @@ impl Manager {
                 }
                 rows.push(format!("DISCONNECT {}%", self.disconnect_volume));
                 rows.push(format!("PAUSE_DISCONNECT {}", if self.pause_on_disconnect {"On"} else {"Off"}));
+                rows.push(format!("CAROUSEL_SOUNDS {}", if self.carousel_sounds {"On"} else {"Off"}));
                 rows
             }
             Page::Pair => {
@@ -447,6 +451,9 @@ impl Manager {
         match action {
             Action::GbaDown(Btn::Up) => self.selected = (self.selected + count - 1) % count,
             Action::GbaDown(Btn::Down) => self.selected = (self.selected + 1) % count,
+            Action::GbaDown(Btn::A | Btn::Left | Btn::Right)
+                if self.page == Page::Home && self.selected == self.carousel_row() =>
+            { self.carousel_sounds = !self.carousel_sounds; }
             Action::GbaDown(Btn::A | Btn::Left | Btn::Right)
                 if self.page == Page::Home && self.selected == self.pause_row() =>
             { self.toggle_pause_on_disconnect(); }
@@ -556,7 +563,8 @@ impl Manager {
         let (_,_,first,visible)=self.scroll_info();
         self.rows().iter().enumerate().skip(first).take(visible).filter_map(|(i,row)| {
             let (id,value)=if let Some(v)=row.strip_prefix("BLUETOOTH ") {(1,v)}
-                else if let Some(v)=row.strip_prefix("PAUSE_DISCONNECT ") {(2,v)} else {return None;};
+                else if let Some(v)=row.strip_prefix("PAUSE_DISCONNECT ") {(2,v)}
+                else if let Some(v)=row.strip_prefix("CAROUSEL_SOUNDS ") {(5,v)} else {return None;};
             Some(slot_ui::MenuSwitch{id:self.page_key()*16+id,on:value=="On",y:slot_ui::expressive::ROW_TOP+6.0+(i-first) as f32*slot_ui::QUICK_PITCH})
         }).collect()
     }
@@ -608,7 +616,7 @@ impl Manager {
         }
         lines.push(
             if self.page == Page::Home
-                && (self.selected == self.disconnect_row() || self.selected == self.pause_row() || self.volume_selected()
+                && (self.selected == self.disconnect_row() || self.selected == self.pause_row() || self.selected == self.carousel_row() || self.volume_selected()
                     || (self.bluetooth_available && self.selected == 1))
             {
                 "B Back · Change"
@@ -989,10 +997,11 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
             .or_else(|| label.strip_prefix("VOLUME ").map(|v| ("Volume", v)))
             .or_else(|| label.strip_prefix("PAUSE_DISCONNECT ").map(|v| ("Pause on disconnect", v)))
             .or_else(|| label.strip_prefix("BLUETOOTH ").map(|v| ("Bluetooth", v)))
+            .or_else(|| label.strip_prefix("CAROUSEL_SOUNDS ").map(|v| ("Carousel sounds", v)))
         {
             let name = slot_ui::quick_value_face(name, highlight);
             blit(&mut rgba, &name, slot_ui::QUICK_LABEL_X as u32 - slot_ui::MENU_PAD, top);
-            if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") {
+            if label.starts_with("BLUETOOTH ") || label.starts_with("PAUSE_DISCONNECT ") || label.starts_with("CAROUSEL_SOUNDS ") {
                 if !switches {continue;}
                 let switch = slot_ui::toggle_face(value == "On", highlight);
                 let x = screen_w - slot_ui::QUICK_EDGE as u32 + slot_ui::MENU_PAD - switch.w;
@@ -1163,6 +1172,7 @@ mod menu_tests {
             disconnect_volume: 0,
             current_volume:50,
             pause_on_disconnect: false,
+            carousel_sounds: true,
             page: Page::Home,
             stack: Vec::new(),
             usb_devices: Vec::new(),
@@ -1372,7 +1382,8 @@ mod menu_tests {
                 "ACTIVE SPEAKER_DEVICE Internal speaker",
                 "USB_DEVICE AB13X Audio",
                 "DISCONNECT 0%",
-                "PAUSE_DISCONNECT Off"
+                "PAUSE_DISCONNECT Off",
+                "CAROUSEL_SOUNDS On"
             ]
         );
         m.observe_output(Some("plughw:CARD=Audio,DEV=0"), true);
@@ -1477,7 +1488,8 @@ mod menu_tests {
                 "DEVICE WF-C510",
                 "Pair audio device",
                 "DISCONNECT 0%",
-                "PAUSE_DISCONNECT Off"
+                "PAUSE_DISCONNECT Off",
+                "CAROUSEL_SOUNDS On"
             ]
         );
         assert!(m.lines()[0].is_empty());
@@ -1629,7 +1641,7 @@ mod menu_tests {
         let mut m = Manager::new(root.path().into(), false);
         assert_eq!(
             m.rows(),
-            vec!["VOLUME 50%","ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off"]
+            vec!["VOLUME 50%","ACTIVE SPEAKER_DEVICE Internal speaker", "DISCONNECT 0%", "PAUSE_DISCONNECT Off", "CAROUSEL_SOUNDS On"]
         );
         assert!(m.pending.is_none());
         m.selected = m.disconnect_row();

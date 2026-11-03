@@ -76,6 +76,10 @@ In Sound, set **Volume on disconnect** to choose the volume used after Bluetooth
 
 If wired headphones are plugged in when Bluetooth disconnects, the chosen level applies to those headphones. Otherwise it applies to the speaker.
 
+## Carousel sounds
+
+**Sound → Carousel sounds** plays or silences the clicks when moving between games. This setting is saved across restarts.
+
 ## Pause on disconnect
 
 Turn on **Sound → Pause on disconnect** to pause when the active headphones or USB audio device disconnects. It is off by default. Reconnecting does not resume the game: choose Resume yourself. Kid mode opens the kid menu.
@@ -101,3 +105,7 @@ Intentional output changes do not trigger this pause, and link play keeps runnin
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Kid mode](KID-MODE.md) · [Sleep & power](POWER-OPTIONS.md)
+
+Choosing an output in Sound restores that output's saved volume and mute state. **Volume on disconnect**
+applies to an unexpected Bluetooth connection loss, headphone unplug or USB removal; manually choosing
+another output does not apply the disconnect volume.

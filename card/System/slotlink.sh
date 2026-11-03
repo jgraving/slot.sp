@@ -195,8 +195,8 @@ link_warm() {
 }
 
 case "${1:-} ${2:-}" in
-"link host") link_host ;;
-"link join") link_join ;;
+"link host") /bin/sh "$(dirname "$0")/slotwifi.sh" down; link_host ;;
+"link join") /bin/sh "$(dirname "$0")/slotwifi.sh" down; link_join ;;
 "link down") link_down ;;
 "link warm") link_warm ;;
 "link cool") exit 0 ;;

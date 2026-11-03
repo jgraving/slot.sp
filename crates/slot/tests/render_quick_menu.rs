@@ -373,7 +373,7 @@ fn the_general_page_renders() {
     }
     composed(&mut f, &mut c, "main");
     tap(&mut f, &mut input, Btn::A);
-    assert_eq!(f.app().quick_menu(), Some(QuickRow::Theme));
+    assert_eq!(f.app().quick_menu(), Some(QuickRow::SecurityPin));
     composed(&mut f, &mut c, "general");
     for _ in 0..QuickRow::DateTime.position(&f.app().hidden_rows()) {
         tap(&mut f, &mut input, Btn::Down);

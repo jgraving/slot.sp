@@ -31,7 +31,7 @@ https://anbernic.com/products/rg-sp. They are not colorimeter measurements.
 
 ## Settings
 
-General → Shell Color cycles Graphite, Platinum, Pearl Blue and Pearl Pink.
+Display → Shell Color cycles Graphite, Platinum, Pearl Blue and Pearl Pink.
 It updates the carousel housing immediately and the shutdown switch uses the
 same saved selection. Platinum is a cool silvery grey with preserved edge relief.
 Old automatic selections resolve to their previous concrete finish on boot;
@@ -229,7 +229,7 @@ wraps with the existing navigation and displays a proportional scrollbar when
 needed. Button artwork is uniformly downsampled to 24px; its text is rendered at
 native size. Back/Resume stays left and Change/Select stays right, 12px above
 the housing, matching Sound. Core picker and link hints use this same height.
-All four existing colors remain under General → Shell Color; selection, theme
+All four existing colors remain under Display → Shell Color; selection, theme
 independence and persistence are exercised in app tests. Graphite is now
 RGB 40/43/49. Paint grain is area-filtered from 128px to 43px and reduced in
 contrast for a finer real-world scale on both housing and power switch.

@@ -157,7 +157,7 @@ impl Policy {
                 _ => u64::from(p.minutes) * 60,
             };
         }
-        if p.active && !dir.join("code").is_file() {
+        if p.active && !dir.join("code").is_file() && !(dir.join("use-device-pin").is_file() && crate::network_vault::vault_path(root).is_file()) {
             return Err(bad());
         }
         Ok(p)

@@ -33,7 +33,7 @@ Favorites contains every game you star. Sort it by name, total recorded playtime
 
 ### Does Light mode change at night?
 
-The menu theme and display presets are separate. **General → UI theme** selects Light or Dark. **Screen → Night mode** manages brightness and screen warmth, with optional day and night start times. See [Day & night](features/night-display.md).
+The menu theme and display presets are separate. **Display → UI theme** selects Light or Dark. **Display → Night mode** manages brightness and screen warmth, with optional day and night start times. See [Day & night](features/night-display.md).
 
 ### Can I change settings during a game?
 
@@ -45,7 +45,7 @@ Yes, on supported handhelds. Bluetooth, USB audio, wired headphones and the spea
 
 ### What does kid mode change?
 
-Children see only approved games in the usual system, Favorites and Recents carousels. Set a daily allowance, session timer or bedtime, plus a maximum volume. A four-button parent code protects the settings. The kid menu still lets children resume or leave a game and adjust brightness and volume within the limit. See [Kid mode](features/kid-mode.md).
+Children see only approved games in the usual system, Favorites and Recents carousels. Set a daily allowance, session timer or bedtime, plus a maximum volume. A separate four-button parent code or the shared device PIN protects the settings. The kid menu still lets children resume or leave a game and adjust brightness and volume within the limit. See [Kid mode](features/kid-mode.md).
 
 ### Can I change the buttons?
 

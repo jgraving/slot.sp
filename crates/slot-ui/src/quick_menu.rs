@@ -117,6 +117,9 @@ pub enum QuickRow {
     CarouselMotion,
     Scaling,
     FrameBlending,
+    Wifi,
+    Achievements,
+    SecurityPin,
 }
 
 impl QuickRow {
@@ -126,7 +129,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 106] = [
+    pub const ALL: [QuickRow; 109] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -233,6 +236,9 @@ impl QuickRow {
         QuickRow::CarouselMotion,
         QuickRow::Scaling,
         QuickRow::FrameBlending,
+        QuickRow::Wifi,
+        QuickRow::Achievements,
+        QuickRow::SecurityPin,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -243,30 +249,27 @@ impl QuickRow {
         QuickRow::Power,
         QuickRow::Controls,
         QuickRow::Kids,
-        QuickRow::About,
+        QuickRow::Wifi,
     ];
 
-    pub const POWER: [QuickRow; 4] = [
+    pub const POWER: [QuickRow; 5] = [
         QuickRow::LidClose,
         QuickRow::SleepTimeout,
+        QuickRow::BootAnimation,
         QuickRow::SleepNow,
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 12] = [
-        QuickRow::Wallpaper,
-        QuickRow::WallpaperTint,
-        QuickRow::ShellColour,
-        QuickRow::Theme,
+    pub const GENERAL: [QuickRow; 6] = [
+        QuickRow::SecurityPin,
         QuickRow::Recents,
-        QuickRow::ShowTitles,
         QuickRow::FavoriteSort,
-        QuickRow::BootAnimation,
-        QuickRow::CarouselSounds,
-        QuickRow::CarouselMotion,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
+        QuickRow::About,
     ];
+
+    pub const SOUND_OPTIONS: [QuickRow; 1] = [QuickRow::CarouselSounds];
 
     pub const CONTROL_PAGES: [QuickRow; 4] = [
         QuickRow::ControlsShelf,
@@ -315,10 +318,16 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 6] = [
+    pub const SCREEN: [QuickRow; 12] = [
         QuickRow::Brightness,
         QuickRow::BlueLight,
         QuickRow::DisplaySchedule,
+        QuickRow::Theme,
+        QuickRow::Wallpaper,
+        QuickRow::WallpaperTint,
+        QuickRow::ShellColour,
+        QuickRow::ShowTitles,
+        QuickRow::CarouselMotion,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -345,7 +354,8 @@ impl QuickRow {
         QuickRow::GbBezel,
     ];
 
-    pub const GAME: [QuickRow; 8] = [
+    pub const GAME: [QuickRow; 9] = [
+        QuickRow::Achievements,
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
@@ -383,10 +393,13 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
+            QuickRow::SecurityPin => &QuickRow::GENERAL,
+            QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
+            QuickRow::Achievements => &QuickRow::GAME,
             QuickRow::LidClose
             | QuickRow::SleepTimeout
             | QuickRow::SleepNow
-            | QuickRow::ShutDown => &QuickRow::POWER,
+            | QuickRow::ShutDown | QuickRow::BootAnimation => &QuickRow::POWER,
             QuickRow::ScreenGeneral
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
@@ -412,16 +425,11 @@ impl QuickRow {
             | QuickRow::LeftStick
             | QuickRow::AutoLoad
             | QuickRow::EjectSave => &QuickRow::GAME,
-            QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
-            | QuickRow::WallpaperTint
-            | QuickRow::DateTime
-            | QuickRow::ShellColour
-            | QuickRow::Theme
-            | QuickRow::Recents
-            | QuickRow::ShowTitles
-            | QuickRow::FavoriteSort
-            | QuickRow::BootAnimation
-            | QuickRow::CarouselSounds => &QuickRow::GENERAL,
+            QuickRow::Wallpaper | QuickRow::WallpaperTint | QuickRow::ShellColour
+            | QuickRow::Theme | QuickRow::ShowTitles
+            | QuickRow::CarouselMotion => &QuickRow::SCREEN,
+            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime
+            | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -459,12 +467,13 @@ impl QuickRow {
             QuickRow::GbaShader => Some(QuickRow::ScreenGba),
             QuickRow::GbcShader => Some(QuickRow::ScreenGbc),
             QuickRow::GbShader => Some(QuickRow::ScreenGb),
-            QuickRow::FastForward => Some(QuickRow::Game),
+            QuickRow::Achievements => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
-            QuickRow::Wallpaper => Some(QuickRow::General),
+            QuickRow::SecurityPin => Some(QuickRow::General),
+            QuickRow::CarouselSounds => Some(QuickRow::Bluetooth),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
             _ => None,
@@ -544,16 +553,19 @@ impl QuickRow {
             QuickRow::ShutDown => "Power Off",
             QuickRow::FastForward => "Fast Forward",
             QuickRow::FastForwardSound => "Fast Forward Sound",
-            QuickRow::Screen => "Screen",
+            QuickRow::Screen => "Display",
             QuickRow::Rumble => "Rumble",
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
-            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp",
+            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp.",
             QuickRow::DateTime => "Date & Time",
             QuickRow::ClockFormat => "Clock format",
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
+            QuickRow::Wifi => "Network",
+            QuickRow::Achievements => "RetroAchievements",
+            QuickRow::SecurityPin => "Security PIN",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -652,6 +664,9 @@ impl QuickRow {
                 | QuickRow::Bluetooth
                 | QuickRow::PlaySound
                 | QuickRow::About
+                | QuickRow::Wifi
+                | QuickRow::Achievements
+                | QuickRow::SecurityPin
                 | QuickRow::Reference
                 | QuickRow::PlayReference
                 | QuickRow::DisplaySchedule
@@ -1338,6 +1353,21 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        10 => vec![with_hint(button_face(ButtonLegend::Select), "Delete", hint, true)],
+        11 => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_pair(ButtonLegend::Left,ButtonLegend::Right), "Method", hint, false),
+            with_hint(button_face(ButtonLegend::A), "Set", hint, false),
+        ],
+        9 => vec![
+            with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
+            with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
+        ],
+        8 => vec![
+            with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
+            with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
+            with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
+        ],
         7 => vec![with_hint(button_face(ButtonLegend::B), "Back", hint, true)],
         6 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
@@ -1387,6 +1417,38 @@ pub fn parent_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], se
 }
 pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32) -> UndoFace {
     parent_settings_face_render(canvas,rows,selected,footer,status,reserve,false)
+}
+/// Network rows reserve a signal icon and preserve the SSID's exact case.
+pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, first_network: usize, signals: &[u8]) -> UndoFace {
+    let mut labels = rows.to_vec();
+    for row in labels.iter_mut().skip(first_network) { row.0.clear(); }
+    let mut face = parent_settings_face_animated_on(canvas, &labels, selected, 0, "", 0.0);
+    let visible = rows.len().min(QUICK_VISIBLE);
+    let start = selected.saturating_sub(visible/2).min(rows.len().saturating_sub(visible));
+    for (i, (name, value, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network) {
+        let lit=i==selected; let ink=if lit {MENU_INK}else{DIM_INK};
+        let y=crate::expressive::ROW_TOP+(i-start) as f32*QUICK_PITCH+TYPE_DROP;
+        let icon=wifi_signal_face(signals.get(i-first_network).copied().unwrap_or(1),ink);
+        parent_blit(&mut face,&icon,QUICK_LABEL_X,y+6.0);
+        if let Some(font)=text::font(if lit {text::Role::Focus}else{text::Role::Menu}) {
+            let reserved=quick_value_face(value,lit).w as f32;
+            let width=(canvas.w-2.0*QUICK_EDGE-34.0-reserved-16.0).max(80.0);
+            let layout=text::fit_preserving_case(font,name,width,1,26.0,26.0);
+            let w=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking)).ceil() as u32+2*MENU_PAD;
+            let mut label=UndoFace{rgba:vec![0;(w*MENU_H*4)as usize],w,h:MENU_H};
+            text::draw_centred(&mut label.rgba,w,MENU_H,&layout,ink);
+            parent_blit(&mut face,&label,QUICK_LABEL_X+34.0-MENU_PAD as f32,y);
+        }
+    }
+    face
+}
+pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
+    let mut paths=String::from(r#"<circle cx="14" cy="24" r="1.9"/>"#);
+    for (level,path) in [(1,"M10 18.6Q14 15.2 18 18.6"),(2,"M6 13.2Q14 6.6 22 13.2"),(3,"M2 7.5Q14-2 26 7.5")] {
+        if bars>=level {paths.push_str(&format!(r#"<path d="{path}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>"#));}
+    }
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}">{paths}</g></svg>"##,ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);
+    UndoFace{rgba:crate::art::render_svg(&svg,28,28).expect("Wi-Fi signal"),w:28,h:28}
 }
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;
@@ -1473,20 +1535,12 @@ pub fn kid_time_text(seconds: u64) -> String {
 }
 
 /// One quiet line of remaining time and a bar, above the native menu footer.
-pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
-    let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
-    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,20.0,20.0);
-    let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
-    let (w,h)=((width.ceil() as u32+40).max(300),36);
-    let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
-    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
-    text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
-    let span=(w-40) as f32;
-    crate::expressive::raster_round(&mut face,20.0,27.0,span,5.0,2.5,[0.35,0.39,0.42,1.0]);
-    let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
-    if fraction>0.0 {crate::expressive::raster_round(&mut face,20.0,27.0,span*fraction,5.0,2.5,crate::expressive::ACCENT);}
-    crate::expressive::raster_round(&mut face,18.5+span*fraction,24.0,3.0,11.0,1.0,[0.96,0.96,0.94,1.0]);
-    face
+pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {kid_time_meter_on(seconds,budget,false)}
+pub fn kid_time_meter_on(seconds: u64, budget: u64, light: bool) -> UndoFace {
+    let label=kid_time_text(seconds);
+    let font=text::font(text::Role::Value).expect("time meter font");
+    let width=(text::line_width(font,&label,20.0,0.0).ceil()as u32+80).clamp(240,520);
+    crate::filled_meter_face(&label,None,seconds.min(budget)as f32/budget.max(1)as f32,light,width,44)
 }
 
 fn parent_label_face(label: &str, lit: bool, has_value: bool, width: u32) -> UndoFace {
