@@ -43,9 +43,12 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     assert(Math.abs(sizes.height-sizes.width*1.25)<1,`${label}: preserve the complete 4:5 render`);
     assert(Math.abs(sizes.width-sizes.imageWidth)<1&&Math.abs(sizes.height-sizes.imageHeight)<1,`${label}: render must fit without cropping`);
   }
-  const waitScreen=(page,state,cart)=>page.waitForFunction(([state,cart])=>{
-    const el=document.getElementById('hero-screen');return el.dataset.state===state&&(cart===undefined||el.dataset.cart===String(cart));
-  },[state,cart]);
+  async function waitScreen(page,state,cart) {
+    try {await page.waitForFunction(([state,cart])=>{
+      const el=document.getElementById('hero-screen');return el.dataset.state===state&&(cart===undefined||el.dataset.cart===String(cart));
+    },[state,cart]);}
+    catch(error){console.log('Screen state mismatch',{expected:{state,cart},actual:await page.locator('#hero-screen').evaluate(el=>({...el.dataset}))});throw error;}
+  }
   const keyButton=(page,key)=>page.locator(`[data-hardware=${key}]`);
   const holdMenu=async page=>{await keyButton(page,'menu').click({delay:1100});};
   async function silhouette(page,label) {
@@ -84,11 +87,17 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
     await silhouette(page,`${label}-front`);
   }
   async function manualChecks(page) {
-    // Start from the seated cartridge reached by autoplay. The first button
-    // claims control even if its OS action is outside this menu-free preview.
+    // The first button claims control even if its OS action is outside this
+    // menu-free preview. Allow an in-flight demo clip to reach its endpoint;
+    // software WebGL can advance the demo while automation prepares a click.
     await keyButton(page,'b').click();
     assert.equal(await page.locator('#hero-screen').getAttribute('data-demo'),'false');
-    await page.waitForTimeout(1600);await waitScreen(page,'seated',1);
+    await page.waitForFunction(()=>{const s=document.getElementById('hero-screen').dataset;return ['shelf','seated'].includes(s.state)&&s.cart===s.target;});
+    const stopped=await page.locator('#hero-screen').evaluate(el=>({state:el.dataset.state,cart:Number(el.dataset.cart)}));
+    await page.waitForTimeout(1600);await waitScreen(page,stopped.state,stopped.cart);
+    if(stopped.state==='seated'){await holdMenu(page);await waitScreen(page,'shelf',stopped.cart);}
+    for(let cart=stopped.cart;cart!==1;cart=(cart+1)%5){await keyButton(page,'right').click();await waitScreen(page,'shelf',(cart+1)%5);}
+    await keyButton(page,'a').click();await waitScreen(page,'seated',1);
     await keyButton(page,'left').click();await keyButton(page,'b').click();
     await keyButton(page,'menu').click();await page.waitForTimeout(250);
     await waitScreen(page,'seated',1);
@@ -116,8 +125,8 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
     const before=await boxes(page);
     await keyButton(page,'right').click();await page.locator('.model-fold').click();
     await page.locator('[data-pose=closed]').waitFor();
-    const stopped=await page.locator('#hero-preview').evaluate(v=>v.currentTime);
-    await page.waitForTimeout(300);assert.equal(await page.locator('#hero-preview').evaluate(v=>v.currentTime),stopped);
+    const pausedTime=await page.locator('#hero-preview').evaluate(v=>v.currentTime);
+    await page.waitForTimeout(300);assert.equal(await page.locator('#hero-preview').evaluate(v=>v.currentTime),pausedTime);
     await page.locator('.model-fold').click();await page.locator('[data-pose=open]').waitFor();await waitScreen(page,'shelf',3);
     stable(before,await boxes(page),'Manual controls and lid');
     assert.equal(await page.locator('#hero-screen').getAttribute('data-boots'),'1');
