@@ -107,7 +107,9 @@ pub fn icon_face(icon: Icon, px: f32, colour: [u8; 3]) -> CartFace {
     if icon==Icon::Gamepad {
         let (w,h)=icon_box(px);
         let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="#{:02x}{:02x}{:02x}">{GAMEPAD_PATH}</g></svg>"##,colour[0],colour[1],colour[2]);
-        return CartFace{rgba:crate::art::render_svg(&svg,w,h).expect("controller icon"),w,h};
+        let mut rgba=crate::art::render_svg(&svg,w,h).expect("controller icon");
+        for pixel in rgba.chunks_exact_mut(4) {pixel[..3].copy_from_slice(&colour);}
+        return CartFace{rgba,w,h};
     }
     let Some(r) = raster(icon, px) else {
         return CartFace { rgba: Vec::new(), w: 0, h: 0 };

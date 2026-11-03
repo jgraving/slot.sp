@@ -357,9 +357,10 @@ pub(crate) fn run(
             continue;
         }
         if should_rescan(rescanned.elapsed(), library.len()) {
-            library = crate::library::pending(&root, &dir, now());
-            library_total = library.len();
-            library_failed = 0;
+            let pending=crate::library::pending(&root,&dir,now());
+            if !pending.is_empty() {
+                library=pending;library_total=library.len();library_failed=0;
+            }
             badges.scan();
             rescanned = Instant::now();
         }

@@ -251,9 +251,10 @@ mod status_tests {
             let canvas=Canvas{w:width,h:480.0};let battery=Some(Battery{percent:100,charge:slot_power::Charge::Charging});let mut draws=vec![];
             draw_corner_audio(canvas,battery,percent,Some(TexId::from_raw(1)),Some(TexId::from_raw(2)),&mut draws);
             draw_corner_indicator(canvas,battery,percent,TexId::from_raw(3),2,&mut draws);
-            draw_corner_kid(canvas,battery,percent,TexId::from_raw(4),3,&mut draws);
+            draw_corner_indicator(canvas,battery,percent,TexId::from_raw(4),3,&mut draws);
+            draw_corner_kid(canvas,battery,percent,TexId::from_raw(5),4,&mut draws);
             let boxes:Vec<_>=draws.iter().filter_map(|d|if let Draw::Tex{x,y,w,h,..}=d {Some((*x,*y,*w,*h))}else{None}).collect();
-            assert_eq!(boxes.len(),4);
+            assert_eq!(boxes.len(),5);
             for pair in boxes.windows(2) {assert!(pair[1].0+pair[1].2<=pair[0].0);assert_eq!(pair[1].1,pair[0].1);}
             assert!(boxes.iter().all(|(x,y,w,h)|*x>=16.0&&x+w<width-16.0&&*y>=0.0&&y+h<=PLATE_H));
         }}

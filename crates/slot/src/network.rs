@@ -95,13 +95,13 @@ impl Menu {
     fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("Set a PIN to encrypt credentials");}
     pub fn open(&mut self) { self.open_wifi(); }
     pub fn open_wifi(&mut self) {
-        self.visible = true; self.page = Page::Wifi; self.selected = 0; self.changed();
+        self.visible = true; self.page = Page::Wifi; self.selected = 0; self.notice.clear(); self.changed();
     }
     pub fn open_achievements(&mut self) {
-        self.visible = true; self.page = Page::Achievements; self.selected = 0; self.changed();
+        self.visible = true; self.page = Page::Achievements; self.selected = 0; self.notice.clear(); self.changed();
     }
     pub fn open_security(&mut self) {
-        self.visible = true; self.page = Page::Security; self.selected = 0;
+        self.visible = true; self.page = Page::Security; self.selected = 0; self.notice.clear();
         self.creating_method = self.method.unwrap_or(Method::Buttons); self.changed();
     }
     fn credentials_ready(&self) -> bool {self.encrypted && !self.locked && !self.upgrade_pin && !self.migrating_plain}
@@ -180,7 +180,7 @@ impl Menu {
     }
     fn resume_unlocked(&mut self) {
         if self.credentials_ready() {self.start_tracking();}
-        self.say("Credentials unlocked");
+        self.notice.clear(); self.changed();
         if self.parent_unlock {self.parent_unlock=false;self.parent_authenticated=true;self.visible=false;return;}
         match self.after_unlock.take() {
             Some(AfterUnlock::Reconnect) => self.reconnect(),
@@ -706,7 +706,8 @@ mod tests {
         assert!(menu.keyboard.is_none());wait(&mut menu);
         menu.input(Action::QuickMenu);
 
-        menu.last_wifi.networks[0].ssid = "Other".into();
+        menu.last_wifi.networks = vec![wifi::Network {ssid:"Other".into(),signal:-50,security:wifi::Security::Personal,encryption:"WPA2".into(),saved:false}];
+        menu.open_wifi();menu.selected = 4;
         menu.input(Action::GbaDown(Btn::A));
         menu.accept(Field::WifiPassword, Zeroizing::new("other-secret".into()));
         assert_eq!(menu.secrets.ssid, "Other");
@@ -941,4 +942,31 @@ mod tests {
         submit_code(&mut m,&CODE);submit_code(&mut m,&CODE);wait(&mut m);
         assert!(!m.upgrade_pin && m.wifi_on);
     }
+    #[test]
+    fn opening_network_does_not_replay_a_previous_unlock_notice() {
+        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());
+        m.say("Credentials unlocked");m.open_wifi();assert!(m.notice_text().is_none());
+        m.say("Credentials unlocked");m.open_achievements();assert!(m.notice_text().is_none());
+    }
+
+    #[test]
+    fn failed_plaintext_migration_preserves_both_data_and_network_gate() {
+        let root=tempfile::tempdir().unwrap();let mut old=Secrets::default();old.token="migration-token".into();
+        write_plain(root.path(),&old).unwrap();
+        let blocked=root.path().join("Config/.network-credentials.json.123.4.tmp");std::fs::create_dir(&blocked).unwrap();
+        let mut m=Menu::new(root.path().into());pin(&mut m);
+        assert!(plain_path(root.path()).is_file());assert!(m.migrating_plain && !m.credentials_ready());
+        assert!(!m.wifi_on && m.service.is_none());
+        let (_,saved)=network_vault::test_decrypt(root.path(),"acgjdi");assert_eq!(saved.token,"migration-token");
+        assert!(m.notice_text().unwrap().contains("Could not delete"));
+    }
+    #[test]
+    fn failed_vault_creation_never_deletes_the_old_plaintext() {
+        let root=tempfile::tempdir().unwrap();let mut old=Secrets::default();old.token="keep-token".into();write_plain(root.path(),&old).unwrap();
+        std::fs::create_dir(network_vault::vault_path(root.path())).unwrap();
+        let mut m=Menu::new(root.path().into());m.locked=false;m.open_security();m.selected=1;m.input(Action::GbaDown(Btn::A));
+        submit_code(&mut m,&CODE);submit_code(&mut m,&CODE);wait(&mut m);
+        assert_eq!(read_plain(root.path()).unwrap().token,"keep-token");assert!(!m.wifi_on && m.service.is_none());
+    }
+
 }
