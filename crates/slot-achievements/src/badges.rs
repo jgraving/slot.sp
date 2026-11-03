@@ -34,7 +34,7 @@ pub fn load_badge(path: &Path) -> Option<BadgeImage> {
     decode(&bytes)
 }
 
-fn decode(bytes: &[u8]) -> Option<BadgeImage> {
+pub(crate) fn decode(bytes: &[u8]) -> Option<BadgeImage> {
     if bytes.len() as u64 > MAX_BYTES {
         return None;
     }
@@ -76,6 +76,7 @@ pub(crate) struct Queue {
     pending: VecDeque<String>,
     retry: Instant,
     pub waiting: bool,
+    retry_delay:u64,
 }
 
 impl Queue {
@@ -86,7 +87,7 @@ impl Queue {
             known: BTreeSet::new(),
             pending: VecDeque::new(),
             retry: Instant::now(),
-            waiting: false,
+            waiting: false,retry_delay:30,
         };
         queue.scan();
         queue
@@ -126,6 +127,7 @@ impl Queue {
     pub fn counts(&self) -> (usize, usize) {
         (self.known.len().saturating_sub(self.pending.len()), self.known.len())
     }
+    pub fn retry_seconds(&self)->u64 {if self.waiting {self.retry.saturating_duration_since(Instant::now()).as_secs()}else{0}}
     pub fn percent(&self) -> u8 {
         if self.known.is_empty() {
             return 100;
@@ -158,6 +160,7 @@ impl Queue {
             })
         };
         if result.is_ok() {
+            self.waiting=false;self.retry_delay=30;self.retry=Instant::now()+Duration::from_secs(3);
             self.names.remove(&name);
             if self.pending.is_empty() {
                 self.waiting = false;
@@ -165,7 +168,8 @@ impl Queue {
         } else {
             self.pending.push_back(name);
             self.waiting = true;
-            self.retry = Instant::now() + Duration::from_secs(30);
+            self.retry = Instant::now() + Duration::from_secs(self.retry_delay);
+            self.retry_delay=(self.retry_delay*2).min(300);
         }
     }
 }
@@ -174,6 +178,18 @@ impl Queue {
 mod tests {
     use super::*;
 
+    #[test]
+    fn failed_artwork_backs_off_without_repeated_http_calls() {
+        struct Failing(usize);
+        impl Transport for Failing {
+            fn call(&mut self,_:&[(&str,String)])->Result<serde_json::Value,Failure>{panic!("artwork must not reauthenticate")}
+            fn badge(&mut self,_:&str)->Result<Vec<u8>,Failure>{self.0+=1;Err(Failure::Network)}
+        }
+        let dir=tempfile::tempdir().unwrap();let mut q=Queue::new(dir.path());q.pending.push_back("25000".into());q.known.insert("25000".into());
+        let mut http=Failing(0);q.step(&mut http);assert_eq!(http.0,1);assert!(q.waiting);assert!(q.retry_seconds()>=29);
+        for _ in 0..100 {q.step(&mut http);}assert_eq!(http.0,1);
+        q.retry=Instant::now();q.step(&mut http);assert_eq!(http.0,2);assert!(q.retry_seconds()>=59);
+    }
     #[test]
     #[ignore = "fetches one public RA badge; no account or award request"]
     fn public_ra_badge_endpoint() {

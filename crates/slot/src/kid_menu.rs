@@ -31,6 +31,7 @@ pub struct Menu {
     first: Vec<u8>,
     time_selected: usize,
     rejected: Option<f32>,
+    minimum_rejected: Option<f32>,
     repeat: Option<(Btn, f32)>,
     start_after_code: bool,
     use_device_pin: bool,
@@ -68,7 +69,7 @@ impl Menu {
             code: Vec::new(),
             first: Vec::new(),
             time_selected: 0,
-            rejected: None,
+            rejected: None,minimum_rejected:None,
             repeat: None,
             start_after_code: false,use_device_pin,device_pin_attempted:false,switch_to_separate:false,
             status: if page == Page::Unlock && !use_device_pin {
@@ -150,6 +151,10 @@ impl Menu {
         if self.use_device_pin && self.page==Page::Unlock && !self.device_pin_attempted {self.device_pin_attempted=true;true}else{false}
     }
     pub fn authorize_device_pin(&mut self) {self.page=Page::Home;self.clear_code();self.status.clear();self.face=None;}
+    pub fn cancel_device_pin(&mut self) {
+        self.clear_code();self.status.clear();self.face=None;
+        if self.draft.active {self.page=Page::ChildSettings;self.selected=3;}else{self.visible=false;}
+    }
     fn switch_parent_method(&mut self) {
         let marker=self.root.join("Config/kids/use-device-pin");
         if self.use_device_pin {
@@ -157,7 +162,7 @@ impl Menu {
             if std::fs::remove_file(marker).is_err() {self.status="Could not change parent code mode".into();return;}
             self.use_device_pin=false;
         } else {
-            if !crate::network_vault::vault_path(&self.root).exists() {self.status="Set a Security PIN in General first".into();return;}
+            if !crate::network_vault::vault_path(&self.root).exists() {self.status="Set a Device code in General first".into();return;}
             if std::fs::create_dir_all(Policy::directory(&self.root)).and_then(|_|slot_store::atomic_write(&marker,b"1\n")).is_err() {self.status="Could not change parent code mode".into();return;}
             self.use_device_pin=true;
         }
@@ -171,9 +176,9 @@ impl Menu {
     }
     fn code_instruction(&self) -> &str {
         match self.page {
-            Page::Set => "Choose a PIN",
-            Page::Confirm => "Repeat your PIN",
-            Page::Unlock => "Enter your PIN",
+            Page::Set => "Choose a code",
+            Page::Confirm => "Repeat your code",
+            Page::Unlock => "Enter your code",
             _ => "",
         }
     }
@@ -219,7 +224,7 @@ impl Menu {
             };
             let rows = [
                 format!("Kid mode {}", if self.draft.active { "On" } else { "Off" }),
-                format!("Parent code: {}",if self.use_device_pin {"Device PIN"}else{"Separate code"}),
+                format!("Parent code: {}",if self.use_device_pin {"Device code"}else{"Separate code"}),
                 self.draft.rule.label().to_string(), value,
                 format!("Volume limit {}%", self.draft.volume_limit),
             ];
@@ -331,7 +336,7 @@ impl Menu {
             let title=slot_ui::quick_heading_face(if self.page==Page::ChildSound{"Sound"}else{"Screen"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);return face;
         }
         if self.page==Page::Unlock && self.use_device_pin {
-            let mut face=settings_face(canvas,&[("Unlock with device PIN".into(),String::new(),false)],0,0,"",0.0);
+            let mut face=settings_face(canvas,&[("Unlock with device code".into(),String::new(),false)],0,0,"",0.0);
             let title=slot_ui::quick_heading_face("Parental controls");let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);return face;
         }
         if self.page == Page::Home {
@@ -341,7 +346,7 @@ impl Menu {
             } else { duration_label(self.draft.minutes) };
             let rows = vec![
                 ("Kid mode".into(), if self.draft.active { "On" } else { "Off" }.into(), true),
-                ("Parent code".into(),if self.use_device_pin {"Device PIN"}else{"Separate code"}.into(),true),
+                ("Parent code".into(),if self.use_device_pin {"Device code"}else{"Separate code"}.into(),true),
                 ("Play limit".into(), kind.into(), true),
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
@@ -369,8 +374,8 @@ impl Menu {
         let left = (face.w - title.w) / 2;
         blit(&mut face, &title, left, 0);
         if self.entering_code() {
-            face=slot_ui::masked_pin_face_on(canvas,"Parent code",self.code_instruction(),self.code.len(),1);
-            if self.code_offset()!=0 {
+            face=slot_ui::masked_pin_state_face_on(canvas,"Parent code",self.code_instruction(),self.code.len(),1,4,if self.minimum_rejected.is_some(){self.code_offset()}else{0});
+            if self.rejected.is_some() && self.code_offset()!=0 {
                 // Only the shared dot row shakes on a rejected separate code.
                 let shift=self.code_offset();let original=face.rgba.clone();
                 for y in 220..244 {for x in 0..face.w {let i=((y*face.w+x)*4)as usize;face.rgba[i..i+4].fill(0);let from=x as i32-shift;if (0..face.w as i32).contains(&from){let at=((y*face.w+from as u32)*4)as usize;face.rgba[i..i+4].copy_from_slice(&original[at..at+4]);}}}
@@ -379,12 +384,13 @@ impl Menu {
         face
     }
     pub fn code_offset(&self) -> i32 {
-        let Some(elapsed) = self.rejected else { return 0; };
+        let Some(elapsed) = self.rejected.or(self.minimum_rejected) else { return 0; };
         let u = (elapsed / 0.36).clamp(0.0, 1.0);
         ((u * std::f32::consts::TAU * 3.0).sin() * 10.0 * (1.0 - u)).round() as i32
     }
     pub fn stop_repeat(&mut self) { self.repeat = None; }
     pub fn update(&mut self, dt: f32) -> Option<Action> {
+        if let Some(elapsed)=&mut self.minimum_rejected {*elapsed+=dt.max(0.0);if *elapsed>=0.36 {self.minimum_rejected=None;}self.face=None;}
         if let Some(elapsed) = &mut self.rejected {
             *elapsed += dt.max(0.0);
             if *elapsed >= 0.36 {
@@ -632,7 +638,7 @@ impl Menu {
                     2 | 4 => self.input(Action::GbaDown(Btn::Right), wall),
                     3 => { self.time_selected = 0; self.page = Page::Time; },
                     1 => {
-                        if self.use_device_pin {self.status="Change the device PIN in General → Security PIN".into();return;}
+                        if self.use_device_pin {self.status="Change the device code in General → Device code".into();return;}
                         self.start_after_code = false;
                         self.page = Page::Set;
                         self.status.clear();
@@ -650,6 +656,7 @@ impl Menu {
             return;
         }
         if self.page == Page::Unlock && self.gate.remaining(Instant::now()) > 0 { return; }
+        if action==Action::GbaDown(Btn::Start) && self.code.len()<4 {self.minimum_rejected=Some(0.0);self.status="Use 4 presses".into();return;}
         let button = match action {
             Action::GbaDown(Btn::A) => Some(0),
             Action::GbaDown(Btn::B) => Some(1),
@@ -666,7 +673,7 @@ impl Menu {
             _ => None,
         };
         if let Some(button) = button {
-            self.status.clear();
+            self.status.clear();self.minimum_rejected=None;
             if self.code.len() < 4 {
                 self.code.push(button);
                 if self.code.len() == 4 { self.complete_code(wall); }

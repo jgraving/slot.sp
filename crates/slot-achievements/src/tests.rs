@@ -39,7 +39,7 @@ fn configured() -> tempfile::TempDir {
 }
 
 fn wait_for(mut condition: impl FnMut() -> bool) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     while !condition() {
         assert!(Instant::now() < deadline, "worker did not finish");
         std::thread::sleep(Duration::from_millis(2));
@@ -757,4 +757,14 @@ fn rewind_display_frames_do_not_unlock_an_achievement() {
         .unwrap()
         .unlocks
         .is_empty());
+}
+
+#[test]
+fn cached_games_still_count_after_worker_restart() {
+    let root=configured();let store=Store::open(root.path(),"Player").unwrap();
+    let rom=root.path().join("Games/GBA/Test.gba");std::fs::write(&rom,b"cached-count").unwrap();
+    let hash=library::hash(&store.dir,&rom).unwrap();
+    storage::write(&store.dir.join(format!("{hash}.json")),&(&game(),&std::collections::BTreeSet::<u32>::new())).unwrap();
+    library::checked(&store.dir,&rom,network::now());
+    let (total,pending)=library::scan(root.path(),&store.dir,network::now());assert_eq!(total,1);assert!(pending.is_empty());
 }

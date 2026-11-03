@@ -6,25 +6,25 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 
 | Tile | Use it for | Instructions |
 | :--- | :--- | :--- |
-| **General** | Recents, Favorites order, clock format, date/time, Security PIN and About. | [Clock & time](POWER-OPTIONS.md#set-the-clock) · [Security PIN](#security-pin) |
+| **General** | Recents, Favorites order, clock format, date/time, Device code and About. | [Clock & time](POWER-OPTIONS.md#set-the-clock) · [Device code](#device-code) |
 | **Display** | Brightness, screen warmth, night schedules, UI theme, wallpaper, SP color, game names and carousel motion, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
 | **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects, and toggle carousel sounds. | [Audio & headphones](BLUETOOTH.md) |
 | **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. RetroAchievements is the first entry. | [Playing & saving](PLAYING.md) |
 | **Power & lid** | Lid behavior, sleep, shutdown timer and startup animation. | [Sleep & power](POWER-OPTIONS.md) |
 | **Device controls** | Game buttons, carousel buttons, shortcuts and the on-device reference. | [Buttons & shortcuts](CONTROLS.md) |
-| **Parental controls** | Approved games, daily allowance, session timer or bedtime, maximum volume and either a separate parent code or the device PIN. | [Kid mode](KID-MODE.md) |
-| **Network** | Connect and scan networks after setting and unlocking the Security PIN. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
+| **Parental controls** | Approved games, daily allowance, session timer or bedtime, maximum volume and either a separate parent code or the device code. | [Kid mode](KID-MODE.md) |
+| **Network** | Connect and scan networks after setting and unlocking the Device code. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
 
 ![The complete settings home](previews/current/light/settings.png)
 
-## Security PIN
+## Device code
 
-**Security PIN** is first in **General**. Choose a button sequence of six or more presses (Start finishes setup) or a keyboard passphrase of at least twelve characters. Credentials are always encrypted. Wi-Fi and RetroAchievements stay disabled without a PIN; existing shorter PINs must be upgraded before network access. Six- and seven-button PINs get a short warning because longer unpredictable secrets are stronger.
+**Device code** is first in **General**. Choose a button sequence of six or more presses (Start finishes setup) or a keyboard passphrase of at least twelve characters. Credentials are always encrypted. Wi-Fi and RetroAchievements stay disabled without a code; existing shorter codes must be upgraded before network access. Six- and seven-button codes get a short warning because longer unpredictable secrets are stronger.
 
-**Startup access** can require the PIN to use the launcher or allow games while
+**Startup access** can require the code to use the launcher or allow games while
 credentials stay locked. Skipping optional startup unlock shows “Saved credentials are locked.” The SD card and games remain accessible; only credentials are encrypted.
-Parental controls can use this PIN or a separate four-button parent code.
-See [PIN setup, storage and reset](RETROACHIEVEMENTS.md#security-pin-and-saved-credentials).
+Parental controls can use this code or a separate four-button parent code.
+See [Code setup, storage and reset](RETROACHIEVEMENTS.md#device-code-and-saved-credentials).
 
 About is also under General; press <kbd>X</kbd> there to restart the launcher.
 
@@ -40,7 +40,7 @@ In kid mode, **Settings** opens four tiles: Sound, Screen, Buttons & shortcuts a
 
 ## Status icons and notices
 
-The battery indicator shows the percentage. A lightning bolt inside it means the charger is connected. A slashed speaker means the active output is muted or its volume is zero. Bluetooth and headphones icons show the audio connection. The Wi-Fi icon appears alongside them while connected. A controller marks background RetroAchievements work. Yellow triangle pills warn about short PINs. Wi-Fi and RetroAchievements require an encrypted vault and a PIN of at least six button presses (or a passphrase).
+The battery indicator shows the percentage. A lightning bolt inside it means the charger is connected. A slashed speaker means the active output is muted or its volume is zero. Bluetooth and headphones icons show the audio connection. The Wi-Fi icon appears alongside them while connected. A controller marks background RetroAchievements work. Yellow triangle pills warn about short codes. Wi-Fi and RetroAchievements require an encrypted vault and a code of at least six button presses (or a passphrase).
 
 Connecting a charger briefly shows a charging notice and plays a tone. Short notices also report audio connections, setting changes and errors. An error includes a next step, such as waking the headphones and trying again.
 

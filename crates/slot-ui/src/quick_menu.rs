@@ -565,7 +565,7 @@ impl QuickRow {
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
             QuickRow::Achievements => "RetroAchievements",
-            QuickRow::SecurityPin => "Security PIN",
+            QuickRow::SecurityPin => "Device code",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -1363,7 +1363,7 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
         ],
-        8 => vec![
+        8 | 12 => vec![
             with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
@@ -1508,7 +1508,8 @@ pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
 pub fn parent_footer_face_on(canvas: Canvas, page: u8, adjustable: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = UndoFace { rgba: vec![0; (width * OUT_H * 4) as usize], w: width, h: OUT_H };
-    let hints = parent_button_legends(page, MENU_INK);
+    let mut hints = parent_button_legends(page, MENU_INK);
+    if page==12 {if let Some(done)=hints.last_mut() {for pixel in done.rgba.chunks_exact_mut(4) {pixel[3]=(u16::from(pixel[3])*80/255)as u8;}}}
     parent_blit(&mut face, &hints[0], 16.0, LEGEND_Y);
     let right: Vec<_> = if page == 0 {
         vec![&hints[if adjustable { 1 } else { 2 }]]
@@ -1699,7 +1700,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
 
 pub(crate) fn clock_legend() -> UndoFace {
     let a = with_hint(button_face(ButtonLegend::A), "Edit", Some([246,244,239]), true);
-    let start = with_hint(button_face(ButtonLegend::Start), "Save", Some([246,244,239]), true);
+    let start = with_hint(button_face(ButtonLegend::Start), "Done", Some([246,244,239]), true);
     let w = a.w + start.w + 16;
     let mut rgba = vec![0; (w * MENU_HINT_H * 4) as usize];
     blit(&mut rgba, w, &a.rgba, a.w, a.h, 0, 0);

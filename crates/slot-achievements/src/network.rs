@@ -45,7 +45,7 @@ impl Http {
     pub(crate) fn new() -> Self {
         Self(
             ureq::Agent::config_builder()
-                .timeout_global(Some(Duration::from_secs(5)))
+                .timeout_global(Some(Duration::from_secs(15)))
                 .max_redirects(0)
                 .user_agent(concat!(
                     "slot/",
@@ -286,8 +286,7 @@ pub(crate) fn run(
     let mut delay = 30;
     let mut warned = false;
     let mut last_award = 0;
-    let mut library = crate::library::pending(&root, &dir, now());
-    let mut library_total = library.len();
+    let (mut library_total,mut library) = crate::library::scan(&root, &dir, now());
     let mut library_failed = 0usize;
     let mut problem = "";
     let mut rescanned = Instant::now();
@@ -342,7 +341,7 @@ pub(crate) fn run(
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
+                || active.as_ref().is_some_and(|game| !game.online),
             std::sync::atomic::Ordering::Release,
         );
         publish_detail(&status, verified, library_total, library.len(), library_failed,
@@ -357,10 +356,9 @@ pub(crate) fn run(
             continue;
         }
         if should_rescan(rescanned.elapsed(), library.len()) {
-            let pending=crate::library::pending(&root,&dir,now());
-            if !pending.is_empty() {
-                library=pending;library_total=library.len();library_failed=0;
-            }
+            let (total,pending)=crate::library::scan(&root,&dir,now());
+            library_total=total;
+            if !pending.is_empty() {library=pending;library_failed=0;}
             badges.scan();
             rescanned = Instant::now();
         }
@@ -510,7 +508,7 @@ pub(crate) fn run(
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
+                || active.as_ref().is_some_and(|game| !game.online),
             std::sync::atomic::Ordering::Release,
         );
         publish_detail(&status, verified, library_total, library.len(), library_failed,
@@ -531,10 +529,10 @@ pub(crate) fn run(
                 });
                 delay = 30;
                 warned = false;
-                next_attempt = Instant::now() + Duration::from_secs(1);
+                next_attempt = Instant::now() + Duration::from_secs(3);
             }
             Err(error) => {
-                problem = match error { Failure::Network => "Connection lost",
+                problem = match error { Failure::Network => "RA server unavailable",
                     Failure::Authentication => "Check username or password",
                     Failure::Rejected => "Server rejected a request",
                     Failure::Invalid => "Game data or storage error" };
@@ -544,7 +542,7 @@ pub(crate) fn run(
                     SyncStatus::Attention
                 });
                 // Reauthenticate after errors. No rejected or malformed response consumes an award.
-                verified = false;
+                if error==Failure::Authentication {verified=false;}
                 let quiet_offline = error == Failure::Network
                     && (active.as_ref().is_some_and(|g| g.ready)
                         || (active.is_none() && auth.is_some()));
@@ -576,6 +574,25 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    #[test]
+    #[ignore = "manual trusted-branch live-account smoke test"]
+    fn live_ra_read_only_smoke() {
+        use zeroize::Zeroize;
+        let username=std::env::var("RA_TEST_USERNAME").expect("RA_TEST_USERNAME is required");
+        let password=std::env::var("RA_TEST_PASSWORD").expect("RA_TEST_PASSWORD is required");
+        assert!(!username.is_empty() && !password.is_empty(),"RA test secrets are missing");
+        let mut config=Config{enabled:true,username,password,token:String::new()};
+        let mut http=Http::new();
+        let result=login(&mut http,&config,None);config.password.zeroize();
+        let Ok(mut auth)=result else {panic!("RA login failed (response and credentials withheld)");};
+        println!("RA login passed");
+        // Lookup only: no startsession, ping, or awardachievement requests.
+        let result=call(&mut http,&auth,"gameid",&[("m","00000000000000000000000000000000".into())]);
+        auth.token.zeroize();assert!(result.is_ok(),"RA game lookup failed (response withheld)");
+        println!("RA read-only game lookup passed");
+        let result=http.badge("25000");assert!(result.as_ref().ok().is_some_and(|b|crate::badges::decode(b).is_some()),"RA artwork download/decode failed");
+        println!("RA artwork download/decode passed");
+    }
     #[test]
     fn empty_session_unlock_lists_may_be_omitted() {
         assert!(unlocked(&json!({"Success":true})).unwrap().is_empty());
@@ -738,7 +755,7 @@ fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining:
         games_total: total, games_failed: failed, badges_done, badges_total,
         pending_awards: store.lock().unwrap().unlocks.values().filter(|u| !u.synced).count(),
         retry_seconds: if matches!(status.get(), SyncStatus::Offline | SyncStatus::Attention) {
-            next_attempt.saturating_duration_since(Instant::now()).as_secs()
+            if problem=="Artwork will retry" {badges.retry_seconds()}else{next_attempt.saturating_duration_since(Instant::now()).as_secs()}
         } else { 0 }, problem,
     };
     *status.detail.lock().unwrap() = detail;

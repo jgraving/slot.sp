@@ -45,7 +45,7 @@ Yes, on supported handhelds. Bluetooth, USB audio, wired headphones and the spea
 
 ### What does kid mode change?
 
-Children see only approved games in the usual system, Favorites and Recents carousels. Set a daily allowance, session timer or bedtime, plus a maximum volume. A separate four-button parent code or the shared device PIN protects the settings. The kid menu still lets children resume or leave a game and adjust brightness and volume within the limit. See [Kid mode](features/kid-mode.md).
+Children see only approved games in the usual system, Favorites and Recents carousels. Set a daily allowance, session timer or bedtime, plus a maximum volume. A separate four-button parent code or the shared device code protects the settings. The kid menu still lets children resume or leave a game and adjust brightness and volume within the limit. See [Kid mode](features/kid-mode.md).
 
 ### Can I change the buttons?
 

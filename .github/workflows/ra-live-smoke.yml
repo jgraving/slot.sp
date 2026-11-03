@@ -1,0 +1,25 @@
+name: RetroAchievements live smoke test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ra-live-smoke
+  cancel-in-progress: false
+jobs:
+  read-only:
+    if: github.repository == 'jgraving/slot.sp' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/fix/ra-background-progress' || github.ref == 'refs/heads/feat/fork-ota-time')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build smoke test before exposing account secrets
+        run: cargo test --locked -p slot-achievements --lib --no-run
+      - name: Authenticate and fetch game data and artwork (no awards)
+        env:
+          RA_TEST_USERNAME: ${{ secrets.RA_TEST_USERNAME }}
+          RA_TEST_PASSWORD: ${{ secrets.RA_TEST_PASSWORD }}
+        run: cargo test --locked -p slot-achievements --lib live_ra_read_only_smoke -- --ignored --exact network::tests::live_ra_read_only_smoke --nocapture

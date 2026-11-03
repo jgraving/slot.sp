@@ -6,19 +6,22 @@ pub fn credential_code_face_on(canvas: crate::Canvas, instruction: &str, count: 
     credential_code_face_with_lock_on(canvas,instruction,count,false)
 }
 pub fn credential_code_face_with_lock_on(canvas:crate::Canvas,instruction:&str,count:usize,locked:bool)->UndoFace {
-    masked_pin_face_on(canvas,"Security PIN",instruction,count,if locked {9}else{8})
+    masked_pin_face_on(canvas,"Device code",instruction,count,if locked {9}else{8})
 }
 pub fn masked_pin_face_on(canvas:crate::Canvas,title:&str,instruction:&str,count:usize,footer:u8)->UndoFace {
+    masked_pin_state_face_on(canvas,title,instruction,count,footer,0,0)
+}
+pub fn masked_pin_state_face_on(canvas:crate::Canvas,title:&str,instruction:&str,count:usize,footer:u8,minimum:usize,shake:i32)->UndoFace {
     let mut face=crate::parent_footer_face_on(canvas,footer,false);
     let title=crate::quick_heading_face(title);
     let x=face.w.saturating_sub(title.w)/2;crate::plate::blit(&mut face.rgba,face.w,&title.rgba,title.w,title.h,x,0);
     let words=crate::quick_value_face(instruction,true);
-    let x=face.w.saturating_sub(words.w)/2;crate::plate::blit(&mut face.rgba,face.w,&words.rgba,words.w,words.h,x,146);
-    let dots=count.clamp(4,12)as u32;
+    let x=(face.w.saturating_sub(words.w)as i32/2+shake).max(0)as u32;crate::plate::blit(&mut face.rgba,face.w,&words.rgba,words.w,words.h,x,146);
+    let dots=count.min(12)as u32;
     let left=face.w.saturating_sub(dots*32)/2;
     for i in 0..dots {
-        let colour=if (i as usize)<count {[164,220,211,255]}else{[120,120,130,160]};
-        crate::page::rounded(&mut face.rgba,face.w,(left+i*32+7,222,18,18),8,colour);
+        let colour=if count>=minimum {[164,220,211,255]}else{[120,120,130,190]};
+        crate::page::rounded(&mut face.rgba,face.w,((left as i32+i as i32*32+7+shake).max(0)as u32,222,18,18),8,colour);
     }
     face
 }
@@ -54,10 +57,10 @@ mod tests {
     #[test]
     fn credential_dots_render_at_every_entry_length_on_both_panels() {
         for w in [640.0,720.0] {for count in [0,1,3,4,5,8,12,13,32,384] {
-            let face=credential_code_face_on(crate::Canvas{w,h:480.0},"Enter your button PIN",count);
+            let face=credential_code_face_on(crate::Canvas{w,h:480.0},"Enter your button code",count);
             assert_eq!(face.rgba.len(),(face.w*face.h*4)as usize);
-            let left=face.w.saturating_sub((count.max(4).min(12) as u32)*32)/2+7;
-            assert!(face.rgba[((222*face.w+left+9)*4+3)as usize]>0);
+            let left=face.w.saturating_sub((count.min(12) as u32)*32)/2+7;
+            if count>0 {assert!(face.rgba[((222*face.w+left+9)*4+3)as usize]>0);} else {assert!(face.rgba[(220*face.w*4)as usize..(244*face.w*4)as usize].iter().all(|&v|v==0));}
         }}
     }
 }

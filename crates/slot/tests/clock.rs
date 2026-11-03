@@ -111,8 +111,8 @@ fn the_picker_hands_back_utc_rather_than_what_was_typed() {
     assert_eq!(c.offset_min(), -300);
     assert_eq!(
         c.secs(),
-        typed + 300 * 60,
-        "09:00 local at UTC-5 is 14:00 UTC"
+        typed,
+        "changing the zone must preserve UTC"
     );
 }
 
@@ -165,7 +165,7 @@ fn confirming_persists_the_offset_and_sets_the_platform_to_utc() {
     assert_eq!(read_slot_state(d.path()).utc_offset_min, -120);
     assert_eq!(
         clock.get(),
-        1_700_000_000 + 120 * 60,
+        1_700_000_000,
         "the platform was set to local rather than to utc"
     );
 }
@@ -301,7 +301,7 @@ fn changing_the_minute_moves_the_clock_by_exactly_that_minute() {
 }
 
 #[test]
-fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
+fn changing_only_the_offset_preserves_utc_and_saves_local_zone() {
     for way in [Way::FirstBoot, Way::QuickMenu] {
         let (d, mut a, clock) = clock_screen(way);
         let before = a.picker().expect("on the clock").offset_min();
@@ -314,7 +314,7 @@ fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
         a.apply(Action::GbaDown(Btn::Start));
         assert_eq!(
             clock.get(),
-            AT + OPEN_FOR + 30 * 60,
+            AT + OPEN_FOR,
             "{way:?}: half an hour west moved the clock by {} s",
             clock.get() - (AT + OPEN_FOR)
         );
@@ -324,4 +324,15 @@ fn changing_only_the_offset_moves_utc_by_exactly_that_change() {
             "{way:?}: the offset was not saved"
         );
     }
+}
+
+#[test]
+fn menu_clock_and_zone_changes_apply_without_start() {
+    let (d,mut a,clock)=clock_screen(Way::QuickMenu);
+    let utc=clock.get();let offset=a.picker().unwrap().offset_min();
+    for _ in 0..2 {a.apply(Action::GbaDown(Btn::Right));}a.apply(Action::GbaDown(Btn::Down));a.apply(Action::GbaDown(Btn::A));a.apply(Action::GbaDown(Btn::Up));
+    assert_eq!(clock.get(),utc);assert_eq!(a.wall_secs(),utc+(offset+30)*60);
+    a.apply(Action::GbaDown(Btn::B));a.apply(Action::GbaDown(Btn::B));
+    assert!(!matches!(a.phase(),Phase::SetClock{..}));
+    let until=std::time::Instant::now()+std::time::Duration::from_secs(2);while read_slot_state(d.path()).utc_offset_min!=offset as i16+30 {assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
 }
