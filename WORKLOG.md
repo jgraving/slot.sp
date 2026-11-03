@@ -66,13 +66,16 @@ Previous chat reported 128/129 library tests initially; the single parent-PIN fa
 - Confirmed source paths for default encryption, variable-length PINs, short-PIN warnings, explicit plaintext confirmation, encrypt-before-delete migration, failure reporting, direct PIN settings navigation, skipped startup warning, mandatory startup lock, connected Wi-Fi indication, and fresh parent-PIN verification.
 - Read the actual regression job log (job 125917901394): 131 slot library tests passed with zero failures; the named network and vault regressions all passed.
 - Verified both native network walkthrough invocations completed: light GLES at 640x480 and dark desktop GL at 720x480; rendering and artifact upload steps succeeded.
-- Next: independently inspect native PNG captures; downloaded artifact is being retrieved. Then finalize this checkpoint.
+- Independently downloaded the final native-review artifact and visually inspected 24 PNGs (12 screens in each theme): storage picker, connected status icon, network icons/security labels, short-PIN warning, plaintext confirmation and deletion, skipped startup unlock, required startup unlock, long PIN entry, shared parent method/prompt, and separate parent method.
+- Reviewed captures show the requested controls and messages rendered in both themes. No additional implementation fix identified in this targeted review.
+- Takeover changes are documentation only: WORKLOG.md and AGENTS.md. Existing test binary and runtime source remain at implementation revision 3f8c0d7.
+- Development verification is complete; next action is user handheld/live-account testing using the linked build. Keep this log current when test feedback arrives.
 - Current environment has no checked-out repo. Recovery documents are written directly to the existing GitHub branch through the connector, so they survive a chat crash.
 
 ## Remaining work and release gates
 
-- Native-render job details and targeted source/test coverage review completed. Independent PNG inspection is in progress.
+- Native-render job details, targeted source/test coverage review, and independent light/dark PNG inspection completed.
 - Physical handheld tests remain: Wi-Fi association/DHCP, reconnect after reboot, required/optional PIN startup, both parent-code methods, warning pills, credential migration, frame pacing/battery cost, link-radio handoff.
 - Live-account tests remain: login and acceptance of deferred/offline awards. Do not claim offline award acceptance is guaranteed.
-- Prior PR description says native GLES and desktop GL light/dark captures were reviewed; this takeover has not yet independently opened those images.
+- Final native GLES and desktop GL light/dark captures independently reviewed in this takeover. These are simulated-device renders, not evidence of real radio/network/account behavior.
 - Keep PR draft for device testing. No merge or release requested in this takeover.
