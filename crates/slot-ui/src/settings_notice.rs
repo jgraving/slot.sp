@@ -118,7 +118,7 @@ pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace 
     settings_notice_face_toned_on(message,canvas,light,NoticeTone::Neutral)
 }
 pub fn settings_notice_face_toned_on(message:&str,canvas:Canvas,light:bool,tone:NoticeTone)->UndoFace {
-    if message=="PIN_BUTTONS" {return pin_buttons_notice_face(light);}
+    if message=="PIN_BUTTONS" || message=="PIN_BUTTONS_MIN" {return pin_buttons_notice_face(light,message=="PIN_BUTTONS_MIN");}
     let prefix=if tone==NoticeTone::Neutral {0}else{36};
     if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent,light);}
     let Some(font) = text::font(text::Role::Detail) else {
@@ -176,13 +176,23 @@ fn charging_notice_face(percent:&str,light:bool)->UndoFace {
 }
 
 /// Only invalid PIN input requests this transient row of permitted controller icons.
-fn pin_buttons_notice_face(light:bool)->UndoFace {
+fn pin_buttons_notice_face(light:bool,minimum:bool)->UndoFace {
     use crate::bitmaps::ButtonLegend::*;
     let buttons=[A,B,X,Y,Up,Down,Left,Right,L1,R1,L2,R2];
     let faces:Vec<_>=buttons.into_iter().map(|button|crate::quick_menu::controller_button_face(button,26)).collect();
-    let width=faces.iter().map(|f|f.w).sum::<u32>()+8*11+32;
+    let label=minimum.then(|| {
+        let layout=text::Layout{lines:vec!["4+ presses".into()],px:16.0,tracking:0.0,role:text::Role::Detail};
+        let font=text::font(text::Role::Detail).expect("PIN hint font");
+        let w=text::line_width(font,"4+ presses",16.0,0.0).ceil()as u32+2;
+        let mut rgba=vec![0;(w*48*4)as usize];
+        text::draw_centred(&mut rgba,w,48,&layout,if light {slot_gfx::ui_palette::INK}else{[246,244,239]});
+        UndoFace{rgba,w,h:48}
+    });
+    let prefix=label.as_ref().map_or(0,|f|f.w+12);
+    let width=faces.iter().map(|f|f.w).sum::<u32>()+8*11+32+prefix;
     let mut face=UndoFace{rgba:vec![0;(width*48*4)as usize],w:width,h:48};
-    let mut x=16;
+    if let Some(label)=label {crate::plate::blit(&mut face.rgba,width,&label.rgba,label.w,label.h,16,0);}
+    let mut x=16+prefix;
     for glyph in faces {
         let rgba=if light {slot_gfx::ui_palette::light_texture(&glyph.rgba)}else{glyph.rgba};
         crate::plate::blit(&mut face.rgba,width,&rgba,glyph.w,glyph.h,x,(48-glyph.h)/2);

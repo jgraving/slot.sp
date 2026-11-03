@@ -30,7 +30,7 @@ fn main(){
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
     let mut a=Review{f,g,now:0,dir,width};a.save("carousel");a.home();a.save("settings");
     a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::SecurityPin);a.save("security-pin-general");a.tap(Btn::A);a.save("security-pin-settings");
-    a.tap(Btn::Down);a.tap(Btn::A);a.save("pin-setup");
+    a.tap(Btn::Down);a.tap(Btn::A);a.save("pin-setup");a.tap(Btn::Start);a.save("pin-allowed-buttons");
     for b in [Btn::A,Btn::X]{a.tap(b);}a.save("pin-masked");
     for b in [Btn::Left,Btn::R1]{a.tap(b);}a.save("pin-ready");a.tap(Btn::Start);a.save("pin-confirm");a.code();a.wait_io();a.save("pin-set");
     a.home();a.nav(QuickRow::Wifi);a.save("wifi-tile");a.tap(Btn::A);a.save("wifi-off");

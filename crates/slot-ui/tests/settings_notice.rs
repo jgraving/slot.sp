@@ -155,5 +155,7 @@ fn warning_severity_uses_different_graphical_symbols_and_short_pills() {
         let allowed=settings_notice_face_toned_on("PIN_BUTTONS",Canvas::FRAMED,light,NoticeTone::Neutral);
         assert!(allowed.w<=576&&allowed.h==48);
         assert!(allowed.rgba.chunks_exact(4).any(|p|p[3]>200));
+        let minimum=settings_notice_face_toned_on("PIN_BUTTONS_MIN",Canvas::FRAMED,light,NoticeTone::Neutral);
+        assert!(minimum.w<=576&&minimum.h==48);
     }
 }

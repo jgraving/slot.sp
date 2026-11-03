@@ -399,7 +399,7 @@ impl Menu {
                 }
                 Action::GbaDown(Btn::Start) if field==Field::Unlock => {self.try_button_unlock();}
                 Action::GbaDown(Btn::Start) => {
-                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("At least 4 presses"); }
+                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("PIN_BUTTONS_MIN"); }
                     else {
                         let text=std::mem::replace(&mut self.code_text,Zeroizing::new(String::new()));
                         self.code=None; self.accept(field,text);
