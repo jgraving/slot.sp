@@ -19,7 +19,7 @@ export function mountSP(stage, video, options={}) {
   canvas.className = 'sp-model-canvas';
   canvas.setAttribute('aria-hidden', 'true');
   const scene = new T.Scene();
-  const camera = new T.PerspectiveCamera(32, 1, .1, 1500);
+  const camera = new T.PerspectiveCamera(32, 1, 1, 1500);
   camera.position.set(0, -2, 355);
   camera.lookAt(0, -2, 0);
   const product = new T.Group();
@@ -314,16 +314,16 @@ export function mountSP(stage, video, options={}) {
   // L1/R1 wrap over the rounded outer corners and down the back moulding;
   // the narrower L2/R2 caps sit 0.6 mm higher, with shorter inset skirts.
   // Both skirts reach inside the chassis, hiding their lower mounting ends.
-  for(const [x,label,inner]of [[-35.7,'L1',false],[-24.3,'L2',true],[24.3,'R2',true],[35.7,'R1',false]]) {
+  for(const [x,label,inner]of [[-36,'L1',false],[-24.3,'L2',true],[24.3,'R2',true],[36,'R1',false]]) {
     const width=inner?8.2:10.5,height=inner?6.5:8.0,depth=inner?6.4:8.7;
     const y=inner?4.0:3.25,top=inner?1.8:1.2;
     // An open collar, not a larger solid box: a surrounding solid would cover
     // the cap's back and side walls when the handheld is turned around.
-    const reveal=rr(width+.3,height+.3,inner?1:1.65,x,y);
-    reveal.holes.push(rr(width-.25,height-.25,inner?.6:1.3,x,y,T.Path));
+    const reveal=rr(width+.3,height+.3,inner?1:1.95,x,y);
+    reveal.holes.push(rr(width-.25,height-.25,inner?.6:1.6,x,y,T.Path));
     mesh(extrusion(reveal,.16,.025),dark,rear,0,0,top-.3);
     const cap=new T.Group();cap.position.set(x,y,top);rear.add(cap);
-    slab(cap,width,height,depth,inner?.8:1.5,.28,button,0,0,0);
+    slab(cap,width,height,depth,inner?.8:1.8,inner?.3:.5,button,0,0,0);
     engraving(label,cap,0,0,.055,4.1,2.7);
     cap.userData.shoulder=true;controls.set(label.toLowerCase(),cap);
   }
