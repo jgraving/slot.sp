@@ -15,7 +15,7 @@ All requested UI and audio changes are implemented and pushed. **All six CI work
 - Native captures: https://github.com/jgraving/slot.sp/actions/runs/41673591921/artifacts/13250905357
 - Feature branch: `feat/182-network-achievements`; PR #186 remains draft, not merged or released.
 - Next action: user handheld testing and live-account checks listed below. No known failing development check remains.
-- This final handoff commit changes WORKLOG.md only; its commit message skips redundant CI. The tested runtime and build are exactly 94f940e. Compare that revision with the live PR head before resuming.
+- Only recovery documentation has changed since the tested runtime/build revision 94f940e. Documentation checkpoints skip redundant CI. Compare that revision with the live PR head before resuming.
 - Historical checkpoints follow. Treat this section as the latest state; do not repeat completed implementation/test work.
 
 ## Final verified behavior
@@ -195,3 +195,14 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 - Completed final native capture review and verified all six workflows on 94f940e.
 - PR description rewritten around the final behavior and fresh build/capture links.
 - Final checkpoint is documentation only; no runtime edit followed successful verification. Handheld/live-account testing remains the next step.
+
+### Crash-recovery recheck (2026-11-03)
+
+- Resumed from the user's pasted transcript and read live WORKLOG.md and AGENTS.md.
+- Found that the previous chat had already completed the requested UI/audio implementation and final handoff. No duplicate runtime changes were needed.
+- Verified live PR #186 is open, draft and mergeable at b0376c573998b5c9be67f729a6a6a3a77c76da2e. Its only change after tested implementation 94f940e is WORKLOG.md; its direct parent is that tested revision.
+- Independently queried all six exact Actions runs listed above: every run is completed/success on full implementation SHA 94f940e0e7c472b6b2f3ea9c506d4c8280f34c37.
+- Read the actual regression job log (126048125888): 134 slot library tests passed, zero failed, including manual_audio_choices_restore_destination_levels_and_mute; the complete regression and native rendering steps succeeded.
+- Rechecked handheld artifact 13250356343: present, not expired, built from 94f940e; API expiry is 2026-11-10 16:28 UTC, although cleanup can remove it earlier.
+- Prior chat's independent visual review is recorded above; this recheck verified CI/render completion and did not repeat PNG inspection.
+- This session adds recovery documentation only. Next action remains handheld and live-account testing. PR stays draft; no merge/release or PDF requested.
