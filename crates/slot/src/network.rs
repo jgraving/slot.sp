@@ -45,7 +45,7 @@ pub struct Menu {
     code: Option<Field>,
     code_text: Zeroizing<String>,
     button_attempt: Option<Zeroizing<String>>,
-    button_checked: usize,
+    button_pending: Vec<usize>,
     pending_ssid: Option<String>,
     secrets: Secrets,
     first_pass: Zeroizing<String>,
@@ -91,7 +91,7 @@ impl Menu {
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
             visible: false, face: None, progress_face: None, page: Page::Wifi,
             selected: 0, revision: 0, keyboard: None, code: None,
-            code_text: Zeroizing::new(String::new()), button_attempt:None, button_checked:0, pending_ssid: None,
+            code_text: Zeroizing::new(String::new()), button_attempt:None, button_pending:Vec::new(), pending_ssid: None,
             secrets, first_pass: Zeroizing::new(String::new()),
             creating_method: Method::Buttons, method, prefs, encrypted, locked: encrypted,
             pending_jobs: 0, after_unlock: None, forget_confirmation: None,
@@ -215,7 +215,7 @@ impl Menu {
                     if self.code!=Some(Field::Unlock) || !self.code_text.starts_with(attempt.as_str()) {continue;}
                     if reply.result.is_err() {continue;}
                     self.short_pin=attempt.len()<8;
-                    self.code=None;self.code_text.zeroize();self.button_checked=0;
+                    self.code=None;self.code_text.zeroize();self.button_pending.clear();
                 }
             }
             match reply.result {
@@ -251,12 +251,12 @@ impl Menu {
                 Ok(Response::Saved) => {
                     if let Some(storage) = self.pending_storage.take() {
                         if remove_plain(&self.root).is_err() {
-                            self.warn("Could not delete plaintext; try again",slot_ui::NoticeTone::Danger);
+                            self.warn("Could not delete unencrypted copy",slot_ui::NoticeTone::Danger);
                         } else {
                             let was_plain=self.prefs.unencrypted;
                             self.prefs.unencrypted=false;self.prefs.remember=Some(storage==Storage::Encrypted);self.store_preferences();
                             if was_plain && storage==Storage::Encrypted {
-                                if self.short_pin {self.warn("Plaintext deleted · short PIN",slot_ui::NoticeTone::Warning);}
+                                if self.short_pin {self.warn("Unencrypted copy deleted · short PIN",slot_ui::NoticeTone::Warning);}
                                 else {self.say("Unencrypted credentials deleted");}
                             }
                             else {self.say(if storage==Storage::Encrypted {"Credentials saved encrypted"}else{"Saved credentials deleted; session only"});}
@@ -302,7 +302,7 @@ impl Menu {
     fn prompt(&mut self, field: Field) {
         let method = if field == Field::Unlock { self.method.unwrap_or(Method::Passphrase) } else { self.creating_method };
         if method == Method::Buttons {
-            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_checked=0;self.notice.clear(); self.changed();
+            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_pending.clear();self.notice.clear(); self.changed();
         } else {
             self.edit(field, match field {
                 Field::CreateVault => "Create unlock passphrase", Field::ConfirmVault => "Repeat unlock passphrase", _ => "Unlock credentials",
@@ -319,7 +319,7 @@ impl Menu {
         if self.return_to_shelf && self.prefs.lock_device {
             self.code_text.zeroize();self.prompt(Field::Unlock);self.say("Enter your Security PIN to unlock the device");return;
         }
-        self.keyboard = None; self.code = None; self.code_text.zeroize(); self.first_pass.zeroize();
+        self.keyboard = None; self.code = None; self.code_text.zeroize();self.button_pending.clear(); self.first_pass.zeroize();
         self.pending_ssid = None; self.after_unlock = None; self.forget_confirmation = None;
         if self.return_to_shelf {
             self.return_to_shelf = false; self.visible = false;
@@ -380,16 +380,23 @@ impl Menu {
         }
     }
     fn try_button_unlock(&mut self) {
-        if self.code!=Some(Field::Unlock) || self.pending_jobs>0 || self.code_text.len()<network_vault::MIN_CODE_LEN || self.button_checked==self.code_text.len() {return;}
-        let text=Zeroizing::new(self.code_text.to_string());
-        self.button_checked=text.len();self.button_attempt=Some(Zeroizing::new(text.to_string()));
+        if self.code!=Some(Field::Unlock) || self.pending_jobs>0 {return;}
+        // Prefer the latest complete input, but retain intermediate prefixes:
+        // fast typing must not skip a correct PIN while Argon2 is in flight.
+        let Some(length)=self.button_pending.pop() else {return;};
+        let text=Zeroizing::new(self.code_text[..length].to_string());
+        self.button_attempt=Some(Zeroizing::new(text.to_string()));
         self.submit(Job::Unlock(text));
     }
     pub fn input(&mut self, action: Action) {
         if let Some(field) = self.code {
             match action {
                 Action::QuickMenu => self.cancel_editor(),
-                Action::GbaDown(Btn::Select) => { self.code_text.pop(); self.button_checked=0;self.changed();self.try_button_unlock(); }
+                Action::GbaDown(Btn::Select) => {
+                    self.code_text.pop();self.button_pending.retain(|&length|length<=self.code_text.len());
+                    if field==Field::Unlock && self.code_text.len()>=network_vault::MIN_CODE_LEN && !self.button_pending.contains(&self.code_text.len()) {self.button_pending.push(self.code_text.len());}
+                    self.changed();self.try_button_unlock();
+                }
                 Action::GbaDown(Btn::Start) if field==Field::Unlock => {self.try_button_unlock();}
                 Action::GbaDown(Btn::Start) => {
                     if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("At least 4 presses"); }
@@ -403,7 +410,9 @@ impl Menu {
                         Btn::Up=>Some(4), Btn::Down=>Some(5), Btn::Left=>Some(6), Btn::Right=>Some(7),
                         Btn::L1=>Some(8), Btn::R1=>Some(9), Btn::L2=>Some(10), Btn::R2=>Some(11), _=>None };
                     if let Some(digit) = digit {
-                        self.code_text.push((b'a'+digit) as char);self.notice.clear();self.changed();self.try_button_unlock();
+                        self.code_text.push((b'a'+digit) as char);
+                        if field==Field::Unlock && self.code_text.len()>=network_vault::MIN_CODE_LEN {self.button_pending.push(self.code_text.len());}
+                        self.notice.clear();self.changed();self.try_button_unlock();
                     } else {self.say("PIN_BUTTONS");}
                 }
                 _ => {},
@@ -861,7 +870,7 @@ mod tests {
         let stale=root.path().join("Config/.network-credentials.json.123.4.tmp");std::fs::write(&stale,b"plain-fixture-password").unwrap();
         menu.set_storage(Storage::Encrypted);assert!(plain_path(root.path()).exists());wait(&mut menu);assert!(!stale.exists());
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
-        assert!(menu.notice_text().unwrap().contains("Plaintext deleted"));
+        assert!(menu.notice_text().unwrap().contains("Unencrypted copy deleted"));
         let reader=Worker::new(root.path());reader.jobs.send(Job::Unlock(Zeroizing::new("acgj".into()))).unwrap();
         match reader.results.recv_timeout(Duration::from_secs(10)).unwrap().result.unwrap() {Response::Unlocked(secrets)=>assert_eq!(secrets.wifi_password,"plain-fixture-password"),_=>panic!("expected saved encrypted payload")}
     }
@@ -925,7 +934,7 @@ mod tests {
         menu.set_storage(Storage::Encrypted);assert_eq!(menu.page,Page::Security);
         menu.input(Action::GbaDown(Btn::A));submit_code(&mut menu,&CODE);submit_code(&mut menu,&CODE);wait(&mut menu);
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
-        assert!(menu.notice_text().unwrap().contains("Plaintext deleted"));
+        assert!(menu.notice_text().unwrap().contains("Unencrypted copy deleted"));
     }
     #[test]
     fn failed_encryption_keeps_the_unencrypted_copy_and_reports_the_failure() {
@@ -953,6 +962,9 @@ mod tests {
         let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);
         buttons(&mut menu,&long);assert_eq!(menu.code_text.len(),8);wait(&mut menu);
         assert!(!menu.locked);assert!(menu.code_text.is_empty());
+        let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);
+        buttons(&mut menu,&long);buttons(&mut menu,&[Btn::B,Btn::Y]);wait(&mut menu);
+        assert!(!menu.locked,"correct prefixes typed while checking must not be skipped");
     }
     #[test]
     fn cancelling_a_pending_automatic_pin_check_cannot_unlock_later() {

@@ -1704,6 +1704,7 @@ impl App {
         let lost = self.bluetooth_connected && !active;
         let previous_address = self.bluetooth_route.clone();
         self.bluetooth_route = address.clone();
+        if changed {self.vol_before.clear();}
         if lost && address.is_some() && address == previous_address {
             // The monitor reports a lost connection with its old address. A
             // cleared route is an explicit output choice: restore that output's
@@ -7633,7 +7634,7 @@ mod bluetooth_tests {
         assert_eq!(app.hud_icon(), Icon::VolumeMuted);
         assert_eq!(app.toast(), Some(Toast::BluetoothDisconnected));
         app.bluetooth_state(None, false); // fallback helper clears the route
-        app.state.volume = 15; // adjust speaker while disconnected
+        app.state.volume = 15;app.state.muted=false; // adjust speaker while disconnected
         app.bluetooth_state(address.clone(), true);
         assert_eq!(app.output_volume(), 45);
         assert_eq!(app.toast(), Some(Toast::BluetoothConnected));
