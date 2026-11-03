@@ -1,4 +1,4 @@
-//! Credentials are either session-only or encrypted under a user-held passphrase.
+//! Credentials are encrypted under a user-held passphrase.
 //! The key is deliberately never persisted or derived from a public device identifier.
 use ring::{
     aead,
@@ -12,7 +12,7 @@ use zeroize::{Zeroize, Zeroizing};
 const MAGIC: &[u8; 8] = b"SLOTNET1";
 const BUTTON_MAGIC: &[u8; 8] = b"SLOTBTN1";
 const MAX_FILE: usize = 32 * 1024;
-pub const MIN_CODE_LEN: usize = 4;
+pub const MIN_CODE_LEN: usize = 6;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Method { Buttons, Passphrase }
@@ -27,7 +27,7 @@ impl Method {
     fn validate(self, secret: &str) -> Result<(), &'static str> {
         match self {
             Self::Buttons if secret.len() >= MIN_CODE_LEN && secret.bytes().all(|b| (b'a'..=b'l').contains(&b)) => Ok(()),
-            Self::Buttons => Err("Use at least 4 button presses"),
+            Self::Buttons => Err("Use at least 6 button presses"),
             Self::Passphrase if secret.chars().count() >= 12 => Ok(()),
             Self::Passphrase => Err("Use at least 12 characters"),
         }
@@ -225,9 +225,9 @@ mod tests {
     #[test]
     fn method_header_is_authenticated_and_legacy_passphrase_files_still_unlock() {
         let root=tempfile::tempdir().unwrap();let path=vault_path(root.path());
-        let code="acgj";
+        let code="acgjdi";
         Method::Buttons.validate(code).unwrap();assert!(Method::Buttons.validate("abc").is_err());
-        assert!(Method::Buttons.validate("abcde").is_ok());
+        assert!(Method::Buttons.validate("abcde").is_err());
         Method::Buttons.validate(&"abcdefghijkl".repeat(32)).unwrap();
         assert!(Method::Buttons.validate("abcz").is_err());
         let mut secrets=Secrets::default();secrets.wifi_password="network-password".into();
@@ -240,4 +240,13 @@ mod tests {
         assert_eq!(method(root.path()),Some(Method::Passphrase));assert!(decrypt(&path,"a long test passphrase").is_ok());
     }
 
+}
+
+#[cfg(test)]
+pub(crate) fn test_legacy(root:&Path,code:&str,secrets:Secrets) {
+    let key=derive_for(code,[2;16],Method::Buttons).unwrap();encrypt(&vault_path(root),&key,&secrets).unwrap();
+}
+#[cfg(test)]
+pub(crate) fn test_decrypt(root:&Path,code:&str)->(Method,Secrets) {
+    let (key,secrets)=decrypt(&vault_path(root),code).unwrap();(key.method,secrets)
 }

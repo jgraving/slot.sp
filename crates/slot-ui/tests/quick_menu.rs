@@ -86,7 +86,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
-        ["Security PIN", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
+        ["Device code", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),

@@ -13,63 +13,50 @@ Enterprise networks and WPA3-only networks are not supported in this test build.
 Use the D-pad to select keyboard keys and A to type. B deletes, X shifts, Y adds a
 space, L1/R1 switches symbols, Select reveals a secret, Start submits and Menu cancels.
 
-## Security PIN and saved credentials
+## Device code and saved credentials
 
 Network is one menu: On/Off, Reconnect, Credential storage, Scan networks, Other network,
 then nearby networks. Each network has a signal icon and its detected security type.
 Scanning uses the same progress indicator as Bluetooth. WPA3-only, enterprise, WEP
 and enhanced-open networks are shown but cannot be joined in this build.
 
-**General → Security PIN** is the first General setting. It sets the device PIN used
+**General → Device code** is the first General setting. It sets the device code used
 to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** or
-**Passphrase**, then **Set Security PIN**:
+**Passphrase**, then **Set Device code**:
 
-- **Button code:** enter four or more presses using A/B/X/Y, the D-pad and shoulder
+- **Button code:** enter six or more presses using A/B/X/Y, the D-pad and shoulder
   buttons. You choose the length; press **Start** to finish, then repeat the sequence
   and press Start again. Select deletes a press; Menu cancels. Held buttons do not
-  repeat. Only masked dots are shown, even for long PINs. During unlock, a correct sequence is accepted automatically without Start. Incorrect prefixes stay silent and remain editable; continue typing or use Select to delete. No stored PIN length is displayed.
+  repeat. Only masked dots are shown, even for long codes. During unlock, a correct sequence is accepted automatically without Start. Incorrect prefixes stay silent and remain editable; continue typing or use Select to delete. No stored code length is displayed.
 - **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
   Choose a long, unpredictable sequence or passphrase for stronger protection.
 
-PINs shorter than eight button presses get a yellow triangle notification because they
-are easier to guess. There is no recovery copy of the device PIN on the card.
+codes shorter than eight button presses get a yellow triangle notification because they
+are easier to guess. There is no recovery copy of the device code on the card.
 
-**Credentials** is an inline Left/Right picker shared by Wi-Fi and
-RetroAchievements:
+Wi-Fi and RetroAchievements require an encrypted vault protected by the device code. There are no plaintext or session-only storage choices. Set and unlock the code before enabling either service. Existing four- or five-button codes still decrypt the vault, but must be replaced with six or more presses before network services start. Long unpredictable secrets are stronger than short patterns.
 
-- **Encrypted** is the default for a new setup. Credentials are saved under the
-  device PIN. If one is needed, the Security PIN page opens directly with a pill
-  explaining that this sets a device PIN for encrypted credentials.
-- **Session only** keeps credentials in memory and forgets them at power-off.
-- **Unencrypted** saves readable credentials on the SD card. A red circled alert
-  explains this. Nothing is written until you select the confirmation row and
-  press **A**. The red warning also appears after confirming the change.
-
-Switching from Unencrypted to Encrypted saves the encrypted copy first, deletes the
-plaintext file, and shows a pill confirming deletion. If saving or deletion fails,
-the change reports the error instead of claiming success. Deleting a file on flash
-storage is not a guarantee of forensic erasure of older data.
+Old plaintext files from previous builds are imported only after code creation or authentication. The encrypted save must succeed before the old file is deleted. Failure keeps network services off and reports the problem. Deletion on flash is not forensic erasure.
 
 After a restart with either feature enabled and encrypted credentials saved, an
 animated unlock card appears. One successful unlock covers both features for that
 session and resumes the requested connection or account action.
 
-**Startup access** under Security PIN chooses between **PIN optional**
-(the default, allowing games without a PIN) and **Require PIN**. With games allowed, Menu skips startup unlock and
+**Startup access** under Device code chooses between **Code optional**
+(the default, allowing games without a code) and **Require code**. With games allowed, Menu skips startup unlock and
 a pill says “Saved credentials are locked.” Saved services become available after unlocking. With Require
-PIN, the launcher stays on the unlock card until the correct PIN or passphrase is
+code, the launcher stays on the unlock card until the correct code or passphrase is
 entered, even when Wi-Fi and achievements are off. This is a launcher access lock:
 the SD card, games and saves remain readable. Only the saved credentials are encrypted.
 The startup lock does not protect against modified software or physical tampering.
 
-Switching to Session only asks before deleting saved credentials; the PIN and current
-session are kept. **Forget Security PIN** removes the vault and saved credentials
-after confirmation. If parental controls use the device PIN, choose a separate parent
+**Forget Device code** removes the vault and saved credentials
+after confirmation. If parental controls use the device code, choose a separate parent
 code first. Pending achievements and game saves are kept.
 
 The key is never stored on the card. Argon2id derives it from the entered secret;
-authenticated ChaCha20-Poly1305 encrypts the vault. A short PIN is a convenience lock:
-four presses from 12 buttons give only 20,736 combinations, which a person with a
+authenticated ChaCha20-Poly1305 encrypts the vault. A short code is a convenience lock:
+six presses from 12 buttons give only 2,985,984 combinations, which a person with a
 copy of the card can try offline. Longer unpredictable secrets make guessing harder.
 Neither option protects credentials on a device that is already running and unlocked.
 The supplicant receives passwords through its control socket and does not save them.
@@ -97,7 +84,7 @@ if sign-in fails after a cold start. Certificate verification is never disabled.
 
 Prepared games can earn achievements without internet. Unlocks are saved before their
 notification appears, remain pending across restarts and upload later. Re-enable the
-account by entering the shared Security PIN after reboot, or enter the account again
+account by entering the shared Device code after reboot, or enter the account again
 for session-only storage. Save files and local achievement caches are independent of
 credential storage. Sign out and disabling tracking preserve pending unlocks.
 
@@ -121,14 +108,32 @@ The networking code needs the OS image's wpa_supplicant, wpa_cli, ip, rfkill and
 udhcpc tools. Actual hardware association, DHCP, TLS clock behavior, real-core RAM
 mapping, battery cost and live server acceptance are the main device checks.
 
-### PIN entry and feedback
+### code entry and feedback
 
-Button PINs accept A, B, X, Y, the four D-pad directions and L1, R1, L2, R2.
+Button codes accept A, B, X, Y, the four D-pad directions and L1, R1, L2, R2.
 Start finishes setup and confirmation; Select deletes, and Menu cancels when startup access allows it.
 Unsupported input briefly shows the permitted button icons. The separate four-button parent code uses
-the same masked card as the device PIN. It completes after four presses; the device PIN has no fixed length.
+the same masked card as the device code. It completes after four presses; the device code has no fixed length.
 
-Yellow triangle pills indicate a caution, such as a short PIN. Red circled alerts indicate a more serious
+Yellow triangle pills indicate a caution, such as a short code. Red circled alerts indicate a more serious
 condition, such as credentials saved without encryption. Short messages stay in the interface; this guide
 explains the consequences. The wider Wi-Fi arcs show signal strength in network lists and a connection
 in the status bar.
+
+## Preparation and background sync
+
+Signing in and preparing games are separate steps. The first pass checks each GBA ROM in `Games/GBA`, caches its achievement rules and server unlocks, and downloads badge artwork. A library of hundreds of games can take a long time: work is deliberately paced and requests can time out. The game-data and artwork phases show their own counts; artwork totals grow as games are discovered. Opening Settings does not restart preparation.
+
+The controller in the status bar means RetroAchievements is working in the background. The settings page shows game data, artwork, pending uploads and games that need another attempt. A connection or account error shows retry status rather than pretending preparation is still moving. Preparation continues on the shelf and during play while slot is running. It pauses when the device sleeps, shuts down, or loses internet; downloaded data and earned unlocks persist. Signing out or turning achievements off stops the worker. A restart uses cached data and prepares remaining or changed games; it also refreshes old data weekly. Newly played games take priority over the background library.
+
+Completed game preparation makes cached tracking available offline. It does not mean every game has achievements, and it is separate from whether the server accepts deferred unlock uploads.
+
+### Reading background sync
+
+The controller stays visible while game data, artwork or unlock uploads remain queued, including retry waits. It disappears when no work remains. Settings shows a stable sync state, separate game/artwork counts, and a retry countdown with its cause. Completed cached games still count after a restart; an empty GBA library says “No GBA games”. An artwork retry does not mean Wi-Fi disconnected or that cached achievements stopped working. Badge failures back off from 30 seconds to five minutes; other sync work can continue. Preparation is paced to reduce background load, but a large first scan still reads ROMs and uses the radio.
+
+For optional live testing, add `RA_TEST_USERNAME` and `RA_TEST_PASSWORD` in GitHub Settings → Secrets and variables → Actions. Prefer a dedicated test account. Run **RetroAchievements live smoke test** manually on a reviewed repository branch. It checks login, a read-only game lookup and a public badge download/decode; it never creates a game session or submits awards. Normal pull-request tests use fake servers and do not receive those secrets. Live smoke tests cannot measure handheld radio reliability, CPU load or temperature.
+
+Date & Time changes made in Settings apply immediately; Start/Done only closes the page. Changing the UTC offset changes local display time while preserving UTC. First-boot clock setup still uses Done to continue. The offset is a manual choice and does not automatically follow daylight-saving changes.
+
+Cached artwork is discovered and fully checked in short worker batches; duplicate unchanged badge files are not decoded again for every game. While this runs, settings says Reading artwork rather than showing an empty completed count. Retry feedback distinguishes artwork-server, invalid-image and card-write failures. A retry countdown in the floating progress pill does not erase progress.

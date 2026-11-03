@@ -354,6 +354,7 @@ pub struct App {
     quick_card:quick_controls::QuickCard,
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
+    pub ra_sync_indicator: Option<TexId>,
     pub wifi_indicator: Option<TexId>,
     pub hud_wifi_indicator: Option<TexId>,
     pub audio_indicator: Option<TexId>,
@@ -466,6 +467,7 @@ pub struct App {
     kid_surface: slot_ui::expressive::SurfaceMotion,
     kid_meter_motion: slot_ui::expressive::SurfaceMotion,
     kid_meter_face: Option<(TexId,u32,u32)>,
+    pub network_meter_face: Option<(TexId,u32,u32)>,
     footer_motion: slot_ui::expressive::SurfaceMotion,
     settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
@@ -623,6 +625,7 @@ impl App {
             quick_card:Default::default(),
             bluetooth_supported: false,
             kid_status_icon: None,
+            ra_sync_indicator: None,
             wifi_indicator: None,
             hud_wifi_indicator: None,
             audio_indicator: None,
@@ -744,7 +747,7 @@ impl App {
             settings_return_game:None,about_heading:None,custom_chrome:Default::default(),
             special_menu_cache: Default::default(),
             kid_surface: Default::default(),
-            kid_meter_motion:Default::default(),kid_meter_face:None,
+            kid_meter_motion:Default::default(),kid_meter_face:None,network_meter_face:None,
             footer_motion: Default::default(),
             settings_notice_revision: 0,
             current_custom_face: None,
@@ -1163,6 +1166,17 @@ impl App {
         } else {
             self.start();
         }
+    }
+
+    fn apply_clock_edit(&mut self) {
+        let Phase::SetClock{picker,seed,from_menu:true}=&mut self.phase else{return;};
+        let moved=picker.secs()-*seed;let offset=picker.offset_min()as i16;
+        if moved==0 && offset==self.state.utc_offset_min {return;}
+        *seed=picker.secs();
+        let utc=self.utc_secs()+moved;
+        if moved!=0 {if let Some(power)=&mut self.power {power.set_clock(utc);}}
+        self.state.utc_offset_min=offset;self.state.clock_set=true;
+        self.display_settings.override_until=None;self.sync_display_schedule();self.save_display();self.persist();
     }
 
     pub fn root(&self) -> Option<&Path> {
@@ -3091,6 +3105,7 @@ impl App {
                 }
                 _ => {}
             }
+            self.apply_clock_edit();
             return;
         }
         if self.repair_prompt {
@@ -4463,7 +4478,8 @@ impl App {
     fn timers(&mut self) {
         let linking=self.link_active();
         if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();
-            if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}}
+            if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
+            if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
@@ -4927,7 +4943,9 @@ impl App {
                 }else{i+=1;}
             }
             let page=custom.unwrap_or_else(||row.or_else(||self.menu_motion.closing_row()).map_or(0,|r|r.page()[0].index() as u64));
-            let kind=row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())});
+            let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
+                row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())})
+            };
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();
@@ -4953,6 +4971,9 @@ impl App {
             if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
                 let t=self.kid_meter_motion.value();
                 out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:slot_ui::expressive::FOOTER_Y-2.0+(1.0-t)*48.0,w:w as f32,h:h as f32,tex,alpha:t});
+            }
+            if let Some((tex,w,h))=self.network_meter_face.filter(|_|self.network.as_ref().and_then(|m|m.floating_progress()).is_some()) {
+                out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:slot_ui::expressive::FOOTER_Y-2.0,w:w as f32,h:h as f32,tex,alpha:self.menu_motion.reveal()});
             }
             // Transient system feedback is composed after cards, titles and hardware.
             self.hud.draw_with_bottom_inset(self.canvas(),self.now(),50.0*self.kid_meter_presence(),out);
@@ -5568,6 +5589,10 @@ impl App {
             out,
         );
         if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
+            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+            slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+        }
+        if let Some(tex) = self.ra_sync_indicator {
             let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
         }

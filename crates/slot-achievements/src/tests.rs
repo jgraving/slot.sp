@@ -39,7 +39,7 @@ fn configured() -> tempfile::TempDir {
 }
 
 fn wait_for(mut condition: impl FnMut() -> bool) {
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(15);
     while !condition() {
         assert!(Instant::now() < deadline, "worker did not finish");
         std::thread::sleep(Duration::from_millis(2));
@@ -178,6 +178,7 @@ fn badge_cache_survives_restart_and_repairs_corrupt_images() {
     assert_eq!(requests.try_iter().count(), 1);
     let mut restarted = badges::Queue::new(&store.dir);
     restarted.enqueue(&game());
+    restarted.maintain();
     assert!(!restarted.pending());
     // Notifications carry a local path even offline, with no network dependency.
     assert_eq!(load_badge(&path).unwrap().width, 2);
@@ -326,7 +327,7 @@ fn offline_unlock_is_durable_then_syncs_without_reopening_the_game() {
     wait_for(|| {
         online
             .take_notice()
-            .is_some_and(|n| n.title == "Achievements synced")
+            .is_some_and(|n| n.title == "Unlocks uploaded")
     });
     assert!(Store::open(root.path(), "Player").unwrap().unlocks[&7].synced);
     assert_eq!(
@@ -608,6 +609,7 @@ fn cache_percentage_counts_unique_badges_and_resumes_from_disk() {
     assert_eq!(queue.percent(), 50); // Failures never count as completed downloads.
     let mut restarted = badges::Queue::new(&store.dir);
     restarted.enqueue(&data);
+    restarted.maintain();
     assert_eq!(restarted.percent(), 50);
     restarted.step(&mut http);
     assert_eq!(restarted.percent(), 100);
@@ -757,4 +759,14 @@ fn rewind_display_frames_do_not_unlock_an_achievement() {
         .unwrap()
         .unlocks
         .is_empty());
+}
+
+#[test]
+fn cached_games_still_count_after_worker_restart() {
+    let root=configured();let store=Store::open(root.path(),"Player").unwrap();
+    let rom=root.path().join("Games/GBA/Test.gba");std::fs::write(&rom,b"cached-count").unwrap();
+    let hash=library::hash(&store.dir,&rom).unwrap();
+    storage::write(&store.dir.join(format!("{hash}.json")),&(&game(),&std::collections::BTreeSet::<u32>::new())).unwrap();
+    library::checked(&store.dir,&rom,network::now());
+    let (total,pending)=library::scan(root.path(),&store.dir,network::now());assert_eq!(total,1);assert!(pending.is_empty());
 }

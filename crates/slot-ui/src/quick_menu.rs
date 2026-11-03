@@ -565,7 +565,7 @@ impl QuickRow {
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
             QuickRow::Achievements => "RetroAchievements",
-            QuickRow::SecurityPin => "Security PIN",
+            QuickRow::SecurityPin => "Device code",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -1363,7 +1363,7 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
         ],
-        8 => vec![
+        8 | 12 => vec![
             with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
@@ -1443,8 +1443,8 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
     face
 }
 pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
-    let mut paths=String::from(r#"<circle cx="14" cy="24" r="1.9"/>"#);
-    for (level,path) in [(1,"M10 18.6Q14 15.2 18 18.6"),(2,"M6 13.2Q14 6.6 22 13.2"),(3,"M2 7.5Q14-2 26 7.5")] {
+    let mut paths=String::from(r#"<circle cx="14" cy="21" r="1.6"/>"#);
+    for (level,path) in [(1,"M9.8 16.8Q14 13.6 18.2 16.8"),(2,"M6 12.8Q14 6.8 22 12.8"),(3,"M2.3 8.8Q14 .2 25.7 8.8")] {
         if bars>=level {paths.push_str(&format!(r#"<path d="{path}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>"#));}
     }
     let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}">{paths}</g></svg>"##,ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);
@@ -1508,7 +1508,8 @@ pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
 pub fn parent_footer_face_on(canvas: Canvas, page: u8, adjustable: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = UndoFace { rgba: vec![0; (width * OUT_H * 4) as usize], w: width, h: OUT_H };
-    let hints = parent_button_legends(page, MENU_INK);
+    let mut hints = parent_button_legends(page, MENU_INK);
+    if page==12 {if let Some(done)=hints.last_mut() {for pixel in done.rgba.chunks_exact_mut(4) {pixel[3]=(u16::from(pixel[3])*80/255)as u8;}}}
     parent_blit(&mut face, &hints[0], 16.0, LEGEND_Y);
     let right: Vec<_> = if page == 0 {
         vec![&hints[if adjustable { 1 } else { 2 }]]
@@ -1699,7 +1700,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
 
 pub(crate) fn clock_legend() -> UndoFace {
     let a = with_hint(button_face(ButtonLegend::A), "Edit", Some([246,244,239]), true);
-    let start = with_hint(button_face(ButtonLegend::Start), "Save", Some([246,244,239]), true);
+    let start = with_hint(button_face(ButtonLegend::Start), "Done", Some([246,244,239]), true);
     let w = a.w + start.w + 16;
     let mut rgba = vec![0; (w * MENU_HINT_H * 4) as usize];
     blit(&mut rgba, w, &a.rgba, a.w, a.h, 0, 0);

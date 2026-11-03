@@ -189,8 +189,9 @@ impl ClockPicker {
             Field::Hour => self.hour = wrap(self.hour + by, 0, 23),
             Field::Minute => self.minute = wrap(self.minute + by, 0, 59),
             Field::Offset => {
-                self.offset_min = (self.offset_min + by * OFFSET_STEP)
-                    .clamp(i64::from(UTC_OFFSET_MIN), i64::from(UTC_OFFSET_MAX))
+                let offset=(self.offset_min+by*OFFSET_STEP).clamp(i64::from(UTC_OFFSET_MIN),i64::from(UTC_OFFSET_MAX));
+                let local=Self::local(self.secs(),offset as i16);
+                self.year=local.year;self.month=local.month;self.day=local.day;self.hour=local.hour;self.minute=local.minute;self.offset_min=offset;
             }
         }
         self.day = self.day.min(days_in_month(self.year, self.month));

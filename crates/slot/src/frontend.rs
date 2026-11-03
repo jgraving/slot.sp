@@ -38,6 +38,7 @@ pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
     hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
+    network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
     network_tex: Option<TexId>,
     network_old_tex: Option<TexId>,
     network_page: Option<u64>,
@@ -46,6 +47,7 @@ pub struct Frontend {
     bluetooth_page: Option<u64>,
     bluetooth_spinner: Vec<TexId>,
     spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
+    ra_sync_icon: Option<TexId>,
     wifi_icon: Option<TexId>,
     hud_wifi_icon: Option<TexId>,
     audio_icon: Option<TexId>,
@@ -209,7 +211,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_tex: None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -221,6 +223,7 @@ impl Frontend {
                 std::thread::spawn(move || {let _=tx.send((0..slot_ui::LOADING_FRAMES).map(|f|slot_ui::loading_face_at(f,96)).collect());});
                 rx
             }),
+            ra_sync_icon: None,
             wifi_icon: None,
             hud_wifi_icon: None,
             audio_icon: None,
@@ -696,6 +699,13 @@ impl Frontend {
             self.session.app_mut().wifi_indicator=None;
             self.session.app_mut().hud_wifi_indicator=None;
         }
+        if self.session.app().network.as_ref().is_some_and(|m| m.achievements_busy()) {
+            if self.ra_sync_icon.is_none() {
+                let f = slot_ui::status_icon_face(Icon::Gamepad, HUD_INK);
+                upload(compositor, &mut self.ra_sync_icon, UndoFace {rgba:f.rgba,w:f.w,h:f.h});
+            }
+            self.session.app_mut().ra_sync_indicator = self.ra_sync_icon;
+        } else { self.session.app_mut().ra_sync_indicator = None; }
         let bluetooth = self.session.app().bluetooth_active();
         let usb = self.session.app().usb_audio_active();
         let kind = if usb {
@@ -908,6 +918,14 @@ impl Frontend {
             }
             self.kid_meter_key=meter;
         }
+        let meter=self.session.app().network.as_ref().and_then(|m|m.floating_progress()).map(|(label,done,total)|(label,done,total,light));
+        if self.network_meter_key!=meter {
+            self.session.app_mut().network_meter_face=if let Some((label,done,total,light))=&meter {
+                let face=slot_ui::filled_meter_face(&format!("{label} {done}/{total}"),Some(Icon::Gamepad),*done as f32/(*total).max(1)as f32,*light,400,40);
+                let tex=upload_rgba(compositor,&mut self.network_meter_tex,face.w,face.h,&face.rgba);Some((tex,face.w,face.h))
+            }else{None};
+            self.network_meter_key=meter;
+        }
         let (kind,value,icon)=self.session.app().hud_meter_key();
         let meter_key=Some((kind,value,icon,light));
         if self.hud_meter_key!=meter_key {
@@ -1069,6 +1087,8 @@ impl Frontend {
         self.switcher.thumbs.len() + self.switcher.spare.len()
     }
 
+    #[cfg(test)]
+    pub(crate) fn app_mut_for_review(&mut self)->&mut crate::app::App {self.session.app_mut()}
     pub fn app(&self) -> &crate::app::App {
         self.session.app()
     }

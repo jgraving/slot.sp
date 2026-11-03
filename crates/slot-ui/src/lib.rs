@@ -145,7 +145,7 @@ pub use sticker::{
 pub use toast::{toast_box, toast_face, toast_rect, Toast};
 
 mod button_code;
-pub use button_code::{masked_pin_face_on,button_code_face, credential_code_face_on, credential_code_face_with_lock_on};
+pub use button_code::{masked_pin_state_face_on,masked_pin_face_on,button_code_face, credential_code_face_on, credential_code_face_with_lock_on};
 
 mod loading;
 pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS};

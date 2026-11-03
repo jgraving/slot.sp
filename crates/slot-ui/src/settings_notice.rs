@@ -181,9 +181,9 @@ fn pin_buttons_notice_face(light:bool,minimum:bool)->UndoFace {
     let buttons=[A,B,X,Y,Up,Down,Left,Right,L1,R1,L2,R2];
     let faces:Vec<_>=buttons.into_iter().map(|button|crate::quick_menu::controller_button_face(button,26)).collect();
     let label=minimum.then(|| {
-        let layout=text::Layout{lines:vec!["4+ presses".into()],px:16.0,tracking:0.0,role:text::Role::Detail};
+        let layout=text::Layout{lines:vec!["6+ presses".into()],px:16.0,tracking:0.0,role:text::Role::Detail};
         let font=text::font(text::Role::Detail).expect("PIN hint font");
-        let w=text::line_width(font,"4+ presses",16.0,0.0).ceil()as u32+2;
+        let w=text::line_width(font,"6+ presses",16.0,0.0).ceil()as u32+2;
         let mut rgba=vec![0;(w*48*4)as usize];
         text::draw_centred(&mut rgba,w,48,&layout,if light {slot_gfx::ui_palette::INK}else{[246,244,239]});
         UndoFace{rgba,w,h:48}
