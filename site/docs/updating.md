@@ -36,4 +36,4 @@ Launcher updates come from **jgraving/slot.sp** releases and use `slot.sp-System
 
 A BaseOS update is offered only for the detected model and an older installed version, when the BaseOS update tool is available. Its checksum and compatibility verdict must pass before the UI reports readiness. Plug in before installing BaseOS; keep power connected through its next-boot installation. Launcher and BaseOS updates are separate choices. The updater never replaces this fork with upstream slot.
 
-**Network → Automatic time** sets the UTC clock in the background after Wi-Fi connects. It preserves your chosen UTC offset; it does not infer a timezone. You can turn it off to use the manual Date & time settings. Failed time requests retry while connected.
+**Network → Automatic time** is off by default, preserving existing manual clock settings. When enabled, it sets the UTC clock in the background after Wi-Fi connects. It preserves your chosen UTC offset; it does not infer a timezone. You can turn it off to use the manual Date & time settings. Failed time requests retry while connected.

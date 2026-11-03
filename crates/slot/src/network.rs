@@ -16,8 +16,8 @@ struct Preferences {
     #[serde(default)] lock_device: bool,
     #[serde(default="default_time")] automatic_time: bool,
 }
-fn default_time()->bool {true}
-impl Default for Preferences {fn default()->Self {Self{achievements:false,wifi_enabled:false,lock_device:false,automatic_time:true}}}
+fn default_time()->bool {false}
+impl Default for Preferences {fn default()->Self {Self{achievements:false,wifi_enabled:false,lock_device:false,automatic_time:false}}}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Page { Wifi, Achievements, Security, Updates }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1065,7 +1065,7 @@ mod tests {
         let fake=UpdateFake::default();let asked=fake.asked.clone();m.updates=Box::new(fake);
         m.open_updates();m.check_updates();assert!(asked.lock().unwrap().is_empty());
         m.wifi_on=true;m.last_wifi.on=true;m.last_wifi.connected=Some("Home".into());m.last_wifi.ip=Some("192.0.2.1".into());
-        assert!(m.automatic_time_ready());m.prefs.automatic_time=false;assert!(!m.automatic_time_ready());
+        assert!(!m.automatic_time_ready());m.prefs.automatic_time=true;assert!(m.automatic_time_ready());m.prefs.automatic_time=false;assert!(!m.automatic_time_ready());
         m.releases.push(update::Release{kind:Kind::BaseOs,running:"1.3.0".into(),version:"1.4.0".into(),url:"fixture".into(),sha256:[0;32],size:100,source:String::new()});
         m.set_battery(Some(slot_power::Battery{percent:10,charge:slot_power::Charge::Discharging}));m.install_update(0);
         assert!(asked.lock().unwrap().is_empty());assert!(m.notice_text().unwrap().contains("Plug in"));
