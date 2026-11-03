@@ -3063,9 +3063,12 @@ impl App {
                 let close = menu.input(action);
                 self.disconnect_volume = menu.disconnect_volume;
                 self.pause_on_disconnect = menu.pause_on_disconnect;
+                let changed = self.state.carousel_sounds != menu.carousel_sounds;
+                self.state.carousel_sounds = menu.carousel_sounds;
                 if close {
                     self.bluetooth = None;
                 }
+                if changed { self.persist(); }
             }
             return;
         }
@@ -3376,6 +3379,7 @@ impl App {
                     let mut menu =
                         crate::bluetooth::Manager::new(root.clone(), self.bluetooth_supported);
                     menu.wired = self.headphones;
+                    menu.carousel_sounds = self.state.carousel_sounds;
                     self.bluetooth = Some(menu);
                 }
             }

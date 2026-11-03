@@ -82,26 +82,11 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Screen", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Wi-Fi"]
+        ["General", "Display", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Wi-Fi"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
-        [
-            "Wallpaper",
-            "Wallpaper Tint",
-            "Shell Color",
-            "UI theme",
-            "Recents",
-            "Game Titles",
-            "Sort Favorites",
-            "Boot Animation",
-            "Carousel Sounds",
-            "Carousel motion",
-            "Clock format",
-            "Date & Time",
-            "Security PIN",
-            "About"
-        ]
+        ["Recents", "Sort Favorites", "Clock format", "Date & Time", "Security PIN", "About"]
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
@@ -113,7 +98,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
-        ["Brightness", "Color temp", "Night mode", "Game Boy Advance", "Game Boy Color", "Game Boy"]
+        ["Brightness", "Color temp", "Night mode", "UI theme", "Wallpaper", "Wallpaper Tint", "Shell Color", "Game Titles", "Carousel motion", "Game Boy Advance", "Game Boy Color", "Game Boy"]
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
@@ -200,6 +185,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
         &QuickRow::SCREEN_GBC[..],
         &QuickRow::SCREEN_GB[..],
         &QuickRow::POWER[..],
+        &QuickRow::SOUND_OPTIONS[..],
     ] {
         for &row in page {
             assert_eq!(row.page(), page, "{row:?}");
@@ -212,10 +198,10 @@ fn a_hidden_row_is_stepped_over_and_takes_no_place() {
     let hidden = [QuickRow::WallpaperTint];
     assert_eq!(QuickRow::Wallpaper.down(&hidden), QuickRow::ShellColour);
     assert_eq!(QuickRow::ShellColour.up(&hidden), QuickRow::Wallpaper);
-    assert_eq!(QuickRow::Wallpaper.up(&hidden), QuickRow::About);
-    assert_eq!(QuickRow::ShellColour.position(&hidden), 1);
+    assert_eq!(QuickRow::Wallpaper.up(&hidden), QuickRow::Theme);
+    assert_eq!(QuickRow::ShellColour.position(&hidden), 5);
     assert_eq!(QuickRow::Wallpaper.down(&[]), QuickRow::WallpaperTint);
-    assert_eq!(QuickRow::ShellColour.position(&[]), 2);
+    assert_eq!(QuickRow::ShellColour.position(&[]), 6);
     assert_eq!(
         slot_ui::quick_row_top(QuickRow::ShellColour, &hidden)
             - slot_ui::quick_row_top(QuickRow::Wallpaper, &hidden),
@@ -500,13 +486,17 @@ fn the_wallpaper_tint_reads_as_how_much_it_darkens() {
 }
 
 #[test]
-fn show_titles_sits_under_recents_on_the_general_page() {
-    let at = |r: QuickRow| QuickRow::GENERAL.iter().position(|g| *g == r);
-    assert_eq!(
-        at(QuickRow::ShowTitles),
-        at(QuickRow::Recents).map(|i| i + 1)
-    );
-    assert_eq!(QuickRow::ShowTitles.parent(), Some(QuickRow::General));
+fn appearance_options_share_the_display_page_and_return_to_its_tile() {
+    for row in [QuickRow::Theme, QuickRow::Wallpaper, QuickRow::WallpaperTint,
+        QuickRow::ShellColour, QuickRow::ShowTitles, QuickRow::CarouselMotion] {
+        assert!(QuickRow::SCREEN.contains(&row));
+        assert!(!QuickRow::GENERAL.contains(&row));
+        assert_eq!(row.parent(), Some(QuickRow::Screen));
+        assert_eq!(row.heading(), "Display");
+    }
+    assert_eq!(QuickRow::BootAnimation.parent(), Some(QuickRow::Power));
+    assert_eq!(QuickRow::CarouselSounds.parent(), Some(QuickRow::Bluetooth));
+    assert_eq!(QuickRow::SecurityPin.parent(), Some(QuickRow::General));
 }
 
 #[test]
@@ -535,6 +525,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
     for hidden in [&[][..], &[QuickRow::WallpaperTint][..]] {
         for selected in QuickRow::GENERAL
             .into_iter()
+            .chain(QuickRow::SCREEN)
             .chain(QuickRow::GAME)
             .chain(QuickRow::CONTROLS)
             .chain(QuickRow::SHORTCUTS)

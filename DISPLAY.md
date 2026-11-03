@@ -12,7 +12,7 @@ Menus, game names and notices use Google Sans Flex. The selected setting has hea
 
 ## Colors
 
-Open **Menu → General → Shell Color** to choose the SP artwork's color:
+Open **Menu → Display → Shell Color** to choose the SP artwork's color:
 
 | Choice | Appearance |
 | :--- | :--- |
@@ -22,23 +22,22 @@ Open **Menu → General → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **General → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
+The selected color also appears on the animated power switch and link screen. **Display → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
 
 [Preview all four SP colors on the homepage](https://jakegraving.com/slot.sp/#intro-title).
 
 ## Backgrounds & animation
 
-Open **Menu → General**:
+Open **Menu → Display**:
 
 | Setting | What to choose |
 | :--- | :--- |
 | **Wallpaper** | Flowing Gradient, Static Gradient, None, Random, or one of your own images. |
 | **Wallpaper Tint** | Darken a custom or random wallpaper in Dark mode, or lighten it in Light mode. |
-| **Boot Animation** | Show or skip the startup animation, where the letters gather and drop into the slot. |
 | **Carousel motion** | Wheel places cartridges along a curved path; Classic keeps them in a horizontal line. Wheel is the default. |
-| **Carousel Sounds** | Play or silence the soft clicks when moving between games. |
-| **Clock format** | Use 12-hour or 24-hour time in the status bar, time editors, schedules and time labels. The default is 24-hour. |
 | **Game Titles** | Choose Off, Clean names without tags, or the full Filename above the slot. |
+
+**Power & lid → Boot Animation** shows or skips the startup animation. **Sound → Carousel sounds** controls the clicks between games. Clock format is in **General**.
 
 **Flowing Gradient** animates the background; **Static Gradient** keeps it still. Both have separate Light and Dark colors. **None** uses a plain background. **Random** chooses one of your images from `Wallpapers/` at startup.
 
@@ -50,7 +49,7 @@ Custom and random wallpapers are lightened in Light mode. **Wallpaper Tint** adj
 
 ## Screen effects & borders
 
-Open **Menu → Screen**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
+Open **Menu → Display**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
 
 | Setting | What it changes |
 | :--- | :--- |
@@ -93,11 +92,11 @@ The screen-size choice is remembered per game. Brightness and warmth have separa
 
 ### Automatic day and night
 
-Set start times in **Screen → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
+Set start times in **Display → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
 
 ## Your own backgrounds & borders
 
-Place PNG backgrounds in `Wallpapers/`, then choose them in **General → Wallpaper**.
+Place PNG backgrounds in `Wallpapers/`, then choose them in **Display → Wallpaper**.
 
 | Display | Background size |
 | :--- | :--- |

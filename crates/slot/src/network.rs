@@ -505,7 +505,7 @@ impl Menu {
             return face;
         }
         if let Some(field) = self.code {
-            let instruction = match field { Field::CreateVault => "Choose 16 button presses", Field::ConfirmVault => "Repeat the same 16 buttons", _ => "Enter your 16-button unlock code" };
+            let instruction = match field { Field::CreateVault => "Choose 4 button presses", Field::ConfirmVault => "Repeat the same 4 buttons", _ => "Enter your 4-button PIN" };
             return slot_ui::credential_code_face_on(canvas, instruction, self.code_text.len());
         }
         let rows = self.rows();
@@ -516,6 +516,14 @@ impl Menu {
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
         let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {if self.forget_pin {"Forget Security PIN?"} else {"Use session only?"}} else { match self.page {Page::Wifi=>"Wi-Fi", Page::Achievements=>"RetroAchievements", Page::Security=>"Security PIN"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
+        if self.page == Page::Security && self.forget_confirmation.is_none() {
+            let lines: &[&str] = match self.creating_method {
+                Method::Buttons => &["Four presses for quick unlocking", "Use a passphrase for stronger card protection"],
+                Method::Passphrase => &["At least 12 characters", "Stronger protection if the card is copied"],
+            };
+            let detail = slot_ui::quick_description_face(lines);
+            let x=face.w.saturating_sub(detail.w)/2; blit(&mut face, &detail, x, 300);
+        }
         if self.forget_confirmation.is_some() {
             let detail = slot_ui::quick_description_face(&["Current session stays signed in", "Next restart needs the credentials again"]);
             let x=face.w.saturating_sub(detail.w)/2; blit(&mut face, &detail, x, 300);
@@ -613,7 +621,7 @@ mod tests {
         assert_eq!(menu.secrets.ssid, "Home");
         assert_eq!(menu.secrets.wifi_password, "home-secret");
     }
-    const CODE: [Btn;16] = [Btn::A,Btn::B,Btn::X,Btn::Y,Btn::Up,Btn::Down,Btn::Left,Btn::Right,Btn::L1,Btn::R1,Btn::L2,Btn::R2,Btn::A,Btn::X,Btn::Left,Btn::R1];
+    const CODE: [Btn;4] = [Btn::A,Btn::X,Btn::Left,Btn::R1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }
     fn wait(menu: &mut Menu) {
         let until=Instant::now()+Duration::from_secs(10);
@@ -684,7 +692,7 @@ mod tests {
         restarted.unlock(None);buttons(&mut restarted,&CODE);wait(&mut restarted);
         assert!(restarted.secrets.wifi_password.is_empty());
         let reader=Worker::new(root.path());
-        reader.jobs.send(Job::Unlock(Zeroizing::new("abcdefghijklacgj".into()))).unwrap();
+        reader.jobs.send(Job::Unlock(Zeroizing::new("acgj".into()))).unwrap();
         let reply=reader.results.recv_timeout(Duration::from_secs(10)).unwrap();
         match reply.result.unwrap() {Response::Unlocked(secrets)=>assert!(secrets.wifi_password.is_empty()),_=>panic!("expected unlocked payload")}
 
@@ -694,8 +702,8 @@ mod tests {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_security();
         menu.selected=1;menu.input(Action::GbaDown(Btn::A));
         for b in CODE {assert!(!menu.repeats(b));}
-        buttons(&mut menu,&CODE[..8]);assert_eq!(menu.code_text.len(),8);
-        menu.input(Action::GbaDown(Btn::Select));assert_eq!(menu.code_text.len(),7);
+        buttons(&mut menu,&CODE[..2]);assert_eq!(menu.code_text.len(),2);
+        menu.input(Action::GbaDown(Btn::Select));assert_eq!(menu.code_text.len(),1);
         menu.input(Action::QuickMenu);assert!(menu.code_text.is_empty()&&menu.first_pass.is_empty());
         menu.open_wifi();assert!(!menu.show_progress());menu.last_wifi.busy=wifi::Busy::Scanning;assert!(menu.show_progress());
         menu.last_wifi.busy=wifi::Busy::Idle;assert!(!menu.show_progress());
@@ -718,7 +726,7 @@ mod tests {
             session.feed([RawEvent::Down(b),RawEvent::Up(b)],i as u64*40);
         }
         let menu=session.app_mut().network.as_mut().unwrap();
-        assert!(menu.code.is_none(),"all sixteen physical presses must submit the code");
+        assert!(menu.code.is_none(),"all four physical presses must submit the code");
         wait(menu);assert!(!menu.locked&&menu.wifi_on);
     }
 

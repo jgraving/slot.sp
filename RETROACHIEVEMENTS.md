@@ -23,11 +23,11 @@ and enhanced-open networks are shown but cannot be joined in this build.
 **General → Security PIN** sets the shared unlock secret for Wi-Fi and
 RetroAchievements. Choose **Button code** or **Passphrase**, then **Set Security PIN**:
 
-- **Button code:** enter 16 presses using A/B/X/Y, the D-pad and shoulder buttons,
+- **Button code:** enter four presses using A/B/X/Y, the D-pad and shoulder buttons,
   then repeat them. The last press submits automatically. Select deletes a press;
   Menu cancels. Held buttons do not repeat into the code. The dots hide your sequence.
 - **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
-  A long, hard-to-guess passphrase gives stronger protection than a predictable code.
+  A long, hard-to-guess passphrase gives stronger protection than the short button PIN.
 
 This Security PIN is separate from the four-button parental-controls code. No recovery
 copy is written to the card. Remember it or keep it somewhere safe yourself.
@@ -57,9 +57,11 @@ kept. Enter the Wi-Fi/account details again afterward.
 Both features share one encrypted file. Its key is never stored on the card. The
 supplicant receives passwords through its Unix control socket and never saves them
 to the card. The vault uses Argon2id and authenticated ChaCha20-Poly1305 encryption.
-It protects a removed card against someone without your secret, not a device that
-is already running and unlocked. A short PIN or an obvious repeated button pattern
-is easier to guess; the button option requires 16 presses for this reason.
+The four-button PIN is convenient, but has few possible combinations: someone who
+copies the card can try every combination outside the device. It does not provide
+strong protection against that attack. Choose a long passphrase for stronger
+protection of a removed card. Neither option protects a device that is already
+running and unlocked.
 
 Link play takes ownership of the radio and turns home Wi-Fi off. Reconnect manually
 after link play. Cached achievements can continue during gpSP link play, but the

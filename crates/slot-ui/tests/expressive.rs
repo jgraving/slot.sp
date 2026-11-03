@@ -128,15 +128,15 @@ fn status_reveal_preserves_icon_centres_and_bounds_opacity() {
 fn selected_tile_expands_to_a_card_and_reverses_without_fading() {
     let mut m=MenuMotion::default();
     m.update(Some(QuickRow::General),&[],None,1.0);
-    m.update(Some(QuickRow::Wallpaper),&[],None,0.0);
-    let first=m.frame(QuickRow::Wallpaper,&[]);
+    m.update(Some(QuickRow::Recents),&[],None,0.0);
+    let first=m.frame(QuickRow::Recents,&[]);
     assert_eq!(first.tile_origin,Some([0.0,0.0]));assert_eq!(first.tile_reveal,0.0);
     assert_eq!(first.page_shift,1.0);assert_eq!(first.opacity,1.0);
-    m.update(Some(QuickRow::Wallpaper),&[],None,0.08);
-    let reveal=m.frame(QuickRow::Wallpaper,&[]).tile_reveal;
+    m.update(Some(QuickRow::Recents),&[],None,0.08);
+    let reveal=m.frame(QuickRow::Recents,&[]).tile_reveal;
     assert!(reveal>0.0&&reveal<1.0);
     m.update(Some(QuickRow::General),&[],None,0.0);
-    assert!((m.outgoing_frame(QuickRow::Wallpaper,&[]).tile_reveal-reveal).abs()<0.001);
+    assert!((m.outgoing_frame(QuickRow::Recents,&[]).tile_reveal-reveal).abs()<0.001);
     assert!(m.frame(QuickRow::General,&[]).page_shift<=0.0);
     m.update(Some(QuickRow::General),&[],None,1.0);assert_eq!(m.outgoing_row(),None);
 }
@@ -418,12 +418,12 @@ fn opening_and_closing_reverse_at_the_same_position_without_losing_velocity() {
 fn back_during_page_travel_reuses_both_pages_at_their_current_positions() {
     let mut motion=MenuMotion::default();
     motion.update(Some(QuickRow::General),&[],None,1.0);
-    motion.update(Some(QuickRow::Wallpaper),&[],None,0.06);
-    let incoming=motion.frame(QuickRow::Wallpaper,&[]).page_shift;
+    motion.update(Some(QuickRow::Recents),&[],None,0.06);
+    let incoming=motion.frame(QuickRow::Recents,&[]).page_shift;
     let outgoing=motion.outgoing_frame(QuickRow::General,&[]).page_shift;
     motion.update(Some(QuickRow::General),&[],None,0.0);
     assert!((motion.frame(QuickRow::General,&[]).page_shift-outgoing).abs()<0.001);
-    assert!((motion.outgoing_frame(QuickRow::Wallpaper,&[]).page_shift-incoming).abs()<0.001);
+    assert!((motion.outgoing_frame(QuickRow::Recents,&[]).page_shift-incoming).abs()<0.001);
     assert_eq!(motion.frame(QuickRow::General,&[]).opacity,1.0);
 }
 

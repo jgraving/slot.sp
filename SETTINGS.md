@@ -6,11 +6,11 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 
 | Tile | Use it for | Instructions |
 | :--- | :--- | :--- |
-| **General** | Light or Dark menus, SP color, wallpaper, Favorites order, carousel motion, Recents, game names, startup animation, carousel sounds, clock format, date/time, Security PIN and About. | [Appearance & screen](DISPLAY.md) |
-| **Screen** | Brightness, screen warmth and day/night schedules, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
-| **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects. | [Audio & headphones](BLUETOOTH.md) |
+| **General** | Recents, Favorites order, clock format, date/time, Security PIN and About. | [Clock & time](POWER-OPTIONS.md#set-the-clock) · [Security PIN](#security-pin) |
+| **Display** | Brightness, screen warmth, night schedules, UI theme, wallpaper, SP color, game names and carousel motion, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
+| **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects, and toggle carousel sounds. | [Audio & headphones](BLUETOOTH.md) |
 | **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. RetroAchievements is the first entry. | [Playing & saving](PLAYING.md) |
-| **Power & lid** | Lid behavior, sleep and shutdown timer. | [Sleep & power](POWER-OPTIONS.md) |
+| **Power & lid** | Lid behavior, sleep, shutdown timer and startup animation. | [Sleep & power](POWER-OPTIONS.md) |
 | **Device controls** | Game buttons, carousel buttons, shortcuts and the on-device reference. | [Buttons & shortcuts](CONTROLS.md) |
 | **Parental controls** | Approved games, daily allowance, session timer or bedtime, maximum volume and the four-button parent code. | [Kid mode](KID-MODE.md) |
 | **Wi-Fi** | Connect, scan nearby networks and choose Session only or Encrypted credential storage. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
@@ -20,7 +20,7 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 ## Security PIN
 
 Set the shared **Security PIN** under **General** before choosing **Encrypted** in
-Wi-Fi or RetroAchievements. Choose a 16-button code or a keyboard passphrase. The
+Wi-Fi or RetroAchievements. Choose a four-button code or a keyboard passphrase. The
 same PIN unlocks both features for the current session. After a restart with either
 feature enabled and credentials saved, an animated card asks you to unlock them.
 See [PIN setup, reconnecting and resetting](RETROACHIEVEMENTS.md#security-pin-and-saved-credentials).
@@ -30,13 +30,13 @@ under General; press <kbd>X</kbd> there to restart the launcher.
 
 ## During a game
 
-Settings float over the game screen. Screen opens display settings for the current system; open **Screen → Night mode** from the carousel to edit the automatic schedule. Tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and undo choices appear when available.
+Settings float over the game screen. Screen opens display settings for the current system; open **Display → Night mode** from the carousel to edit the automatic schedule. Tap <kbd>MENU</kbd> for **Resume**, **Settings** and **Exit game**. **Save states**, **Screenshots** and undo choices appear when available.
 
 In kid mode, **Settings** opens four tiles: Sound, Screen, Buttons & shortcuts and Parental controls. See the [kid menu](KID-MODE.md#the-kid-menu).
 
 ## Light, dark, day and night
 
-**General → UI theme** changes the interface palette. **Screen → Night mode** changes saved brightness and warmth settings, with an optional schedule. They are independent.
+**Display → UI theme** changes the interface palette. **Display → Night mode** changes saved brightness and warmth settings, with an optional schedule. They are independent.
 
 ## Status icons and notices
 

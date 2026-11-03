@@ -29,7 +29,7 @@ Browse your games as cartridges, press A to play, and use MENU for settings. Thi
 1. Use <kbd>Left</kbd> and <kbd>Right</kbd> to choose a game, then tap <kbd>A</kbd> to play.
 2. Tap <kbd>MENU</kbd> during play to open the game menu.
 3. Back on the carousel, press <kbd>Y</kbd> to add a game to Favorites.
-4. Open **Menu → General** to choose the **UI theme**, **Shell Color** and **Wallpaper**.
+4. Open **Menu → Display** to choose the **UI theme**, **Shell Color** and **Wallpaper**.
 5. Try <kbd>SELECT</kbd> + <kbd>X</kbd> to switch to the night display preset.
 
 ## Reading the controls

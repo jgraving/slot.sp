@@ -352,16 +352,11 @@ fn screen_opens_a_page_of_its_own_and_b_comes_back_to_it() {
     open_at(&mut a, QuickRow::Screen);
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::Brightness));
-    for want in [
-        QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
-        QuickRow::Brightness,QuickRow::BlueLight,QuickRow::DisplaySchedule,QuickRow::ScreenGba,QuickRow::ScreenGbc,QuickRow::ScreenGb,
-    ] {
+    let hidden=a.hidden_rows();
+    let rows: Vec<_> = QuickRow::SCREEN.into_iter().filter(|r|!hidden.contains(r)).collect();
+    for want in rows.iter().skip(1).chain(rows.iter()) {
         press(&mut a, Btn::Down);
-        assert_eq!(
-            a.quick_menu(),
-            Some(want),
-            "the page did not wrap on itself"
-        );
+        assert_eq!(a.quick_menu(), Some(*want), "the display page did not wrap on itself");
     }
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::GbShader));

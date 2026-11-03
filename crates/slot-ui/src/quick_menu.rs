@@ -177,6 +177,7 @@ impl QuickRow {
         QuickRow::Kids,
         QuickRow::LidClose,
         QuickRow::SleepTimeout,
+        QuickRow::BootAnimation,
         QuickRow::SleepNow,
         QuickRow::ShutDown,
         QuickRow::ShellColour,
@@ -252,29 +253,24 @@ impl QuickRow {
         QuickRow::Wifi,
     ];
 
-    pub const POWER: [QuickRow; 4] = [
+    pub const POWER: [QuickRow; 5] = [
         QuickRow::LidClose,
         QuickRow::SleepTimeout,
+        QuickRow::BootAnimation,
         QuickRow::SleepNow,
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 14] = [
-        QuickRow::Wallpaper,
-        QuickRow::WallpaperTint,
-        QuickRow::ShellColour,
-        QuickRow::Theme,
+    pub const GENERAL: [QuickRow; 6] = [
         QuickRow::Recents,
-        QuickRow::ShowTitles,
         QuickRow::FavoriteSort,
-        QuickRow::BootAnimation,
-        QuickRow::CarouselSounds,
-        QuickRow::CarouselMotion,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
         QuickRow::SecurityPin,
         QuickRow::About,
     ];
+
+    pub const SOUND_OPTIONS: [QuickRow; 1] = [QuickRow::CarouselSounds];
 
     pub const CONTROL_PAGES: [QuickRow; 4] = [
         QuickRow::ControlsShelf,
@@ -323,10 +319,16 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 6] = [
+    pub const SCREEN: [QuickRow; 12] = [
         QuickRow::Brightness,
         QuickRow::BlueLight,
         QuickRow::DisplaySchedule,
+        QuickRow::Theme,
+        QuickRow::Wallpaper,
+        QuickRow::WallpaperTint,
+        QuickRow::ShellColour,
+        QuickRow::ShowTitles,
+        QuickRow::CarouselMotion,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -393,11 +395,12 @@ impl QuickRow {
     pub fn page(self) -> &'static [QuickRow] {
         match self {
             QuickRow::SecurityPin => &QuickRow::GENERAL,
+            QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
             QuickRow::Achievements => &QuickRow::GAME,
             QuickRow::LidClose
             | QuickRow::SleepTimeout
             | QuickRow::SleepNow
-            | QuickRow::ShutDown => &QuickRow::POWER,
+            | QuickRow::ShutDown | QuickRow::BootAnimation => &QuickRow::POWER,
             QuickRow::ScreenGeneral
             | QuickRow::ScreenGba
             | QuickRow::ScreenGbc
@@ -423,16 +426,11 @@ impl QuickRow {
             | QuickRow::LeftStick
             | QuickRow::AutoLoad
             | QuickRow::EjectSave => &QuickRow::GAME,
-            QuickRow::About | QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::Wallpaper
-            | QuickRow::WallpaperTint
-            | QuickRow::DateTime
-            | QuickRow::ShellColour
-            | QuickRow::Theme
-            | QuickRow::Recents
-            | QuickRow::ShowTitles
-            | QuickRow::FavoriteSort
-            | QuickRow::BootAnimation
-            | QuickRow::CarouselSounds => &QuickRow::GENERAL,
+            QuickRow::Wallpaper | QuickRow::WallpaperTint | QuickRow::ShellColour
+            | QuickRow::Theme | QuickRow::ShowTitles
+            | QuickRow::CarouselMotion => &QuickRow::SCREEN,
+            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime
+            | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -475,7 +473,8 @@ impl QuickRow {
             QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
             QuickRow::ScSave => Some(QuickRow::Shortcuts),
-            QuickRow::Wallpaper => Some(QuickRow::General),
+            QuickRow::Recents => Some(QuickRow::General),
+            QuickRow::CarouselSounds => Some(QuickRow::Bluetooth),
             QuickRow::ControlsShelf => Some(QuickRow::Controls),
             QuickRow::ShelfPrev => Some(QuickRow::ControlsShelf),
             _ => None,
@@ -555,7 +554,7 @@ impl QuickRow {
             QuickRow::ShutDown => "Power Off",
             QuickRow::FastForward => "Fast Forward",
             QuickRow::FastForwardSound => "Fast Forward Sound",
-            QuickRow::Screen => "Screen",
+            QuickRow::Screen => "Display",
             QuickRow::Rumble => "Rumble",
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",

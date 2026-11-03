@@ -87,14 +87,17 @@ fn carousel_sounds_toggle_is_saved_and_disables_motion_ticks() {
     let mut a = App::boot(d.path());
     a.update(1.0);
     a.apply(Action::QuickMenu);
-    for _ in 0..QuickRow::General.position(&[]) { common::through(&mut a, Btn::Down); }
+    common::through(&mut a, Btn::Right);
+    common::through(&mut a, Btn::Right);
     common::through(&mut a, Btn::A);
-    for _ in 0..QuickRow::CarouselSounds.position(&a.hidden_rows()) { common::through(&mut a, Btn::Down); }
-    assert_eq!(a.quick_menu(), Some(QuickRow::CarouselSounds));
+    let menu=a.bluetooth.as_mut().expect("Sound opened");
+    menu.selected=menu.rows().iter().position(|r|r.starts_with("CAROUSEL_SOUNDS ")).unwrap();
+    assert!(!menu.show_progress());
     assert_eq!(a.quick_value(QuickRow::CarouselSounds), Some(QuickValue::On));
     common::through(&mut a, Btn::Right);
     assert_eq!(a.quick_value(QuickRow::CarouselSounds), Some(QuickValue::Off));
     assert!(!read_slot_state(d.path()).carousel_sounds);
+    assert!(!a.bluetooth.as_ref().unwrap().carousel_sounds);
     let mut a = App::boot(d.path());
     a.update(1.0);
     a.apply(Action::GbaDown(Btn::Right));
