@@ -20,6 +20,11 @@ log() {
 	echo "$(date '+%F %T') $*" >> "$LOGS/slot-session.log" 2>/dev/null
 }
 
+# Do not run a partially installed tree; retained staging can finish on retry.
+if [ -f "$SYS/slotupdate.sh" ]; then
+    sh "$SYS/slotupdate.sh" || exit 1
+fi
+
 pid="$(cat "$RUN/slot-led.pid" 2>/dev/null)"
 if [ -z "$pid" ] || [ ! -d "/proc/$pid" ]; then
 	sh "$SYS/led.sh" once

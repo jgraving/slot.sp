@@ -35,7 +35,7 @@ fn main(){
     for b in [Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}a.save("pin-ready");a.tap(Btn::Start);a.save("pin-confirm");a.code();a.wait_io();a.save("pin-set");
     a.home();a.nav(QuickRow::Wifi);a.save("wifi-tile");a.tap(Btn::A);a.save("wifi-off");
     a.tap(Btn::A);a.settle();a.save("wifi-on");
-    for _ in 0..4{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
+    for _ in 0..6{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
     for _ in 0..4{a.tap(Btn::A);}a.tap(Btn::Start);a.wait_io();a.save("wrong-pin");for _ in 0..4{a.tap(Btn::Select);}a.code();a.wait_io();a.save("unlocked-reconnected");

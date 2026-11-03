@@ -249,6 +249,45 @@ User requests removal of unencrypted storage/selectors and a six-button minimum 
 - First RA revision compiled and all 134 core library tests passed. UI icon checks found the bundled font has no gamepad glyph. Replaced that glyph with vector artwork in the shared box instead of weakening the visibility tests.
 - Encrypted-only and neutral meter edits are ready for a fresh CI run. Source-level whitespace check passes. Previous confirmation-prompt implementation has been removed under the user's superseding direction.
 
+### Encrypted-only CI follow-up
+
+- New minimum-PIN, legacy-upgrade, plaintext migration and network gating tests pass. First encrypted-only run compiled and passed 131/132 core tests. Remaining fixture assumed a Wi-Fi credential save was synchronous; it must wait for the encrypted worker before issuing the next input. Corrected fixture; no runtime change for this failure.
+
+### Stale unlock notification report
+
+Before editing: user reports Credentials unlocked appearing on entering Network and cannot tell whether Wi-Fi was running. Source stores the notice across page opens and changes its page key, causing it to replay. Clear old notices when opening settings pages and remove routine successful unlock text; preserve explicit locked, connection and failure feedback. This notice is not a Wi-Fi connection-state transition.
+
+### Local validation available
+
+- Standalone Rust 1.96 toolchain is now working in scratch with the system linker. All 19 targeted network tests pass locally, including six-button setup, legacy upgrade, cached-password isolation and stale-notice suppression.
+- Added explicit encrypted-migration write/deletion failure regressions before final testing. Final UI/core/native CI is still required.
+
+### Final RA source checkpoint before broader CI
+
+- New stale-unlock notice regression and both plaintext-migration failure paths pass locally. Core suite: 134 tests pass; the remaining Unix control-socket test cannot bind in this local sandbox (Operation not permitted) and remains enabled in CI.
+- Controller glyph renders as vector artwork; local icon test caught premultiplied edge-colour rounding, corrected by preserving flat RGB with antialiased alpha. Neutral meter checks pass at all tested fill levels/themes.
+- Preserve the completed game count while artwork continues instead of clearing it to 0/0 on an empty rescan. Status-corner layout now covers simultaneous audio, mute, Wi-Fi, RA controller and parental icon.
+- Next: full CI, production light/dark capture review and fresh device build. OTA/time remains in its own stacked draft branch.
+
+## Separate OTA/time integration
+
 ### Separate OTA/time integration starting
 
 Branch feat/fork-ota-time depends on fix/ra-background-progress / PR #190. Source references: upstream slot commit 87788eafba77bc93ba11048d22f1c2f08f792a91 (OTA) and 4f402cb8bc20431facb03c3277640a9ed8e9bdfb (network time). Adaptation plan before edits: use jgraving/slot.sp GitHub stable releases and slot.sp-System.zip asset with digest/source verification; stage a new System tree and swap at next launch with recovery, leaving Config/Games/Saves untouched. BaseOS only for detected BASEOS_TARGET/BASEOS_VERSION with baseos-update compatibility verdict, verified digest/size, explicit install action and low-battery gate. Preserve encrypted supplicant networking; never import upstream wifi.conf. Integrate nonblocking network time using actual connected network and a user toggle, preserving UTC offset and display schedules. No hardware OS update will be run in this session. Runtime toolchain installation is being attempted to validate locally. Not implemented yet.
+
+### OTA/time local implementation checkpoint
+
+- Adapted upstream update worker and SNTP scheduling without upstream Wi-Fi config or settings storage. Launcher release selection is pinned to jgraving/slot.sp and validates GitHub digest/size plus build-info product/repository/architecture/source. Archive validation restricts extraction to System and rejects traversal, symlinks, oversized entries, duplicate names and control characters.
+- Network gains Updates and Automatic time. Installs are explicit; BaseOS requires correct target/version, checksum, baseos-update WILL APPLY verdict and adequate battery/charging. Downloads use cancellable workers; no real update has been installed.
+- System staging is applied at next launch with atomic per-file replacements, retained complete staging for retry, and no writes outside System. Unlike upstream's cleanup, unknown System files are retained to preserve fork/custom additions.
+- Added release/archive/target/cancellation tests and shell tests for incomplete/traversal packages and config/game/save preservation. Shell update and existing launch tests pass locally. Initial host cargo check passes; Rust runtime was recovered locally after installer limitations. Full test/device checks pending.
+- Automatic time runs in a worker only when the unlocked network is actually connected, retries failure after a minute, polls daily after success and preserves UTC offset and schedule settings. Existing manual clock UI is retained.
+
+### OTA/time tests ready for CI
+
+- Local host check and device-feature check pass. All 17 release/archive/cancellation/network-time/SNTP tests pass. Shell staged-update and existing launch tests pass.
+- Added menu regression coverage for connected-only checks, low-battery BaseOS gating, time-toggle readiness, and progress/completion texture refresh.
+- Synced the latest RA fixes/tests from PR #190 into this dependent branch; do not regress its stale-notice or migration-failure coverage. Updated upstream-style auto time to preserve this fork's UTC offset and manual clock menu.
+- No real network update or OS installation has run. Physical interruption/recovery and BaseOS install testing remain mandatory before merging this draft.
+
+- Added GitHub ancestry checking before offering a launcher release: stable must be ahead of the running build. Newer/diverged PR builds cannot be downgraded merely because their hash differs from latest stable. No automatic install/restart is performed.

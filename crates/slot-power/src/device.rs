@@ -730,16 +730,8 @@ impl Platform for DevicePlatform {
             .unwrap_or(0)
     }
 
-    fn set_clock(&mut self, secs: i64) {
-        ran(
-            "date",
-            Command::new("date").arg(format!("-s@{secs}")).status(),
-        );
-        ran(
-            "hwclock",
-            Command::new("hwclock").args(["-w", "-u"]).status(),
-        );
-    }
+    fn set_clock(&mut self,secs:i64) {write_network_clock(secs);}
+    fn set_clock_in_background(&mut self,secs:i64) {std::thread::spawn(move||write_network_clock(secs));}
 
     fn relink_adb(&mut self) -> bool {
         let gadget = self.sysfs.join("kernel/config/usb_gadget/g1/UDC");
@@ -888,4 +880,16 @@ mod tests {
         assert_eq!(device_target(None, "BASEOS_TARGET='rgsp'\n"), Some("rgsp"));
         assert_eq!(device_target(None, "BASEOS_DEVICE=h700\n"), None);
     }
+}
+
+fn write_network_clock(secs:i64) {
+        ran(
+            "date",
+            Command::new("date").arg(format!("-s@{secs}")).status(),
+        );
+        ran(
+            "hwclock",
+            Command::new("hwclock").args(["-w", "-u"]).status(),
+        );
+
 }

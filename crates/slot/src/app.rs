@@ -346,6 +346,7 @@ pub struct App {
     pub kids: crate::kid_policy::Policy,
     pub kid_menu: Option<crate::kid_menu::Menu>,
     pub network: Option<crate::network::Menu>,
+    net_time: crate::net_time::NetTime,
     pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
@@ -616,6 +617,7 @@ impl App {
             kids: crate::kid_policy::Policy::default(),
             kid_menu: None,
             network: None,
+            net_time: crate::net_time::NetTime::new(Arc::new(crate::sntp::fetch)),
             display_schedule: None,
             kid_error: false,
             catalog,
@@ -4462,10 +4464,22 @@ impl App {
         self.timers();
     }
 
+    pub fn set_net_time_source(&mut self,source:crate::net_time::Source) {self.net_time=crate::net_time::NetTime::new(source);}
+    fn step_net_time(&mut self) {
+        let ready=!self.shutting_down() && !matches!(self.phase,Phase::Doze{..}|Phase::SetClock{..})
+            && self.network.as_ref().is_some_and(|m|m.automatic_time_ready());
+        let Some(utc)=self.net_time.step(ready,self.now()) else {return;};
+        if !(1_577_836_800..4_102_444_800).contains(&utc) {return;}
+        let drift=utc.abs_diff(self.utc_secs());
+        if let Some(power)=&mut self.power {if drift>=2 {power.set_clock_in_background(utc);}}
+        if !self.state.clock_set {self.state.clock_set=true;self.persist();}
+    }
+
     fn timers(&mut self) {
         let linking=self.link_active();
-        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();
+        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}}
+        self.step_net_time();
         self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();

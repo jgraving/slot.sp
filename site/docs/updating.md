@@ -27,3 +27,13 @@ Your `Games`, `Saves`, `States`, `Labels` and `Config` folders stay in place. Wi
 If you are moving from a version of slot older than 1.4.0, copy over the existing `System` folder without deleting it first. The launcher moves the old settings into `Config`.
 
 [All downloads & release notes](https://github.com/jgraving/slot.sp/releases/latest) · [First installation](installing.md) · [User guide](features/guide.md)
+
+## On-device updates
+
+After installing a version that includes the updater, open **Settings → Network → Updates** while connected to Wi-Fi. Choose **Check for updates**, select **slot.sp** or **BaseOS**, then press **A** to download. **B** cancels a download. Wait for **Restart to install**, then restart from the normal power menu.
+
+Launcher updates come from **jgraving/slot.sp** releases and use `slot.sp-System.zip`. The updater verifies the download and its product, repository, processor architecture and source revision before staging it. Installation replaces files inside `System`; your `Config`, games, saves, labels and wallpapers stay in their existing folders. If an installation is interrupted, keep the card in place and restart so the staged files can finish installing.
+
+A BaseOS update is offered only for the detected model and an older installed version, when the BaseOS update tool is available. Its checksum and compatibility verdict must pass before the UI reports readiness. Plug in before installing BaseOS; keep power connected through its next-boot installation. Launcher and BaseOS updates are separate choices. The updater never replaces this fork with upstream slot.
+
+**Network → Automatic time** sets the UTC clock in the background after Wi-Fi connects. It preserves your chosen UTC offset; it does not infer a timezone. You can turn it off to use the manual Date & time settings. Failed time requests retry while connected.
