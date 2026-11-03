@@ -100,6 +100,12 @@ export function createHero(video, canvas, {media, reduced, onState}) {
         video.addEventListener('seeked',done,{once:true});video.addEventListener('error',error,{once:true});video.currentTime=time;
       });
       if(current!==operation||disposed)return;
+      // Present the first decoded frame before its clock starts. The 3D
+      // renderer may need to upload/compile the screen texture on first load;
+      // that work must not consume the short native boot animation.
+      context.drawImage(video,0,0,720,480);painted();
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      if(current!==operation||disposed)return;
       clip.ready=true;lastTime=-1;resume();
     } catch(error) {
       // Static endpoints keep every control functional if decoding is unavailable.

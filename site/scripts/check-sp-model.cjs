@@ -141,8 +141,11 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       await page.evaluate(()=>{
         const canvas=document.getElementById('hero-screen'),video=document.getElementById('hero-preview');
         let first=null;
+        window.__nativeBootSamples=[];
         const frame=()=>{
-          if(video.paused||canvas.dataset.state!=='boot')return;
+          if(canvas.dataset.state!=='boot')return;
+          if(window.__nativeBootSamples.length<20)window.__nativeBootSamples.push({time:video.currentTime,paused:video.paused,ready:video.readyState,at:performance.now()});
+          if(video.paused)return;
           const pixels=canvas.toDataURL('image/jpeg',.1);
           if(first===null)first=pixels;
           else if(first!==pixels){window.__nativeBootChanged=true;canvas.removeEventListener('hero:frame',frame);}
@@ -152,7 +155,11 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       release();
       await page.locator('.sp-stage.model-ready[data-pose=open]').waitFor({timeout:60000});
       if(width!==1366)await keyButton(page,'b').click();
-      await page.waitForFunction(()=>window.__nativeBootChanged===true);
+      try {await page.waitForFunction(()=>window.__nativeBootChanged===true);}
+      catch(error){
+        console.log('Boot playback diagnostics',await page.evaluate(()=>({frames:window.__nativeBootSamples,screen:{...document.getElementById('hero-screen').dataset},video:{time:document.getElementById('hero-preview').currentTime,paused:document.getElementById('hero-preview').paused}})));
+        await page.screenshot({path:path.join(out,`${width}-boot-failure.png`)});throw error;
+      }
       assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false');
       stable(before,await boxes(page),`${width}: renderer handoff`);
       assert(requests.some(url=>url.includes('/vendor/three')),'The live 3D model must load');
