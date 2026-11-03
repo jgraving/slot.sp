@@ -2,14 +2,14 @@
 
 Updated 2026-11-03. Read this first, then each branch's WORKLOG.md and live PR checks. Historical worklog sections contain superseded requests.
 
-## Current follow-up: final CI in progress
+## Ready for handheld testing
 
 PR #186 merged as 6d499951289899fbf2314ecee04d0f69a03a2b28. Follow-ups remain drafts:
 
 | PR | Branch | Current runtime | Verification |
 | --- | --- | --- | --- |
 | [#190: RA / Device code / Parent code](https://github.com/jgraving/slot.sp/pull/190) | fix/ra-background-progress | 285cfa1e586dabffe1720b3cdcd13f1047230d4f | All six workflows pass; 138 core tests, 31 achievement tests, native renders and ARM64 package |
-| [#191: General update/time tools](https://github.com/jgraving/slot.sp/pull/191) | feat/fork-ota-time | 92c2e8a470c30ca3add237780d1b32fc932a8156 | Device/package, scaling, blending and shortcuts pass; launcher 41731781266 and website 41731781278 pending |
+| [#191: General update/time tools](https://github.com/jgraving/slot.sp/pull/191) | feat/fork-ota-time | 92c2e8a470c30ca3add237780d1b32fc932a8156 | All six workflows pass; 141 core tests, 31 achievement tests, 18 update/time tests, native renders and ARM64 package |
 
 The runtime source is frozen unless a check fails. Later recovery commits are documentation only. Do not repeat implementation.
 
@@ -26,16 +26,18 @@ The runtime source is frozen unless a check fails. Later recovery commits are do
 
 ## Evidence and next steps
 
-Local: 140 combined core tests pass with one ignored native fixture and the sandbox-blocked Unix socket test excluded; clock 19/19, launcher quick-menu 58/58, UI library/quick-menu 61/61, achievements 31/31. The Unix socket test remains enabled in CI. Shared ARM64 CI passed, including both bundled cores.
+CI confirms 141 combined core tests pass, including the Unix socket test. Local: 140 passed with the socket test excluded; clock 19/19, launcher quick-menu 58/58, UI library/quick-menu 61/61, achievements 31/31. The Unix socket test remains enabled in CI. Shared ARM64 CI passed, including both bundled cores.
 
 Production light/GLES and dark/GL captures were reviewed for floating RA phases/retry/completion, disabled General tools, immediate UTC offset, zero/partial/ready code entry and direct parent cancellation/reopen. Final dark walkthrough passed with 47 valid PNGs. A prior local run had incomplete PNG output and a final fixture-marker failure; a clean traced rerun passed, confirmed synchronous removal at the expected root, and tracing was removed. Keep native assertions.
 
-- Combined System artifact: [13276413591](https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591), present/unexpired; final website/native checks pending.
+- Combined System artifact: [13276413591](https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591), present/unexpired; all six checks pass.
 - Current shared System artifact: [13276730948](https://github.com/jgraving/slot.sp/actions/runs/41730841353/artifacts/13276730948), present/unexpired when checked. Prefer a new combined artifact once #191 passes.
 - [RA worklog](https://github.com/jgraving/slot.sp/blob/fix/ra-background-progress/WORKLOG.md).
 - [OTA/time worklog](https://github.com/jgraving/slot.sp/blob/feat/fork-ota-time/WORKLOG.md).
 
-Next: verify all six workflows on both exact runtime SHAs, inspect completed device logs and artifact IDs, update PR validation/build links, then checkpoint final evidence in this index and both logs. Recheck artifact availability before sharing. Carry the latest parent documentation into #191 to keep the stacked PR mergeable.
+All six workflows are completed/success on each recorded runtime. Combined native review: [13277792404](https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404). Shared native review: [13278142220](https://github.com/jgraving/slot.sp/actions/runs/41730841530/artifacts/13278142220). Artifacts were present/unexpired at handoff; recheck before sharing later. Later commits update only recovery Markdown, and #191 includes the latest parent documentation.
+
+Next: handheld test these changes using the combined build. Confirm stable RA game/artwork progress and indicator when leaving settings, real heat/radio/RTC behavior, both code methods and direct cancellation, timezone persistence, and explicit OTA staging/restart/interruption/recovery. Keep both drafts until hardware validation. Retarget #191 to main after #190 merges; no follow-up merge/release is requested.
 
 No live account secrets were used. Optional manual RA smoke workflow uses RA_TEST_USERNAME and RA_TEST_PASSWORD only for login, read-only lookup and public artwork, without awards or game sessions. It is not part of ordinary PR checks.
 
