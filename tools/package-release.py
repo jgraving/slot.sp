@@ -55,7 +55,15 @@ def package(root: Path, output: Path, source: str) -> None:
     # Remove aliases left by an earlier build when reusing an output directory.
     for name in ('slot-System.zip', 'slot-SD2.zip'):
         (output / name).unlink(missing_ok=True)
-    files = ['slot.sp-System.zip', 'slot.sp-SD2.zip', 'build-info.json']
+    sources = Path('vendor/samba-sources')
+    if not (sources / 'dependency-sources.tsv').is_file():
+        raise ValueError('missing network-sharing corresponding source')
+    with zipfile.ZipFile(output / 'slot.sp-network-sources.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(sources.rglob('*')):
+            if path.is_file(): archive.write(path, path.relative_to(sources))
+    if (output / 'slot.sp-System.zip').stat().st_size > 64 * 1024 * 1024:
+        raise ValueError('System archive exceeds the OTA download limit')
+    files = ['slot.sp-network-sources.zip', 'slot.sp-System.zip', 'slot.sp-SD2.zip', 'build-info.json']
     (output / 'SHA256SUMS').write_text(''.join(
         f'{hashlib.sha256((output / name).read_bytes()).hexdigest()}  {name}\n' for name in files
     ))

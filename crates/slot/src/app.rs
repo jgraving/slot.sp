@@ -4477,6 +4477,11 @@ impl App {
     }
 
     /// Startup credential prompts wait for the boot intro and other modal pages.
+    pub fn add_shared_games(&mut self,carts:Vec<Cart>) {
+        for mut cart in carts {if !self.catalog.iter().any(|c|c.platform==cart.platform && c.stem==cart.stem){cart.read_header();self.catalog.push(cart);}}
+        self.catalog.sort_by(|a,b|(a.platform as u8,slot_store::sort_key(&a.stem)).cmp(&(b.platform as u8,slot_store::sort_key(&b.stem))));
+        self.apply_kid_scope();
+    }
     pub fn open_studio(&mut self) {
         if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
         let Some(root)=self.root.clone() else {return;};
@@ -4522,11 +4527,15 @@ impl App {
     fn timers(&mut self) {
         if let Some(menu)=&mut self.studio {menu.update();}
         if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);self.studio=None;}
+        let sharing_allowed=!self.kids.active && !self.shutting_down() && !self.link_active() && self.studio.is_none() && matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}|Phase::About|Phase::SetClock{..});
+        if let Some(network)=&mut self.network {network.set_sharing_allowed(sharing_allowed);}
         let linking=self.link_active();
         if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
             if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
+        let added=self.network.as_mut().map(|m|m.take_shared_games()).unwrap_or_default();
+        if !added.is_empty() {self.add_shared_games(added);}
         self.step_net_time();
         self.tick_quick_controls();
         self.sync_display_schedule();
@@ -6386,6 +6395,8 @@ impl App {
     }
 
     fn doze(&mut self) {
+        if let Some(menu)=&mut self.studio {menu.finish();}
+        if let Some(network)=&mut self.network {network.set_sharing_allowed(false);}
         if let Some(cart)=self.settings_return_game.take(){self.phase=Phase::Playing{cart};}
         if self.link_active() {
             self.end_link();
@@ -6471,6 +6482,8 @@ impl App {
     }
 
     fn begin_restart(&mut self) {
+        if let Some(menu)=&mut self.studio {menu.finish();}
+        if let Some(menu)=&mut self.network {menu.set_sharing_allowed(false);}
         if self.shutting_down() {
             return;
         }
@@ -6829,6 +6842,8 @@ impl App {
     }
 
     fn begin_power_off(&mut self) {
+        if let Some(menu)=&mut self.studio {menu.finish();}
+        if let Some(menu)=&mut self.network {menu.set_sharing_allowed(false);}
         if self.powering_off {
             return;
         }

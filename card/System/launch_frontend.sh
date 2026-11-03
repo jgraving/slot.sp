@@ -7,6 +7,9 @@ SESSION_MAX=65536
 export SLOT_ROOT="$SD"
 export SLOT_RUN="$RUN"
 
+# Never inherit a share from a prior launcher session, even after a crash.
+[ ! -f "$SYS/slotsmb.sh" ] || sh "$SYS/slotsmb.sh" stop >/dev/null 2>&1
+
 mkdir -p "$LOGS" 2>/dev/null
 for f in slot.log slot.log.1 slot-session.log slot-session.log.1 slot-card.log ags-shutdown-trace.log input-trace.log; do
 	[ -f "$SD/$f" ] && mv -f "$SD/$f" "$LOGS/$f"

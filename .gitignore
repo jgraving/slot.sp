@@ -36,3 +36,4 @@
 # Website build inputs derived from the maintained configuration.
 /site/zensical.build.toml
 /site/docs/assets/generated
+.samba-build/

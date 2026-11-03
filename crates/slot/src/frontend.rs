@@ -1125,7 +1125,7 @@ impl Frontend {
     }
 
     pub fn powering_off(&self) -> bool {
-        self.session.app().ready_to_power_off() && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
+        self.session.app().ready_to_power_off() && self.session.app().studio.as_ref().is_none_or(|m|!m.busy()) && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restarting(&self) -> bool {

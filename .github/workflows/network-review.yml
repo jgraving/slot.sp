@@ -1,7 +1,7 @@
 name: Network and achievements test build
 on:
   pull_request:
-    paths: ['crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', '.github/workflows/network-review.yml']
+    paths: ['crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', 'card/System/slotsmb.sh', 'card/test-smb*', 'tools/*samba*', 'taskfile.yml', '.github/workflows/network-review.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,7 +9,27 @@ concurrency:
   group: network-review-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  samba:
+    name: Build and test encrypted network sharing
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build maintained Samba and discovery with private dependencies
+        run: bash tools/samba-build-env.sh
+      - name: Exercise real SMB authentication, encryption, uploads and shutdown
+        run: python3 card/test-smb-integration.py vendor/samba
+      - uses: actions/upload-artifact@v7
+        with:
+          name: samba-runtime
+          retention-days: 1
+          path: |
+            vendor/samba
+            vendor/samba-sources
+          if-no-files-found: error
   device:
+    needs: samba
     if: github.repository == 'jgraving/slot.sp'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 40
@@ -18,6 +38,12 @@ jobs:
       SLOT_SILENT: '1'
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: samba-runtime
+          path: vendor
+      - name: Restore executable modes
+        run: chmod +x vendor/samba/bin/* vendor/samba/lib/*
       - name: Install build dependencies
         run: |
           sed -i '/bullseye-security/d' /etc/apt/sources.list
@@ -42,9 +68,13 @@ jobs:
         run: |
           cd dist-network
           zip -qr ../slot.sp-network-System.zip System
+          cd ../vendor/samba-sources
+          zip -qr ../../slot.sp-network-sources.zip .
       - uses: actions/upload-artifact@v7
         with:
           name: slot.sp-network-System
           retention-days: 7
-          path: slot.sp-network-System.zip
+          path: |
+            slot.sp-network-System.zip
+            slot.sp-network-sources.zip
           if-no-files-found: error

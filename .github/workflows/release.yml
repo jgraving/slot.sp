@@ -27,7 +27,27 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/heads/integrate-upstream-') }}
 
 jobs:
+  samba:
+    name: Build and test encrypted network sharing
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    container: debian:trixie
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build maintained Samba and discovery with private dependencies
+        run: bash tools/samba-build-env.sh
+      - name: Exercise real SMB authentication, encryption, uploads and shutdown
+        run: python3 card/test-smb-integration.py vendor/samba
+      - uses: actions/upload-artifact@v7
+        with:
+          name: samba-runtime
+          retention-days: 1
+          path: |
+            vendor/samba
+            vendor/samba-sources
+          if-no-files-found: error
   build:
+    needs: samba
     if: (github.repository == 'jgraving/slot' || github.repository == 'jgraving/slot.sp') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/integrate-upstream-') || startsWith(github.ref, 'refs/tags/v'))
     name: Test and package ARM64
     timeout-minutes: 35
@@ -39,6 +59,12 @@ jobs:
       SLOT_KID_UI_PREVIEW: /tmp/slot-parent-previews
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: samba-runtime
+          path: vendor
+      - name: Restore executable modes
+        run: chmod +x vendor/samba/bin/* vendor/samba/lib/*
 
       - name: Install build dependencies
         run: |

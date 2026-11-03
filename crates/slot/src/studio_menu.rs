@@ -33,7 +33,10 @@ impl Menu {
             None => {},
         }
         let (jobs, rx) = channel(); let (tx, done) = channel(); let card = root.clone();
-        std::thread::spawn(move || while let Ok(job) = rx.recv() {
+        std::thread::spawn(move || while let Ok(first) = rx.recv() {
+            let mut newest=None;let mut saving=None;
+            for job in std::iter::once(first).chain(rx.try_iter()) {match job {Job::Preview(..)=>newest=Some(job),Job::Save(..)=>saving=Some(job)}}
+            let Some(job)=saving.or(newest) else {continue;};
             let result = match job {
                 Job::Preview(gen, model, art, original) => Done::Preview(gen, preview(&model, &art, original.as_deref().map(Vec::as_slice))),
                 Job::Save(model, art, original) => Done::Saved(save(&card, &model, &art, original.as_deref().map(Vec::as_slice))),
@@ -48,6 +51,11 @@ impl Menu {
     pub fn page_key(&self) -> u64 { 4100 + match self.model.screen {Screen::List{..}=>0, Screen::Sheet{..}=>1, Screen::Chips{..}=>2, Screen::Custom{..}=>3, Screen::Hex{..}=>4} }
     pub fn notice_text(&self) -> Option<&str> {(!self.notice.is_empty()).then_some(&self.notice)}
     pub fn take_saved(&mut self) -> Option<Cart> {self.saved.take()}
+    pub fn finish(&mut self) {
+        if self.saving {return;}
+        self.saving=true;self.notice="Saving cartridge…".into();
+        if self.jobs.send(Job::Save(self.model.clone(),self.art.clone(),self.original.clone())).is_err(){self.saving=false;self.notice="Editor unavailable".into();}
+    }
     pub fn busy(&self) -> bool {self.saving}
     fn rebuild(&mut self) {
         self.generation=self.generation.wrapping_add(1);self.face=None;
@@ -86,10 +94,7 @@ impl Menu {
         let before=self.model.clone();
         match self.model.press(btn) {
             Some(Effect::Close) => {
-                self.saving=true;self.notice="Saving cartridge…".into();
-                if self.jobs.send(Job::Save(self.model.clone(),self.art.clone(),self.original.clone())).is_err() {
-                    self.saving=false;self.notice="Editor unavailable".into();
-                }
+                self.finish();
             }
             Some(Effect::Fetch) if !self.model.art_ready() && self.fetch.is_none() => {
                 let (tx,rx)=channel();let (root,cart)=(self.root.clone(),self.model.cart.clone());

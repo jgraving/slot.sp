@@ -38,7 +38,7 @@ fn main(){
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.save("general-updates-disconnected");
     a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-disabled");
     a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);a.tap(Btn::B);a.tap(Btn::B);
-    a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
+    a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.tap(Btn::A);a.save("updates-settings");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-off");a.tap(Btn::Right);a.save("automatic-time-on");a.tap(Btn::Left);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");

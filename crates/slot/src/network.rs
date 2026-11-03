@@ -12,14 +12,16 @@ use zeroize::{Zeroize, Zeroizing};
 #[derive(Serialize, Deserialize)]
 struct Preferences {
     #[serde(default)] achievements: bool,
+    #[serde(default)] sharing_enabled:bool,
+    #[serde(default)] sharing_keep:bool,
     #[serde(default)] wifi_enabled: bool,
     #[serde(default)] lock_device: bool,
     #[serde(default="default_time")] automatic_time: bool,
 }
 fn default_time()->bool {false}
-impl Default for Preferences {fn default()->Self {Self{achievements:false,wifi_enabled:false,lock_device:false,automatic_time:false}}}
+impl Default for Preferences {fn default()->Self {Self{sharing_enabled:false,sharing_keep:false,achievements:false,wifi_enabled:false,lock_device:false,automatic_time:false}}}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Page { Wifi, Achievements, Security, Updates }
+enum Page { Wifi, Achievements, Security, Updates, Sharing }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Field { Ssid, WifiPassword, Username, AccountPassword, CreateVault, ConfirmVault, Unlock }
 #[derive(Clone, Copy)]
@@ -27,6 +29,10 @@ enum AfterUnlock { Reconnect, EnableAchievements, ChangePin }
 
 pub struct Menu {
     root: PathBuf,
+    sharing:crate::sharing::Sharing,
+    sharing_allowed:bool,
+    sharing_reveal:bool,
+    sharing_library:Vec<slot_store::Cart>,
     updates: Box<dyn UpdateJobs>,
     releases: Vec<update::Release>,
     update_busy: bool,
@@ -81,14 +87,16 @@ pub struct Menu {
 }
 impl Menu {
     pub fn new(root: PathBuf) -> Self {
-        let prefs: Preferences = std::fs::read(root.join("Config/network.json")).ok()
+        let mut prefs: Preferences = std::fs::read(root.join("Config/network.json")).ok()
             .and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+        if !prefs.sharing_keep {prefs.sharing_enabled=false;}
         let encrypted = network_vault::vault_path(&root).exists();
         let method = network_vault::method(&root);
         // Old plaintext is read only after a PIN is created or authenticated.
         let migrating_plain = plain_path(&root).exists();
         let secrets = Secrets::default();
         Self {
+            sharing:crate::sharing::Sharing::new(root.clone()),sharing_allowed:true,sharing_reveal:false,sharing_library:Vec::new(),
             updates:update::update_jobs(root.clone()),releases:Vec::new(),update_busy:false,update_installing:None,
             update_bytes:0,update_message:String::new(),update_staged:false,restart_requested:false,battery:None,
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
@@ -137,7 +145,7 @@ impl Menu {
         if !self.encrypted {
             self.prefs.wifi_enabled=false;self.prefs.achievements=false;self.store_preferences();return;
         }
-        if self.prefs.lock_device || self.prefs.wifi_enabled || self.prefs.achievements || self.migrating_plain {
+        if self.prefs.lock_device || self.prefs.wifi_enabled || self.prefs.achievements || self.prefs.sharing_enabled || self.migrating_plain {
             if self.prefs.wifi_enabled {self.open_wifi();}else{self.open_achievements();}
             self.return_to_shelf=true;
             self.unlock(if self.prefs.wifi_enabled {Some(AfterUnlock::Reconnect)}else{None});
@@ -218,7 +226,7 @@ impl Menu {
         if let Some(field) = self.code { return 4030 + field as u64; }
         if let Some((field, _)) = self.keyboard { return 4010 + field as u64; }
         if self.forget_confirmation.is_some() { return 4003; }
-        match self.page { Page::Wifi => 4000, Page::Achievements => 4001, Page::Security => 4002, Page::Updates => 4004 }
+        match self.page { Page::Wifi => 4000, Page::Achievements => 4001, Page::Security => 4002, Page::Updates => 4004, Page::Sharing=>4005 }
     }
     pub fn focus_info(&self) -> (usize, usize) {
         let count = self.rows().len(); let selected = if let Some(yes) = self.forget_confirmation { usize::from(yes) } else { self.selected.min(count.saturating_sub(1)) };
@@ -269,6 +277,7 @@ impl Menu {
     }
     pub fn update(&mut self) {
         self.take_update_events();
+        self.step_sharing();
         if let Some(since)=self.pin_rejected {self.face=None;if since.elapsed().as_secs_f32()>=0.36 {self.pin_rejected=None;}}
 
         while let Ok(reply) = self.worker.results.try_recv() {
@@ -308,7 +317,7 @@ impl Menu {
                 }
                 Ok(Response::Forgotten) => {
                     self.encrypted=false;self.locked=false;self.method=None;self.upgrade_pin=false;
-                    self.prefs.lock_device=false;self.prefs.wifi_enabled=false;self.prefs.achievements=false;
+                    self.prefs.lock_device=false;self.prefs.wifi_enabled=false;self.prefs.achievements=false;self.prefs.sharing_enabled=false;self.sharing.request(None);
                     self.wifi_on=false;self.wifi.turn_off();self.service=None;self.secrets=Secrets::default();self.store_preferences();
                     self.say("Code removed · network disabled");
                 }
@@ -516,12 +525,13 @@ impl Menu {
             if action == Action::QuickMenu { self.visible = false; }
             return;
         };
+        if btn == Btn::B && self.page==Page::Sharing {self.page=Page::Wifi;self.selected=4;self.sharing_reveal=false;self.notice.clear();self.changed();return;}
         if btn == Btn::B { self.visible = false; self.notice.clear(); self.changed(); return; }
         if matches!(btn, Btn::Up | Btn::Down) {
             let count = self.rows().len(); self.selected = (self.selected + if btn==Btn::Down {1} else {count-1}) % count;
             self.notice.clear(); self.changed(); return;
         }
-        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Wifi && self.selected==5) || (self.page==Page::Security && self.selected==2)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
+        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Wifi && self.selected==5) || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
         match self.page {
             Page::Security => match self.selected {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
@@ -542,10 +552,19 @@ impl Menu {
                 1 => self.reconnect(),
                 2 => { if self.wifi_on { self.wifi.scan(); self.say("Scanning for networks"); } else { self.say("Turn Wi-Fi on first"); } }
                 3 => { if self.wifi_on && self.unlocked() { self.edit(Field::Ssid, "Network name", "", false, 1, 32); } else if !self.wifi_on { self.say("Turn Wi-Fi on first"); } }
+                4 => {self.page=Page::Sharing;self.selected=0;self.notice.clear();self.changed();}
                 _ => {
                     if !self.wifi_on { self.say("Turn Wi-Fi on first"); return; }
-                    if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(4)).cloned() { self.choose_network(network); }
+                    if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(5)).cloned() { self.choose_network(network); }
                 }
+            },
+            Page::Sharing=> match self.selected {
+                0=>self.toggle_sharing(),
+                1=>{self.prefs.sharing_keep=!self.prefs.sharing_keep;self.store_preferences();self.changed();if self.prefs.sharing_keep {self.warn("Not recommended on public Wi-Fi",slot_ui::NoticeTone::Warning);}},
+                4=>{if self.unlocked(){self.sharing_reveal=!self.sharing_reveal;self.changed();}},
+                5=>{if self.unlocked(){match crate::sharing::password(){Ok(password)=>{self.sharing.request(None);self.secrets.sharing_password=password.to_string();self.save_secrets();self.sharing_reveal=true;self.say("Sharing password changed");},Err(error)=>self.say(error)}}},
+                6=>{self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");},
+                _=>{},
             },
             Page::Updates => {},
             Page::Achievements => {
@@ -593,6 +612,7 @@ impl Menu {
         }
     }
     fn connect(&mut self) {
+        if self.secrets.ssid!=self.secrets.sharing_network {self.prefs.sharing_enabled=false;self.sharing.request(None);}
         if !self.credentials_ready() {return;}
         let pass = (!self.secrets.wifi_password.is_empty()).then_some(self.secrets.wifi_password.as_str());
         self.wifi.join(&self.secrets.ssid, pass); self.save_secrets(); self.say("Connecting to Wi-Fi");
@@ -615,6 +635,16 @@ impl Menu {
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
                 ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
+                ("Network sharing".into(),if self.sharing.view.active {"On"}else{"Off"}.into(),false),
+            ],
+            Page::Sharing=>vec![
+                ("Sharing".into(),if self.sharing.view.busy {"Working…"}else if self.sharing.view.active {"On"}else{"Off"}.into(),true),
+                ("Keep on after reboot".into(),if self.prefs.sharing_keep {"On"}else{"Off"}.into(),true),
+                ("Address".into(),self.last_wifi.ip.clone().unwrap_or_else(||"Not connected".into()),false),
+                ("Username".into(),"slot".into(),false),
+                ("Password".into(),if self.locked {"Locked".into()}else if self.sharing_reveal {self.secrets.sharing_password.clone()}else{"Press A to show".into()},false),
+                ("New password".into(),String::new(),false),
+                ("Import uploads".into(),String::new(),false),
             ],
             Page::Updates => {
                 if self.update_staged {return vec![("Restart to install".into(),String::new(),false)];}
@@ -693,9 +723,9 @@ impl Menu {
         let selected = self.focus_info().0;
         let mut face = if self.page == Page::Wifi && self.forget_confirmation.is_none() {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
-            slot_ui::wifi_settings_face_on(canvas, &rows, selected, 4, &signals)
+            slot_ui::wifi_settings_face_on(canvas, &rows, selected, 5, &signals)
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
-        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Device code?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Device code", Page::Updates=>"Updates"} });
+        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Device code?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Device code", Page::Updates=>"Updates", Page::Sharing=>"Network sharing"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
 
         face
@@ -709,7 +739,39 @@ impl Menu {
         if self.page==Page::Updates {if let Some(r)=&self.update_installing {return Some(("Downloading".into(),self.update_bytes,r.size));}}
         None
     }
-    pub fn flush_ready(&self) -> bool { if self.update_busy {self.updates.cancel();} !self.update_busy && self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
+    pub fn set_sharing_allowed(&mut self,allowed:bool) {self.sharing_allowed=allowed;if !allowed {self.sharing.request(None);}}
+    pub fn take_shared_games(&mut self)->Vec<slot_store::Cart> {std::mem::take(&mut self.sharing_library)}
+    fn toggle_sharing(&mut self) {
+        if self.prefs.sharing_enabled||self.sharing.view.active {self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");return;}
+        if !self.wifi_connected(){self.say("Connect to Wi-Fi first");return;}
+        if !self.unlocked(){return;}
+        if !self.sharing_allowed{self.say("Return to the carousel first");return;}
+        if self.secrets.sharing_password.is_empty(){match crate::sharing::password(){Ok(pass)=>{self.secrets.sharing_password=pass.to_string();self.save_secrets();},Err(error)=>{self.say(error);return;}}}
+        self.secrets.sharing_network=self.last_wifi.connected.clone().unwrap_or_default();self.save_secrets();
+        self.prefs.sharing_enabled=true;self.store_preferences();self.sharing_reveal=false;
+        self.warn("Only share on trusted Wi-Fi",slot_ui::NoticeTone::Warning);
+    }
+    fn step_sharing(&mut self) {
+        for event in self.sharing.poll() {match event {
+            crate::sharing::Event::Stopped(import)=>{if !import.added.is_empty()||import.skipped>0 {
+                let text=format!("{} added · {} left in Inbox",import.added.len(),import.skipped);self.sharing_library.extend(import.added);self.say(text);
+            }},
+            crate::sharing::Event::Failed(error)=>{self.prefs.sharing_enabled=false;self.store_preferences();self.warn(error,slot_ui::NoticeTone::Danger);},
+            _=>self.changed(),
+        }}
+        // Explicit network changes and disconnects revoke this session rather than re-enable elsewhere.
+        if self.prefs.sharing_enabled && self.wifi_on && self.last_wifi.connected.as_deref().is_some_and(|s|s!=self.secrets.sharing_network) {
+            self.prefs.sharing_enabled=false;self.store_preferences();self.warn("Sharing stopped · network changed",slot_ui::NoticeTone::Warning);
+        }
+        if self.sharing.view.active && !self.wifi_connected() {self.prefs.sharing_enabled=false;self.store_preferences();self.say("Sharing stopped · disconnected");}
+        let start=if self.prefs.sharing_enabled && self.sharing_allowed && self.credentials_ready() && self.pending_jobs==0 && self.wifi_connected()
+            && self.last_wifi.connected.as_deref()==Some(self.secrets.sharing_network.as_str()) {
+            self.last_wifi.ip.as_ref().and_then(|ip|ip.parse::<std::net::Ipv4Addr>().ok()).filter(|ip|!ip.is_unspecified()&&!ip.is_multicast()&&!ip.is_loopback())
+                .map(|ip|crate::sharing::Start{connection:crate::sharing::Connection{ssid:self.secrets.sharing_network.clone(),ip},password:Zeroizing::new(self.secrets.sharing_password.clone())})
+        }else{None};
+        let old=self.sharing.view.clone();self.sharing.request(start);if old!=self.sharing.view{self.changed();}
+    }
+    pub fn flush_ready(&self) -> bool { if self.update_busy {self.updates.cancel();} !self.update_busy && self.sharing.ready() && self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
 
 }
 fn sync_label(d: slot_achievements::SyncDetail) -> String {
@@ -764,7 +826,7 @@ mod tests {
         assert!(!menu.prefs.achievements);
         assert!(!menu.wifi_on);
         assert!(menu.service.is_none());
-        assert_eq!(menu.rows().len(), 4);
+        assert_eq!(menu.rows().len(), 5);
         assert!(!root.path().join("Config/retroachievements.toml").exists());
         assert!(!network_vault::vault_path(root.path()).exists());
     }
@@ -784,7 +846,7 @@ mod tests {
             encryption: "WPA2".into(),
             saved: false,
         }];
-        menu.selected = 4;
+        menu.selected = 5;
         menu.input(Action::GbaDown(Btn::A));
         assert_eq!(menu.keyboard.as_ref().unwrap().1.text(), "");
         assert_eq!(menu.secrets.ssid, "Home");
@@ -799,7 +861,7 @@ mod tests {
         menu.input(Action::QuickMenu);
 
         menu.last_wifi.networks = vec![wifi::Network {ssid:"Other".into(),signal:-50,security:wifi::Security::Personal,encryption:"WPA2".into(),saved:false}];
-        menu.open_wifi();menu.selected = 4;
+        menu.open_wifi();menu.selected = 5;
         menu.input(Action::GbaDown(Btn::A));
         menu.accept(Field::WifiPassword, Zeroizing::new("other-secret".into()));
         assert_eq!(menu.secrets.ssid, "Other");
@@ -829,8 +891,8 @@ mod tests {
             encryption: "WPA3".into(),
             saved: false,
         }];
-        assert_eq!(menu.rows()[4].1, "WPA3");
-        menu.selected = 4;
+        assert_eq!(menu.rows()[5].1, "WPA3");
+        menu.selected = 5;
         menu.input(Action::GbaDown(Btn::A));
         assert!(menu.keyboard.is_none());
         assert_eq!(menu.secrets.ssid, "Home");
