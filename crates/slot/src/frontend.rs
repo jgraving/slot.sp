@@ -38,6 +38,7 @@ pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
     hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
+    network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
     network_tex: Option<TexId>,
     network_old_tex: Option<TexId>,
     network_page: Option<u64>,
@@ -210,7 +211,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_tex: None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -917,6 +918,14 @@ impl Frontend {
             }
             self.kid_meter_key=meter;
         }
+        let meter=self.session.app().network.as_ref().and_then(|m|m.floating_progress()).map(|(label,done,total)|(label,done,total,light));
+        if self.network_meter_key!=meter {
+            self.session.app_mut().network_meter_face=if let Some((label,done,total,light))=&meter {
+                let face=slot_ui::filled_meter_face(&format!("{label} {done}/{total}"),Some(Icon::Gamepad),*done as f32/(*total).max(1)as f32,*light,400,40);
+                let tex=upload_rgba(compositor,&mut self.network_meter_tex,face.w,face.h,&face.rgba);Some((tex,face.w,face.h))
+            }else{None};
+            self.network_meter_key=meter;
+        }
         let (kind,value,icon)=self.session.app().hud_meter_key();
         let meter_key=Some((kind,value,icon,light));
         if self.hud_meter_key!=meter_key {
@@ -1078,6 +1087,8 @@ impl Frontend {
         self.switcher.thumbs.len() + self.switcher.spare.len()
     }
 
+    #[cfg(test)]
+    pub(crate) fn app_mut_for_review(&mut self)->&mut crate::app::App {self.session.app_mut()}
     pub fn app(&self) -> &crate::app::App {
         self.session.app()
     }

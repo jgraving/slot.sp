@@ -45,7 +45,7 @@ impl Http {
     pub(crate) fn new() -> Self {
         Self(
             ureq::Agent::config_builder()
-                .timeout_global(Some(Duration::from_secs(5)))
+                .timeout_global(Some(Duration::from_secs(15)))
                 .max_redirects(0)
                 .user_agent(concat!(
                     "slot/",
@@ -92,6 +92,8 @@ impl Transport for Http {
 fn success(value: Value) -> Result<Value, Failure> {
     if value.get("Success") == Some(&Value::Bool(true)) {
         Ok(value)
+    } else if matches!(value.get("Code").and_then(Value::as_str),Some("expired_token"|"invalid_credentials"|"access_denied")) {
+        Err(Failure::Authentication)
     } else {
         Err(Failure::Rejected)
     }
@@ -126,7 +128,7 @@ fn login(
         fields.push(("p", config.password.clone()));
     }
     let response = match http.call(&fields).and_then(success) {
-        Err(Failure::Rejected) if config.token.is_empty() && !config.password.is_empty() => {
+        Err(Failure::Rejected|Failure::Authentication) if config.token.is_empty() && !config.password.is_empty() => {
             // A remembered token can expire. An explicitly supplied password can renew it.
             success(http.call(&[
                 ("r", "login2".into()),
@@ -194,9 +196,7 @@ pub(crate) fn award(
             .is_some_and(|s| s.starts_with("User already has"))
     {
         Ok(())
-    } else {
-        Err(Failure::Rejected)
-    }
+    } else {success(response).map(|_|())}
 }
 
 fn unlocked(response: &Value) -> Result<BTreeSet<u32>, Failure> {
@@ -286,8 +286,7 @@ pub(crate) fn run(
     let mut delay = 30;
     let mut warned = false;
     let mut last_award = 0;
-    let mut library = crate::library::pending(&root, &dir, now());
-    let mut library_total = library.len();
+    let (mut library_total,mut library) = crate::library::scan(&root, &dir, now());
     let mut library_failed = 0usize;
     let mut problem = "";
     let mut rescanned = Instant::now();
@@ -336,13 +335,14 @@ pub(crate) fn run(
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
-        // Metadata preparation and badge downloads each occupy half of a cache refresh.
+        badges.maintain();
+        // Publish independent game and artwork phases before attempting HTTP.
         status.pending.store(
-            !library.is_empty()
+            !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
+                || active.as_ref().is_some_and(|game| !game.online),
             std::sync::atomic::Ordering::Release,
         );
         publish_detail(&status, verified, library_total, library.len(), library_failed,
@@ -357,10 +357,9 @@ pub(crate) fn run(
             continue;
         }
         if should_rescan(rescanned.elapsed(), library.len()) {
-            let pending=crate::library::pending(&root,&dir,now());
-            if !pending.is_empty() {
-                library=pending;library_total=library.len();library_failed=0;
-            }
+            let (total,pending)=crate::library::scan(&root,&dir,now());
+            library_total=total;
+            if !pending.is_empty() {library=pending;library_failed=0;}
             badges.scan();
             rescanned = Instant::now();
         }
@@ -418,7 +417,7 @@ pub(crate) fn run(
                         let mut store = store.lock().unwrap();
                         store.ack(unlock.id).map_err(|_| Failure::Invalid)?;
                         if store.unlocks.values().all(|u| u.synced) {
-                            let _ = notices.send(Notice::status(0, "Achievements synced"));
+                            let _ = notices.send(Notice::status(0, "Unlocks uploaded"));
                         }
                     }
                     Err(Failure::Network) => return Err(Failure::Network),
@@ -506,11 +505,11 @@ pub(crate) fn run(
             deferred_error.map_or(Ok(()), Err)
         })();
         status.pending.store(
-            !library.is_empty()
+            !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.ready),
+                || active.as_ref().is_some_and(|game| !game.online),
             std::sync::atomic::Ordering::Release,
         );
         publish_detail(&status, verified, library_total, library.len(), library_failed,
@@ -518,7 +517,7 @@ pub(crate) fn run(
         match result {
             Ok(()) => {
                 problem = if library_failed > 0 { "Some games could not be prepared" }
-                    else if badges.waiting { "Artwork will retry" } else { "" };
+                    else if badges.waiting { badges.problem } else { "" };
                 status.set(if library_failed > 0 || badges.waiting {
                     SyncStatus::Attention
                 } else if !library.is_empty()
@@ -531,10 +530,10 @@ pub(crate) fn run(
                 });
                 delay = 30;
                 warned = false;
-                next_attempt = Instant::now() + Duration::from_secs(1);
+                next_attempt = Instant::now() + Duration::from_secs(3);
             }
             Err(error) => {
-                problem = match error { Failure::Network => "Connection lost",
+                problem = match error { Failure::Network => "RA server unavailable",
                     Failure::Authentication => "Check username or password",
                     Failure::Rejected => "Server rejected a request",
                     Failure::Invalid => "Game data or storage error" };
@@ -544,7 +543,7 @@ pub(crate) fn run(
                     SyncStatus::Attention
                 });
                 // Reauthenticate after errors. No rejected or malformed response consumes an award.
-                verified = false;
+                if error==Failure::Authentication {verified=false;status.pending.store(true,std::sync::atomic::Ordering::Release);}
                 let quiet_offline = error == Failure::Network
                     && (active.as_ref().is_some_and(|g| g.ready)
                         || (active.is_none() && auth.is_some()));
@@ -576,6 +575,30 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    #[test]
+    fn authentication_expiry_is_distinct_from_retryable_request_failure() {
+        for code in ["expired_token","invalid_credentials","access_denied"] {assert_eq!(success(serde_json::json!({"Success":false,"Code":code})),Err(Failure::Authentication));}
+        assert_eq!(success(serde_json::json!({"Success":false,"Code":"not_found"})),Err(Failure::Rejected));
+    }
+    #[test]
+    #[ignore = "manual trusted-branch live-account smoke test"]
+    fn live_ra_read_only_smoke() {
+        use zeroize::Zeroize;
+        let username=std::env::var("RA_TEST_USERNAME").expect("RA_TEST_USERNAME is required");
+        let password=std::env::var("RA_TEST_PASSWORD").expect("RA_TEST_PASSWORD is required");
+        assert!(!username.is_empty() && !password.is_empty(),"RA test secrets are missing");
+        let mut config=Config{enabled:true,username,password,token:String::new()};
+        let mut http=Http::new();
+        let result=login(&mut http,&config,None);config.password.zeroize();
+        let Ok(mut auth)=result else {panic!("RA login failed (response and credentials withheld)");};
+        println!("RA login passed");
+        // Lookup only: no startsession, ping, or awardachievement requests.
+        let result=call(&mut http,&auth,"gameid",&[("m","00000000000000000000000000000000".into())]);
+        auth.token.zeroize();assert!(result.is_ok(),"RA game lookup failed (response withheld)");
+        println!("RA read-only game lookup passed");
+        let result=http.badge("25000");assert!(result.as_ref().ok().is_some_and(|b|crate::badges::decode(b).is_some()),"RA artwork download/decode failed");
+        println!("RA artwork download/decode passed");
+    }
     #[test]
     fn empty_session_unlock_lists_may_be_omitted() {
         assert!(unlocked(&json!({"Success":true})).unwrap().is_empty());
@@ -734,11 +757,11 @@ fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining:
     next_attempt: Instant, problem: &'static str) {
     let (badges_done, badges_total) = badges.counts();
     let detail = crate::SyncDetail {
-        status: status.get(), authenticated, games_done: total.saturating_sub(remaining),
+        status: status.get(), authenticated,catalog_ready:true,artwork_ready:!badges.discovery_pending(), games_done: total.saturating_sub(remaining),
         games_total: total, games_failed: failed, badges_done, badges_total,
         pending_awards: store.lock().unwrap().unlocks.values().filter(|u| !u.synced).count(),
         retry_seconds: if matches!(status.get(), SyncStatus::Offline | SyncStatus::Attention) {
-            next_attempt.saturating_duration_since(Instant::now()).as_secs()
+            if badges.waiting && problem==badges.problem {badges.retry_seconds()}else{next_attempt.saturating_duration_since(Instant::now()).as_secs()}
         } else { 0 }, problem,
     };
     *status.detail.lock().unwrap() = detail;

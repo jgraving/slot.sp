@@ -120,6 +120,9 @@ pub enum QuickRow {
     Wifi,
     Achievements,
     SecurityPin,
+    Updates,
+    AutomaticTime,
+    TimeZone,
 }
 
 impl QuickRow {
@@ -127,9 +130,9 @@ impl QuickRow {
         matches!(self, Self::FastForwardSound | Self::Rumble | Self::AutoLoad | Self::EjectSave
             | Self::Turbo | Self::Rewind | Self::BootAnimation | Self::CarouselSounds
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
-            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
+            | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::AutomaticTime)
     }
-    pub const ALL: [QuickRow; 109] = [
+    pub const ALL: [QuickRow; 112] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -239,6 +242,9 @@ impl QuickRow {
         QuickRow::Wifi,
         QuickRow::Achievements,
         QuickRow::SecurityPin,
+        QuickRow::Updates,
+        QuickRow::AutomaticTime,
+        QuickRow::TimeZone,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -260,8 +266,11 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 6] = [
+    pub const GENERAL: [QuickRow; 9] = [
         QuickRow::SecurityPin,
+        QuickRow::Updates,
+        QuickRow::AutomaticTime,
+        QuickRow::TimeZone,
         QuickRow::Recents,
         QuickRow::FavoriteSort,
         QuickRow::ClockFormat,
@@ -393,7 +402,7 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
-            QuickRow::SecurityPin => &QuickRow::GENERAL,
+            QuickRow::SecurityPin | QuickRow::Updates | QuickRow::AutomaticTime | QuickRow::TimeZone => &QuickRow::GENERAL,
             QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
             QuickRow::Achievements => &QuickRow::GAME,
             QuickRow::LidClose
@@ -565,7 +574,10 @@ impl QuickRow {
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
             QuickRow::Achievements => "RetroAchievements",
-            QuickRow::SecurityPin => "Security PIN",
+            QuickRow::SecurityPin => "Device code",
+            QuickRow::Updates => "Updates",
+            QuickRow::AutomaticTime => "Automatic time",
+            QuickRow::TimeZone => "Time zone",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -666,7 +678,7 @@ impl QuickRow {
                 | QuickRow::About
                 | QuickRow::Wifi
                 | QuickRow::Achievements
-                | QuickRow::SecurityPin
+                | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
                 | QuickRow::Reference
                 | QuickRow::PlayReference
                 | QuickRow::DisplaySchedule
@@ -1363,7 +1375,7 @@ pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, true),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
         ],
-        8 => vec![
+        8 | 12 => vec![
             with_hint(button_face(ButtonLegend::Menu), "Cancel", hint, true),
             with_hint(button_face(ButtonLegend::Select), "Delete", hint, false),
             with_hint(button_face(ButtonLegend::Start), "Done", hint, false),
@@ -1508,7 +1520,8 @@ pub fn parent_footer_face(page: u8, adjustable: bool) -> UndoFace {
 pub fn parent_footer_face_on(canvas: Canvas, page: u8, adjustable: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = UndoFace { rgba: vec![0; (width * OUT_H * 4) as usize], w: width, h: OUT_H };
-    let hints = parent_button_legends(page, MENU_INK);
+    let mut hints = parent_button_legends(page, MENU_INK);
+    if page==12 {if let Some(done)=hints.last_mut() {for pixel in done.rgba.chunks_exact_mut(4) {pixel[3]=(u16::from(pixel[3])*80/255)as u8;}}}
     parent_blit(&mut face, &hints[0], 16.0, LEGEND_Y);
     let right: Vec<_> = if page == 0 {
         vec![&hints[if adjustable { 1 } else { 2 }]]
@@ -1699,7 +1712,7 @@ fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right:
 
 pub(crate) fn clock_legend() -> UndoFace {
     let a = with_hint(button_face(ButtonLegend::A), "Edit", Some([246,244,239]), true);
-    let start = with_hint(button_face(ButtonLegend::Start), "Save", Some([246,244,239]), true);
+    let start = with_hint(button_face(ButtonLegend::Start), "Done", Some([246,244,239]), true);
     let w = a.w + start.w + 16;
     let mut rgba = vec![0; (w * MENU_HINT_H * 4) as usize];
     blit(&mut rgba, w, &a.rgba, a.w, a.h, 0, 0);
@@ -1790,6 +1803,7 @@ pub struct QuickMenuFaces {
 pub struct QuickMenu<'a> {
     pub row: QuickRow,
     pub hidden: &'a [QuickRow],
+    pub disabled: &'a [QuickRow],
     pub values: [Option<QuickValue>; QuickRow::ALL.len()],
     pub clock: Option<[(TexId, u32, u32); 2]>,
     pub wallpaper: Option<[(TexId, u32, u32); 2]>,
@@ -1811,6 +1825,11 @@ pub struct QuickMenu<'a> {
 }
 
 impl QuickMenu<'_> {
+    fn clip_row(&self,out:&mut Vec<Draw>,row:QuickRow,begin:usize,rect:[f32;4]) {
+        if self.disabled.contains(&row) {for d in &mut out[begin..] {match d {Draw::Tex{alpha,..}|Draw::Part{alpha,..}=>*alpha*=0.45,Draw::Rect{colour,..}|Draw::RoundRect{colour,..}=>colour[3]*=0.45,_=>{}}}}
+        clip_quads(out,begin,rect);
+    }
+
     pub fn draw(&self, out: &mut Vec<Draw>) {
         self.draw_animated(crate::MenuFrame::settled(self.row, self.hidden), out);
     }
@@ -1879,7 +1898,7 @@ impl QuickMenu<'_> {
             let y = top + (index as f32 - frame.window_start) * QUICK_PITCH + TYPE_DROP;
             if y + MENU_H as f32 <= top || y >= top + len as f32 * QUICK_PITCH { continue; }
             let row_begin = out.len();
-            let lit = row == self.row;
+            let lit = row == self.row && !self.disabled.contains(&row);
             if let Some(&(tex, w, h)) = faces.labels.get(row.index()).map(|l| &l[lit as usize]) {
                 let x=if pause {self.canvas.centred(w as f32)}else{QUICK_LABEL_X-pad};
                 push(out, tex, x, y, w, h);
@@ -1895,7 +1914,7 @@ impl QuickMenu<'_> {
                         else if on { 1.0 } else { 0.0 };
                     crate::draw_switch(out,right-crate::SWITCH_W,y+5.0,t,1.0);
                 }
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                self.clip_row(out,row,row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
                 continue;
             }
             let value = match row {
@@ -1920,7 +1939,7 @@ impl QuickMenu<'_> {
                     .map(|v| v[lit as usize]),
             };
             let Some((tex, w, h)) = value else {
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                self.clip_row(out,row,row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
                 continue;
             };
             if matches!(row,QuickRow::Brightness|QuickRow::PlayBrightness|QuickRow::BlueLight|QuickRow::PlayBlueLight) {
@@ -1929,16 +1948,16 @@ impl QuickMenu<'_> {
                 let t=value.and_then(|v|(0..10).find(|&n|if index==1 {QuickValue::temperature(n)==v}else{QuickValue::level(n)==v})).unwrap_or(0) as f32/9.0;
                 crate::draw_slider(out,right-crate::MENU_SLIDER_SPAN,y+5.0,crate::MENU_SLIDER_W,frame.sliders[index].unwrap_or(t),1.0);
                 push(out,tex,right+pad-w as f32,y,w,h);
-                clip_quads(out,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
+                self.clip_row(out,row,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
             }
             if row.disclosure() {
                 let (_,cw,_)=faces.carets[1];
                 push(out,tex,right-cw as f32-CARET_GAP+pad-w as f32,y,w,h);
-                clip_quads(out,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
+                self.clip_row(out,row,row_begin,[MENU_INSET,top,self.canvas.w-MENU_INSET,top+len as f32*QUICK_PITCH-8.0]);continue;
             }
             if !lit || row.binds() || row.toggle() {
                 push(out, tex, right + pad - w as f32, y, w, h);
-                clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+                self.clip_row(out,row,row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
                 continue;
             }
             let [(left_tex, lw, lh), (right_tex, rw, rh)] = faces.carets;
@@ -1947,7 +1966,7 @@ impl QuickMenu<'_> {
             let vx = rx - CARET_GAP + pad - w as f32;
             push(out, tex, vx, y, w, h);
             push(out, left_tex, vx + pad - CARET_GAP - lw as f32, y, lw, lh);
-            clip_quads(out, row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
+            self.clip_row(out,row,row_begin, [MENU_INSET, top, self.canvas.w - MENU_INSET, top + len as f32 * QUICK_PITCH - 8.0]);
         }
         crate::expressive::draw_scrollbar(self.canvas,top,len,shown.len(),frame.window_start,out);
         if let Some((tex, w, h)) = self.description {

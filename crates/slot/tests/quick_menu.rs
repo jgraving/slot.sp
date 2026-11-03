@@ -1056,7 +1056,7 @@ fn no_row_in_hand_runs_its_arrows_into_its_label() {
             }
             open_at(&mut a, row);
             let out = frame(&a);
-            let [lx, _, lw, _] = placed(&out, 1100 + row.index()).expect("the lit label");
+            let [lx, _, lw, _] = placed(&out, if row==QuickRow::AutomaticTime {1000+row.index()}else{1100+row.index()}).expect("selected or disabled label");
             let label_ends = lx + lw - MENU_PAD as f32;
             if let Some([cx, ..]) = placed(&out, 300) {
                 assert!(

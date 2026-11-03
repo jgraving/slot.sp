@@ -58,8 +58,12 @@ pub(crate) fn hash(dir: &Path, path: &Path) -> Result<String, String> {
 }
 
 pub(crate) fn pending(root: &Path, dir: &Path, now: u64) -> VecDeque<PathBuf> {
+    scan(root,dir,now).1
+}
+
+pub(crate) fn scan(root:&Path,dir:&Path,now:u64)->(usize,VecDeque<PathBuf>) {
     let index: Index = storage::read(&dir.join("library.json")).unwrap_or_default();
-    let mut paths: Vec<_> = std::fs::read_dir(root.join("Games/GBA"))
+    let paths: Vec<_> = std::fs::read_dir(root.join("Games/GBA"))
         .into_iter()
         .flatten()
         .filter_map(Result::ok)
@@ -73,7 +77,9 @@ pub(crate) fn pending(root: &Path, dir: &Path, now: u64) -> VecDeque<PathBuf> {
                     .file_name()
                     .is_some_and(|name| name.to_string_lossy().starts_with('.'))
         })
-        .filter(|path| {
+        .collect();
+    let total=paths.len();
+    let mut paths:Vec<_>=paths.into_iter().filter(|path| {
             let Some(entry) = index.get(path) else {
                 return true;
             };
@@ -86,7 +92,7 @@ pub(crate) fn pending(root: &Path, dir: &Path, now: u64) -> VecDeque<PathBuf> {
         })
         .collect();
     paths.sort();
-    paths.into()
+    (total,paths.into())
 }
 
 pub(crate) fn checked(dir: &Path, path: &Path, now: u64) {

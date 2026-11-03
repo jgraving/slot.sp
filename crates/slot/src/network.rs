@@ -70,6 +70,8 @@ pub struct Menu {
     return_to_shelf: bool,
     parent_unlock: bool,
     parent_authenticated: bool,
+    parent_cancelled: bool,
+    pin_rejected: Option<Instant>,
     notice: String,
     wifi_on: bool,
     last_wifi: wifi::WifiView,
@@ -98,16 +100,18 @@ impl Menu {
             pending_jobs: 0, after_unlock: None, forget_confirmation: None,
             migrating_plain, migration_saving:false, upgrade_pin:false, short_pin:false,
             notice_tone:slot_ui::NoticeTone::Neutral,toast_tone:slot_ui::NoticeTone::Neutral,
-            startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false, notice: String::new(),
+            startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false,parent_cancelled:false,pin_rejected:None, notice: String::new(),
             wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None,
         }
     }
     pub fn requires_startup_lock(&self)->bool {self.encrypted && self.prefs.lock_device}
     pub fn unlock_for_parent(&mut self) {
-        self.open_security();self.parent_unlock=true;self.parent_authenticated=false;self.return_to_shelf=false;self.unlock(None);
+        self.open_security();self.parent_unlock=true;self.parent_authenticated=false;self.parent_cancelled=false;self.return_to_shelf=false;self.unlock(None);
     }
     pub fn take_parent_authenticated(&mut self)->bool {std::mem::take(&mut self.parent_authenticated)}
-    fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("Set a PIN to encrypt credentials");}
+    pub fn take_parent_cancelled(&mut self)->bool {std::mem::take(&mut self.parent_cancelled)}
+    pub fn pin_hint_key(&self)->u64 {u64::from(self.code.is_some_and(|f|f!=Field::Unlock) && self.code_text.len()>=network_vault::MIN_CODE_LEN)}
+    fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("Set a code to encrypt credentials");}
     pub fn open(&mut self) { self.open_wifi(); }
     pub fn open_wifi(&mut self) {
         self.visible = true; self.page = Page::Wifi; self.selected = 0; self.notice.clear(); self.changed();
@@ -143,12 +147,18 @@ impl Menu {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
     pub fn achievements_busy(&self) -> bool {
-        self.service.as_ref().is_some_and(|s| s.sync_status() == slot_achievements::SyncStatus::Syncing)
+        self.service.as_ref().is_some_and(|s| s.sync_pending() || s.sync_status() == slot_achievements::SyncStatus::Syncing || self.last_sync.progress().is_some() || self.last_sync.pending_awards>0)
     }
     pub fn automatic_time_ready(&self)->bool {self.prefs.automatic_time && self.wifi_connected()}
+    pub fn automatic_time_enabled(&self)->bool {self.prefs.automatic_time}
+    pub fn toggle_automatic_time(&mut self) {
+        if !self.wifi_connected() {self.require_wifi("automatic time");return;}
+        self.prefs.automatic_time=!self.prefs.automatic_time;self.store_preferences();self.changed();
+    }
+    pub fn require_wifi(&mut self,feature:&str) {self.open_wifi();self.say(format!("Wi-Fi needed for {feature}"));}
     pub fn set_battery(&mut self,battery:Option<slot_power::Battery>) {self.battery=battery;}
     pub fn take_update_restart(&mut self)->bool {std::mem::take(&mut self.restart_requested)}
-    fn open_updates(&mut self) {self.page=Page::Updates;self.selected=0;self.notice.clear();self.changed();}
+    pub fn open_updates(&mut self) {if !self.wifi_connected() {self.require_wifi("updates");return;}self.visible=true;self.page=Page::Updates;self.selected=0;self.notice.clear();self.changed();}
     fn check_updates(&mut self) {
         if !self.wifi_connected() {self.say("Connect to Wi-Fi first");return;}
         if self.update_busy {return;}
@@ -230,8 +240,8 @@ impl Menu {
         self.changed();
     }
     fn resume_unlocked(&mut self) {
-        if self.credentials_ready() {self.start_tracking();}
-        self.notice.clear();self.changed();
+        if self.credentials_ready() && self.service.is_none() {self.start_tracking();}
+        self.notice.clear(); self.changed();
         if self.parent_unlock {self.parent_unlock=false;self.parent_authenticated=true;self.visible=false;return;}
         match self.after_unlock.take() {
             Some(AfterUnlock::Reconnect) => self.reconnect(),
@@ -259,6 +269,8 @@ impl Menu {
     }
     pub fn update(&mut self) {
         self.take_update_events();
+        if let Some(since)=self.pin_rejected {self.face=None;if since.elapsed().as_secs_f32()>=0.36 {self.pin_rejected=None;}}
+
         while let Ok(reply) = self.worker.results.try_recv() {
             self.pending_jobs = self.pending_jobs.saturating_sub(1);
             if reply.operation==Operation::Unlock {
@@ -276,7 +288,7 @@ impl Menu {
                 Ok(Response::Unlocked(secrets)) => {
                     self.secrets=secrets;self.locked=false;
                     if self.upgrade_pin && !self.parent_unlock {
-                        self.prompt(Field::CreateVault);self.say("Choose a PIN with 6+ presses");
+                        self.prompt(Field::CreateVault);self.say("Choose a code with 6+ presses");
                     } else if self.migrating_plain {self.migrate_plain();}
                     else {self.resume_unlocked();}
                 }
@@ -290,15 +302,15 @@ impl Menu {
                     }
                     if self.credentials_ready() {
                         self.resume_unlocked();
-                        if self.short_pin {self.warn("Short PIN: easy to guess",slot_ui::NoticeTone::Warning);}
-                        else {self.say("Security PIN saved");}
+                        if self.short_pin {self.warn("Short code: easy to guess",slot_ui::NoticeTone::Warning);}
+                        else {self.say("Device code saved");}
                     }
                 }
                 Ok(Response::Forgotten) => {
                     self.encrypted=false;self.locked=false;self.method=None;self.upgrade_pin=false;
                     self.prefs.lock_device=false;self.prefs.wifi_enabled=false;self.prefs.achievements=false;
                     self.wifi_on=false;self.wifi.turn_off();self.service=None;self.secrets=Secrets::default();self.store_preferences();
-                    self.say("PIN removed · network disabled");
+                    self.say("Code removed · network disabled");
                 }
                 Ok(Response::Saved) => {
                     if self.migration_saving {
@@ -349,10 +361,10 @@ impl Menu {
     fn prompt(&mut self, field: Field) {
         let method = if field == Field::Unlock { self.method.unwrap_or(Method::Passphrase) } else { self.creating_method };
         if method == Method::Buttons {
-            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_pending.clear();self.notice.clear(); self.changed();
+            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_pending.clear();self.pin_rejected=None;self.notice.clear(); self.changed();
         } else {
             self.edit(field, match field {
-                Field::CreateVault => "Create unlock passphrase", Field::ConfirmVault => "Repeat unlock passphrase", _ => "Unlock credentials",
+                Field::CreateVault => "Choose device code", Field::ConfirmVault => "Repeat device code", _ => "Enter device code",
             }, "", true, 12, 128);
         }
     }
@@ -363,9 +375,9 @@ impl Menu {
     }
     fn cancel_editor(&mut self) {
 
-        if self.parent_unlock {self.parent_unlock=false;self.visible=false;}
+        if self.parent_unlock {self.parent_unlock=false;self.parent_cancelled=true;self.visible=false;}
         if self.return_to_shelf && self.prefs.lock_device {
-            self.code_text.zeroize();self.prompt(Field::Unlock);self.say("Enter your Security PIN to unlock the device");return;
+            self.code_text.zeroize();self.prompt(Field::Unlock);self.say("Enter your Device code to unlock the device");return;
         }
         self.keyboard = None; self.code = None; self.code_text.zeroize();self.button_pending.clear(); self.first_pass.zeroize();
         self.pending_ssid = None; self.after_unlock = None; self.forget_confirmation = None;
@@ -425,7 +437,7 @@ impl Menu {
             match action {
                 Action::QuickMenu|Action::GbaDown(Btn::B)=> {
                     if self.update_busy {if !self.updates.cancel() {self.say("Finishing update…");}}
-                    else {self.open_wifi();self.selected=4;}
+                    else {self.visible=false;self.notice.clear();self.changed();}
                 }
                 Action::GbaDown(Btn::Up|Btn::Down) if !self.update_busy=> {
                     let count=self.rows().len();self.selected=(self.selected+if action==Action::GbaDown(Btn::Down){1}else{count-1})%count;self.changed();
@@ -443,9 +455,9 @@ impl Menu {
                     if field==Field::Unlock && self.code_text.len()>=4 && !self.button_pending.contains(&self.code_text.len()) {self.button_pending.push(self.code_text.len());}
                     self.changed();self.try_button_unlock();
                 }
-                Action::GbaDown(Btn::Start) if field==Field::Unlock => {self.try_button_unlock();}
+                Action::GbaDown(Btn::Start) if field==Field::Unlock => {if self.code_text.len()<network_vault::MIN_CODE_LEN {self.pin_rejected=Some(Instant::now());self.say("Use 6+ presses");}self.try_button_unlock();}
                 Action::GbaDown(Btn::Start) => {
-                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("PIN_BUTTONS_MIN"); }
+                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.pin_rejected=Some(Instant::now());self.say("Use 6+ presses"); }
                     else {
                         let text=std::mem::replace(&mut self.code_text,Zeroizing::new(String::new()));
                         self.code=None; self.accept(field,text);
@@ -456,7 +468,7 @@ impl Menu {
                         Btn::Up=>Some(4), Btn::Down=>Some(5), Btn::Left=>Some(6), Btn::Right=>Some(7),
                         Btn::L1=>Some(8), Btn::R1=>Some(9), Btn::L2=>Some(10), Btn::R2=>Some(11), _=>None };
                     if let Some(digit) = digit {
-                        self.code_text.push((b'a'+digit) as char);
+                        self.pin_rejected=None;self.code_text.push((b'a'+digit) as char);
                         if field==Field::Unlock && self.code_text.len()>=4 {self.button_pending.push(self.code_text.len());}
                         self.notice.clear();self.changed();self.try_button_unlock();
                     } else {self.say("PIN_BUTTONS");}
@@ -515,7 +527,7 @@ impl Menu {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
                 1 => { if self.locked { self.unlock(Some(AfterUnlock::ChangePin)); } else { self.first_pass.zeroize(); self.prompt(Field::CreateVault); } }
                 2 => {
-                    if !self.encrypted {self.say("Set Security PIN first");}
+                    if !self.encrypted {self.say("Set Device code first");}
                     else {self.prefs.lock_device=!self.prefs.lock_device;self.store_preferences();self.changed();}
                 }
                 3 => { if self.root.join("Config/kids/use-device-pin").exists() {self.say("Set a separate parent code first");}
@@ -529,12 +541,10 @@ impl Menu {
                 }
                 1 => self.reconnect(),
                 2 => { if self.wifi_on { self.wifi.scan(); self.say("Scanning for networks"); } else { self.say("Turn Wi-Fi on first"); } }
-                4 => self.open_updates(),
-                5 => {self.prefs.automatic_time=!self.prefs.automatic_time;self.store_preferences();self.changed();}
                 3 => { if self.wifi_on && self.unlocked() { self.edit(Field::Ssid, "Network name", "", false, 1, 32); } else if !self.wifi_on { self.say("Turn Wi-Fi on first"); } }
                 _ => {
                     if !self.wifi_on { self.say("Turn Wi-Fi on first"); return; }
-                    if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(6)).cloned() { self.choose_network(network); }
+                    if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(4)).cloned() { self.choose_network(network); }
                 }
             },
             Page::Updates => {},
@@ -572,7 +582,7 @@ impl Menu {
             Field::AccountPassword => { self.secrets.password = text.to_string(); self.secrets.token.zeroize(); self.service = None; self.save_secrets(); }
             Field::CreateVault => { self.first_pass = text; self.prompt(Field::ConfirmVault); }
             Field::ConfirmVault => {
-                if self.first_pass.as_str() != text.as_str() { self.first_pass.zeroize(); self.prompt(Field::CreateVault); self.say("PINs did not match"); return; }
+                if self.first_pass.as_str() != text.as_str() { self.first_pass.zeroize(); self.prompt(Field::CreateVault); self.say("Codes did not match"); return; }
                 self.first_pass.zeroize(); let saved=if self.migrating_plain {
                     let Some(saved)=read_plain(&self.root) else {self.warn("Could not read old credentials",slot_ui::NoticeTone::Danger);return;};
                     self.secrets=saved.clone();saved
@@ -589,24 +599,22 @@ impl Menu {
     }
     pub fn rows(&self) -> Vec<(String, String, bool)> {
         if let Some(yes) = self.forget_confirmation {
-            return vec![("Keep current storage".into(),String::new(),false),("Forget Security PIN".into(),if yes {"Confirm with A"}else{""}.into(),false)];
+            return vec![("Keep current storage".into(),String::new(),false),("Forget Device code".into(),if yes {"Confirm with A"}else{""}.into(),false)];
         }
         let status = if self.service.is_some() { sync_label(self.last_sync) }
             else { if self.locked {"Unlock to use account"} else if self.prefs.achievements {"Account needed"} else {"Disabled"}.into() };
         let mut rows = match self.page {
             Page::Security => vec![
                 ("Unlock with".into(),match self.creating_method {Method::Buttons=>"Button code",Method::Passphrase=>"Passphrase"}.into(),true),
-                (if self.encrypted {"Change Security PIN"} else {"Set Security PIN"}.into(),if self.locked {"Locked"} else if self.encrypted {"Set"} else {"Not set"}.into(),false),
-                ("Startup access".into(),if self.prefs.lock_device {"Require PIN"}else{"PIN optional"}.into(),true),
-                ("Forget Security PIN".into(),String::new(),false),
+                (if self.encrypted {"Change Device code"} else {"Set Device code"}.into(),if self.locked {"Locked"} else if self.encrypted {"Set"} else {"Not set"}.into(),false),
+                ("Startup access".into(),if self.prefs.lock_device {"Require code"}else{"Code optional"}.into(),true),
+                ("Forget Device code".into(),String::new(),false),
             ],
             Page::Wifi => vec![
                 ("Wi-Fi".into(), if self.wifi_on {"On"} else {"Off"}.into(), true),
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
                 ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
-                ("Updates".into(),String::new(),false),
-                ("Automatic time".into(),if self.prefs.automatic_time {"On"}else{"Off"}.into(),true),
             ],
             Page::Updates => {
                 if self.update_staged {return vec![("Restart to install".into(),String::new(),false)];}
@@ -628,12 +636,13 @@ impl Menu {
         if self.page == Page::Achievements && self.service.is_some() {
             let d = self.last_sync;
             rows.extend([
-                ("Game data".into(), format!("{} / {}", d.games_done, d.games_total), false),
-                ("Artwork".into(), format!("{} / {}", d.badges_done, d.badges_total), false),
+                (if d.games_total>0 && d.games_done==d.games_total && d.games_failed==0 {"Games ready"}else{"Game data"}.into(), if !d.catalog_ready {"Reading library…".into()}else if d.games_total==0 {"No GBA games".into()}else{format!("{} / {}", d.games_done, d.games_total)}, false),
+                ("Artwork".into(), if !d.catalog_ready || !d.artwork_ready {"Reading artwork…".into()}else if d.badges_total==0 {"None queued".into()}else{format!("{} / {}", d.badges_done, d.badges_total)}, false),
                 ("Uploads waiting".into(), d.pending_awards.to_string(), false),
                 ("Games to retry".into(), d.games_failed.to_string(), false),
             ]);
             if !d.problem.is_empty() {rows.push(("Status".into(),d.problem.into(),false));}
+            if d.retry_seconds>0 {rows.push(("Retry in".into(),format!("{}s",d.retry_seconds),false));}
         }
         if self.page == Page::Wifi { for n in &self.last_wifi.networks {
             rows.push((n.ssid.chars().take(22).collect(), n.encryption.clone(), false));
@@ -673,48 +682,43 @@ impl Menu {
             return face;
         }
         if let Some(field) = self.code {
-            let instruction = match field { Field::CreateVault => "Choose a PIN", Field::ConfirmVault => "Repeat your PIN", _ => "Enter your PIN" };
-            return slot_ui::masked_pin_face_on(canvas,"Security PIN",instruction,self.code_text.len(),if field==Field::Unlock {if self.return_to_shelf && self.prefs.lock_device {10}else{1}}else{8});
+            let instruction = match field { Field::CreateVault => "Choose a code", Field::ConfirmVault => "Repeat your code", _ => "Enter your code" };
+            let minimum=network_vault::MIN_CODE_LEN;
+            let footer=if field==Field::Unlock {if self.return_to_shelf && self.prefs.lock_device {10}else{1}}else if self.code_text.len()<minimum {12}else{8};
+            let u=self.pin_rejected.map_or(0.0,|t|(t.elapsed().as_secs_f32()/0.36).clamp(0.0,1.0));
+            let shake=((u*std::f32::consts::TAU*3.0).sin()*10.0*(1.0-u)).round()as i32;
+            return slot_ui::masked_pin_state_face_on(canvas,"Device code",instruction,self.code_text.len(),footer,minimum,shake);
         }
         let rows = self.rows();
         let selected = self.focus_info().0;
         let mut face = if self.page == Page::Wifi && self.forget_confirmation.is_none() {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
-            slot_ui::wifi_settings_face_on(canvas, &rows, selected, 6, &signals)
+            slot_ui::wifi_settings_face_on(canvas, &rows, selected, 4, &signals)
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
-        if self.page == Page::Achievements && self.forget_confirmation.is_none() && self.service.is_some() {
-            if let Some((phase, done, total)) = self.last_sync.progress() {
-                let label = format!("{phase} {done} / {total}");
-                let meter = slot_ui::filled_meter_face(&label, Some(slot_ui::Icon::Gamepad),
-                    done as f32 / total.max(1) as f32, _light, 400, 28);
-                blit(&mut face, &meter, (canvas.w as u32 - meter.w)/2, 350);
-            }
-        }
-        if self.page==Page::Updates {
-            if let Some(release)=&self.update_installing {
-                let fraction=(self.update_bytes as f64/release.size.max(1)as f64).clamp(0.0,1.0);
-                let meter=slot_ui::filled_meter_face(&format!("Downloading {}%",(fraction*100.0)as u32),Some(slot_ui::Icon::Gamepad),fraction as f32,_light,400,28);
-                blit(&mut face,&meter,(canvas.w as u32-meter.w)/2,350);
-            }
-        }
-        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Security PIN?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Security PIN", Page::Updates=>"Updates"} });
+        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Device code?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Device code", Page::Updates=>"Updates"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
 
         face
     }
+    /// The compositor draws this after the card's clip and footer chrome.
+    pub fn floating_progress(&self)->Option<(String,u64,u64)> {
+        if !self.visible || self.is_keyboard() || self.forget_confirmation.is_some() {return None;}
+        if self.page==Page::Achievements && self.service.is_some() {
+            return self.last_sync.progress().map(|(phase,done,total)|(if self.last_sync.retry_seconds>0 {format!("{phase} · retry {}s",self.last_sync.retry_seconds)}else{phase.to_string()},done as u64,total as u64));
+        }
+        if self.page==Page::Updates {if let Some(r)=&self.update_installing {return Some(("Downloading".into(),self.update_bytes,r.size));}}
+        None
+    }
     pub fn flush_ready(&self) -> bool { if self.update_busy {self.updates.cancel();} !self.update_busy && self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
+
 }
 fn sync_label(d: slot_achievements::SyncDetail) -> String {
     use slot_achievements::SyncStatus::*;
     match d.status {
         Disabled => "Starting…".into(),
-        Offline | Attention => if d.retry_seconds > 0 { format!("Retry in {}s", d.retry_seconds) }
-            else if !d.problem.is_empty() { d.problem.into() } else { "Retry needed".into() },
-        Ready => if d.authenticated { "Signed in · up to date" } else { "Signing in…" }.into(),
-        Syncing => if !d.authenticated { "Signing in…".into() }
-            else if d.pending_awards > 0 { format!("Uploading {} unlocks", d.pending_awards) }
-            else if let Some((phase, done, total)) = d.progress() { format!("{phase} {done}/{total}") }
-            else { "Syncing…".into() },
+        Offline | Attention => if d.problem=="Check username or password" {"Check account"}else{"Waiting to retry"}.into(),
+        Ready => if d.authenticated { "Up to date" } else { "Signing in…" }.into(),
+        Syncing => if !d.authenticated {"Signing in…"}else{"Syncing…"}.into(),
     }
 }
 fn plain_path(root:&std::path::Path)->PathBuf {root.join("Config/network-credentials.json")}
@@ -760,7 +764,7 @@ mod tests {
         assert!(!menu.prefs.achievements);
         assert!(!menu.wifi_on);
         assert!(menu.service.is_none());
-        assert_eq!(menu.rows().len(), 6);
+        assert_eq!(menu.rows().len(), 4);
         assert!(!root.path().join("Config/retroachievements.toml").exists());
         assert!(!network_vault::vault_path(root.path()).exists());
     }
@@ -780,7 +784,7 @@ mod tests {
             encryption: "WPA2".into(),
             saved: false,
         }];
-        menu.selected = 6;
+        menu.selected = 4;
         menu.input(Action::GbaDown(Btn::A));
         assert_eq!(menu.keyboard.as_ref().unwrap().1.text(), "");
         assert_eq!(menu.secrets.ssid, "Home");
@@ -795,7 +799,7 @@ mod tests {
         menu.input(Action::QuickMenu);
 
         menu.last_wifi.networks = vec![wifi::Network {ssid:"Other".into(),signal:-50,security:wifi::Security::Personal,encryption:"WPA2".into(),saved:false}];
-        menu.open_wifi();menu.selected = 6;
+        menu.open_wifi();menu.selected = 4;
         menu.input(Action::GbaDown(Btn::A));
         menu.accept(Field::WifiPassword, Zeroizing::new("other-secret".into()));
         assert_eq!(menu.secrets.ssid, "Other");
@@ -825,8 +829,8 @@ mod tests {
             encryption: "WPA3".into(),
             saved: false,
         }];
-        assert_eq!(menu.rows()[6].1, "WPA3");
-        menu.selected = 6;
+        assert_eq!(menu.rows()[4].1, "WPA3");
+        menu.selected = 4;
         menu.input(Action::GbaDown(Btn::A));
         assert!(menu.keyboard.is_none());
         assert_eq!(menu.secrets.ssid, "Home");
@@ -856,7 +860,7 @@ mod tests {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();
         assert!(!menu.rows().iter().any(|r|r.0=="Credentials"));assert!(!plain_path(root.path()).exists());
         menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.page,Page::Security);
-        assert!(!menu.wifi_on);assert!(menu.notice_text().unwrap().contains("PIN to encrypt credentials"));
+        assert!(!menu.wifi_on);assert!(menu.notice_text().unwrap().contains("code to encrypt credentials"));
         assert_eq!(menu.selected,1);
         menu.open_achievements();menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.page,Page::Security);
         assert!(!menu.prefs.achievements);
@@ -868,7 +872,7 @@ mod tests {
         assert!(menu.visible && menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
         submit_code(&mut menu,&[Btn::A;4]);wait(&mut menu);
         assert!(menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
-        assert_eq!(menu.code_text.as_str(),"aaaa");assert!(menu.notice_text().is_none());
+        assert_eq!(menu.code_text.as_str(),"aaaa");assert_eq!(menu.notice_text(),Some("Use 6+ presses"));
         for _ in 0..4 {menu.input(Action::GbaDown(Btn::Select));}
         buttons(&mut menu,&CODE);wait(&mut menu);
         assert!(!menu.locked && menu.wifi_on && !menu.visible);
@@ -1057,6 +1061,51 @@ mod tests {
         assert_eq!(read_plain(root.path()).unwrap().token,"keep-token");assert!(!m.wifi_on && m.service.is_none());
     }
 
+    #[cfg(target_os="linux")]
+    #[test]
+    #[ignore = "requires Mesa EGL; produces production-compositor review captures"]
+    fn native_ra_progress_review() {
+        use slot_gfx::Compositor;
+        use slot_input::{InputSource,RawEvent,Millis};
+        struct Empty;impl InputSource for Empty {fn poll(&mut self,_:Millis)->Vec<RawEvent>{vec![]}}
+        let dir=std::path::PathBuf::from(std::env::var_os("SLOT_QOL_PREVIEW").expect("preview directory"));
+        for (name,width,light) in [("ra-light-gles",640,true),("ra-dark-gl",720,false)] {
+            let output=dir.join(name);std::fs::create_dir_all(&output).unwrap();let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
+            let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+            let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+            for i in 0..90 {f.advance_at(&mut Empty,i*17,1.0/60.0);f.compose(&mut g);}
+            let m=f.app_mut_for_review().network.as_mut().unwrap();m.open_achievements();m.prefs.achievements=true;m.selected=6;m.secrets.username="Preview".into();m.secrets.token="fixture".into();
+            let mut review_tick=2000;
+            m.service=Some(slot_achievements::Service::configured(root.path().into(),slot_achievements::Config::default()));
+            for (shot,done,total,badges,status,problem,retry) in [
+                ("game-data",6,900,5,slot_achievements::SyncStatus::Syncing,"",0),
+                ("artwork-downloading",900,900,175,slot_achievements::SyncStatus::Syncing,"",0),
+                ("artwork-retry",900,900,175,slot_achievements::SyncStatus::Attention,"Artwork server unavailable",20),
+                ("up-to-date",900,900,800,slot_achievements::SyncStatus::Ready,"",0)] {
+                for _ in 0..60 {
+                review_tick+=17;f.advance_at(&mut Empty,review_tick,1.0/60.0);
+                let m=f.app_mut_for_review().network.as_mut().unwrap();m.last_sync=slot_achievements::SyncDetail{catalog_ready:true,artwork_ready:true,authenticated:true,games_done:done,games_total:total,badges_done:badges,badges_total:800,status,problem,retry_seconds:retry,..Default::default()};m.face=None;m.notice.clear();
+                f.compose(&mut g);
+                }
+                let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn general_network_tools_route_to_wifi_and_return_without_enabling_it() {
+        let root=tempfile::tempdir().unwrap();let mut app=crate::app::App::new(vec![]);app.network=Some(Menu::new(root.path().into()));
+        app.apply(Action::QuickMenu);app.apply(Action::GbaDown(Btn::A));
+        assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::SecurityPin));app.apply(Action::GbaDown(Btn::Down));
+        assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::Updates));app.apply(Action::GbaDown(Btn::A));
+        let m=app.network.as_ref().unwrap();assert_eq!(m.page,Page::Wifi);assert_eq!(m.notice_text(),Some("Wi-Fi needed for updates"));assert!(!m.wifi_on);
+        app.apply(Action::GbaDown(Btn::B));assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::Updates));app.apply(Action::GbaDown(Btn::Down));app.apply(Action::GbaDown(Btn::A));
+        let m=app.network.as_ref().unwrap();assert_eq!(m.notice_text(),Some("Wi-Fi needed for automatic time"));assert!(!m.prefs.automatic_time);
+        app.apply(Action::GbaDown(Btn::B));
+        let m=app.network.as_mut().unwrap();m.wifi_on=true;m.last_wifi.on=true;m.last_wifi.connected=Some("Home".into());m.last_wifi.ip=Some("192.0.2.1".into());
+        app.apply(Action::GbaDown(Btn::A));assert!(app.network.as_ref().unwrap().prefs.automatic_time);assert!(!app.network.as_ref().unwrap().visible);
+        app.apply(Action::GbaDown(Btn::Up));app.apply(Action::GbaDown(Btn::A));assert_eq!(app.network.as_ref().unwrap().page,Page::Updates);app.apply(Action::GbaDown(Btn::B));assert!(!app.network.as_ref().unwrap().visible);assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::Updates));
+    }
     #[derive(Default)]
     struct UpdateFake {asked:std::sync::Arc<std::sync::Mutex<Vec<UpdateJob>>>,events:std::collections::VecDeque<UpdateEvent>}
     impl UpdateJobs for UpdateFake {
@@ -1079,12 +1128,51 @@ mod tests {
     }
     #[test]
     fn update_progress_and_completion_refresh_the_settings_face() {
-        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());m.open_updates();m.update_busy=true;
+        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());m.wifi_on=true;m.last_wifi.on=true;m.last_wifi.connected=Some("Home".into());m.last_wifi.ip=Some("192.0.2.1".into());m.open_updates();m.update_busy=true;
         m.updates=Box::new(UpdateFake{events:[UpdateEvent::Progress(50),UpdateEvent::Staged].into(),..Default::default()});
         m.face=Some(TexId::from_raw(1));m.take_update_events();
         assert!(m.face.is_none());assert_eq!(m.update_bytes,50);assert!(m.update_staged&&!m.update_busy);
         assert_eq!(m.update_message,"Restart to install");
         assert_eq!(m.rows()[0].0,"Restart to install");m.input(Action::GbaDown(Btn::A));assert!(m.take_update_restart());assert!(!m.take_update_restart());
     }
+    #[test]
+    fn early_done_preserves_entry_and_enables_hint_only_at_minimum() {
+        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());m.prompt(Field::CreateVault);
+        assert_eq!(m.code_text.len(),0);assert_eq!(m.pin_hint_key(),0);
+        buttons(&mut m,&CODE[..3]);m.input(Action::GbaDown(Btn::Start));
+        assert_eq!(m.code_text.len(),3);assert!(m.pin_rejected.is_some());assert_eq!(m.notice_text(),Some("Use 6+ presses"));
+        buttons(&mut m,&CODE[3..]);assert_eq!(m.code_text.len(),6);assert_eq!(m.pin_hint_key(),1);assert!(m.pin_rejected.is_none());
+    }
+    #[test]
+    fn parent_device_pin_cancel_returns_directly_to_previous_menu() {
+        let root=tempfile::tempdir().unwrap();let mut network=Menu::new(root.path().into());pin(&mut network);
+        std::fs::create_dir_all(root.path().join("Config/kids")).unwrap();std::fs::write(root.path().join("Config/kids/use-device-pin"),b"1").unwrap();
+        let mut app=crate::app::App::new(vec![]);app.network=Some(network);
+        app.kid_menu=Some(crate::kid_menu::Menu::new(root.path().into(),crate::kid_policy::Policy::default()));
+        app.network.as_mut().unwrap().unlock_for_parent();app.apply(Action::QuickMenu);app.update(0.02);
+        assert!(!app.network.as_ref().unwrap().visible);assert!(app.kid_menu.is_none());
+        let mut policy=crate::kid_policy::Policy::default();policy.active=true;
+        app.kid_menu=Some(crate::kid_menu::Menu::new(root.path().into(),policy));
+        app.network.as_mut().unwrap().unlock_for_parent();app.apply(Action::QuickMenu);app.update(0.02);
+        assert!(app.kid_menu.as_ref().unwrap().settings_grid());assert!(!app.network.as_ref().unwrap().parent_authenticated);
+    }
+    #[test]
+    fn ra_meter_is_a_separate_compositor_overlay() {
+        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());m.open_achievements();
+        m.service=Some(slot_achievements::Service::configured(root.path().into(),slot_achievements::Config::default()));
+        m.last_sync=slot_achievements::SyncDetail{games_done:6,games_total:900,..Default::default()};
+        assert_eq!(m.floating_progress(),Some(("Game data".into(),6,900)));
+        let face=m.screen_face_on(slot_ui::Canvas::FRAMED,false);
+        assert!(face.rgba[(350*face.w*4)as usize..(378*face.w*4)as usize].iter().all(|&v|v==0));
+        let mut app=crate::app::App::new(vec![]);app.network=Some(m);app.network_meter_face=Some((slot_ui::TexId::from_raw(60000),400,40));
+        let mut out=Vec::new();app.draw(&mut out);
+        assert!(out.iter().any(|d|matches!(d,slot_ui::Draw::Tex{tex,y,h,..} if *tex==slot_ui::TexId::from_raw(60000) && *y==slot_ui::expressive::FOOTER_Y-2.0 && *h==40.0)));
+        app.network.as_mut().unwrap().prompt(Field::Unlock);assert!(app.network.as_ref().unwrap().floating_progress().is_none());
+
+    }
 
 }
+
+#[cfg(all(test,target_os="linux"))]
+#[path="../../slot-ui/examples/support/mod.rs"]
+mod review_surface;

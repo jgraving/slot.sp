@@ -117,7 +117,7 @@ impl Surface for Egl {
         unsafe {
             let f = self
                 .lib
-                .get::<unsafe extern "C" fn(*const i8) -> *const c_void>(b"eglGetProcAddress\0")
+                .get::<unsafe extern "C" fn(*const std::ffi::c_char) -> *const c_void>(b"eglGetProcAddress\0")
                 .unwrap();
             f(CString::new(name).unwrap().as_ptr())
         }

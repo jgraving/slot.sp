@@ -456,6 +456,7 @@ pub struct App {
     legend_faces: Vec<TexId>,
     undo_face: Option<TexId>,
     clock_faces: Option<(TexId, TexId)>,
+    clock_return_row:QuickRow,
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
@@ -468,6 +469,7 @@ pub struct App {
     kid_surface: slot_ui::expressive::SurfaceMotion,
     kid_meter_motion: slot_ui::expressive::SurfaceMotion,
     kid_meter_face: Option<(TexId,u32,u32)>,
+    pub network_meter_face: Option<(TexId,u32,u32)>,
     footer_motion: slot_ui::expressive::SurfaceMotion,
     settings_notice_revision: u64,
     current_custom_face: Option<(u64, TexId)>,
@@ -740,7 +742,7 @@ impl App {
             pending: None,
             legend_faces: Vec::new(),
             undo_face: None,
-            clock_faces: None,
+            clock_faces: None,clock_return_row:QuickRow::DateTime,
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
@@ -748,7 +750,7 @@ impl App {
             settings_return_game:None,about_heading:None,custom_chrome:Default::default(),
             special_menu_cache: Default::default(),
             kid_surface: Default::default(),
-            kid_meter_motion:Default::default(),kid_meter_face:None,
+            kid_meter_motion:Default::default(),kid_meter_face:None,network_meter_face:None,
             footer_motion: Default::default(),
             settings_notice_revision: 0,
             current_custom_face: None,
@@ -1163,10 +1165,21 @@ impl App {
         self.save_display();
         self.persist();
         if from_menu {
-            self.return_from_settings_page(QuickRow::DateTime);
+            self.return_from_settings_page(self.clock_return_row);
         } else {
             self.start();
         }
+    }
+
+    fn apply_clock_edit(&mut self) {
+        let Phase::SetClock{picker,seed,from_menu:true}=&mut self.phase else{return;};
+        let moved=picker.secs()-*seed;let offset=picker.offset_min()as i16;
+        if moved==0 && offset==self.state.utc_offset_min {return;}
+        *seed=picker.secs();
+        let utc=self.utc_secs()+moved;
+        if moved!=0 {if let Some(power)=&mut self.power {power.set_clock(utc);}}
+        self.state.utc_offset_min=offset;self.state.clock_set=true;
+        self.display_settings.override_until=None;self.sync_display_schedule();self.save_display();self.persist();
     }
 
     pub fn root(&self) -> Option<&Path> {
@@ -1351,6 +1364,7 @@ impl App {
             | QuickRow::ColourCorrection
             | QuickRow::PlayBrightness
             | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
+            QuickRow::AutomaticTime=>Some(if self.network.as_ref().is_some_and(|m|m.automatic_time_enabled()){QuickValue::On}else{QuickValue::Off}),
             QuickRow::ClockFormat => Some(if self.state.clock_12h {QuickValue::Hour12}else{QuickValue::Hour24}),
             QuickRow::CarouselMotion => Some(if self.state.carousel_wheel {QuickValue::Wheel}else{QuickValue::Classic}),
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
@@ -1418,7 +1432,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
-            | QuickRow::SecurityPin
+            | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -3091,10 +3105,11 @@ impl App {
                 Action::GbaDown(Btn::Start) => self.confirm_clock(),
                 Action::GbaDown(Btn::B) if picker.editing() => picker.toggle_editing(),
                 Action::GbaDown(Btn::B) if *from_menu => {
-                    self.return_from_settings_page(QuickRow::DateTime);
+                    self.return_from_settings_page(self.clock_return_row);
                 }
                 _ => {}
             }
+            self.apply_clock_edit();
             return;
         }
         if self.repair_prompt {
@@ -3318,7 +3333,7 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::TimeZone|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::About => {
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
@@ -3378,7 +3393,7 @@ impl App {
                 self.suspend_pending = self.power_settings.lid_close == 1;
             }
             QuickRow::ShutDown => self.hold_power(),
-            QuickRow::LidClose | QuickRow::SleepTimeout => {}
+            QuickRow::LidClose | QuickRow::SleepTimeout | QuickRow::AutomaticTime => {}
             QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::ShowTitles | QuickRow::FavoriteSort => self.change_setting(row, true),
             QuickRow::Bluetooth => {
                 if let Some(root) = &self.root {
@@ -3389,16 +3404,18 @@ impl App {
                     self.bluetooth = Some(menu);
                 }
             }
-            QuickRow::DateTime => {
+            QuickRow::DateTime | QuickRow::TimeZone => {
+                self.clock_return_row=row;
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
+                if row==QuickRow::TimeZone {if let Phase::SetClock{picker,..}=&mut self.phase {picker.field(slot_ui::Field::Offset);picker.toggle_editing();}}
             }
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
             }
             QuickRow::Wifi | QuickRow::Achievements
-            | QuickRow::SecurityPin => {
+            | QuickRow::SecurityPin | QuickRow::Updates => {
                 if let Some(menu) = &mut self.network {
-                    if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
+                    if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
             QuickRow::About => self.phase = Phase::About,
@@ -3503,6 +3520,8 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        if row==QuickRow::AutomaticTime {if let Some(m)=&mut self.network {m.toggle_automatic_time();}return;}
+
         if row == QuickRow::Scaling { self.set_picture(self.video_mode.step(right)); return; }
         if row == QuickRow::FrameBlending {
             if self.link_active() { return; }
@@ -3686,7 +3705,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
-            | QuickRow::SecurityPin
+            | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -4478,7 +4497,8 @@ impl App {
     fn timers(&mut self) {
         let linking=self.link_active();
         if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
-            if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}}
+            if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
+            if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
         self.step_net_time();
         self.tick_quick_controls();
@@ -4944,7 +4964,9 @@ impl App {
                 }else{i+=1;}
             }
             let page=custom.unwrap_or_else(||row.or_else(||self.menu_motion.closing_row()).map_or(0,|r|r.page()[0].index() as u64));
-            let kind=row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())});
+            let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
+                row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens() || (r==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())))})
+            };
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();
@@ -4970,6 +4992,9 @@ impl App {
             if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
                 let t=self.kid_meter_motion.value();
                 out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:slot_ui::expressive::FOOTER_Y-2.0+(1.0-t)*48.0,w:w as f32,h:h as f32,tex,alpha:t});
+            }
+            if let Some((tex,w,h))=self.network_meter_face.filter(|_|self.network.as_ref().and_then(|m|m.floating_progress()).is_some()) {
+                out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:slot_ui::expressive::FOOTER_Y-2.0,w:w as f32,h:h as f32,tex,alpha:self.menu_motion.reveal()});
             }
             // Transient system feedback is composed after cards, titles and hardware.
             self.hud.draw_with_bottom_inset(self.canvas(),self.now(),50.0*self.kid_meter_presence(),out);
@@ -5539,7 +5564,7 @@ impl App {
         frame.background = false; // The panel owns one surface behind both pages.
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
-            row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
+            disabled: if self.network.as_ref().is_some_and(|m|m.wifi_connected()){&[]}else{&[QuickRow::Updates,QuickRow::AutomaticTime]}, row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
             values: QuickRow::ALL.map(|r| self.quick_value(r)),
             clock: self.quick_clock_faces, wallpaper: self.quick_wallpaper_faces,
             faces: self.quick_menu_faces.as_ref(), ground: self.menu_ground(),
@@ -5697,7 +5722,7 @@ impl App {
             false => back,
         };
         self.draw_side_legend(left, false, y, out);
-        let right = if row.opens() { open } else { change };
+        let right = if row.opens() || (row==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())) { open } else { change };
         self.draw_side_legend(right, true, y, out);
     }
 

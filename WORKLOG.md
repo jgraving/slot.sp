@@ -7,7 +7,7 @@ Active PR: https://github.com/jgraving/slot.sp/pull/191
 Current implementation revision: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`
 Status: draft, not merged or released.
 
-## Current state — ready for handheld testing
+## Previous verified state — followed by active work below
 
 This is the separate OTA/time draft, stacked on PR #190. Current runtime: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`. PR #190 is fully verified on 16ac082; the OTA branch includes its final encrypted-only/six-button PIN, RA progress/icon, neutral meters, Wi-Fi and quiet-unlock changes.
 
@@ -348,3 +348,54 @@ Before edits: user reports automatic time is wrong for their location and points
 ### Wi-Fi stability and immediate time changes
 
 Before edits: user reports repeated Wi-Fi disconnects and RA restarting/blinking; investigate radio readiness and service lifecycle before choosing a fix. Also clarifies the existing UTC offset control is discoverable but requiring Start to save is inconsistent. Make time-zone/offset changes apply and persist immediately; preserve manual date/time editing semantics where needed, and remove misleading Save hints for controls that auto-apply. No logs from the handheld are available, so distinguish source defects/reproductions from unverified radio causes.
+
+### RA retries / warm device report
+
+Before edits: user clarifies Wi-Fi seems stable; RA alternates retry countdown and Artwork will retry, and the device becomes warm. Inspect badge retry scheduling and library scan cadence. Keep controller indicator steady while pending/retrying, distinguish artwork failures from account/API connectivity, avoid reauth/rescans for isolated artwork failures, reduce unneeded polling/work, and test retry backoff with fake transport. Hardware temperature cause is unverified without device telemetry. Existing UI/PIN/cancel fixes are locally compiling, not yet published or validated broadly.
+
+### RA status clarification / optional live tests
+
+- Further device reports: artwork retries/blinking appear after leaving settings; completed games then show 0/0. UI visibility does not own the HTTP worker. Found indicator gated only on instantaneous Syncing, game denominator initialized to only uncached games, and all request failures discarded verified auth. Isolated artwork failures already use a separate queue; extend its bounded backoff and throttle background requests, keep pending indicator steady, retain cached totals and use stable concise state labels plus separate retry cause/countdown.
+- User asks about GitHub RA username/password secrets for CI. Add an optional manually dispatched smoke workflow with RA_TEST_USERNAME and RA_TEST_PASSWORD for trusted repository branches, isolated from PR checks. Tests may authenticate and fetch public metadata/artwork only; no awards, session creation, private response logs, tokens or uploaded credentials. Credentials must be added through GitHub, never chat. No live-account result claimed until secrets are provided and workflow succeeds.
+- Local host compile and all 24 network tests pass (new early-Done/cancel/floating-overlay regressions included). Clock tests found stale expected UTC-shift behavior; corrected expectations because zone selection now preserves UTC and menu changes auto-apply. Parent/UI/achievement suites are still running. Do not merge yet.
+
+### Consistent naming (before edits)
+
+User requests one consistent term throughout UI/notifications. Use Device code and Parent code: code fits controller sequences and keyboard passphrases, avoids alternating Security PIN / device PIN / parent PIN. Parent method values: Device code / Separate code. Internal Rust identifiers and internal PIN_BUTTONS notice tokens can remain for compatibility, but user-visible headings, prompts, hints, notices and guide copy must use code. Update text assertions and production walkthroughs; preserve historical WORKLOG language as history.
+
+### Implementation checkpoint before full CI
+
+- Implemented direct parent device-code cancellation (adult returns to prior menu; child returns to child settings), zero initial dots, neutral incomplete dots, enabled Done only after the six-button setup minimum, and early-Done shake/pill without clearing. Separate four-button parent code retains automatic completion; it has no Done submission requirement. Silent variable-length unlock and legacy upgrade are preserved.
+- Moved RA progress out of settings-card raster into a floating compositor layer. Pending/retrying work keeps the controller visible. Cached games count toward total after service restart; empty GBA libraries use words instead of 0/0. Concise stable sync states have separate phase counts, failure cause and retry timer.
+- Badge retries now back off 30→60→…→300 seconds; successful artwork and library preparation are paced at three-second intervals. Non-authentication HTTP errors preserve verified account state; HTTP timeout is 15 seconds instead of 5. Parent device-code verification no longer recreates an existing RA service. Physical heat/radio behavior remains unverified.
+- Settings date/time edits apply immediately; changing zone preserves UTC. Done closes rather than saves. Naming standardized to Device code / Parent code, including guides. Optional trusted-branch manual live smoke workflow added; secrets are not present or used here.
+- Local validation: 137 core tests passed (one Unix socket bind test blocked by local sandbox, enabled in CI); 24 targeted network tests passed before final text standardization; all 29 achievement tests and all 61 UI library/quick-menu tests passed. All 43 child/parent UI tests and four parent storage tests passed after retaining the existing wrong-code-only dot shake. Clock suite 19/19 passes with updated zone semantics. New string-only changes will be rechecked in CI.
+- Remaining: carry changes into #191, relocate Updates/Automatic time and expose Time zone in General, validate connected/disconnected routing and native light/dark captures, then all six CI checks and fresh package. Keep drafts. No physical BaseOS installation or live RA account test has run.
+
+### Cached-artwork startup investigation
+
+Before the next edit: user clarifies artwork was still downloading, despite game pass looking complete; also reports Starting/empty counts and warmth. Found Queue::new/scan synchronously parses all cached games and enqueue fully decodes cached PNGs, repeatedly for duplicate badge references. Move discovery/validation into bounded worker maintenance slices, deduplicate known names before disk/decode, keep queued work visible and publish state before expensive work. Preserve full corrupt-PNG validation, cache repair and fake-server tests; do not replace decoding with header-only guesses. Thermal cause remains unverified. Next native review must show separate game/art phases and no completion wording until all queued work is done.
+
+### Bounded cache work and final verification in progress
+
+Shared runtime checkpoint f3f5e012d7f663c36b2164447641dd0cc9db0f89 passed ARM64/package, scaling, blending and shortcut checks; native/website were still running when checked. A newer local revision adds bounded cached-artwork discovery/validation, file-fingerprint deduplication, early status publication and explicit Reading library/artwork states. Full PNG corruption checks are preserved. Retry causes distinguish server, invalid image and card writes; floating meter includes countdown. Completed cached-game totals survive restart; Up to date requires no pending artwork/uploads.
+
+Local newer revision: 137 core tests pass (one explicitly ignored native-render fixture and one sandbox-blocked Unix socket test excluded); 30 achievement tests pass, two live-network tests remain explicitly ignored. Earlier full child/parent (43+4), clock (19) and UI (61) suites passed. Added ignored production-compositor RA fixture and CI capture step: game pass, artwork pass, retry and completion in both light GLES/dark GL. First capture review confirms pill is outside the card, completed games remain 900/900, and controller is present while artwork is pending. Final countdown capture rerender running. General relocation/connectivity tests on #191 pass (27 targeted network tests); its quick-menu suite now passes 58/58 with disabled-row expectations.
+
+Do not infer actual hardware cooling, live RA-account success or firmware installation from these simulations. Both PRs remain drafts. Next: publish this checkpoint, synchronize #191, inspect final native captures and exact-head CI/build artifacts, update CURRENT_WORK.md.
+
+### ARM harness correction and final shared revision
+
+- CI on 3949bc4 found an ARM64 compile failure in the newly included Mesa review helper: eglGetProcAddress used *const i8, but C char is unsigned on that target. Use std::ffi::c_char. This is test-harness portability; normal launcher runtime compiled. Scaling/blending/shortcuts passed; remaining jobs were running.
+- Explicitly classify rcheevos protocol Code values expired_token, invalid_credentials and access_denied as authentication failures, preserving account recovery while retaining verified auth for ordinary retries. Primary source checked: RetroAchievements/rcheevos src/rapi/rc_api_common.c. All 31 achievement tests pass locally; no live credentials used.
+- Added native walkthrough cancellation/reopen coverage and repeatable clean mock-card setup. Final RA retry capture reviewed in dark GL: neutral floating pill says Artwork · retry 20s 175/800, with completed games 900/900 and steady controller glyph. Up-to-date capture has no progress pill or controller. General light render shows disabled network tools and zero-dot/grey-Done setup correctly.
+- One local General walkthrough produced incomplete PNG files and failed its final marker assertion. A clean traced rerun passed and all PNGs validated; trace confirmed synchronous marker removal at the expected root. Temporary tracing was removed. Keep exact assertions and CI native review; do not weaken production parental behavior or claim asynchronous marker writes.
+- Broad --no-default-features --tests check also selected an unrelated host-only input test; use the repository's existing feature-specific test commands. Required tests remain enabled in CI.
+
+### General integration ready for final CI
+
+- General now starts Device code, Updates, Automatic time, Time zone. Network contains only Wi-Fi controls and scanned networks. Disconnected network tools are dimmed; A opens Network with feature-specific Wi-Fi-needed feedback and B returns to the original General row. Connected automatic time toggles inline, and Updates returns to General. Disabled Automatic time advertises Select/A instead of a misleading Change hint.
+- Time zone opens the existing offset field directly, already in edit mode; changes apply/persist immediately without shifting UTC. Date/time changes from settings also auto-apply; Done simply leaves. Updated setup/update/time guides.
+- Carried all shared RA/controller/cache/PIN/cancel/naming changes through remote shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f. The shared native harness uses platform C char so ARM tests can compile it.
+- Local General checks: 27 targeted network tests, 58 launcher quick-menu tests and all 61 UI library/quick-menu tests passed. Combined full core/clock/menu rerun is running. Light native General/PIN/connectivity/clock captures reviewed. First walkthrough had incomplete PNG output and a final fixture-marker failure; a fresh traced run completed and every PNG validated. Trace showed synchronous correct marker removal, and temporary trace code was removed. Fresh dark review and exact-head CI remain required.
+- No firmware update was installed. No live RA secrets or account tests have been run. Both drafts remain open. Publish the combined revision, then verify six workflows and native outputs on that exact revision before handing over a new test build.

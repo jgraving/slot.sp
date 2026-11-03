@@ -184,7 +184,7 @@ fn main() {
                 frame_state.background=false;
                 frame_state.entry=1.0;
                 QuickMenu {
-                    row,
+                    disabled: &[], row,
                     hidden: &hidden,
                     values,
                     clock: None,
