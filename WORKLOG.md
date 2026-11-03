@@ -2,21 +2,19 @@
 
 Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `feat/182-network-achievements`
-Active PR: https://github.com/jgraving/slot.sp/pull/186
-Implementation revision tested after UI follow-up: `94f940e0e7c472b6b2f3ea9c506d4c8280f34c37`
+Active branch: `fix/ra-background-progress`
+Active PR: https://github.com/jgraving/slot.sp/pull/190
+Current implementation revision: `16ac0826febc8cc800c0de6d8f24fdee64a1c7b3`
 Status: draft, not merged or released.
 
-## Current state — active handheld follow-up
+## Current state — PR #190 validation
 
-User authorized merging PR #186 and reported unclear RetroAchievements preparation progress (0%, 1%, 3%, then 2%, then 3%) with roughly 900 games. Before implementation:
+PR #186 is merged. PR #190 contains the current requested follow-ups: phase-specific RA progress/counts and controller status, stable library passes, flatter Wi-Fi arcs, encrypted-only credentials with six-plus button PIN creation and legacy upgrade/migration, neutral adaptive adjustment/kid-time pills, and no stale “Credentials unlocked” notification on page entry. Separate four-button parent codes are unchanged.
 
-- Trace preparation vs award sync, whether work survives leaving settings/gameplay, progress denominator/restarts, completion/failure and resumability. Explain verified behavior to user.
-- Add a small controller status-bar indicator while background RA work is active; useful progress/count/status on RA settings with concise UI copy.
-- Make settings/status-bar Wi-Fi arcs wider and lower.
-- Investigate upstream OTA (including base OS) and automatic time; target jgraving/slot.sp releases, preserve custom setup. Keep upstream integration in a separate review PR; assess actual payload/install compatibility before enabling base OS updates.
-- Merge existing tested PR #186 using the authorized current head, then implement follow-ups on new branch(es), test through CI and keep checkpoints pushed.
-- No runtime work started in this follow-up yet. Prior completed state follows.
+- Runtime revision: 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3. Full launcher regression step passed; light/dark native walkthroughs and the ARM64 build are still running. Scaling, blending and shortcut checks passed. Final workflow/artifact results must be verified before handoff.
+- Local: 27 achievement tests passed (one deliberate public-endpoint test ignored); targeted UI/icon/meter/notice tests pass. Core tests pass except an unchanged control-socket test blocked by the local sandbox; it remains enabled in CI.
+- Separate OTA/time draft: https://github.com/jgraving/slot.sp/pull/191 on feat/fork-ota-time, based on this PR. Automatic time is opt-in; updates target this fork's releases and preserve Config/games/saves. Physical BaseOS/recovery tests remain outstanding.
+- No follow-up PR is merged; #186 was merged with user authorization. Detailed chronological checkpoints below include superseded requests; this section states the final requested behavior.
 
 ## Previous completed follow-up
 
@@ -57,7 +55,7 @@ All results below are for 94f940e:
 2. Continue on the existing feature branch unless the task requires otherwise. Do not repeat completed work.
 3. Update this log before a substantial operation and after each meaningful result. Commit and push checkpoints so recovery does not depend on the current chat or local disk.
 4. Record exact revisions, test results, failures, remaining work, and artifact links. Never record credentials, PINs, tokens, or private account information.
-5. User's next-chat prompt: "Continue jgraving/slot.sp PR #186. Read WORKLOG.md and AGENTS.md on feat/182-network-achievements first."
+5. User's next-chat prompt: "Continue jgraving/slot.sp PR #190 and dependent PR #191. Read WORKLOG.md on fix/ra-background-progress and feat/fork-ota-time first."
 
 ## User requirements retained from the attached crashed-chat transcript
 
@@ -268,3 +266,7 @@ Before editing: user reports Credentials unlocked appearing on entering Network 
 - Controller glyph renders as vector artwork; local icon test caught premultiplied edge-colour rounding, corrected by preserving flat RGB with antialiased alpha. Neutral meter checks pass at all tested fill levels/themes.
 - Preserve the completed game count while artwork continues instead of clearing it to 0/0 on an empty rescan. Status-corner layout now covers simultaneous audio, mute, Wi-Fi, RA controller and parental icon.
 - Next: full CI, production light/dark capture review and fresh device build. OTA/time remains in its own stacked draft branch.
+
+### Current durable handoff
+
+PR #190 runtime is 16ac082; full CI/render/package validation still running. PR #191 adds OTA/time separately. Latest user concern (stale unlock notices) is fixed and covered; no implication that Wi-Fi was disconnected. Keep both draft pending device tests and record final Actions links/artifacts before ending.
