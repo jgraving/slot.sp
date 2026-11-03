@@ -595,6 +595,7 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
         .map(|i| TexId::from_raw(700 + i))
         .collect();
     a.set_icon_faces(icons.clone());
+    let meter=[TexId::from_raw(9010),TexId::from_raw(9011)];a.set_hud_meter_faces(meter);
     open_at(&mut a, QuickRow::FastForward);
     let before = read_slot_state(d.path());
     a.apply(Action::BrightnessUp);
@@ -613,8 +614,8 @@ fn brightness_and_volume_still_answer_over_the_quick_menu() {
     let out = frame(&a);
     assert!(
         out.iter()
-            .any(|d| matches!(*d, Draw::Tex { tex, .. } if icons.contains(&tex))),
-        "the level's bar is not drawn over the menu"
+            .any(|d| matches!(*d, Draw::Tex { tex, .. } | Draw::Part { tex, .. } if meter.contains(&tex))),
+        "the level capsule is not drawn over the menu"
     );
 }
 
