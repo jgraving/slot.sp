@@ -26,11 +26,25 @@
           <img class="hero-screen hero-screen-poster" src="{{ (hero_media ~ 'platinum.png') | url }}" width="720" height="480" alt="Cartridge carousel">
           <canvas id="hero-screen" class="hero-screen" width="720" height="480" role="img" aria-label="Interactive cartridge carousel"></canvas>
           <video id="hero-preview" class="hero-source" muted playsinline preload="none" data-media="{{ hero_media | url }}" aria-hidden="true"></video>
-          <button class="hardware-button hardware-a" type="button" data-hardware="insert" aria-label="A: insert cartridge preview" title="Insert cartridge"></button>
-          <button class="hardware-button hardware-b" type="button" data-hardware="eject" aria-label="B: eject cartridge preview" title="Eject cartridge"></button>
-          <button class="hardware-button hardware-menu" type="button" data-hardware="boot" aria-label="MENU: replay startup" title="Replay startup"></button>
-          <button class="hardware-button hardware-left" type="button" data-hardware="left" aria-label="D-pad left: previous cartridge preview" title="Previous cartridge"></button>
-          <button class="hardware-button hardware-right" type="button" data-hardware="right" aria-label="D-pad right: next cartridge preview" title="Next cartridge"></button>
+          {% for key, label, hint in [
+            ('a', 'A: launch selected cartridge', 'Launch cartridge'),
+            ('b', 'B: back', 'Back — no menu is open'),
+            ('x', 'X: kid approval (not included in preview)', 'Kid approval — not included in preview'),
+            ('y', 'Y: favorite (not included in preview)', 'Favorite — not included in preview'),
+            ('menu', 'MENU: hold to return to carousel', 'Hold to return to carousel'),
+            ('select', 'SELECT: shortcut modifier', 'Shortcut modifier — not included in preview'),
+            ('start', 'START: emulator picker (not included in preview)', 'Emulator picker — not included in preview'),
+            ('left', 'D-pad left: previous cartridge', 'Previous cartridge'),
+            ('right', 'D-pad right: next cartridge', 'Next cartridge'),
+            ('up', 'D-pad up: previous starting letter', 'Previous starting letter'),
+            ('down', 'D-pad down: next starting letter', 'Next starting letter'),
+            ('l1', 'L1: previous system (single-system preview)', 'Previous system — single-system preview'),
+            ('r1', 'R1: next system (single-system preview)', 'Next system — single-system preview'),
+            ('l2', 'L2: rewind (games not included in preview)', 'Rewind — games not included in preview'),
+            ('r2', 'R2: fast-forward (games not included in preview)', 'Fast-forward — games not included in preview')
+          ] %}
+          <button class="hardware-button hardware-{{ key }}" type="button" data-hardware="{{ key }}" aria-label="{{ label }}" title="{{ hint }}" hidden></button>
+          {% endfor %}
         </div>
       </div>
       <div class="preview-controls">

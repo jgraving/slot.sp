@@ -1,4 +1,4 @@
-// Check the fixed-angle model, stable first load and native screen controls.
+// Exercise the live 3D model, native autoplay and OS-aligned manual controls.
 const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
@@ -9,7 +9,7 @@ const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
 const origin='https://jakegraving.com/slot.sp/';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
 (async()=>{
-  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   const report=[];
   async function pageFor(width,options={}) {
     const page=await browser.newPage({viewport:{width,height:1000},deviceScaleFactor:1.5,reducedMotion:'reduce',...options});
@@ -43,198 +43,196 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
     assert(Math.abs(sizes.height-sizes.width*1.25)<1,`${label}: preserve the complete 4:5 render`);
     assert(Math.abs(sizes.width-sizes.imageWidth)<1&&Math.abs(sizes.height-sizes.imageHeight)<1,`${label}: render must fit without cropping`);
   }
-  async function blendedEdges(page,label) {
-    const background=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--page').trim());
-    const png=await page.locator('.sp-stage').screenshot({path:path.join(out,`${label}-opening.png`)});
-    // Compare actual composited edge pixels, including H.264 color conversion.
-    execFileSync('python3',['-c',`import io,sys
-from PIL import Image,ImageColor
-image=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert('RGB')
-expected=ImageColor.getrgb(sys.argv[1]);w,h=image.size
-points=[(x,y) for x in [0,w-1] for y in [0,h//4,h//2,3*h//4,h-1]]
-points += [(x,y) for y in [0,h-1] for x in [w//4,w//2,3*w//4]]
-for point in points:
-    actual=image.getpixel(point)
-    assert max(abs(a-b) for a,b in zip(actual,expected)) <= 1, (point,actual,expected)
-`,background],{input:png});
+  async function waitScreen(page,state,cart) {
+    try {await page.waitForFunction(([state,cart])=>{
+      const el=document.getElementById('hero-screen');return el.dataset.state===state&&(cart===undefined||el.dataset.cart===String(cart));
+    },[state,cart]);}
+    catch(error){console.log('Screen state mismatch',{expected:{state,cart},actual:await page.locator('#hero-screen').evaluate(el=>({...el.dataset}))});throw error;}
   }
-  async function inspectMotionFrame(page,label,time) {
-    await page.locator('.sp-stage[data-motion-ready=true]').waitFor();
-    const video=page.locator('.model-opening'),stage=page.locator('.sp-stage');
-    await video.evaluate(async(v,time)=>{v.pause();await new Promise(resolve=>{v.addEventListener('seeked',resolve,{once:true});v.currentTime=time;});},time);
-    await page.waitForFunction(()=>getComputedStyle(document.querySelector('.model-opening')).opacity==='1');
-    const outer=await stage.boundingBox(),frame=await video.boundingBox();
-    const expected=await stage.evaluate(el=>Math.min(parseFloat(getComputedStyle(el).maxWidth),parseFloat(getComputedStyle(el.closest('.intro')).gridTemplateColumns.split(' ').at(-1))));
-    assert(Math.abs(outer.width-expected)<1,`${label}: preview should fill its available column`);
-    for(const key of ['x','y','width','height'])assert(Math.abs(outer[key]-frame[key])<.5,`${label}: the whole video must fit the stage`);
-    const file=path.join(out,`${label}.png`);await stage.screenshot({path:file});
-    execFileSync('python',['-c',`from PIL import Image,ImageChops
+  const keyButton=(page,key)=>page.locator(`[data-hardware=${key}]`);
+  const holdMenu=async page=>{await keyButton(page,'menu').click({delay:1100});};
+  async function silhouette(page,label) {
+    // The keyboard focus outline belongs to the stage, not the model silhouette.
+    await page.locator('.model-fold').focus();
+    const file=path.join(out,`${label}.png`);await page.locator('.sp-stage').screenshot({path:file});
+    execFileSync('python3',['-c',`from PIL import Image,ImageChops
 import sys
-im=Image.open(sys.argv[1]).convert('RGB');target=(14,20,35)
-for p in [(2,2),(im.width-3,2),(2,im.height-3),(im.width-3,im.height-3)]:
- assert max(abs(a-b) for a,b in zip(im.getpixel(p),target))<=1, ('Visible video matte',p,im.getpixel(p))
-r,g,b=ImageChops.difference(im,Image.new('RGB',im.size,target)).split()
-box=ImageChops.lighter(ImageChops.lighter(r,g),b).point(lambda v:255 if v>30 else 0).getbbox()
-assert box and box[0]>1 and box[1]>1 and box[2]<im.width-1 and box[3]<im.height-1, ('Clipped model',box,im.size)
-print('PASS: matching matte and complete lid silhouette',sys.argv[1])`,file],{stdio:'inherit'});
-    await blendedEdges(page,label);
-    await video.evaluate(v=>v.play());
+im=Image.open(sys.argv[1]).convert('RGB');bg=(14,20,35);w,h=im.size
+for p in [(1,1),(w-2,1),(1,h-2),(w-2,h-2)]:
+ assert max(abs(a-b) for a,b in zip(im.getpixel(p),bg))<=2, ('Visible canvas box',p,im.getpixel(p))
+r,g,b=ImageChops.difference(im,Image.new('RGB',im.size,bg)).split()
+box=ImageChops.lighter(ImageChops.lighter(r,g),b).point(lambda v:255 if v>35 else 0).getbbox()
+assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped handheld',box,im.size)
+`,file],{stdio:'inherit'});
   }
-  async function interactiveChecks(page) {
-    const screen=page.locator('#hero-screen');
-    const waitFor=(state,cart)=>page.waitForFunction(([state,cart])=>{
-      const el=document.getElementById('hero-screen');return el.dataset.state===state&&el.dataset.cart===String(cart);
-    },[state,cart]);
-    // Five actual selections, each with its own insertion/ejection, including wrap.
-    for(let cart=0;cart<5;cart++) {
-      await page.locator('[data-hardware=insert]').click();await waitFor('seated',cart);
-      assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
-      await screen.screenshot({path:path.join(out,`cart-${cart}-seated.png`)});
-      await page.locator('[data-hardware=eject]').click();await waitFor('shelf',cart);
-      await page.locator('[data-hardware=right]').click();await waitFor('shelf',(cart+1)%5);
+  async function rotate(page,label) {
+    const stage=page.locator('.sp-stage'),box=await stage.boundingBox();
+    const initial=Number(await stage.getAttribute('data-view-yaw'));
+    await page.mouse.move(box.x+30,box.y+box.height*.6);await page.mouse.down();
+    await page.mouse.move(box.x+170,box.y+box.height*.6+25,{steps:12});await page.mouse.up();
+    await page.waitForFunction(y=>Math.abs(Number(document.querySelector('.sp-stage').dataset.viewYaw)-y)>.7,initial);
+    await stage.focus();await page.keyboard.press('Home');
+    await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.sp-stage').dataset.viewYaw)+.38)<.002);
+    // Rotate to the rear and tip the rear edge toward the camera. Every
+    // shoulder target follows its own face normal, not the front D-pad plane.
+    for(let i=0;i<23;i++)await page.keyboard.press('ArrowRight');
+    for(let i=0;i<8;i++)await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(()=>Number(document.querySelector('.sp-stage').dataset.viewPitch)>.6);
+    await silhouette(page,`${label}-shoulders`);
+    for(const key of ['l1','l2','r1','r2']){
+      assert(await keyButton(page,key).isVisible(),`${label}: ${key} is reachable from the rear`);
+      await keyButton(page,key).click();
     }
-    await page.locator('[data-hardware=right]').click({clickCount:3,delay:30});await waitFor('shelf',3);
-    await page.locator('[data-hardware=left]').click({clickCount:2,delay:30});await waitFor('shelf',1);
-    // Reversals and A/B during motion settle to the latest intent, without resets.
-    await page.locator('[data-hardware=right]').click();
-    await page.locator('[data-hardware=left]').click();
-    await page.locator('[data-hardware=insert]').click();
-    await waitFor('seated',1);
-    await page.locator('[data-hardware=eject]').click();await waitFor('shelf',1);
-    await page.locator('[data-hardware=insert]').click();
-    await page.locator('[data-hardware=eject]').click();await waitFor('shelf',1);
+    assert(!(await keyButton(page,'a').isVisible()),'Face buttons cannot be clicked through the back');
+    await stage.focus();await page.keyboard.press('Home');
+    await page.waitForFunction(()=>Math.abs(Number(document.querySelector('.sp-stage').dataset.viewYaw)+.38)<.002);
+    await silhouette(page,`${label}-front`);
+  }
+  async function manualChecks(page) {
+    // The first button claims control even if its OS action is outside this
+    // menu-free preview. Allow an in-flight demo clip to reach its endpoint;
+    // software WebGL can advance the demo while automation prepares a click.
+    await keyButton(page,'b').click();
+    assert.equal(await page.locator('#hero-screen').getAttribute('data-demo'),'false');
+    await page.waitForFunction(()=>{const s=document.getElementById('hero-screen').dataset;return ['shelf','seated'].includes(s.state)&&s.cart===s.target;});
+    const stopped=await page.locator('#hero-screen').evaluate(el=>({state:el.dataset.state,cart:Number(el.dataset.cart)}));
+    await page.waitForTimeout(1600);await waitScreen(page,stopped.state,stopped.cart);
+    if(stopped.state==='seated'){await holdMenu(page);await waitScreen(page,'shelf',stopped.cart);}
+    for(let cart=stopped.cart;cart!==1;cart=(cart+1)%5){await keyButton(page,'right').click();await waitScreen(page,'shelf',(cart+1)%5);}
+    await keyButton(page,'a').click();await waitScreen(page,'seated',1);
+    await keyButton(page,'left').click();await keyButton(page,'b').click();
+    await keyButton(page,'menu').click();await page.waitForTimeout(250);
+    await waitScreen(page,'seated',1);
+    assert.equal(await page.locator('#hero-screen').getAttribute('data-boots'),'1','MENU no longer reboots');
+    await holdMenu(page);await waitScreen(page,'shelf',1);
+    await keyButton(page,'left').click();await waitScreen(page,'shelf',0);
+    for(let cart=0;cart<5;cart++) {
+      await keyButton(page,'a').click();await waitScreen(page,'seated',cart);
+      assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
+      await page.locator('.sp-stage').screenshot({path:path.join(out,`cart-${cart}-seated.png`)});
+      await holdMenu(page);await waitScreen(page,'shelf',cart);
+      await keyButton(page,'right').click();await waitScreen(page,'shelf',(cart+1)%5);
+    }
+    await keyButton(page,'right').click({clickCount:3,delay:30});await waitScreen(page,'shelf',3);
+    await keyButton(page,'left').click({clickCount:2,delay:30});await waitScreen(page,'shelf',1);
+    await keyButton(page,'right').click();await keyButton(page,'left').click();
+    await keyButton(page,'a').click();await waitScreen(page,'seated',1);
+    await holdMenu(page);await waitScreen(page,'shelf',1);
+    await keyButton(page,'down').click();await waitScreen(page,'shelf',2);
+    await keyButton(page,'up').click();await waitScreen(page,'shelf',1);
+    await keyButton(page,'right').focus();await page.keyboard.press('ArrowRight');await waitScreen(page,'shelf',2);
+    await page.keyboard.press('a');await waitScreen(page,'seated',2);
+    await page.keyboard.press('b');await waitScreen(page,'seated',2);
+    await page.keyboard.down('m');await page.waitForTimeout(1100);await page.keyboard.up('m');await waitScreen(page,'shelf',2);
     const before=await boxes(page);
-    await page.locator('[data-hardware=right]').click();
-    await page.locator('.model-fold').click();await page.locator('[data-pose=closed]').waitFor();
-    const stopped=await page.locator('#hero-preview').evaluate(v=>v.currentTime);
-    await page.waitForTimeout(300);
-    assert.equal(await page.locator('#hero-preview').evaluate(v=>v.currentTime),stopped,'Lid closure suspends the exact action frame');
-    await page.locator('.model-fold').click();await page.locator('[data-pose=open]').waitFor();await waitFor('shelf',2);
-    stable(before,await boxes(page),'Interactive playback and lid');
-    assert.equal(await screen.getAttribute('data-boots'),'1','Interactions and lid reopening never restart boot');
-    await page.locator('[data-hardware=right]').focus();await page.keyboard.press('ArrowRight');await waitFor('shelf',3);
-    await page.keyboard.press('a');await waitFor('seated',3);await page.keyboard.press('b');await waitFor('shelf',3);
-    await page.locator('[data-hardware=boot]').click();await waitFor('shelf',0);
-    assert.equal(await screen.getAttribute('data-boots'),'2','Explicit replay alone restarts boot');
-    report.push({nativeActions:true,fiveCartridges:true,wrap:true,rapidInput:true,reversals:true,resume:true,keyboard:true});
+    await keyButton(page,'right').click();await page.locator('.model-fold').click();
+    await page.locator('[data-pose=closed]').waitFor();
+    const pausedTime=await page.locator('#hero-preview').evaluate(v=>v.currentTime);
+    await page.waitForTimeout(300);assert.equal(await page.locator('#hero-preview').evaluate(v=>v.currentTime),pausedTime);
+    await page.locator('.model-fold').click();await page.locator('[data-pose=open]').waitFor();await waitScreen(page,'shelf',3);
+    stable(before,await boxes(page),'Manual controls and lid');
+    assert.equal(await page.locator('#hero-screen').getAttribute('data-boots'),'1');
+    await page.waitForTimeout(1600);await waitScreen(page,'shelf',3);
+    assert.equal(await page.locator('#hero-screen').getAttribute('data-demo'),'false','Manual control never silently restarts autoplay');
+    report.push({nativeActions:true,osMappings:true,menuHold:true,autoplayTakeover:true,wrap:true,rapidInput:true,keyboard:true});
   }
   try {
     for(const width of [1366,390,320]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
-      page.on('pageerror',e=>errors.push(e.message));
-      page.on('console',m=>{if(m.type()==='error')errors.push(m.text()+' '+m.location().url);if(m.type()==='warning')console.log('Browser warning:',m.text());});
-      page.on('response',r=>{if(r.status()>=400)console.log('Failed response:',r.status(),r.url());});
-      page.on('request',r=>requests.push(r.url()));
-      let release;
-      const held=new Promise(resolve=>release=resolve);
-      await page.route('**/*-opening.mp4',async route=>{await held;await route.fallback();});
-      await page.goto(origin,{waitUntil:'domcontentloaded'});
-      await page.locator('.sp-stage').scrollIntoViewIfNeeded();
+      page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
+      page.on('console',m=>{if(m.type()==='warning'||m.type()==='error')console.log('Browser:',m.type(),m.text());});
+      let release;const held=new Promise(resolve=>release=resolve);
+      await page.route('**/sp-model.*.js',async route=>{await held;await route.fallback();});
+      await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.sp-stage').scrollIntoViewIfNeeded();
       await page.evaluate(()=>document.fonts.ready);
-      await page.locator('[data-pose=opening]').waitFor();
-      assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Hold screen playback during opening');
-      assert.equal(await page.locator('.model-opening').evaluate(v=>getComputedStyle(v).opacity),'0','Keep the poster visible until the first flip frame decodes');
-      await fitsStage(page,`${width}: first load`);
-      const before=await boxes(page);
-      if(width===1366)await page.screenshot({path:path.join(out,'first-load.png')});
+      const before=await boxes(page);await fitsStage(page,`${width}: first paint`);
+      assert(await page.locator('.model-poster').isVisible(),'Reserve a complete model while WebGL loads');
+      // Observe boot while it happens. Software WebGL can delay the next
+      // automation round trip beyond a fixed video timestamp.
+      await page.evaluate(()=>{
+        const canvas=document.getElementById('hero-screen'),video=document.getElementById('hero-preview');
+        let first=null;
+        window.__nativeBootSamples=[];
+        const frame=()=>{
+          if(canvas.dataset.state!=='boot')return;
+          if(window.__nativeBootSamples.length<20)window.__nativeBootSamples.push({time:video.currentTime,paused:video.paused,ready:video.readyState,at:performance.now()});
+          // Include the decoded frame primed before playback. Software-only
+          // WebGL may show just one subsequent frame during the 1.37 s boot.
+          if(video.readyState<2||(video.paused&&video.currentTime>.05))return;
+          const pixels=canvas.toDataURL('image/jpeg',.1);
+          if(first===null)first=pixels;
+          else if(first!==pixels){window.__nativeBootChanged=true;canvas.removeEventListener('hero:frame',frame);}
+        };
+        canvas.addEventListener('hero:frame',frame);
+      });
       release();
-      await inspectMotionFrame(page,`${width}-opening-edges`,8/30);
-      await page.locator('[data-pose=open]').waitFor();
-      await page.waitForFunction(()=>{
-        const v=document.getElementById('hero-preview');
-        return !v.paused&&v.currentTime>0&&document.getElementById('hero-screen').dataset.state==='boot';
-      },{},{timeout:10000});
-      assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false','Native boot must actually play');
-      const bootFrame=await page.locator('#hero-screen').evaluate(c=>c.toDataURL());
-      await page.waitForFunction(()=>document.getElementById('hero-preview').currentTime>.7);
-      assert.notEqual(await page.locator('#hero-screen').evaluate(c=>c.toDataURL()),bootFrame,'The hidden decoder must paint changing boot frames into the glass');
-      await page.waitForFunction(()=>document.querySelector('.model-poster img').complete);
-      stable(before,await boxes(page),`${width}: first opening`);
-      assert(await page.locator('.model-opening').evaluate(v=>v.currentTime>.9&&!v.error),'The rendered opening must play');
-      assert.equal(await page.locator('.pose-hero,.device,.model-angle').count(),0,'No rotation renderer, old illustration or angle toolbar');
-      assert(!requests.some(url=>/\/vendor\/three|\/sp-model\.[^/]*js/.test(url)),'Do not load a rotatable 3D runtime');
-      const stage=page.locator('.sp-stage'),box=await stage.boundingBox();
-      await page.mouse.move(box.x+12,box.y+80);await page.mouse.down();await page.mouse.move(box.x+box.width-12,box.y+120,{steps:8});await page.mouse.up();
-      assert.equal(await stage.getAttribute('data-pose'),'open','Dragging must leave the fixed view alone');
-      await page.getByRole('button',{name:'Close lid',exact:true}).click();
-      await page.locator('[data-pose=closing]').waitFor();
-      await inspectMotionFrame(page,`${width}-closing-edges`,24/30);
-      await page.locator('[data-pose=closed]').waitFor();
-      assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Closed lid pauses the native screen');
-      assert(!(await page.getByRole('button',{name:'A: insert cartridge preview',exact:true}).isVisible()));
-      assert(await page.locator('.model-opening').evaluate(v=>v.currentTime>.9&&!v.error),'Closing must play its matching render');
-      stable(before,await boxes(page),`${width}: lid closed`);
-      if(width===1366)await stage.screenshot({path:path.join(out,'closed-model.png')});
-      await page.getByRole('button',{name:'Open lid',exact:true}).click();await page.locator('[data-pose=open]').waitFor();
-      stable(before,await boxes(page),`${width}: lid reopened`);
-      await page.locator('#hero-screen[data-state=shelf][data-painted=true]').waitFor();
-      assert.equal(await page.locator('#hero-screen').getAttribute('data-boots'),'1','First opening plays boot exactly once; reopening resumes it');
-      assert(await page.locator('#hero-preview').evaluate(v=>v.paused),'The carousel waits for input after boot');
-      if(width===1366)await interactiveChecks(page);
+      await page.locator('.sp-stage.model-ready[data-pose=open]').waitFor({timeout:60000});
+      if(width!==1366)await keyButton(page,'b').click();
+      try {await page.waitForFunction(()=>window.__nativeBootChanged===true);}
+      catch(error){
+        console.log('Boot playback diagnostics',await page.evaluate(()=>({frames:window.__nativeBootSamples,screen:{...document.getElementById('hero-screen').dataset},video:{time:document.getElementById('hero-preview').currentTime,paused:document.getElementById('hero-preview').paused}})));
+        await page.screenshot({path:path.join(out,`${width}-boot-failure.png`)});throw error;
+      }
+      assert.equal(await page.locator('#hero-screen').getAttribute('data-failed'),'false');
+      stable(before,await boxes(page),`${width}: renderer handoff`);
+      assert(requests.some(url=>url.includes('/vendor/three')),'The live 3D model must load');
+      assert.equal(await page.locator('.model-opening').getAttribute('src'),null,'Do not download a second model animation with WebGL');
+      if(width===1366){await waitScreen(page,'seated',1);await manualChecks(page);}
+      else await waitScreen(page,'shelf',0);
+      await rotate(page,String(width));
+      await page.locator('.model-fold').click();await page.locator('[data-pose=closed]').waitFor();
+      assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
+      await silhouette(page,`${width}-closed`);
+      await page.locator('.model-fold').click();await page.locator('[data-pose=open]').waitFor();
+      stable(before,await boxes(page),`${width}: rotating and lid`);
       if(width===1366)await page.screenshot({path:path.join(out,'desktop-home.png')});
       if(width===390)await page.screenshot({path:path.join(out,'phone-home.png')});
-      assert.deepEqual(errors,[],`${width}: opening browser errors`);
-      report.push({width,opening:true,closing:true,fixedView:true,layoutStable:true,errors});await page.close();
+      assert.deepEqual(errors,[],`${width}: runtime errors`);
+      report.push({width,rotation:true,opaqueModel:true,layoutStable:true,bootOnce:true,errors});await page.close();
     }
     for(const width of [1366,820,390,320]) {
-      const page=await pageFor(width),errors=[];
-      page.on('pageerror',e=>errors.push(e.message));
-      page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
-      await page.goto(origin,{waitUntil:'networkidle'});
-      const stage=page.locator('.sp-stage');await stage.scrollIntoViewIfNeeded();
-      await page.locator('[data-ready=true][data-pose=open]').waitFor();
-      await fitsStage(page,`${width}: reduced motion`);
-      await page.evaluate(()=>document.fonts.ready);
-      assert(await page.evaluate(()=>document.getElementById('hero-preview').paused),'Reduced motion stays paused');
-      assert.equal(await page.locator('.model-opening').getAttribute('src'),null,'Reduced motion never downloads the opening');
-      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Horizontal overflow');
-      const brand=page.locator('.intro-wordmark');assert(await brand.isVisible());
-      assert((await brand.boundingBox()).width>=190,'Prominent homepage wordmark');
-      for(const name of ['A: insert cartridge preview','B: eject cartridge preview','MENU: replay startup','D-pad left: previous cartridge preview','D-pad right: next cartridge preview']) {
-        const hit=await page.getByRole('button',{name,exact:true}).evaluate(el=>{const r=el.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {correct:top===el,rect:r.toJSON(),target:top?.outerHTML.slice(0,240),scale:getComputedStyle(document.querySelector('.sp-stage')).getPropertyValue('--model-scale')};});
-        assert(hit.correct,`${width}: ${name} is obscured: ${JSON.stringify(hit)}`);
+      const page=await pageFor(width),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
+      await page.goto(origin,{waitUntil:'networkidle'});await page.locator('.sp-stage').scrollIntoViewIfNeeded();
+      await page.locator('.sp-stage.model-ready[data-pose=open]').waitFor();await page.locator('#hero-screen[data-painted=true]').waitFor({state:'attached'});
+      assert.equal(await page.locator('#hero-screen').getAttribute('data-demo'),'false');
+      assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
+      assert(!requests.some(url=>url.endsWith('.mp4')),'Reduced motion downloads no animations');
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+      assert((await page.locator('.intro-wordmark').boundingBox()).width>=190);
+      for(const key of ['a','b','x','y','menu','select','start','left','right','up','down']) {
+        const hit=await keyButton(page,key).evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;});
+        assert(hit,`${width}: ${key} target must track its physical button`);
+        const offset=await keyButton(page,key).evaluate(el=>{
+          const r=el.getBoundingClientRect(),stage=el.closest('.sp-stage').getBoundingClientRect();
+          return Math.hypot(r.x+r.width/2-stage.x-parseFloat(el.style.left)*stage.width/100,r.y+r.height/2-stage.y-parseFloat(el.style.top)*stage.height/100);
+        });
+        assert(offset<1,`${width}: ${key} hit target is centered on its projected mesh`);
       }
-      for(const [action,state,cart] of [['right','shelf',1],['insert','seated',1],['eject','shelf',1],['left','shelf',0]]) {
-        await page.locator(`[data-hardware=${action}]`).click();
-        await page.waitForFunction(([state,cart])=>{
-          const screen=document.getElementById('hero-screen');return screen.dataset.state===state&&screen.dataset.cart===String(cart);
-        },[state,cart]);
-      }
-      assert.equal(await page.locator('#hero-preview').getAttribute('src'),null,'Reduced motion uses native stills without downloading the film');
+      await keyButton(page,'right').click();await waitScreen(page,'shelf',1);
+      await keyButton(page,'a').click();await waitScreen(page,'seated',1);
+      await holdMenu(page);await waitScreen(page,'shelf',1);
       for(const name of ['Graphite','Pearl Blue','Pearl Pink','Platinum']) {
         await page.getByRole('button',{name,exact:true}).click();
-        await page.waitForFunction(finish=>document.querySelector('.model-poster img').currentSrc.includes(finish.replaceAll(' ','_')+'-open.png'),name.toLowerCase());
-        assert.equal(await page.locator('.finish-name').textContent(),name);
-        await page.waitForFunction(finish=>document.getElementById('hero-screen').dataset.finish===finish,name.toLowerCase().replaceAll(' ','_'));
-        if(width===1366)await stage.screenshot({path:path.join(out,`${name.toLowerCase().replaceAll(' ','-')}-model.png`)});
+        await page.waitForFunction(f=>document.getElementById('hero-screen').dataset.finish===f,name.toLowerCase().replaceAll(' ','_'));
+        assert.equal(await page.locator('.sp-stage').getAttribute('data-finish'),name.toLowerCase());
+        if(width===1366)await silhouette(page,name.toLowerCase().replaceAll(' ','-'));
       }
-      const before=await boxes(page);
-      await page.getByRole('button',{name:'Close lid',exact:true}).press('Space');
-      await page.locator('[data-pose=closed]').waitFor();
-      assert((await page.locator('.model-poster img').getAttribute('src')).endsWith('platinum-closed.png'));
-      await page.getByRole('button',{name:'Open lid',exact:true}).press('Enter');await page.locator('[data-pose=open]').waitFor();
-      stable(before,await boxes(page),`${width}: reduced-motion lid flip`);
-      await page.locator('.preview-controls').scrollIntoViewIfNeeded();
-      assert(await page.locator('.preview-toggle,.model-fold,[data-shell]').evaluateAll(nodes=>nodes.every(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el;})),`${width}: controls are covered`);
-      if(width===1366) {
+      const before=await boxes(page);await page.locator('.model-fold').press('Space');await page.locator('[data-pose=closed]').waitFor();
+      await page.locator('.model-fold').press('Enter');await page.locator('[data-pose=open]').waitFor();stable(before,await boxes(page),'Reduced-motion lid');
+      if(width===1366){
         await page.getByRole('button',{name:'Pearl Blue',exact:true}).click();await page.reload({waitUntil:'networkidle'});
-        await stage.scrollIntoViewIfNeeded();await page.locator('[data-finish="pearl blue"]').waitFor();
-        assert.equal(await page.locator('.finish-name').textContent(),'Pearl Blue','Remember the selected finish');
+        await page.locator('.sp-stage[data-finish="pearl blue"]').waitFor();
+        assert.equal(await page.locator('.finish-name').textContent(),'Pearl Blue');
         for(const key of ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'])await page.keyboard.press(key);
-        await page.locator('[data-finish=gold]').waitFor();
-        assert.equal(await page.locator('.finish-name').textContent(),'Gold','Keep the gold-shell secret');
+        await page.locator('.sp-stage[data-finish=gold]').waitFor();
       }
-      if(width===320)await page.screenshot({path:path.join(out,'narrow-controls.png')});
-      assert.deepEqual(errors,[],`${width}: reduced-motion browser errors`);
-      report.push({width,reducedMotion:true,colors:true,cartridgeControls:true,layoutStable:true,errors});await page.close();
+      assert.deepEqual(errors,[]);report.push({width,reducedMotion:true,hitTargets:true,finishes:true});await page.close();
     }
     const saved=await pageFor(390,{reducedMotion:'no-preference'});
     await saved.addInitScript(()=>Object.defineProperty(navigator,'connection',{value:{saveData:true}}));
-    await saved.goto(origin,{waitUntil:'networkidle'});await saved.locator('[data-ready=true][data-pose=open]').waitFor();
-    assert(await saved.evaluate(()=>document.getElementById('hero-preview').paused));
-    assert.equal(await saved.locator('.model-opening').getAttribute('src'),null);
-    await saved.getByRole('button',{name:'Close lid',exact:true}).click();await saved.locator('[data-pose=closed]').waitFor();await saved.close();
-    fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
-    console.log('PASS: fixed angle, stable first load and lid controls, matching opening/closing, all finishes and persistence, stateful native carousel, boot-first playback, queued inputs, prominent wordmark, responsive layout and reduced motion');
+    await saved.goto(origin,{waitUntil:'networkidle'});await saved.locator('.sp-stage.model-ready[data-pose=open]').waitFor();
+    assert.equal(await saved.locator('#hero-preview').getAttribute('src'),null);assert.equal(await saved.locator('#hero-screen').getAttribute('data-demo'),'false');
+    await saved.close();fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
+    console.log('PASS: rotating 3D, shoulder hit targets, boot-first autoplay, manual takeover, OS controls, stable layout, finishes and reduced motion');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

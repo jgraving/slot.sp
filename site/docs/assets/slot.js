@@ -36,6 +36,7 @@
     };
     document.querySelectorAll('[data-shell]').forEach(button => {
       button.addEventListener('click', () => {
+        if (ready) player?.takeControl();
         document.querySelector('.sp-render-fallback')?.classList.remove('secret-finish');
         const values = finishes[button.dataset.shell];
         ['--shell-light','--shell-base','--shell-shade','--btn','--btn-hi','--etch'].forEach((key,i) => document.documentElement.style.setProperty(key,values[i]));
@@ -53,7 +54,7 @@
     const toggle = document.querySelector('.preview-toggle');
     if (!preview || !toggle) return;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    let player = null, screenFinish = 'platinum';
+    let player = null, liveModel = null, screenFinish = 'platinum';
     const waitingInputs = [];
     const screen = document.getElementById('hero-screen');
     let visible = false;
@@ -115,6 +116,7 @@
     }
     async function flipLid(open, animate = true) {
       introPending = false;
+      if (liveModel) { liveModel.setLid(open ? 150 : 0); return; }
       const current = ++motionRequest;
       motion.pause();
       delete stage.dataset.motionReady;
@@ -138,11 +140,11 @@
       if (motion.requestVideoFrameCallback) motion.requestVideoFrameCallback(reveal);
       else requestAnimationFrame(reveal);
     });
-    fold.addEventListener('click', () => flipLid(pose === 'closed'));
+    fold.addEventListener('click', () => { player?.takeControl(); flipLid(pose === 'closed' || pose === 'closing'); });
     stage.addEventListener('sp:finish', event => {
       shell = event.detail;
       stage.dataset.finish = shell;
-      if (!busy()) updateStill(pose === 'open', true);
+      if (!liveModel && !busy()) updateStill(pose === 'open', true);
     });
     async function prepareModel() {
       try {
@@ -157,13 +159,22 @@
         stage.style.setProperty('--fallback-screen', `matrix3d(${matrix.join(',')})`);
         stage.querySelectorAll('[data-hardware]').forEach(button => {
           const point = projection.controls[button.dataset.hardware];
+          if (!point) return;
           button.style.left = (point.x / 480 * 100) + '%'; button.style.top = (point.y / 600 * 100) + '%';
         });
+        // Compile the same photographed model once, then swap at the exact
+        // reserved camera size. Existing renders remain the no-WebGL fallback.
+        try {
+          const {mountSP} = await import(new URL('sp-model.js', assets).href);
+          // Shader preparation must not interrupt the incoming page slide.
+          if(!pageReady())await new Promise(resolve=>document.addEventListener('slot:page-ready',resolve,{once:true}));
+          liveModel = mountSP(stage, preview, {screenCanvas:screen, managed:true, finish:shell});
+        } catch (error) { console.warn('Using rendered handheld fallback.', error); }
         ready = true;
         stage.dataset.ready = 'true';
         stage.dataset.finish = shell;
-        setPose(pose);
-        if (introPending && visible && pageReady()) flipLid(true); else sync();
+        if (liveModel) { introPending=false; pose=stage.dataset.pose; sync(); }
+        else { setPose(pose); if (introPending && visible && pageReady()) flipLid(true); else sync(); }
       } catch (error) {
         introPending = false;
         updateStill(true);
@@ -175,42 +186,91 @@
     setPose(pose);
     function sync() {
       const awake = pageReady() && visible && !document.hidden;
+      if (liveModel) {
+        liveModel.setActive(awake);
+        player?.setActive(awake && pose === 'open' && ready);
+        return;
+      }
       if (busy()) {
         const current = motionRequest;
         if (awake) motion.play().catch(() => finishMotion(current)); else motion.pause();
       }
       player?.setActive(awake && pose === 'open' && ready);
     }
+    stage.addEventListener('sp:lid', () => { pose=stage.dataset.pose; sync(); });
+    stage.addEventListener('sp:fallback', () => {
+      liveModel=null;introPending=false;ready=false;
+      prepareModelFallback();
+    });
+    async function prepareModelFallback() {
+      // Restore the fixed projection after context loss, without changing the
+      // native player's cartridge, boot count or manual/autoplay ownership.
+      try {
+        const projection=await (await fetch(asset('projection.json'))).json();
+        stage.querySelectorAll('[data-hardware]').forEach(button=>{
+          const p=projection.controls[button.dataset.hardware];
+          if(p){button.style.left=p.x/480*100+'%';button.style.top=p.y/600*100+'%';}
+        });
+        ready=true;await updateStill(true);setPose('open');
+      } catch { await updateStill(true);setPose('open'); }
+    }
     function send(action) {
       if (player) player.input(action);
       else { waitingInputs.push(action); if (waitingInputs.length > 5) waitingInputs.shift(); }
     }
     toggle.addEventListener('click', () => {
-      if (pose === 'closed' && ready) { flipLid(true); player?.play(); return; }
+      if ((pose === 'closed' || pose === 'closing') && ready) { flipLid(true); player?.play(); return; }
       player?.toggle();
     });
     import(new URL('hero-player.js', assets).href).then(({createHero}) => {
-      player = createHero(preview, screen, {media, reduced, onState:({moving,paused,active,failed}) => {
-        const playing = moving && !paused && active;
+      player = createHero(preview, screen, {media, reduced, onState:({moving,paused,active,failed,demo}) => {
+        const playing = (demo || moving) && !paused && active;
         toggle.setAttribute('aria-pressed', String(playing));
-        toggle.querySelector('span').textContent = playing ? 'Pause preview' : moving ? 'Play preview' : 'Replay startup';
+        toggle.querySelector('span').textContent = playing ? 'Pause preview' : 'Play preview';
         toggle.disabled = failed;
       }});
       if (screenFinish !== 'platinum') player.setColor(screenFinish);
       waitingInputs.splice(0).forEach(action => player.input(action));
       sync();
     }).catch(error => console.warn('Interactive preview unavailable.', error));
+    let menuTimer=0, menuHeld=false;
+    function releaseMenu() { clearTimeout(menuTimer);menuTimer=0;menuHeld=false; }
+    function holdMenu() {
+      if(menuHeld)return;menuHeld=true;player?.takeControl();
+      // MENU_HOLD_MS in slot-input: holding MENU returns to the carousel.
+      menuTimer=setTimeout(()=>{if(menuHeld)send('eject');},1000);
+    }
     document.querySelectorAll('[data-hardware]').forEach(button => {
-      button.addEventListener('click', () => send(button.dataset.hardware));
+      button.addEventListener('pointerdown', event => {
+        player?.takeControl();
+        if(button.dataset.hardware==='menu'&&event.button===0){holdMenu();button.setPointerCapture(event.pointerId);}
+      });
+      button.addEventListener('click', () => {
+        const hardware=button.dataset.hardware;
+        // Menu-only features deliberately do not masquerade as other actions.
+        send(({a:'insert',left:'left',right:'right',up:'up',down:'down'})[hardware]||'noop');
+      });
+      if(button.dataset.hardware==='menu') {
+        // Pointerdown precedes focus transfer. A different button losing focus
+        // must not cancel a MENU hold that has just begun.
+        for(const name of ['pointerup','pointercancel','lostpointercapture','blur'])button.addEventListener(name,releaseMenu);
+        button.addEventListener('keydown',event=>{if([' ','Enter'].includes(event.key)){event.preventDefault();holdMenu();}});
+        button.addEventListener('keyup',event=>{if([' ','Enter'].includes(event.key)){event.preventDefault();releaseMenu();}});
+      }
     });
     // Keyboard controls belong to the focused handheld, never page navigation.
     document.querySelector('.sp-preview').addEventListener('keydown', event => {
-      if (event.altKey || event.ctrlKey || event.metaKey ||
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey ||
           event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
-      const action = {ArrowLeft:'left',ArrowRight:'right',a:'insert',b:'eject',m:'boot'}[event.key];
+      const key=event.key.length===1?event.key.toLowerCase():event.key;
+      if(key==='m'&&pose==='open'){event.preventDefault();holdMenu();return;}
+      const action = {ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',a:'insert',b:'noop',x:'noop',y:'noop',Enter:'noop',Shift:'noop'}[key];
       if (!action || pose !== 'open') return;
       event.preventDefault();send(action);
     });
+    document.querySelector('.sp-preview').addEventListener('keyup',event=>{if(event.key.toLowerCase()==='m')releaseMenu();});
+    window.addEventListener('blur',releaseMenu);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseMenu();});
     // A small, opt-in old-console secret. Normal typing and shortcuts are untouched.
     const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
     let codeIndex = 0;
@@ -241,7 +301,7 @@
     reduced.addEventListener('change', () => {
       if (reduced.matches) {
         introPending = false;
-        if (busy()) finishMotion();
+        if (!liveModel && busy()) finishMotion();
         sync();
       }
     });

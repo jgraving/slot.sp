@@ -143,7 +143,7 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
  .md-header__inner[data-guide-topics=false]>.mast-mark{grid-column:1}
 }
 
-/* One fixed projection from first paint through every lid transition. */
+/* A reserved 4:5 stage shared by the live model and rendered fallback. */
 .md-typeset .sp-preview{width:100%;margin:0;padding:0;min-width:0;max-width:none}
 .sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;background:var(--page);overflow:hidden;touch-action:pan-y}
 .sp-render-fallback{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
@@ -157,10 +157,10 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-stage[data-motion-ready=true]:is([data-pose=opening],[data-pose=closing]) .model-opening{opacity:1}
 .md-typeset .sp-render-fallback .hero-screen{position:absolute;left:0;top:0;width:720px;height:480px;max-width:none;margin:0;border:0;border-radius:1px;transform-origin:0 0;transform:scale(var(--model-scale,1)) var(--fallback-screen);opacity:0;z-index:2;transition:opacity 180ms var(--motion-effects)}
 .sp-stage[data-ready=true][data-pose=open] .hero-screen{opacity:1}
-.sp-render-fallback .hardware-button{position:absolute;display:block;visibility:hidden;width:max(24px,calc(40px * var(--model-scale,1)));height:max(24px,calc(40px * var(--model-scale,1)));transform:none;clip-path:circle(50%);pointer-events:auto;z-index:3}
-.sp-render-fallback .hardware-button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--teal);background:#54c2b81c}
+.sp-stage .hardware-button{position:absolute;display:block;visibility:hidden;width:max(20px,calc(30px * var(--model-scale,1)));height:max(20px,calc(30px * var(--model-scale,1)));padding:0;border:0;background:transparent;cursor:pointer;translate:-50% -50%;clip-path:circle(50%);pointer-events:auto;z-index:3}
+.sp-stage .hardware-button:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--teal);background:#54c2b81c}
 .sp-stage[data-ready=true][data-pose=open] .hardware-button{visibility:visible}
-.sp-render-fallback .hardware-button[hidden]{display:none}
+.sp-stage .hardware-button[hidden]{display:none}
 .preview-controls{display:flex;align-items:center;justify-content:center;gap:20px;min-height:74px;padding:8px 0}
 .finish-controls{display:grid;justify-items:center;gap:4px}
 .finish-name{color:var(--muted);font-size:13px;line-height:18px}
@@ -202,3 +202,11 @@ html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .sp-render-fallback .hero-screen-poster{z-index:3}
 .sp-render-fallback .hero-screen[hidden]{display:none}
 .md-typeset .sp-render-fallback .hero-screen{pointer-events:none;background:#0b0e11}
+
+/* The native canvas is a texture in WebGL, not a second layer over the glass. */
+.sp-stage.model-ready .sp-render-fallback{visibility:hidden}
+.sp-model-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1;touch-action:pan-y;cursor:grab}
+.sp-stage.is-dragging .sp-model-canvas{cursor:grabbing}
+.sp-stage.model-ready .hardware-button{visibility:visible}
+.sp-stage:not(.model-ready) :is(.hardware-l1,.hardware-l2,.hardware-r1,.hardware-r2){display:none}
+.sp-stage:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:24px}
