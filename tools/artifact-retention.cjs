@@ -20,6 +20,10 @@ function planArtifacts(artifacts, runs, releases, now = Date.now(), activePaths 
     const run = runs.get(a.workflow_run.id);
     const age = now - Date.parse(a.created_at);
     if (!Number.isFinite(age) || age < 0) return [];
+    // A PR-only workflow is absent from main by design, not retired. Keep every
+    // PR build for its first 24 hours, including runs superseded by newer commits.
+    const prBuild = run.event === 'pull_request' || run.event === 'pull_request_target';
+    if (prBuild && age < DAY) return [];
     const published = a.name === 'release-downloads' && run.head_branch === 'main' && releases.some(r => completeRelease(r)
       && (r.target_commitish === run.head_sha || r.tag_name.endsWith('-' + run.head_sha.slice(0, 7))));
     const deployed = a.name === 'github-pages' && run.conclusion === 'success';
@@ -67,7 +71,7 @@ async function run({github, context, core, dryRun = true}) {
     deleted++; bytes += a.size_in_bytes;
   }
   await core.summary.addHeading('Generated artifact retention')
-    .addRaw(`${dryRun ? 'Dry run' : 'Cleanup'}: ${deleted} artifacts, ${(bytes / 2**30).toFixed(3)} GiB. Active runs are protected. Latest temporary copies expire after 24 hours; release assets and the deployed website are untouched.\n`)
+    .addRaw(`${dryRun ? 'Dry run' : 'Cleanup'}: ${deleted} artifacts, ${(bytes / 2**30).toFixed(3)} GiB. Active runs are protected. All PR builds stay for 24 hours; other latest temporary copies expire after 24 hours; release assets and the deployed website are untouched.\n`)
     .write();
 }
 module.exports = {DAY, completeRelease, planArtifacts, run};

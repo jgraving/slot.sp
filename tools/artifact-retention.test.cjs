@@ -35,3 +35,20 @@ test('keep the newest successful workflow set even when ZIP names change',()=>{
  assert.deepEqual(planArtifacts(items,runs,[],now,new Set([path])).map(a=>a.id),[1]);
  assert.deepEqual(planArtifacts(items,runs,[],now,new Set()).map(a=>a.id),[1,2]);
 });
+
+
+test('PR-only workflows and superseded PR builds stay for their first 24 hours',()=>{
+ const path='.github/workflows/build.yml';
+ const prOnly='.github/workflows/network-review.yml';
+ const items=[artifact(1,'slot.sp-network-System',1000),artifact(2,'old-pr-build',2000),artifact(3,'new-pr-build',1000),artifact(4,'old-pr-build',DAY),artifact(5,'target-pr-build',1000)];
+ const runs=new Map([
+  finished(1,{id:1,path:prOnly,event:'pull_request'}),
+  finished(2,{id:2,path,event:'pull_request'}),
+  finished(3,{id:3,path,event:'pull_request'}),
+  finished(4,{id:4,path,event:'pull_request'}),
+  finished(5,{id:5,path:prOnly,event:'pull_request_target'}),
+ ]);
+ const selected=planArtifacts(items,runs,[],now,new Set([path]));
+ assert.deepEqual(selected.map(a=>a.id),[4]);
+ assert.equal(selected[0].reason,'older than 24 hours');
+});
