@@ -121,3 +121,9 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 - Found two causes: Bluetooth treated a cleared manual route as a lost device, and USB applied disconnect volume even when unplugged=false. Limited fallback-volume handling to actual connection loss/removal; added regression for speaker/headphone/USB/Bluetooth levels and mute restoration.
 - Parent PIN cards now share the system PIN layout, per additional user steering. Guide and test labels updated.
 - Next: publish audio correction and inspect compile/test outcomes. Keep PR draft.
+
+### First CI result
+
+- Runtime code compiles. Initial regression run passed 132 of 133 library tests; the only failure still asserted the old requirement that unlock waits for Start.
+- Updated that raw-input regression to require automatic continuation without Start. Async PIN editing/cancellation and existing credential-storage tests passed in the same run.
+- Audio manual-route correction pushed as 9e50275b45a0721fbd695f8d1fc80ef5d6895346; checks on that revision started. Next push includes the updated stale test expectation.

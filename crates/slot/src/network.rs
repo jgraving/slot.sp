@@ -840,11 +840,9 @@ mod tests {
         for (i,b) in CODE.into_iter().enumerate() {
             session.feed([RawEvent::Down(b),RawEvent::Up(b)],i as u64*40);
         }
-        assert!(session.app().network.as_ref().unwrap().code.is_some(),"button presses must wait for Start");
-        session.feed([RawEvent::Down(Btn::Start),RawEvent::Up(Btn::Start)],200);
         let menu=session.app_mut().network.as_mut().unwrap();
-        assert!(menu.code.is_none(),"Start must submit the whole button sequence");
         wait(menu);assert!(!menu.locked&&menu.wifi_on);
+        assert!(menu.code.is_none(),"the correct raw sequence unlocks without Start");
     }
 
     #[test]
