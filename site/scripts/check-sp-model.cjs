@@ -145,7 +145,9 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
         const frame=()=>{
           if(canvas.dataset.state!=='boot')return;
           if(window.__nativeBootSamples.length<20)window.__nativeBootSamples.push({time:video.currentTime,paused:video.paused,ready:video.readyState,at:performance.now()});
-          if(video.paused)return;
+          // Include the decoded frame primed before playback. Software-only
+          // WebGL may show just one subsequent frame during the 1.37 s boot.
+          if(video.readyState<2||(video.paused&&video.currentTime>.05))return;
           const pixels=canvas.toDataURL('image/jpeg',.1);
           if(first===null)first=pixels;
           else if(first!==pixels){window.__nativeBootChanged=true;canvas.removeEventListener('hero:frame',frame);}
