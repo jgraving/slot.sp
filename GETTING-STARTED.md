@@ -93,3 +93,9 @@ sha256sum --ignore-missing -c SHA256SUMS
 ---
 
 Next: [Buttons & shortcuts](CONTROLS.md) · [Games & artwork](LIBRARY.md)
+
+## Updates from the handheld
+
+Open **General → Updates** while Wi-Fi is connected. Launcher updates target this fork's `jgraving/slot.sp` releases and stage its verified `slot.sp-System.zip`; choose **Restart to install** when ready. The updater keeps Config, Games, Saves and custom System additions. BaseOS updates are separate, offered only for the detected compatible target and adequate battery or charging. Installation is explicit. This integration is still in the OTA test draft and needs physical interruption/recovery testing before release.
+
+**General → Automatic time** enables background UTC correction over a connected network. **Time zone** chooses the local UTC offset and applies immediately. The offset is manual, including daylight-saving changes. Selecting Updates or Automatic time while disconnected opens Network with a Wi-Fi-needed pill.

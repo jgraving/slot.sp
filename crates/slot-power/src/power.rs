@@ -103,6 +103,7 @@ impl Power {
         self.platform.now()
     }
 
+    pub fn set_clock_in_background(&mut self,secs:i64) {self.platform.set_clock_in_background(secs);}
     pub fn set_clock(&mut self, secs: i64) {
         self.platform.set_clock(secs);
     }

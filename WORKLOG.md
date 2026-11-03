@@ -2,19 +2,35 @@
 
 Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `fix/ra-background-progress`
-Active PR: https://github.com/jgraving/slot.sp/pull/190
-Current implementation revision: `285cfa1e586dabffe1720b3cdcd13f1047230d4f`
+Active branch: `feat/fork-ota-time`
+Active PR: https://github.com/jgraving/slot.sp/pull/191
+Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
 Status: draft, not merged or released.
 
-## Current state — PR #190 validation
+## Current verified follow-up
 
-PR #186 is merged. PR #190 contains the current requested follow-ups: phase-specific RA progress/counts and controller status, stable library passes, flatter Wi-Fi arcs, encrypted-only credentials with six-plus button PIN creation and legacy upgrade/migration, neutral adaptive adjustment/kid-time pills, and no stale “Credentials unlocked” notification on page entry. Separate four-button parent codes are unchanged.
+Combined runtime **92c2e8a470c30ca3add237780d1b32fc932a8156** passes all six workflows: launcher/native 41731781266, ARM64/package 41731781331, website 41731781278, scaling 41731781246, blending 41731781272 and shortcuts 41731781290.
 
-- Runtime revision: 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3. All six workflows pass, including all 135 core library tests, the complete launcher/UI regressions, native light/dark walkthroughs, both bundled cores, ARM64 packaging, scaling, blending, shortcuts and website checks.
-- Local: 27 achievement tests passed (one deliberate public-endpoint test ignored); targeted UI/icon/meter/notice tests pass. Core tests pass except an unchanged control-socket test blocked by the local sandbox; it remains enabled in CI.
-- Separate OTA/time draft: https://github.com/jgraving/slot.sp/pull/191 on feat/fork-ota-time, based on this PR. Automatic time is opt-in; updates target this fork's releases and preserve Config/games/saves. Physical BaseOS/recovery tests remain outstanding.
-- No follow-up PR is merged; #186 was merged with user authorization. Detailed chronological checkpoints below include superseded requests; this section states the final requested behavior.
+CI device logs confirm **141 core tests**, **31 achievement tests**, **6 updater + 5 network-time + 7 SNTP tests**, complete parent/menu/UI regressions and both bundled GBA cores. Native CI explicitly ran the RA production-compositor fixture and full light/GLES/dark/GL walkthroughs. The local final dark General/code/time/cancellation walkthrough passed with 47 valid PNGs; key light and dark captures were independently reviewed.
+
+- Combined build: https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591.
+- Combined native review: https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404.
+- Both artifacts were present/unexpired at handoff; recheck later.
+- General starts Device code, Updates, Automatic time, Time zone. Disconnected update/time rows are grey and A routes to Network with short feedback. Clock/offset edits apply immediately without shifting UTC; Done leaves the editor.
+- Includes final #190 RA/cache/controller/floating-pill, empty-code/Done readiness, direct parent cancellation and consistent Device code / Parent code behavior. Shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f also passes all six workflows (138 core tests). No runtime edit followed successful checks.
+- This recovery synchronization explicitly includes parent documentation commit f8932a8ddf855f7e378ac267948dabba81682aba, preserving the stacked PR's mergeability. Later commits change recovery Markdown only.
+- Keep both drafts. Physical heat/radio/RTC, live RA-account/deferred awards and actual BaseOS/launcher interruption/recovery remain handheld gates. No live secrets or real firmware installation used. CURRENT_WORK.md is the entry point; next step is device testing, not repeating development implementation/checks.
+
+## Previous verified state — followed by active work below
+
+This is the separate OTA/time draft, stacked on PR #190. Current runtime: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`. PR #190 is fully verified on 16ac082; the OTA branch includes its final encrypted-only/six-button PIN, RA progress/icon, neutral meters, Wi-Fi and quiet-unlock changes.
+
+- OTA downloads target jgraving/slot.sp releases and validate integrity, embedded identity and forward ancestry. BaseOS is a separate explicit model-matched update with compatibility and power gates. Automatic time is opt-in and preserves UTC offset/manual settings.
+- All six workflows pass on the recorded runtime: ARM64/package and both bundled cores, website, scaling, blending, shortcuts, full launcher/UI regressions and production native renders. All 137 core tests and all 18 update/time integration tests pass.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576 (present/unexpired when checked).
+- Local light/GLES and dark/desktop-GL walkthroughs pass; Updates, disconnected feedback and automatic-time off/on pages reviewed. Final selected-row highlight was also visually verified. Interrupted-install simulation preserved executable mode, custom System files, Config, Games and Saves.
+- No physical firmware installation was executed. Real BaseOS installation/recovery and live handheld networking/time remain device-test gates; keep this PR draft. Retarget main after #190 merges.
+- Recovery entry point: CURRENT_WORK.md on fix/ra-background-progress. Historical checkpoints below retain superseded requests; final behavior is encrypted-only with six-plus new button PINs and separate four-button parent codes.
 
 ## Previous completed follow-up
 
@@ -271,18 +287,64 @@ Before editing: user reports Credentials unlocked appearing on entering Network 
 
 PR #190 runtime is 16ac082; full CI/render/package validation still running. PR #191 adds OTA/time separately. Latest user concern (stale unlock notices) is fixed and covered; no implication that Wi-Fi was disconnected. Keep both draft pending device tests and record final Actions links/artifacts before ending.
 
-### PR #190 final validation
 
-- Independently verified all six exact-revision Actions runs on 16ac082: launcher 41686624436; ARM64/package 41686624422; scaling 41686624187; blending 41686624018; shortcuts 41686624177; website 41686624335. Every run completed/success.
-- Test build: https://github.com/jgraving/slot.sp/actions/runs/41686624422/artifacts/13257020164 (present/unexpired when checked).
-- Native review: https://github.com/jgraving/slot.sp/actions/runs/41686624436/artifacts/13255334115.
-- Locally ran production Network/PIN walkthroughs in light GLES/640 and dark desktop GL/720 and reviewed connected Wi-Fi and six-button hint captures. Reviewed neutral volume/kid-time captures; all adaptive neutral-colour and unchanged green-charging tests passed.
-- Runtime code is unchanged after this validation. Later commits are recovery documentation only. No PR #190 merge requested; draft remains for handheld testing.
-- A single recovery entry point now exists at CURRENT_WORK.md on this branch; AGENTS.md routes future agents to it. Main requires changes through a PR, so the entry point will reach main when this PR merges.
+## Separate OTA/time integration
 
-### Combined handoff complete
+### Separate OTA/time integration starting
 
-Dependent PR #191 also passes all six workflows on runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd. Combined System artifact 13257574576 includes both PRs. CURRENT_WORK.md is the entry point for the next chat and links both detailed branch logs. No further runtime changes followed final verification; both PRs remain draft for handheld review.
+Branch feat/fork-ota-time depends on fix/ra-background-progress / PR #190. Source references: upstream slot commit 87788eafba77bc93ba11048d22f1c2f08f792a91 (OTA) and 4f402cb8bc20431facb03c3277640a9ed8e9bdfb (network time). Adaptation plan before edits: use jgraving/slot.sp GitHub stable releases and slot.sp-System.zip asset with digest/source verification; stage a new System tree and swap at next launch with recovery, leaving Config/Games/Saves untouched. BaseOS only for detected BASEOS_TARGET/BASEOS_VERSION with baseos-update compatibility verdict, verified digest/size, explicit install action and low-battery gate. Preserve encrypted supplicant networking; never import upstream wifi.conf. Integrate nonblocking network time using actual connected network and a user toggle, preserving UTC offset and display schedules. No hardware OS update will be run in this session. Runtime toolchain installation is being attempted to validate locally. Not implemented yet.
+
+### OTA/time local implementation checkpoint
+
+- Adapted upstream update worker and SNTP scheduling without upstream Wi-Fi config or settings storage. Launcher release selection is pinned to jgraving/slot.sp and validates GitHub digest/size plus build-info product/repository/architecture/source. Archive validation restricts extraction to System and rejects traversal, symlinks, oversized entries, duplicate names and control characters.
+- Network gains Updates and Automatic time. Installs are explicit; BaseOS requires correct target/version, checksum, baseos-update WILL APPLY verdict and adequate battery/charging. Downloads use cancellable workers; no real update has been installed.
+- System staging is applied at next launch with atomic per-file replacements, retained complete staging for retry, and no writes outside System. Unlike upstream's cleanup, unknown System files are retained to preserve fork/custom additions.
+- Added release/archive/target/cancellation tests and shell tests for incomplete/traversal packages and config/game/save preservation. Shell update and existing launch tests pass locally. Initial host cargo check passes; Rust runtime was recovered locally after installer limitations. Full test/device checks pending.
+- Automatic time runs in a worker only when the unlocked network is actually connected, retries failure after a minute, polls daily after success and preserves UTC offset and schedule settings. Existing manual clock UI is retained.
+
+### OTA/time tests ready for CI
+
+- Local host check and device-feature check pass. All 17 release/archive/cancellation/network-time/SNTP tests pass. Shell staged-update and existing launch tests pass.
+- Added menu regression coverage for connected-only checks, low-battery BaseOS gating, time-toggle readiness, and progress/completion texture refresh.
+- Synced the latest RA fixes/tests from PR #190 into this dependent branch; do not regress its stale-notice or migration-failure coverage. Updated upstream-style auto time to preserve this fork's UTC offset and manual clock menu.
+- No real network update or OS installation has run. Physical interruption/recovery and BaseOS install testing remain mandatory before merging this draft.
+
+- Added GitHub ancestry checking before offering a launcher release: stable must be ahead of the running build. Newer/diverged PR builds cannot be downgraded merely because their hash differs from latest stable. No automatic install/restart is performed.
+
+### Compatibility default
+
+- Automatic time defaults off, matching upstream's opt-in behavior and preserving existing manual clock setups. Its switch can enable background correction after Wi-Fi connects. Local checks passed before this default adjustment; the readiness test now covers the off→on→off sequence.
+
+Local OTA source/default checks pass; full CI is running. This branch includes PR #190 and remains a separate draft for OTA/BaseOS device testing.
+
+### Native walkthrough timing follow-up
+
+- PR #190: all six workflows pass on 16ac082; ARM64 System artifact 13257020164 and native-review artifact 13255334115 are present. Light GLES/dark GL Network and PIN captures reviewed locally; neutral volume/kid-time examples reviewed.
+- Local OTA native walkthrough completed the correct separate-parent-code UI but its immediate on-disk assertion raced the existing asynchronous settings writer. Added a bounded wait for that write, preserving the assertion instead of removing it. Runtime behavior is unchanged by this fixture correction.
+- Expanded the OTA native walkthrough to capture Updates, the disconnected-check pill and Automatic time off/on states. No actual update request is sent by the disconnected fixture. Fresh CI will include these additional pages.
+
+### Native UI review corrections
+
+- Updates' initial helper/status value overlapped its action label. Removed the helper and limited inline state to short Checking/Downloading/Available/Retry labels; detailed failures remain pills. A staged update now offers an actual Restart to install action through the existing safe restart flow.
+- Correction to earlier native diagnosis: parent-method marker changes are synchronous, not handled by the asynchronous settings writer. A traced clean walkthrough confirmed correct removal. The generated mock card is now reset before each example run so rerunning into an old output folder cannot inherit old PIN/parent settings. Keep the final marker assertion (bounded wait) and verify the clean walkthrough again. No production kid-menu change was made.
+
+- Clean native OTA light/GLES walkthrough now passes end to end, including the parent-method marker assertion. Updated restart-action regression passes locally. Final change is UI/status and test-fixture cleanup; rerun required CI on this revision.
+
+- Final visual review also found the new Updates page was absent from the shared custom-list focus range. Included its page key so the normal selected-row highlight and motion render there. This is a one-range UI correction; no update-install logic changed. The interrupted-install simulation also passed, preserving executable mode, custom System files, Config, Games and Saves.
+
+### Final packaging checkpoint
+
+Current runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd has a successful ARM64 package/bundled-core run 41692152351, System artifact 13257574576. The last pending workflow is launcher native rendering (41692152466). No runtime changes should follow unless a new failure is found. Update completion evidence and CURRENT_WORK.md when that run finishes.
+
+### Final verified handoff
+
+- Runtime: 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd. All six exact-head workflows completed/success: launcher 41692152466; ARM64/package 41692152351; website 41692152398; scaling 41692152447; blending 41692152404; shortcuts 41692152430.
+- Device job 126113196756 logs confirm 137 core library tests plus 6 update, 5 network-time and 7 SNTP tests pass. Staged-update and launch shell tests pass. Both bundled cores validate.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576.
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41692152466/artifacts/13259275746.
+- Production light/GLES and dark/GL walkthroughs completed locally; Updates, disconnected feedback, automatic-time off/on and the final selected-row highlight were reviewed. Clean generated cards prevent repeat-run state contamination. No production parent-menu change was made.
+- Local interrupted-install simulation successfully resumed with executable mode, custom System files, Config, Games and Saves preserved.
+- This final synchronization changes recovery documentation only and includes the latest PR #190 documentation parent to resolve its worklog conflict. No runtime change follows successful checks. Keep draft for physical BaseOS/RTC/network/recovery testing; do not claim hardware firmware validation.
 
 ### Active follow-up: PIN entry, parent cancellation and General network tools (2026-11-03)
 
@@ -292,6 +354,14 @@ Record before implementation:
 - Move Updates and Automatic time out of Network and place them directly after Security PIN at the top of General. Grey them out without an active Wi-Fi connection; A opens Network and shows a short Wi-Fi-required pill identifying the selected feature.
 - PIN entry starts with zero dots, adds dots per press. During setup/confirmation, Done/Start is dim and changes state/colour until six minimum device buttons (four for a separate parent code) are entered. Start before the setup minimum shakes the existing entry without clearing it and shows a short minimum-length pill. Unlock must preserve silent variable-length verification and legacy four/five-button upgrade; do not disclose the stored PIN length.
 - Shared parent/PIN/RA changes belong in #190 and must be carried into #191; General placement/connectivity changes belong in #191. Keep both drafts, run targeted regressions and native captures, then existing CI; no merge requested.
+
+### Automatic time / time-zone correction
+
+Before edits: user reports automatic time is wrong for their location and points out it still needs a time-zone choice. SNTP sets UTC only; existing implementation preserves an arbitrary old fixed offset. Add an explicit Time zone selector alongside Automatic time in General, persist the selected offset and apply it immediately without changing UTC or the automatic-time switch. Use clear UTC offsets and short location examples; do not guess the user's location. Document fixed-offset/daylight-saving limits in the guide. Include regression and native review coverage.
+
+### Wi-Fi stability and immediate time changes
+
+Before edits: user reports repeated Wi-Fi disconnects and RA restarting/blinking; investigate radio readiness and service lifecycle before choosing a fix. Also clarifies the existing UTC offset control is discoverable but requiring Start to save is inconsistent. Make time-zone/offset changes apply and persist immediately; preserve manual date/time editing semantics where needed, and remove misleading Save hints for controls that auto-apply. No logs from the handheld are available, so distinguish source defects/reproductions from unverified radio causes.
 
 ### RA retries / warm device report
 
@@ -336,6 +406,18 @@ Do not infer actual hardware cooling, live RA-account success or firmware instal
 - One local General walkthrough produced incomplete PNG files and failed its final marker assertion. A clean traced rerun passed and all PNGs validated; trace confirmed synchronous marker removal at the expected root. Temporary tracing was removed. Keep exact assertions and CI native review; do not weaken production parental behavior or claim asynchronous marker writes.
 - Broad --no-default-features --tests check also selected an unrelated host-only input test; use the repository's existing feature-specific test commands. Required tests remain enabled in CI.
 
-### Final follow-up handoff
+### General integration ready for final CI
 
-Both exact runtimes pass all six workflows. Shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f: launcher 41730841530, device 41730841353, website 41730841277, scaling 41730841370, blending 41730841282, shortcuts 41730841264. Combined runtime 92c2e8a470c30ca3add237780d1b32fc932a8156: launcher 41731781266, device 41731781331, website 41731781278, scaling 41731781246, blending 41731781272, shortcuts 41731781290. Combined System artifact 13276413591 and native artifact 13277792404 are present/unexpired. Native job explicitly ran the RA production-compositor fixture and the full menu walkthroughs. Latest changes are documentation only. Keep both drafts for physical heat/radio/time/update/recovery and live-account testing; no credentials or real firmware installation used. CURRENT_WORK.md is the durable entry point. Do not repeat implementation or development checks unless a new failure/change warrants it.
+- General now starts Device code, Updates, Automatic time, Time zone. Network contains only Wi-Fi controls and scanned networks. Disconnected network tools are dimmed; A opens Network with feature-specific Wi-Fi-needed feedback and B returns to the original General row. Connected automatic time toggles inline, and Updates returns to General. Disabled Automatic time advertises Select/A instead of a misleading Change hint.
+- Time zone opens the existing offset field directly, already in edit mode; changes apply/persist immediately without shifting UTC. Date/time changes from settings also auto-apply; Done simply leaves. Updated setup/update/time guides.
+- Carried all shared RA/controller/cache/PIN/cancel/naming changes through remote shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f. The shared native harness uses platform C char so ARM tests can compile it.
+- Local General checks: 27 targeted network tests, 58 launcher quick-menu tests and all 61 UI library/quick-menu tests passed. Combined full core/clock/menu rerun is running. Light native General/PIN/connectivity/clock captures reviewed. First walkthrough had incomplete PNG output and a final fixture-marker failure; a fresh traced run completed and every PNG validated. Trace showed synchronous correct marker removal, and temporary trace code was removed. Fresh dark review and exact-head CI remain required.
+- No firmware update was installed. No live RA secrets or account tests have been run. Both drafts remain open. Publish the combined revision, then verify six workflows and native outputs on that exact revision before handing over a new test build.
+
+### Final all-green handoff
+
+All six workflows pass on combined source 92c2e8a470c30ca3add237780d1b32fc932a8156. Exact evidence/build/native links are at the top and in CURRENT_WORK.md. Final checkpoint only updates Markdown and carries latest #190 documentation ancestry. Verify docs-only compare and both draft PR mergeability before ending. Remaining work is physical handheld/live-account testing; no follow-up merge/release requested.
+
+### Merge authorized by user — 2026-11-03
+
+Before merging: user explicitly authorizes merging both PRs if tests pass, superseding earlier draft-only instructions. Rechecked all six workflows on shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f and combined runtime 92c2e8a470c30ca3add237780d1b32fc932a8156: all success. Compared current heads f8932a8ddf855f7e378ac267948dabba81682aba / a3d707db65dc69ff009b129f7ebcc03e0e534d4b against those tested runtimes; later differences are only CURRENT_WORK.md and WORKLOG.md. Plan: ready/merge #190 preserving ancestry, retarget #191 to main, ready/merge #191, then record actual merge SHAs in main through a documentation PR. Hardware/live-account caveats remain testing notes, not an approval block; no release or firmware installation requested.

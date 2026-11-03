@@ -86,7 +86,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
-        ["Device code", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
+        ["Device code", "Updates", "Automatic time", "Time zone", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
@@ -170,7 +170,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::DisplaySchedule,
             QuickRow::Wifi,
             QuickRow::Achievements,
-            QuickRow::SecurityPin
+            QuickRow::SecurityPin, QuickRow::Updates, QuickRow::TimeZone
         ]
     );
     for page in [
@@ -537,7 +537,7 @@ fn long_pages_scroll_five_spaced_rows_with_the_selection_and_keep_clear_of_statu
             for width in [640.0, 720.0] {
                 let mut out = Vec::new();
                 QuickMenu {
-                    row: selected,
+                    disabled: &[], row: selected,
                     hidden,
                     values: [None; QuickRow::ALL.len()],
                     clock: None,

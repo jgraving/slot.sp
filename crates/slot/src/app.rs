@@ -346,6 +346,7 @@ pub struct App {
     pub kids: crate::kid_policy::Policy,
     pub kid_menu: Option<crate::kid_menu::Menu>,
     pub network: Option<crate::network::Menu>,
+    net_time: crate::net_time::NetTime,
     pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
@@ -455,6 +456,7 @@ pub struct App {
     legend_faces: Vec<TexId>,
     undo_face: Option<TexId>,
     clock_faces: Option<(TexId, TexId)>,
+    clock_return_row:QuickRow,
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
@@ -617,6 +619,7 @@ impl App {
             kids: crate::kid_policy::Policy::default(),
             kid_menu: None,
             network: None,
+            net_time: crate::net_time::NetTime::new(Arc::new(crate::sntp::fetch)),
             display_schedule: None,
             kid_error: false,
             catalog,
@@ -739,7 +742,7 @@ impl App {
             pending: None,
             legend_faces: Vec::new(),
             undo_face: None,
-            clock_faces: None,
+            clock_faces: None,clock_return_row:QuickRow::DateTime,
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
@@ -1162,7 +1165,7 @@ impl App {
         self.save_display();
         self.persist();
         if from_menu {
-            self.return_from_settings_page(QuickRow::DateTime);
+            self.return_from_settings_page(self.clock_return_row);
         } else {
             self.start();
         }
@@ -1361,6 +1364,7 @@ impl App {
             | QuickRow::ColourCorrection
             | QuickRow::PlayBrightness
             | QuickRow::PlayBlueLight => self.quick_value(self.playing_row(row)),
+            QuickRow::AutomaticTime=>Some(if self.network.as_ref().is_some_and(|m|m.automatic_time_enabled()){QuickValue::On}else{QuickValue::Off}),
             QuickRow::ClockFormat => Some(if self.state.clock_12h {QuickValue::Hour12}else{QuickValue::Hour24}),
             QuickRow::CarouselMotion => Some(if self.state.carousel_wheel {QuickValue::Wheel}else{QuickValue::Classic}),
             QuickRow::Brightness => Some(QuickValue::level(self.state.brightness)),
@@ -1428,7 +1432,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
-            | QuickRow::SecurityPin
+            | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -3101,7 +3105,7 @@ impl App {
                 Action::GbaDown(Btn::Start) => self.confirm_clock(),
                 Action::GbaDown(Btn::B) if picker.editing() => picker.toggle_editing(),
                 Action::GbaDown(Btn::B) if *from_menu => {
-                    self.return_from_settings_page(QuickRow::DateTime);
+                    self.return_from_settings_page(self.clock_return_row);
                 }
                 _ => {}
             }
@@ -3329,7 +3333,7 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::TimeZone|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::About => {
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
@@ -3389,7 +3393,7 @@ impl App {
                 self.suspend_pending = self.power_settings.lid_close == 1;
             }
             QuickRow::ShutDown => self.hold_power(),
-            QuickRow::LidClose | QuickRow::SleepTimeout => {}
+            QuickRow::LidClose | QuickRow::SleepTimeout | QuickRow::AutomaticTime => {}
             QuickRow::ClockFormat | QuickRow::CarouselMotion | QuickRow::ShowTitles | QuickRow::FavoriteSort => self.change_setting(row, true),
             QuickRow::Bluetooth => {
                 if let Some(root) = &self.root {
@@ -3400,16 +3404,18 @@ impl App {
                     self.bluetooth = Some(menu);
                 }
             }
-            QuickRow::DateTime => {
+            QuickRow::DateTime | QuickRow::TimeZone => {
+                self.clock_return_row=row;
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
+                if row==QuickRow::TimeZone {if let Phase::SetClock{picker,..}=&mut self.phase {picker.field(slot_ui::Field::Offset);picker.toggle_editing();}}
             }
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
             }
             QuickRow::Wifi | QuickRow::Achievements
-            | QuickRow::SecurityPin => {
+            | QuickRow::SecurityPin | QuickRow::Updates => {
                 if let Some(menu) = &mut self.network {
-                    if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
+                    if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
             QuickRow::About => self.phase = Phase::About,
@@ -3514,6 +3520,8 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
+        if row==QuickRow::AutomaticTime {if let Some(m)=&mut self.network {m.toggle_automatic_time();}return;}
+
         if row == QuickRow::Scaling { self.set_picture(self.video_mode.step(right)); return; }
         if row == QuickRow::FrameBlending {
             if self.link_active() { return; }
@@ -3697,7 +3705,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
-            | QuickRow::SecurityPin
+            | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -4475,11 +4483,24 @@ impl App {
         self.timers();
     }
 
+    pub fn set_net_time_source(&mut self,source:crate::net_time::Source) {self.net_time=crate::net_time::NetTime::new(source);}
+    fn step_net_time(&mut self) {
+        let ready=!self.shutting_down() && !matches!(self.phase,Phase::Doze{..}|Phase::SetClock{..})
+            && self.network.as_ref().is_some_and(|m|m.automatic_time_ready());
+        let Some(utc)=self.net_time.step(ready,self.now()) else {return;};
+        if !(1_577_836_800..4_102_444_800).contains(&utc) {return;}
+        let drift=utc.abs_diff(self.utc_secs());
+        if let Some(power)=&mut self.power {if drift>=2 {power.set_clock_in_background(utc);}}
+        if !self.state.clock_set {self.state.clock_set=true;self.persist();}
+    }
+
     fn timers(&mut self) {
         let linking=self.link_active();
-        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.update();
+        if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
             if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
+        if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
+        self.step_net_time();
         self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
@@ -4944,7 +4965,7 @@ impl App {
             }
             let page=custom.unwrap_or_else(||row.or_else(||self.menu_motion.closing_row()).map_or(0,|r|r.page()[0].index() as u64));
             let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
-                row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())})
+                row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens() || (r==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())))})
             };
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
@@ -5467,7 +5488,7 @@ impl App {
         match key {
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
-            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4003=>{
+            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4004=>{
                 let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
                 slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
@@ -5543,7 +5564,7 @@ impl App {
         frame.background = false; // The panel owns one surface behind both pages.
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
         QuickMenu {
-            row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
+            disabled: if self.network.as_ref().is_some_and(|m|m.wifi_connected()){&[]}else{&[QuickRow::Updates,QuickRow::AutomaticTime]}, row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
             values: QuickRow::ALL.map(|r| self.quick_value(r)),
             clock: self.quick_clock_faces, wallpaper: self.quick_wallpaper_faces,
             faces: self.quick_menu_faces.as_ref(), ground: self.menu_ground(),
@@ -5701,7 +5722,7 @@ impl App {
             false => back,
         };
         self.draw_side_legend(left, false, y, out);
-        let right = if row.opens() { open } else { change };
+        let right = if row.opens() || (row==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())) { open } else { change };
         self.draw_side_legend(right, true, y, out);
     }
 

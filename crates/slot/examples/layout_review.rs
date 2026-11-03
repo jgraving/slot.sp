@@ -57,7 +57,7 @@ fn main(){
   values[QuickRow::ShowTitles.index()]=Some(QuickValue::Show);values[QuickRow::FastForward.index()]=Some(QuickValue::Speed3);
   values[QuickRow::FastForwardSound.index()]=Some(QuickValue::On);values[QuickRow::Rumble.index()]=Some(QuickValue::On);
   let wallpaper=Some([s.face(quick_value_face("Flowing Gradient",false)),s.face(quick_value_face("Flowing Gradient",true))]);
-  QuickMenu{row,hidden:&[],values,clock:None,wallpaper,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
+  QuickMenu {disabled: &[], row,hidden:&[],values,clock:None,wallpaper,faces:Some(&faces),ground:Some((bg,720)),palette:None,bound:None,description:None,
    gba_bezel:None,gb_bezel:None,gbc_bezel:None,bezel:None,over_game:false,footer_legends:true,footer_top:480.,canvas:Canvas::FRAMED}.draw(&mut out);
   draw_empty_slot(Canvas::FRAMED,slot,&mut out);
   for (i,(tex,w)) in [faces.legend[0],faces.legend[if row.opens(){2}else{1}]].into_iter().enumerate(){

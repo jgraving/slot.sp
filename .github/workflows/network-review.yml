@@ -28,9 +28,11 @@ jobs:
         run: |
           cargo check --locked -p slot --no-default-features --features device
           cargo test --locked -p slot-achievements -p slot-retro --lib
-          cargo test --locked -p slot --no-default-features --lib --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code -- --test-threads=1
+          cargo test --locked -p slot --no-default-features --lib --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code --test fork_updates --test net_time --test sntp -- --test-threads=1
           cargo test --locked -p slot-ui --lib --test quick_menu
           sh card/test-slotlink.sh
+          sh card/test-update.sh
+          sh card/test-launch.sh
           python3 card/test-wifi-security.py
       - name: Build test System folder
         run: task dist:device OUT=dist-network

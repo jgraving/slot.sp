@@ -73,3 +73,7 @@ pub mod display_schedule;
 pub mod network;
 pub mod network_vault;
 pub mod wifi;
+
+pub mod update;
+pub mod net_time;
+pub mod sntp;
