@@ -7,7 +7,18 @@ Active PR: https://github.com/jgraving/slot.sp/pull/186
 Implementation revision tested after UI follow-up: `94f940e0e7c472b6b2f3ea9c506d4c8280f34c37`
 Status: draft, not merged or released.
 
-## Current state — follow-up complete
+## Current state — active handheld follow-up
+
+User authorized merging PR #186 and reported unclear RetroAchievements preparation progress (0%, 1%, 3%, then 2%, then 3%) with roughly 900 games. Before implementation:
+
+- Trace preparation vs award sync, whether work survives leaving settings/gameplay, progress denominator/restarts, completion/failure and resumability. Explain verified behavior to user.
+- Add a small controller status-bar indicator while background RA work is active; useful progress/count/status on RA settings with concise UI copy.
+- Make settings/status-bar Wi-Fi arcs wider and lower.
+- Investigate upstream OTA (including base OS) and automatic time; target jgraving/slot.sp releases, preserve custom setup. Keep upstream integration in a separate review PR; assess actual payload/install compatibility before enabling base OS updates.
+- Merge existing tested PR #186 using the authorized current head, then implement follow-ups on new branch(es), test through CI and keep checkpoints pushed.
+- No runtime work started in this follow-up yet. Prior completed state follows.
+
+## Previous completed follow-up
 
 All requested UI and audio changes are implemented and pushed. **All six CI workflows pass on 94f940e.** Native light/dark GLES and desktop GL walkthroughs pass, and the final warning, PIN, allowed-button hint, Network and filled-meter captures were visually reviewed.
 
