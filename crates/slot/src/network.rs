@@ -703,7 +703,7 @@ mod tests {
 
         menu.last_wifi.networks[0].ssid = "Home".into();
         menu.input(Action::GbaDown(Btn::A));
-        assert!(menu.keyboard.is_none());
+        assert!(menu.keyboard.is_none());wait(&mut menu);
         menu.input(Action::QuickMenu);
 
         menu.last_wifi.networks[0].ssid = "Other".into();
