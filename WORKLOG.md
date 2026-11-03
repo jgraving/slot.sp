@@ -283,3 +283,12 @@ PR #190 runtime is 16ac082; full CI/render/package validation still running. PR 
 ### Combined handoff complete
 
 Dependent PR #191 also passes all six workflows on runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd. Combined System artifact 13257574576 includes both PRs. CURRENT_WORK.md is the entry point for the next chat and links both detailed branch logs. No further runtime changes followed final verification; both PRs remain draft for handheld review.
+
+### Active follow-up: PIN entry, parent cancellation and General network tools (2026-11-03)
+
+Record before implementation:
+- Cancelling device-PIN authentication for parental controls with Menu must return to the prior menu immediately, without leaving the blank Unlock with device PIN card requiring another B.
+- RA progress must float above menus/card clipping, like the other notification/meter pills.
+- Move Updates and Automatic time out of Network and place them directly after Security PIN at the top of General. Grey them out without an active Wi-Fi connection; A opens Network and shows a short Wi-Fi-required pill identifying the selected feature.
+- PIN entry starts with zero dots, adds dots per press. During setup/confirmation, Done/Start is dim and changes state/colour until six minimum device buttons (four for a separate parent code) are entered. Start before the setup minimum shakes the existing entry without clearing it and shows a short minimum-length pill. Unlock must preserve silent variable-length verification and legacy four/five-button upgrade; do not disclose the stored PIN length.
+- Shared parent/PIN/RA changes belong in #190 and must be carried into #191; General placement/connectivity changes belong in #191. Keep both drafts, run targeted regressions and native captures, then existing CI; no merge requested.
