@@ -166,6 +166,8 @@
         // reserved camera size. Existing renders remain the no-WebGL fallback.
         try {
           const {mountSP} = await import(new URL('sp-model.js', assets).href);
+          // Shader preparation must not interrupt the incoming page slide.
+          if(!pageReady())await new Promise(resolve=>document.addEventListener('slot:page-ready',resolve,{once:true}));
           liveModel = mountSP(stage, preview, {screenCanvas:screen, managed:true, finish:shell});
         } catch (error) { console.warn('Using rendered handheld fallback.', error); }
         ready = true;

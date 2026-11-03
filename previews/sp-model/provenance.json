@@ -1,143 +1,143 @@
 {
-  "source_commit": "144e7b42289aec5f83529552d7d49a2bdae5582c",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41550512647",
-  "revision": "ffcf286df6e4",
-  "model_sha256": "ffcf286df6e4ab2f7325b4c0a9bce5dac97d9a6601409f0487d8accd2473fcec",
+  "source_commit": "b10154efab23545d07a06de64c0a1b36d2984801",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41555512881",
+  "revision": "c88d21517d19",
+  "model_sha256": "c88d21517d19dc03ec70649e5359c26da7104da5577b1b831e27305a3683dbe2",
   "derived_closing": [
     {
-      "path": "previews/sp-model/ffcf286df6e4/platinum-closing.mp4",
-      "source": "previews/sp-model/ffcf286df6e4/platinum-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/platinum-closing.mp4",
+      "source": "previews/sp-model/c88d21517d19/platinum-opening.mp4",
       "source_sha256": "a1b1e7ad6cd3b8a196674760d80a454051f26242c41e2aa9957d2aabf4f12349",
       "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/graphite-closing.mp4",
-      "source": "previews/sp-model/ffcf286df6e4/graphite-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/graphite-closing.mp4",
+      "source": "previews/sp-model/c88d21517d19/graphite-opening.mp4",
       "source_sha256": "bafa7144482be3c013f472a94ad8cd9536ae9c6bd8dad34c35c9366e9af4c731",
       "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_blue-closing.mp4",
-      "source": "previews/sp-model/ffcf286df6e4/pearl_blue-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/pearl_blue-closing.mp4",
+      "source": "previews/sp-model/c88d21517d19/pearl_blue-opening.mp4",
       "source_sha256": "d8bed0ffafef18d2820ccf56207b135aa6e7fb717cd8b6b4b3eda50d49a9803a",
       "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_pink-closing.mp4",
-      "source": "previews/sp-model/ffcf286df6e4/pearl_pink-opening.mp4",
-      "source_sha256": "81f519cd91eeaa753d3442d740b66a2aea4c824f83d04c06dc53952411f19541",
+      "path": "previews/sp-model/c88d21517d19/pearl_pink-closing.mp4",
+      "source": "previews/sp-model/c88d21517d19/pearl_pink-opening.mp4",
+      "source_sha256": "f01494c12e5e19f510bf738cde05fddbb4510d8d5949e1aa6a3b77ffa171c273",
       "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/gold-closing.mp4",
-      "source": "previews/sp-model/ffcf286df6e4/gold-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/gold-closing.mp4",
+      "source": "previews/sp-model/c88d21517d19/gold-opening.mp4",
       "source_sha256": "918661090f2ae5e02e6220f57aa50c241933367808d1b30e55ae223796b80a16",
       "method": "Reverse the reviewed opening frames; H.264, matching frame rate"
     }
   ],
   "files": [
     {
-      "path": "previews/sp-model/ffcf286df6e4/gold-closed.png",
+      "path": "previews/sp-model/c88d21517d19/gold-closed.png",
       "bytes": 232801,
       "sha256": "1650c55b4afbe3c30a3f8417760cdb0b8b56da9ff125ab6f948e753f428f2c86"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/gold-closing.mp4",
+      "path": "previews/sp-model/c88d21517d19/gold-closing.mp4",
       "bytes": 236499,
       "sha256": "d687f5d7784500ffc85403769ccf9b591ddefc6827a30a14478203819fde0ae7"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/gold-open.png",
+      "path": "previews/sp-model/c88d21517d19/gold-open.png",
       "bytes": 288991,
       "sha256": "822afdaaeb0f424a85f883ac5cd5c4ed49cb061389d7abd77f524ac439ec0e92"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/gold-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/gold-opening.mp4",
       "bytes": 227265,
       "sha256": "918661090f2ae5e02e6220f57aa50c241933367808d1b30e55ae223796b80a16"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/graphite-closed.png",
+      "path": "previews/sp-model/c88d21517d19/graphite-closed.png",
       "bytes": 193613,
       "sha256": "550b3edb28d04be98e3321a40cd0ba68af12216f89d248d52b3932f700119129"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/graphite-closing.mp4",
+      "path": "previews/sp-model/c88d21517d19/graphite-closing.mp4",
       "bytes": 225256,
       "sha256": "8c5caa442303f55ddd8d7beaf7303f3f4f380871625f74c994a3287da27e0b31"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/graphite-open.png",
+      "path": "previews/sp-model/c88d21517d19/graphite-open.png",
       "bytes": 234668,
-      "sha256": "83b87791b4e2ad4564b824aa0d630e722ad1018c85ad98a1b754c12378725b65"
+      "sha256": "ac48702d9d17d8a3b91d4f5c28cb9c588565b80c44aef033217207049ffed724"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/graphite-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/graphite-opening.mp4",
       "bytes": 209873,
       "sha256": "bafa7144482be3c013f472a94ad8cd9536ae9c6bd8dad34c35c9366e9af4c731"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_blue-closed.png",
+      "path": "previews/sp-model/c88d21517d19/pearl_blue-closed.png",
       "bytes": 231717,
       "sha256": "30131d06b47863a690234760fc8426db179c68fa0064e447441dabe09171d0dd"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_blue-closing.mp4",
+      "path": "previews/sp-model/c88d21517d19/pearl_blue-closing.mp4",
       "bytes": 227031,
       "sha256": "37a1933a22e16b5be103029efbe430e9fe41bca4d13b2522133c65a79ed54a4e"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_blue-open.png",
-      "bytes": 286098,
-      "sha256": "a3a91d049d98fd0550c119897d831d59d7ec1c278e8e84e42a709da94deeb790"
+      "path": "previews/sp-model/c88d21517d19/pearl_blue-open.png",
+      "bytes": 286099,
+      "sha256": "8d307c47a205a1297c34f116382c5a96733a20d02929f7776067ce19bb1ee836"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_blue-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/pearl_blue-opening.mp4",
       "bytes": 218499,
       "sha256": "d8bed0ffafef18d2820ccf56207b135aa6e7fb717cd8b6b4b3eda50d49a9803a"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_pink-closed.png",
+      "path": "previews/sp-model/c88d21517d19/pearl_pink-closed.png",
       "bytes": 230318,
       "sha256": "5c9918f3a0684abb97deace8ce6c78c9a8f39cfe5ca2ef5d3f419cacb6a2d721"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_pink-closing.mp4",
+      "path": "previews/sp-model/c88d21517d19/pearl_pink-closing.mp4",
       "bytes": 222444,
       "sha256": "eb3cf5e659d582dd1d4f3565571b87e2daaaa7cc22e72039f63b929f14948ef8"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_pink-open.png",
+      "path": "previews/sp-model/c88d21517d19/pearl_pink-open.png",
       "bytes": 288385,
       "sha256": "7e6838846ff68ea6f1be7d02957320778d3469b8510317ac6c40b2f258ae174b"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/pearl_pink-opening.mp4",
-      "bytes": 213986,
-      "sha256": "81f519cd91eeaa753d3442d740b66a2aea4c824f83d04c06dc53952411f19541"
+      "path": "previews/sp-model/c88d21517d19/pearl_pink-opening.mp4",
+      "bytes": 213982,
+      "sha256": "f01494c12e5e19f510bf738cde05fddbb4510d8d5949e1aa6a3b77ffa171c273"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/platinum-closed.png",
+      "path": "previews/sp-model/c88d21517d19/platinum-closed.png",
       "bytes": 221874,
       "sha256": "9b902d6af379646d3dac9cca0dc2d06824e8c9c1935f8ba4f7e27567d9924db7"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/platinum-closing.mp4",
-      "bytes": 222761,
-      "sha256": "886a83ddbe500532f41276cbd56fc1d399a41866ab83101d0ed72d630e9c6e75"
+      "path": "previews/sp-model/c88d21517d19/platinum-closing.mp4",
+      "bytes": 222756,
+      "sha256": "7a147f8a339b5f6a2e286bd37f16b0af13a25ff392521ac215aa268824ef71d6"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/platinum-open.png",
+      "path": "previews/sp-model/c88d21517d19/platinum-open.png",
       "bytes": 282024,
-      "sha256": "6387ac964a186d253a6d887c0bb468ee89cb329f258d82760bba71ce3f18e74b"
+      "sha256": "4b22f8bd95852b3d58784e41bef9add684d5dcb8f132207942b316a2a8ae5b49"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/platinum-opening.mp4",
+      "path": "previews/sp-model/c88d21517d19/platinum-opening.mp4",
       "bytes": 218819,
       "sha256": "a1b1e7ad6cd3b8a196674760d80a454051f26242c41e2aa9957d2aabf4f12349"
     },
     {
-      "path": "previews/sp-model/ffcf286df6e4/projection.json",
+      "path": "previews/sp-model/c88d21517d19/projection.json",
       "bytes": 1533,
       "sha256": "f15d0bca998a84f9beb3457eae9ec078a50f043a0d63348d4fd17544ab0bf9ec"
     }

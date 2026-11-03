@@ -3,14 +3,14 @@
   "frame_ms": 80,
   "duration": 11.84,
   "poster_index": 15,
-  "model_sha256": "ffcf286df6e4ab2f7325b4c0a9bce5dac97d9a6601409f0487d8accd2473fcec",
+  "model_sha256": "c88d21517d19dc03ec70649e5359c26da7104da5577b1b831e27305a3683dbe2",
   "browser_version": "156.0.8078.47",
   "logo_sha256": "a3f3f9b12c0e3a924161572723948f67a382abb954c985e49fc658b7f4058a6c",
   "logo_font_sha256": "4459a82bdff1f86a4c64996826fb5cdd1c6573cd9900881cd5ea184058a538f4",
   "logo_font_profile": "display",
   "native_sha256": "7d00e6e64a1d1fccb88b441098e8f4618257ad2efe7c9c1cfaaccf80e88a165a",
-  "source_commit": "144e7b42289aec5f83529552d7d49a2bdae5582c",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41550512647",
+  "source_commit": "b10154efab23545d07a06de64c0a1b36d2984801",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41555512881",
   "files": [
     {
       "path": "previews/readme-model/hero-3d.gif",
