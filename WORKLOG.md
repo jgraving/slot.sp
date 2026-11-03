@@ -4,8 +4,41 @@ Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `feat/182-network-achievements`
 Active PR: https://github.com/jgraving/slot.sp/pull/186
-Implementation revision verified at takeover: `3f8c0d7eb240338e897e931a6d403268e9b95510`
+Implementation revision tested after UI follow-up: `94f940e0e7c472b6b2f3ea9c506d4c8280f34c37`
 Status: draft, not merged or released.
+
+## Current state — follow-up complete
+
+All requested UI and audio changes are implemented and pushed. **All six CI workflows pass on 94f940e.** Native light/dark GLES and desktop GL walkthroughs pass, and the final warning, PIN, allowed-button hint, Network and filled-meter captures were visually reviewed.
+
+- Test build: https://github.com/jgraving/slot.sp/actions/runs/41673591917/artifacts/13250356343
+- Native captures: https://github.com/jgraving/slot.sp/actions/runs/41673591921/artifacts/13250905357
+- Feature branch: `feat/182-network-achievements`; PR #186 remains draft, not merged or released.
+- Next action: user handheld testing and live-account checks listed below. No known failing development check remains.
+- This final handoff commit changes WORKLOG.md only; its commit message skips redundant CI. The tested runtime and build are exactly 94f940e. Compare that revision with the live PR head before resuming.
+- Historical checkpoints follow. Treat this section as the latest state; do not repeat completed implementation/test work.
+
+## Final verified behavior
+
+- Short yellow warning-triangle / red circled-alert pills. Skipping unlock says “Saved credentials are locked.” Security and binding details live in the guide, rather than persistent small explanatory captions.
+- Shared masked system/parent PIN cards. Variable button PIN unlock is automatic from four presses, with silent incorrect prefixes and responsive input. One worker request at a time; fast typing retains intermediate prefixes, and cancellation/deletion rejects stale results. Setup still uses Start to choose length and confirm. Finishing too early shows allowed button icons and “4+ presses” in a contextual pill.
+- Filled volume/brightness/color-temperature capsules remain at the top; kid time is also filled. Foreground contrast changes at the animated fill boundary in both themes. Settings sliders remain unchanged.
+- Color temp. label; focused Night mode warmth previews without persisting temporary day warmth, changing brightness or overriding scheduling. Leaving the row/menu restores the active setting.
+- Vertical D-pad movement reaches incomplete pause-grid rows from every column. Network tile/submenu name and wider antialiased Wi-Fi arcs are in place.
+- Manual speaker/wired/Bluetooth/USB output choices restore destination volume/mute. Disconnect volume is restricted to actual connection loss/removal.
+
+## Final validation evidence
+
+All results below are for 94f940e:
+
+- Launcher tests and native captures: https://github.com/jgraving/slot.sp/actions/runs/41673591921 — success. Includes all 134 slot library tests and the complete UI/menu regressions.
+- ARM64 test System package and both bundled cores: https://github.com/jgraving/slot.sp/actions/runs/41673591917 — success.
+- Scaling: https://github.com/jgraving/slot.sp/actions/runs/41673591948 — success.
+- Blending: https://github.com/jgraving/slot.sp/actions/runs/41673591886 — success.
+- Shortcuts: https://github.com/jgraving/slot.sp/actions/runs/41673591899 — success.
+- Website: https://github.com/jgraving/slot.sp/actions/runs/41673591994 — success. Build/links/desktop/phone navigation passed. The unchanged 3D preview's boot-frame observation initially timed out under software rendering; retrying only that job passed, with no website animation code change.
+- Final artifact IDs: handheld 13250356343, native review 13250905357. Both were present and unexpired at completion; verify availability before linking later.
+- Visual review covered short/red warning symbols, concise locked-credential feedback, clean shared PIN layouts, allowed-button hint, wider Wi-Fi arcs and two-tone meter text/icons in both themes. These are simulated-device renders, not physical hardware/network evidence.
 
 ## Start here after a crash
 
@@ -70,7 +103,7 @@ Previous chat reported 128/129 library tests initially; the single parent-PIN fa
 - Reviewed captures show the requested controls and messages rendered in both themes. No additional implementation fix identified in this targeted review.
 - Takeover changes are documentation only: WORKLOG.md and AGENTS.md. Existing test binary and runtime source remain at implementation revision 3f8c0d7.
 - Development verification is complete; next action is user handheld/live-account testing using the linked build. Keep this log current when test feedback arrives.
-- Current environment has no checked-out repo. Recovery documents are written directly to the existing GitHub branch through the connector, so they survive a chat crash.
+- Initial takeover had no local checkout. A complete clone was subsequently recovered; changes and checkpoints are persisted on the GitHub feature branch. Scratch paths are not a durable handoff.
 
 ## Remaining work and release gates
 
@@ -156,3 +189,9 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 - Pressing Start before four setup presses now shows the allowed controller icons with the brief “4+ presses” label in a transient pill. This makes the requested help reachable through actual handheld controls while leaving the card free of explanatory copy.
 - Added that state to the native PIN walkthrough and checked the hint's width at the 640px panel size in regression coverage.
 - Manual audio routing, meter geometry, warmth preview and grid behavior are otherwise unchanged. Next step remains CI and native visual review.
+
+### Completion checkpoint
+
+- Completed final native capture review and verified all six workflows on 94f940e.
+- PR description rewritten around the final behavior and fresh build/capture links.
+- Final checkpoint is documentation only; no runtime edit followed successful verification. Handheld/live-account testing remains the next step.
