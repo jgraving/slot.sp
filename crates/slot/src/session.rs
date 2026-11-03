@@ -626,6 +626,7 @@ impl Session {
 
     fn held(&self) -> bool {
         self.app.parent_controls_open()
+            || self.app.network.as_ref().is_some_and(|m|m.visible)
             || self.app.game_menu_open()
             || self.app.in_game_menu().is_some()
             || self.app.repair_prompt()

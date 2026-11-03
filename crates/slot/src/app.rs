@@ -6125,7 +6125,7 @@ impl App {
     }
 
     fn on_shelf(&self) -> bool {
-        matches!(self.phase, Phase::Shelf)
+        matches!(self.phase, Phase::Shelf) && !self.network.as_ref().is_some_and(|m|m.visible)
     }
 
     pub fn browsed_rom(&self) -> Option<&std::path::Path> {
