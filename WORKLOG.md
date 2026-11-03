@@ -1,10 +1,10 @@
 # Development recovery log
 
-Last updated: 2026-11-03 (Europe/Zurich).
+Last updated: 2026-11-04 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `main`
 Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
-Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
+Verified OS implementation/release: `356c30749a98d103c249af1f95355047b25c5818`
 Status: merged into main; automatic main build release published.
 
 ## Merged handoff — 2026-11-03
@@ -458,3 +458,13 @@ Actual main 356c30749a98d103c249af1f95355047b25c5818 passed all configured push 
 After rechecking main membership, all three results and the issue's author/comments, posted the authorized reply to #182 tagging @demifiend9: https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916. Reply covers merged GBA softcore support, initial internet preparation, cached offline tracking/queued reconnect uploads, current exclusions, guide and the verified main build. The posted body and tag were read back successfully. No issue closure requested or performed.
 
 Website CI routing helpers/tests live under site/scripts so they also fit the existing website-only exclusions in the device release workflow. This avoids causing an OS release build just for the new website CI helper. Six routing/integration regressions pass after relocation and YAML validation passes. PR #192 changes only website CI and recovery notes; it must pass its normal applicable latest-head checks before merging. No skip marker is used on its final implementation commit. CI-scope/workflow changes deliberately exercise all website jobs once; future OS-only/recovery edits trigger no website jobs, and guide-only edits skip 3D checks. Keep remaining physical/live-account caveats as testing notes, not unmerged feature work.
+
+### Final merged CI and issue handoff — 2026-11-04 (Europe/Zurich)
+
+PR #192 merged into main as cff3899aa51cb67f6090ef2775a674fe21785d79. Exact implementation head 883cb577b89bd49537abf09d56bcee45b99b8618 passes website workflow 41737516993 (attempt 2): routing, build/link/navigation and model/video all pass. The first model job 126271182056 timed out at the unchanged boot-video frame observation (check-sp-model.cjs:171); only that job was retried, and passed with unchanged source/assertion. No test was disabled or loosened. Six local routing/integration regressions and YAML validation also pass.
+
+Website triggers now exclude OS and recovery-only edits. Published guide changes keep website checks without 3D; homepage/model/shared rendering dependencies retain 3D/video checks. Manual and CI-routing changes exercise the full website suite. Helpers remain under site/ to avoid unrelated device release builds. Deployment handles an intentionally skipped model while blocking failed required checks.
+
+Actual OS main 356c307 passed its fresh launcher/native, device/build/release and website workflows. Automatic release https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.03-356c307 remains the current OS build; later changes are website CI/recovery only. The authorized @demifiend9 reply is posted and verified: https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916. #190 and #191 were merged earlier; no feature work remains unmerged. Hardware/live-account follow-ups remain testing notes.
+
+This final journal update changes only recovery Markdown. Under the requested CI scoping it should not launch website/device jobs, and uses no CI-skip marker. Compare against the tested CI head before resuming and continue from main.
