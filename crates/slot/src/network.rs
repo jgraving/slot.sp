@@ -41,6 +41,7 @@ pub struct Menu {
     first: usize,
     revision: u64,
     keyboard: Option<(Field, Keyboard)>,
+    pending_ssid: Option<String>,
     secrets: Secrets,
     first_pass: Zeroizing<String>,
     prefs: Preferences,
@@ -76,6 +77,7 @@ impl Menu {
             first: 0,
             revision: 0,
             keyboard: None,
+            pending_ssid: None,
             secrets: Secrets::default(),
             first_pass: Zeroizing::new(String::new()),
             prefs,
@@ -328,6 +330,7 @@ impl Menu {
                     }
                     KeyOutcome::Cancelled => {
                         self.keyboard = None;
+                        self.pending_ssid = None;
                         self.first_pass.zeroize();
                     }
                     KeyOutcome::Typing => {}
@@ -452,17 +455,22 @@ impl Menu {
                         }
                         let network = self.last_wifi.networks.get(self.selected - 4).cloned();
                         if let Some(network) = network {
-                            self.secrets.ssid = network.ssid;
                             match network.security {
                                 wifi::Security::Unsupported => {
                                     self.say("This network type is not supported")
                                 }
                                 wifi::Security::Open => {
+                                    self.secrets.ssid = network.ssid;
                                     self.secrets.wifi_password.zeroize();
                                     self.connect();
                                 }
                                 wifi::Security::Personal => {
-                                    let pass = self.secrets.wifi_password.clone();
+                                    let pass = Zeroizing::new(if self.secrets.ssid == network.ssid {
+                                        self.secrets.wifi_password.clone()
+                                    } else {
+                                        String::new()
+                                    });
+                                    self.pending_ssid = Some(network.ssid);
                                     self.edit(
                                         Field::WifiPassword,
                                         "Wi-Fi password",
@@ -547,7 +555,7 @@ impl Menu {
     fn accept(&mut self, field: Field, text: Zeroizing<String>) {
         match field {
             Field::Ssid => {
-                self.secrets.ssid = text.to_string();
+                self.pending_ssid = Some(text.to_string());
                 self.edit(
                     Field::WifiPassword,
                     "Wi-Fi password (blank for open)",
@@ -559,8 +567,12 @@ impl Menu {
             }
             Field::WifiPassword => {
                 if !text.is_empty() && wifi::psk_value(&text).is_err() {
+                    self.pending_ssid = None;
                     self.say("Use 8–63 characters or a 64-digit key");
                     return;
+                }
+                if let Some(ssid) = self.pending_ssid.take() {
+                    self.secrets.ssid = ssid;
                 }
                 self.secrets.wifi_password = text.to_string();
                 self.connect();
@@ -687,10 +699,10 @@ impl Menu {
                 for network in &self.last_wifi.networks {
                     rows.push((
                         &network.ssid,
-                        if network.security == wifi::Security::Open {
-                            "Open"
-                        } else {
-                            "Password"
+                        match network.security {
+                            wifi::Security::Open => "Open",
+                            wifi::Security::Personal => "Password",
+                            wifi::Security::Unsupported => "Unsupported",
                         }
                         .into(),
                     ));
@@ -802,5 +814,69 @@ mod tests {
         assert_eq!(menu.rows().len(), 3);
         assert!(!root.path().join("Config/retroachievements.toml").exists());
         assert!(!network_vault::vault_path(root.path()).exists());
+    }
+
+    #[test]
+    fn choosing_another_network_never_prefills_or_reassigns_the_saved_password() {
+        let root = tempfile::tempdir().unwrap();
+        let mut menu = Menu::new(root.path().into());
+        menu.open_wifi();
+        menu.wifi_on = true;
+        menu.secrets.ssid = "Home".into();
+        menu.secrets.wifi_password = "home-secret".into();
+        menu.last_wifi.networks = vec![wifi::Network {
+            ssid: "Other".into(),
+            signal: -50,
+            security: wifi::Security::Personal,
+            saved: false,
+        }];
+        menu.selected = 4;
+        menu.input(Action::GbaDown(Btn::A));
+        assert_eq!(menu.keyboard.as_ref().unwrap().1.text(), "");
+        assert_eq!(menu.secrets.ssid, "Home");
+        assert_eq!(menu.secrets.wifi_password, "home-secret");
+        menu.input(Action::QuickMenu);
+        assert!(menu.pending_ssid.is_none());
+        assert_eq!(menu.secrets.ssid, "Home");
+
+        menu.last_wifi.networks[0].ssid = "Home".into();
+        menu.input(Action::GbaDown(Btn::A));
+        assert_eq!(menu.keyboard.as_ref().unwrap().1.text(), "home-secret");
+        menu.input(Action::QuickMenu);
+
+        menu.last_wifi.networks[0].ssid = "Other".into();
+        menu.input(Action::GbaDown(Btn::A));
+        menu.accept(Field::WifiPassword, Zeroizing::new("other-secret".into()));
+        assert_eq!(menu.secrets.ssid, "Other");
+        assert_eq!(menu.secrets.wifi_password, "other-secret");
+        assert!(menu.pending_ssid.is_none());
+    }
+
+    #[test]
+    fn hidden_and_unsupported_networks_preserve_credentials_until_confirmed() {
+        let root = tempfile::tempdir().unwrap();
+        let mut menu = Menu::new(root.path().into());
+        menu.secrets.ssid = "Home".into();
+        menu.secrets.wifi_password = "home-secret".into();
+        menu.accept(Field::Ssid, Zeroizing::new("Hidden".into()));
+        assert_eq!(menu.secrets.ssid, "Home");
+        assert_eq!(menu.keyboard.as_ref().unwrap().1.text(), "");
+        menu.input(Action::QuickMenu);
+        assert!(menu.pending_ssid.is_none());
+
+        menu.open_wifi();
+        menu.wifi_on = true;
+        menu.last_wifi.networks = vec![wifi::Network {
+            ssid: "Unsupported".into(),
+            signal: -50,
+            security: wifi::Security::Unsupported,
+            saved: false,
+        }];
+        assert_eq!(menu.rows()[4].1, "Unsupported");
+        menu.selected = 4;
+        menu.input(Action::GbaDown(Btn::A));
+        assert!(menu.keyboard.is_none());
+        assert_eq!(menu.secrets.ssid, "Home");
+        assert_eq!(menu.secrets.wifi_password, "home-secret");
     }
 }

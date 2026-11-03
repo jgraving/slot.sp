@@ -31,6 +31,8 @@ const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg'
      return route.fulfill({path:file,contentType});
     });
     await page.addInitScript(finish=>{
+     const getContext=HTMLCanvasElement.prototype.getContext;
+     HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/.test(type)?null:getContext.call(this,type,...args);};
      localStorage.setItem('slot.sp:hardware-finish',finish);
      // Hold the first presented frame for deterministic screenshot sampling.
      document.addEventListener('loadeddata',event=>{

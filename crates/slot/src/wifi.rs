@@ -19,9 +19,9 @@ const POLL: Duration = Duration::from_secs(5);
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum Security {
     Open,
-    /// WPA or WPA2 personal, or WPA3's SAE: a passphrase.
+    /// WPA or WPA2 personal, including WPA2/WPA3 transition networks.
     Personal,
-    /// WPA enterprise or WEP, which slot cannot join.
+    /// Enterprise, WEP, WPA3-only or enhanced-open networks, which slot cannot join.
     Unsupported,
 }
 
@@ -306,8 +306,11 @@ pub fn security(flags: &str) -> Security {
     if flags.contains("EAP") || flags.contains("WEP") {
         return Security::Unsupported;
     }
-    if flags.contains("PSK") || flags.contains("SAE") {
+    if flags.contains("PSK") {
         return Security::Personal;
+    }
+    if flags.contains("SAE") || flags.contains("OWE") {
+        return Security::Unsupported;
     }
     Security::Open
 }
@@ -758,11 +761,27 @@ mod tests {
         assert!(found[2].saved && !found[0].saved);
         assert_eq!(
             found[1].security,
-            Security::Personal,
-            "WPA3 is a passphrase too"
+            Security::Unsupported,
+            "SAE-only networks need a key management mode this backend does not configure"
         );
         assert_eq!(found[2].security, Security::Open);
         assert_eq!(found[3].security, Security::Unsupported);
+    }
+
+    #[test]
+    fn only_supported_personal_and_open_networks_are_joinable() {
+        assert_eq!(security("[WPA2-PSK+SAE-CCMP][ESS]"), Security::Personal);
+        assert_eq!(security("[WPA2-PSK-CCMP][ESS]"), Security::Personal);
+        assert_eq!(security("[ESS]"), Security::Open);
+        for flags in [
+            "[SAE][ESS]",
+            "[OWE][ESS]",
+            "[OWE-TRANS][ESS]",
+            "[WEP][ESS]",
+            "[WPA2-EAP-CCMP][ESS]",
+        ] {
+            assert_eq!(security(flags), Security::Unsupported, "{flags}");
+        }
     }
 
     #[test]
