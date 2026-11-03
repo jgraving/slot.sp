@@ -1,15 +1,17 @@
-//! Filled capsules share the charging palette and contrast on both sides of the level.
+//! Filled capsules use a neutral palette and contrast on both sides of the level.
 use crate::{Icon, UndoFace, text};
 pub const METER_W: u32 = 176;
 pub const METER_H: u32 = 52;
 
 pub fn filled_meter_face(label: &str, icon: Option<Icon>, fraction: f32, light: bool, w: u32, h: u32) -> UndoFace {
-    let colours=crate::battery::charge_colours(light);
+    let (track,fill,filled_ink,empty_ink):([f32;4],[f32;4],[u8;3],[u8;3])=if light {
+        ([0.82,0.82,0.82,1.0],[0.20,0.20,0.20,1.0],[250,250,250],[28,28,28])
+    } else {([0.30,0.30,0.30,1.0],[0.95,0.95,0.95,1.0],[22,22,22],[246,246,246])};
     let edge=w as f32*fraction.clamp(0.0,1.0);
     let mut face=UndoFace{rgba:vec![0;(w*h*4)as usize],w,h};
-    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,colours.track);
+    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,track);
     for (i,p) in face.rgba.chunks_exact_mut(4).enumerate() {
-        if ((i as u32%w) as f32) < edge {for c in 0..3 {p[c]=(colours.fill[c]*255.0).round()as u8;}}
+        if ((i as u32%w) as f32) < edge {for c in 0..3 {p[c]=(fill[c]*255.0).round()as u8;}}
     }
     let font=text::font(text::Role::Value).expect("meter font");
     let px=if h>=48 {22.0}else{20.0};
@@ -27,7 +29,7 @@ pub fn filled_meter_face(label: &str, icon: Option<Icon>, fraction: f32, light: 
     };
     crate::plate::blit(&mut mask,w,&glyph.rgba,glyph.w,glyph.h,left,(h-glyph.h)/2);
     for (i,(p,ink)) in face.rgba.chunks_exact_mut(4).zip(mask.chunks_exact(4)).enumerate() {
-        let colour=if ((i as u32%w)as f32) < edge {colours.filled_ink}else{colours.empty_ink};
+        let colour=if ((i as u32%w)as f32) < edge {filled_ink}else{empty_ink};
         let a=ink[3]as f32/255.0;
         for c in 0..3 {p[c]=(colour[c]as f32*a+p[c]as f32*(1.0-a)).round()as u8;}
     }

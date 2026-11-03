@@ -24,7 +24,7 @@ and enhanced-open networks are shown but cannot be joined in this build.
 to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** or
 **Passphrase**, then **Set Security PIN**:
 
-- **Button code:** enter four or more presses using A/B/X/Y, the D-pad and shoulder
+- **Button code:** enter six or more presses using A/B/X/Y, the D-pad and shoulder
   buttons. You choose the length; press **Start** to finish, then repeat the sequence
   and press Start again. Select deletes a press; Menu cancels. Held buttons do not
   repeat. Only masked dots are shown, even for long PINs. During unlock, a correct sequence is accepted automatically without Start. Incorrect prefixes stay silent and remain editable; continue typing or use Select to delete. No stored PIN length is displayed.
@@ -34,21 +34,9 @@ to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** 
 PINs shorter than eight button presses get a yellow triangle notification because they
 are easier to guess. There is no recovery copy of the device PIN on the card.
 
-**Credentials** is an inline Left/Right picker shared by Wi-Fi and
-RetroAchievements:
+Wi-Fi and RetroAchievements require an encrypted vault protected by the device PIN. There are no plaintext or session-only storage choices. Set and unlock the PIN before enabling either service. Existing four- or five-button PINs still decrypt the vault, but must be replaced with six or more presses before network services start. Long unpredictable secrets are stronger than short patterns.
 
-- **Encrypted** is the default for a new setup. Credentials are saved under the
-  device PIN. If one is needed, the Security PIN page opens directly with a pill
-  explaining that this sets a device PIN for encrypted credentials.
-- **Session only** keeps credentials in memory and forgets them at power-off.
-- **Unencrypted** saves readable credentials on the SD card. A red circled alert
-  explains this. Nothing is written until you select the confirmation row and
-  press **A**. The red warning also appears after confirming the change.
-
-Switching from Unencrypted to Encrypted saves the encrypted copy first, deletes the
-plaintext file, and shows a pill confirming deletion. If saving or deletion fails,
-the change reports the error instead of claiming success. Deleting a file on flash
-storage is not a guarantee of forensic erasure of older data.
+Old plaintext files from previous builds are imported only after PIN creation or authentication. The encrypted save must succeed before the old file is deleted. Failure keeps network services off and reports the problem. Deletion on flash is not forensic erasure.
 
 After a restart with either feature enabled and encrypted credentials saved, an
 animated unlock card appears. One successful unlock covers both features for that
@@ -62,14 +50,13 @@ entered, even when Wi-Fi and achievements are off. This is a launcher access loc
 the SD card, games and saves remain readable. Only the saved credentials are encrypted.
 The startup lock does not protect against modified software or physical tampering.
 
-Switching to Session only asks before deleting saved credentials; the PIN and current
-session are kept. **Forget Security PIN** removes the vault and saved credentials
+**Forget Security PIN** removes the vault and saved credentials
 after confirmation. If parental controls use the device PIN, choose a separate parent
 code first. Pending achievements and game saves are kept.
 
 The key is never stored on the card. Argon2id derives it from the entered secret;
 authenticated ChaCha20-Poly1305 encrypts the vault. A short PIN is a convenience lock:
-four presses from 12 buttons give only 20,736 combinations, which a person with a
+six presses from 12 buttons give only 2,985,984 combinations, which a person with a
 copy of the card can try offline. Longer unpredictable secrets make guessing harder.
 Neither option protects credentials on a device that is already running and unlocked.
 The supplicant receives passwords through its control socket and does not save them.
@@ -140,5 +127,3 @@ Signing in and preparing games are separate steps. The first pass checks each GB
 The controller in the status bar means RetroAchievements is working in the background. The settings page shows game data, artwork, pending uploads and games that need another attempt. A connection or account error shows retry status rather than pretending preparation is still moving. Preparation continues on the shelf and during play while slot is running. It pauses when the device sleeps, shuts down, or loses internet; downloaded data and earned unlocks persist. Signing out or turning achievements off stops the worker. A restart uses cached data and prepares remaining or changed games; it also refreshes old data weekly. Newly played games take priority over the background library.
 
 Completed game preparation makes cached tracking available offline. It does not mean every game has achievements, and it is separate from whether the server accepts deferred unlock uploads.
-
-Credentials stays an inline selector. Choosing Unencrypted asks for **A: Confirm** or **B: Cancel** in a pill; no plaintext file is created before confirmation. Cancel returns to Encrypted (PIN setup is required if none exists). Session only removes saved credentials while keeping the current session signed in.

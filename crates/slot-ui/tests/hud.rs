@@ -394,3 +394,15 @@ fn adjusting_during_dismissal_reverses_the_pill_without_a_position_jump() {
     assert!((after.1 - before.1).abs() < 0.001);
     assert!((sample(&hud, 1800).0 - 8.0).abs() < 0.1);
 }
+
+#[test]
+fn adjustment_capsules_are_neutral_at_every_fill_in_both_themes() {
+    for light in [false,true] {for level in [0.0,0.3,0.7,1.0] {
+        for icon in [Icon::Volume,Icon::Brightness,Icon::BlueLight] {
+            let face=slot_ui::filled_meter_face("60%",Some(icon),level,light,176,52);
+            for p in face.rgba.chunks_exact(4).filter(|p|p[3]>0) {assert_eq!(p[0],p[1]);assert_eq!(p[1],p[2]);}
+        }
+        let face=slot_ui::kid_time_meter_on(300,600,light);
+        for p in face.rgba.chunks_exact(4).filter(|p|p[3]>0) {assert_eq!(p[0],p[1]);assert_eq!(p[1],p[2]);}
+    }}
+}

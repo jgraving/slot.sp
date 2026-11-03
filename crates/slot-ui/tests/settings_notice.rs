@@ -159,14 +159,3 @@ fn warning_severity_uses_different_graphical_symbols_and_short_pills() {
         assert!(minimum.w<=576&&minimum.h==48);
     }
 }
-
-#[test]
-fn inline_storage_confirmation_stays_visible_until_answered() {
-    let mut notice=SettingsNotice::default();
-    notice.observe(Some((1,"CONFIRM_UNENCRYPTED".into())),0);
-    let face=slot_ui::settings_notice_face_toned_on("CONFIRM_UNENCRYPTED",Canvas::FRAMED,false,slot_ui::NoticeTone::Warning);
-    assert!(face.w<=576 && face.h==76);
-    assert!(notice.alpha(10000)>0.99);
-    notice.observe(None,10000);
-    assert!(notice.alpha(11000)<0.01);
-}

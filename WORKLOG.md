@@ -236,4 +236,15 @@ Current step: recover a local checkout and inspect rendering/input paths. No run
 
 ### Superseding user decision: encrypted credentials only
 
-Before starting the next edits: user proposes removing unencrypted storage entirely, requiring a device PIN, and raising the minimum button PIN to six. Adopt this simpler flow: remove all credential-storage selectors and new plaintext/session-only writes; Wi-Fi/RA require an encrypted, unlocked vault. Existing shorter PINs must remain decryptable for upgrade, but network access waits for a six-plus PIN replacement. Existing plaintext credentials must migrate only after successful vault creation/unlock and encrypted save, then delete plaintext. Preserve failure handling and separate four-button parental codes. The prior inline-selector work is superseded. PR #190 first CI is still running. OTA/time investigation remains separate.
+User requests removal of unencrypted storage/selectors and a six-button minimum PIN. Keep existing short PINs decryptable for upgrade, gate Wi-Fi/RA until upgraded, migrate existing plaintext only after encrypted save succeeds, and leave separate parent codes at four buttons. Previous inline-selector implementation is superseded. Record before making these edits.
+
+### Neutral meter steering and encrypted-only implementation
+
+- Latest user steering: kid-time/volume/brightness/warmth pills must be neutral white/grey with adaptive ink; only charging stays green. Recorded and implemented in the shared meter palette.
+- Removed storage selectors and all production plaintext writes. Wi-Fi/RA now require encrypted/unlocked credentials; forgetting PIN turns both off. PIN creation minimum is six, while unlock still tries legacy four/five prefixes for upgrade without storing a length hint. Legacy PIN authentication gates networking until replacement. Separate parental code stays four.
+- Existing plaintext migration reads only after PIN authentication/creation, writes encrypted data before deletion, and gates services on failures. Added migration/no-PIN/legacy-upgrade regression coverage; historical storage-choice tests superseded. Guide sources and native walkthrough updated. Not yet compiled.
+
+### First CI finding and follow-up ready to publish
+
+- First RA revision compiled and all 134 core library tests passed. UI icon checks found the bundled font has no gamepad glyph. Replaced that glyph with vector artwork in the shared box instead of weakening the visibility tests.
+- Encrypted-only and neutral meter edits are ready for a fresh CI run. Source-level whitespace check passes. Previous confirmation-prompt implementation has been removed under the user's superseding direction.
