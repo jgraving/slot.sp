@@ -42,6 +42,8 @@ pub fn method(root: &Path) -> Option<Method> {
 }
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Secrets {
+    #[serde(default)] pub sharing_password: String,
+    #[serde(default)] pub sharing_network: String,
     pub ssid: String,
     pub wifi_password: String,
     pub username: String,
@@ -55,6 +57,7 @@ impl Drop for Secrets {
         self.username.zeroize();
         self.password.zeroize();
         self.token.zeroize();
+        self.sharing_password.zeroize();self.sharing_network.zeroize();
     }
 }
 struct Key {

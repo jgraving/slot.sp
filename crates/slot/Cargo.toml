@@ -11,6 +11,10 @@ host = ["dep:winit", "dep:cpal", "dep:gilrs", "slot-gfx/host"]
 device = ["slot-gfx/device"]
 
 [dependencies]
+crc32fast = "1"
+mdns-sd = "0.17"
+image-webp = "0.2"
+jpeg-decoder = {version="0.3", default-features=false}
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 ureq = { version = "3", default-features = false, features = ["rustls", "json"] }
 slot-achievements = { path = "../slot-achievements" }

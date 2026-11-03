@@ -346,6 +346,7 @@ pub struct App {
     pub kids: crate::kid_policy::Policy,
     pub kid_menu: Option<crate::kid_menu::Menu>,
     pub network: Option<crate::network::Menu>,
+    pub studio: Option<crate::studio_menu::Menu>,
     net_time: crate::net_time::NetTime,
     pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
@@ -619,6 +620,7 @@ impl App {
             kids: crate::kid_policy::Policy::default(),
             kid_menu: None,
             network: None,
+            studio: None,
             net_time: crate::net_time::NetTime::new(Arc::new(crate::sntp::fetch)),
             display_schedule: None,
             kid_error: false,
@@ -1038,6 +1040,7 @@ impl App {
     }
 
     fn repeats(&self, btn: Btn) -> bool {
+        if self.studio.is_some() {return matches!(btn,Btn::Up|Btn::Down|Btn::Left|Btn::Right);}
         if let Some(menu)=self.network.as_ref().filter(|m|m.visible) { return menu.repeats(btn); }
         if self.display_schedule.is_some() { return true; }
         let vertical = matches!(btn, Btn::Up | Btn::Down);
@@ -1214,7 +1217,7 @@ impl App {
 
     pub fn in_game_hidden(&self) -> Vec<QuickRow> {
         let no_bezel = self.playing_platform() == Platform::Gba && !self.framed_panel();
-        let mut hidden = vec![];
+        let mut hidden = vec![QuickRow::CartStudio];
         if self.hidden_rows().contains(&QuickRow::WallpaperTint){hidden.push(QuickRow::WallpaperTint);}
         if self.link_active() { hidden.push(QuickRow::FrameBlending); }
         if !self.palette_live {
@@ -1430,7 +1433,7 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
-            | QuickRow::Wifi
+            | QuickRow::Wifi | QuickRow::CartStudio
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
@@ -1838,6 +1841,7 @@ impl App {
             WallpaperPick::File(_) | WallpaperPick::Random
         );
         let mut hidden = vec![];
+        if self.kids.active || self.shelf().carts.is_empty() {hidden.push(QuickRow::CartStudio);}
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -2240,6 +2244,7 @@ impl App {
     }
 
     pub fn input_context(&self) -> slot_input::Context {
+        if self.studio.is_some() {return slot_input::Context::Menu;}
         if self.network.as_ref().is_some_and(|m|m.visible) { return slot_input::Context::Menu; }
         let overlaid = self.parent_controls_open()
             || self.game_menu_open()
@@ -2259,7 +2264,7 @@ impl App {
     }
 
     pub fn literal_menu_buttons(&self) -> bool {
-        self.parent_controls_open() || self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard())
+        self.studio.is_some() || self.parent_controls_open() || self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard())
     }
 
     fn binding_of(&self, row: QuickRow) -> Option<Binding> {
@@ -3045,6 +3050,7 @@ impl App {
             Action::PowerOff => return,
             _ => {}
         }
+        if let Some(menu)=self.studio.as_mut().filter(|_|!matches!(self.phase,Phase::Doze{..})) {menu.input(action);return;}
         if self.network.as_ref().is_some_and(|m|m.visible) && !matches!(self.phase, Phase::Doze { .. }) {
             self.network.as_mut().unwrap().input(action);
             return;
@@ -3165,6 +3171,7 @@ impl App {
         let now = self.now();
         match self.phase {
             Phase::Shelf => match action {
+                Action::GbaDown(Btn::Select) if self.core_picker.is_none() => self.open_studio(),
                 Action::GbaDown(Btn::Start) if self.core_picker.is_none() => {
                     self.open_core_picker()
                 }
@@ -3418,6 +3425,7 @@ impl App {
                     if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
+            QuickRow::CartStudio => self.open_studio(),
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
@@ -3703,7 +3711,7 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
-            | QuickRow::Wifi
+            | QuickRow::Wifi | QuickRow::CartStudio
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
@@ -4469,6 +4477,23 @@ impl App {
     }
 
     /// Startup credential prompts wait for the boot intro and other modal pages.
+    pub fn open_studio(&mut self) {
+        if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
+        let Some(root)=self.root.clone() else {return;};
+        let Some(cart)=self.shelf().carts.get(self.shelf().index).cloned() else {return;};
+        let wifi=self.network.as_ref().is_some_and(|m|m.wifi_connected());
+        self.play_held=None;self.shelf_mut().release_hold();
+        self.studio=Some(crate::studio_menu::Menu::new(root,cart,wifi));
+    }
+    fn update_cart_appearance(&mut self,cart:&Cart) {
+        for c in &mut self.catalog {if c.platform==cart.platform && c.stem==cart.stem {*c=cart.clone();}}
+        for (_,shelf) in &mut self.shelves {for i in 0..shelf.carts.len() {
+            if shelf.carts[i].platform==cart.platform && shelf.carts[i].stem==cart.stem {
+                shelf.carts[i]=cart.clone();self.orphaned.extend(shelf.take_face(i));self.orphaned.extend(shelf.take_interior(i));
+            }
+        }}
+    }
+
     pub fn startup_network(&mut self) {
         if (self.kids.active && !self.network.as_ref().is_some_and(|m|m.requires_startup_lock())) || self.link_active() || self.kid_menu.is_some()
             || self.bluetooth.is_some() || self.display_schedule.is_some()
@@ -4495,6 +4520,8 @@ impl App {
     }
 
     fn timers(&mut self) {
+        if let Some(menu)=&mut self.studio {menu.update();}
+        if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);self.studio=None;}
         let linking=self.link_active();
         if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
@@ -5009,7 +5036,7 @@ impl App {
     fn draw_scene(&self, out: &mut Vec<Draw>) {
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) && self.draw_quick_controls(out) {return;}
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
-            if let Some(tex) = self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face)
+            if let Some(tex) = self.studio.as_ref().and_then(|m|m.face).or_else(||self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face))
                 .or_else(||self.display_schedule.as_ref().and_then(|m| m.face))
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
                 if matches!(self.phase,Phase::Playing{..}) && (self.kid_menu.is_some() || self.network.as_ref().is_some_and(|m|m.visible)) {
@@ -5425,7 +5452,7 @@ impl App {
     }
 
     fn custom_menu_key(&self) -> Option<u64> {
-        self.network.as_ref().filter(|m|m.visible).map(|m|m.page_key())
+        self.studio.as_ref().map(|m|m.page_key()).or_else(||self.network.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(|| self.display_schedule.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(||self.kid_menu.as_ref().filter(|m|m.visible).map(|m|m.page_key()))
             .or_else(||self.bluetooth.as_ref().map(|m|m.page_key()))
@@ -5441,7 +5468,7 @@ impl App {
             .or_else(||self.bluetooth.as_ref().map(|m|m.visible_switches())).unwrap_or_default()
     }
     pub fn note_custom_menu_face(&mut self) {
-        let face=self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face)
+        let face=self.studio.as_ref().and_then(|m|m.face).or_else(||self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face))
             .or_else(||self.display_schedule.as_ref().and_then(|m|m.face))
             .or_else(||self.kid_menu.as_ref().and_then(|m|m.face))
             .or_else(||self.bluetooth.as_ref().and_then(|m|m.face));
@@ -7391,6 +7418,7 @@ impl App {
         if let Some(menu)=self.network.as_ref().filter(|m|!m.visible) {
             if let Some(message)=menu.take_toast() {return Some((0xA0000000,message.into()));}
         }
+        if let Some(menu)=&self.studio {return menu.notice_text().map(|s|(menu.page_key(),s.into()));}
         if self.capture.is_some() {return Some((0xB0000000 ^ self.settings_notice_revision,"Press a button or chord".into()));}
         let (page,message)=if let Some(menu)=self.network.as_ref().filter(|m|m.visible) {
             (menu.page_key(),menu.notice_text()?.to_string())

@@ -77,3 +77,7 @@ pub mod wifi;
 pub mod update;
 pub mod net_time;
 pub mod sntp;
+
+pub mod studio;
+pub mod studio_menu;
+pub mod art;

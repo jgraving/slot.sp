@@ -437,7 +437,7 @@ pub fn raster_menu_rows(
     }
 }
 
-pub(crate) fn raster_round(
+pub fn raster_round(
     face: &mut crate::UndoFace,
     left: f32,
     top: f32,
