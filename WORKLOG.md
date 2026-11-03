@@ -2,10 +2,23 @@
 
 Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `feat/fork-ota-time`
-Active PR: https://github.com/jgraving/slot.sp/pull/191
+Active branch: `main`
+Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
 Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
-Status: draft, not merged or released.
+Status: merged into main; not released.
+
+## Merged handoff — 2026-11-03
+
+User authorized merging both follow-ups once tests passed, superseding earlier draft-only instructions. Rechecked all six workflows on both tested runtimes; every workflow succeeded. Later changes were recovery Markdown only.
+
+- PR #190 merged into main as 169ad506577db458f690dd613402feea07430f5a.
+- PR #191 retargeted from fix/ra-background-progress to main and merged as 356c30749a98d103c249af1f95355047b25c5818, preserving ancestry.
+- Verified combined source: 92c2e8a470c30ca3add237780d1b32fc932a8156. CI: 141 core tests, 31 achievement tests, 18 updater/time/SNTP tests, complete launcher/UI regression checks, both bundled cores, production native light/dark walkthroughs, website, scaling, blending and shortcuts all pass.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591.
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404.
+- CURRENT_WORK.md on main is the recovery entry point. Continue new work from main; do not reopen the merged drafts or repeat implementation. Earlier draft/retarget instructions below are historical and superseded.
+- Physical handheld heat/radio/RTC, live RA/deferred-award acceptance and real firmware interruption/recovery remain testing notes. No live secrets were used, no firmware was installed, and no release was published.
+- This post-merge documentation PR records the actual results without changing runtime source.
 
 ## Current verified follow-up
 
