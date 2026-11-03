@@ -11,7 +11,7 @@ use crate::text;
 pub const INK: [u8; 4] = [0xf6, 0xf4, 0xef, 0xff];
 pub const DIM: [u8; 4] = [0x9a, 0x9a, 0xa4, 0xff];
 pub const LIT: [u8; 4] = [0xf6, 0xf4, 0xef, 0xff];
-pub const LIT_INK: [u8; 4] = [0x1a, 0x18, 0x16, 0xff];
+pub const LIT_INK: [u8; 4] = [34, 37, 42, 0xff];
 
 /// A filled rectangle with its corners rounded off, on a picture `face_w` wide.
 pub fn rounded(

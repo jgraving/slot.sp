@@ -388,9 +388,9 @@ const RADIUS: u32 = 8;
 const KEY_PX: f32 = 22.0;
 const HINTS_H: u32 = 40;
 
-const KEY: [u8; 4] = [0x2c, 0x2c, 0x32, 0xf0];
-const ARMED: [u8; 4] = [0x4a, 0x4a, 0x56, 0xf8];
-const FIELD: [u8; 4] = [0x22, 0x22, 0x28, 0xf0];
+const KEY: [u8; 4] = [51, 79, 82, 0xf0];
+const ARMED: [u8; 4] = [61, 107, 110, 0xf8];
+const FIELD: [u8; 4] = [20, 25, 31, 0xf0];
 
 #[cfg(test)]
 mod tests {

@@ -619,9 +619,9 @@ impl Menu {
     pub fn rows(&self) -> Vec<(String, String, bool)> {
         let storage = if self.encrypted {
             if self.locked {
-                "Encrypted · locked"
+                "Locked"
             } else {
-                "Encrypted · unlocked"
+                "Encrypted"
             }
         } else {
             "This session only"
@@ -707,7 +707,7 @@ impl Menu {
                     if self.secrets.username.is_empty() {
                         "Not signed in".into()
                     } else {
-                        self.secrets.username.clone()
+                        self.secrets.username.chars().take(16).collect()
                     },
                 ),
                 (
@@ -727,20 +727,13 @@ impl Menu {
         rows.into_iter()
             .map(|(name, value)| {
                 let toggle = matches!(value.as_str(), "On" | "Off");
-                (name.into(), value, toggle)
+                (name.chars().take(22).collect(), value, toggle)
             })
             .collect()
     }
-    pub fn screen_face_on(&self, canvas: slot_ui::Canvas, light: bool) -> UndoFace {
+    pub fn screen_face_on(&self, canvas: slot_ui::Canvas, _light: bool) -> UndoFace {
         if let Some((_, keyboard)) = &self.keyboard {
-            let mut src = keyboard.face();
-            if light {
-                for pixel in src.rgba.chunks_exact_mut(4) {
-                    for c in &mut pixel[..3] {
-                        *c = 255 - *c;
-                    }
-                }
-            }
+            let src = keyboard.face();
             let mut face = UndoFace {
                 rgba: vec![0; (canvas.w as u32 * 480 * 4) as usize],
                 w: canvas.w as u32,
@@ -792,7 +785,7 @@ impl Menu {
         face
     }
     pub fn flush_ready(&self) -> bool {
-        self.service.as_ref().is_none_or(|s| s.flush_ready())
+        !self.saving && self.service.as_ref().is_none_or(|s| s.flush_ready())
     }
 }
 
