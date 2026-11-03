@@ -4,7 +4,21 @@ on:
   pull_request:
     paths:
       - 'site/**'
-      - '*.md'
+      - 'GUIDE.md'
+      - 'GETTING-STARTED.md'
+      - 'CONTROLS.md'
+      - 'LIBRARY.md'
+      - 'PLAYING.md'
+      - 'SCREENSHOTS.md'
+      - 'DISPLAY.md'
+      - 'NIGHT-DISPLAY.md'
+      - 'BLUETOOTH.md'
+      - 'KID-MODE.md'
+      - 'POWER-OPTIONS.md'
+      - 'LINK-PLAY.md'
+      - 'CART-STUDIO.md'
+      - 'SETTINGS.md'
+      - 'RETROACHIEVEMENTS.md'
       - 'previews/**'
       - 'licenses/GoogleSansFlex-OFL.txt'
       - 'crates/slot-ui/assets/fonts/profiles.json'
@@ -14,11 +28,27 @@ on:
       - 'tools/check-site-navigation.cjs'
       - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
+      - 'tools/site-ci-scope.py'
+      - 'tools/test-site-ci-scope.py'
   push:
     branches: [main]
     paths:
       - 'site/**'
-      - '*.md'
+      - 'GUIDE.md'
+      - 'GETTING-STARTED.md'
+      - 'CONTROLS.md'
+      - 'LIBRARY.md'
+      - 'PLAYING.md'
+      - 'SCREENSHOTS.md'
+      - 'DISPLAY.md'
+      - 'NIGHT-DISPLAY.md'
+      - 'BLUETOOTH.md'
+      - 'KID-MODE.md'
+      - 'POWER-OPTIONS.md'
+      - 'LINK-PLAY.md'
+      - 'CART-STUDIO.md'
+      - 'SETTINGS.md'
+      - 'RETROACHIEVEMENTS.md'
       - 'previews/**'
       - 'licenses/GoogleSansFlex-OFL.txt'
       - 'crates/slot-ui/assets/fonts/profiles.json'
@@ -28,6 +58,8 @@ on:
       - 'tools/check-site-navigation.cjs'
       - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
+      - 'tools/site-ci-scope.py'
+      - 'tools/test-site-ci-scope.py'
   workflow_dispatch:
 
 permissions:
@@ -38,7 +70,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Select website checks
+    runs-on: ubuntu-latest
+    outputs:
+      website: ${{ steps.scope.outputs.website }}
+      model: ${{ steps.scope.outputs.model }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test website CI routing
+        run: python3 tools/test-site-ci-scope.py
+      - id: scope
+        name: Detect website and model dependencies
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          FORCE_WEBSITE_CHECKS: ${{ github.event_name == 'workflow_dispatch' }}
+        run: python3 tools/site-ci-scope.py
+
   model:
+    needs: changes
+    if: needs.changes.outputs.model == 'true'
     name: Check 3D handheld preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -69,6 +124,8 @@ jobs:
           if-no-files-found: ignore
 
   build:
+    needs: changes
+    if: needs.changes.outputs.website == 'true'
     name: Build and check website
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -155,8 +212,12 @@ jobs:
 
   deploy:
     name: Publish website
-    needs: [build, model]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.repository == 'jgraving/slot.sp' || vars.ENABLE_PAGES == 'true')
+    needs: [changes, build, model]
+    if: >-
+      always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      && (github.repository == 'jgraving/slot.sp' || vars.ENABLE_PAGES == 'true')
+      && needs.build.result == 'success'
+      && (needs.model.result == 'success' || (needs.changes.outputs.model == 'false' && needs.model.result == 'skipped'))
     runs-on: ubuntu-latest
     permissions:
       pages: write
