@@ -61,12 +61,17 @@ Previous chat reported 128/129 library tests initially; the single parent-PIN fa
   Name: slot.sp-network-System; implementation 3f8c0d7; created 2026-11-03 12:34 UTC.
   API expiry is 2026-11-10 12:34 UTC, but separate cleanup may remove it sooner. Recheck availability before sharing later.
 - No existing AGENTS.md or recovery log found in the feature branch tree.
-- Next: inspect source/tests against the requirements and native-render job evidence; record any unresolved findings here.
+- Created WORKLOG.md in commit bcb7173205679294044bc56a823f946fc29f1281 and AGENTS.md in commit 6705fde707382d98e14238e5ce38a040ab0f0f59 on the feature branch.
+- Inspected network.rs, network_vault.rs, and the production network_review walkthrough source at 3f8c0d7.
+- Confirmed source paths for default encryption, variable-length PINs, short-PIN warnings, explicit plaintext confirmation, encrypt-before-delete migration, failure reporting, direct PIN settings navigation, skipped startup warning, mandatory startup lock, connected Wi-Fi indication, and fresh parent-PIN verification.
+- Read the actual regression job log (job 125917901394): 131 slot library tests passed with zero failures; the named network and vault regressions all passed.
+- Verified both native network walkthrough invocations completed: light GLES at 640x480 and dark desktop GL at 720x480; rendering and artifact upload steps succeeded.
+- Next: independently inspect native PNG captures; downloaded artifact is being retrieved. Then finalize this checkpoint.
 - Current environment has no checked-out repo. Recovery documents are written directly to the existing GitHub branch through the connector, so they survive a chat crash.
 
 ## Remaining work and release gates
 
-- Verify native-render workflow job details and review source/test coverage against the request.
+- Native-render job details and targeted source/test coverage review completed. Independent PNG inspection is in progress.
 - Physical handheld tests remain: Wi-Fi association/DHCP, reconnect after reboot, required/optional PIN startup, both parent-code methods, warning pills, credential migration, frame pacing/battery cost, link-radio handoff.
 - Live-account tests remain: login and acceptance of deferred/offline awards. Do not claim offline award acceptance is guaranteed.
 - Prior PR description says native GLES and desktop GL light/dark captures were reviewed; this takeover has not yet independently opened those images.
