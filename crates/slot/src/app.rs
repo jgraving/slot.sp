@@ -4943,7 +4943,9 @@ impl App {
                 }else{i+=1;}
             }
             let page=custom.unwrap_or_else(||row.or_else(||self.menu_motion.closing_row()).map_or(0,|r|r.page()[0].index() as u64));
-            let kind=self.network.as_ref().filter(|m|m.visible).map_or_else(||row.map_or_else(||self.network.as_ref().filter(|m|m.visible).map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|m|m.pin_hint_key()),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())}),|m|m.pin_hint_key());
+            let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
+                row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens())})
+            };
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();

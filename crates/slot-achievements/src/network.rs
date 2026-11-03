@@ -92,6 +92,8 @@ impl Transport for Http {
 fn success(value: Value) -> Result<Value, Failure> {
     if value.get("Success") == Some(&Value::Bool(true)) {
         Ok(value)
+    } else if matches!(value.get("Code").and_then(Value::as_str),Some("expired_token"|"invalid_credentials"|"access_denied")) {
+        Err(Failure::Authentication)
     } else {
         Err(Failure::Rejected)
     }
@@ -126,7 +128,7 @@ fn login(
         fields.push(("p", config.password.clone()));
     }
     let response = match http.call(&fields).and_then(success) {
-        Err(Failure::Rejected) if config.token.is_empty() && !config.password.is_empty() => {
+        Err(Failure::Rejected|Failure::Authentication) if config.token.is_empty() && !config.password.is_empty() => {
             // A remembered token can expire. An explicitly supplied password can renew it.
             success(http.call(&[
                 ("r", "login2".into()),
@@ -194,9 +196,7 @@ pub(crate) fn award(
             .is_some_and(|s| s.starts_with("User already has"))
     {
         Ok(())
-    } else {
-        Err(Failure::Rejected)
-    }
+    } else {success(response).map(|_|())}
 }
 
 fn unlocked(response: &Value) -> Result<BTreeSet<u32>, Failure> {
@@ -338,7 +338,7 @@ pub(crate) fn run(
         badges.maintain();
         // Publish independent game and artwork phases before attempting HTTP.
         status.pending.store(
-            !library.is_empty()
+            !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
@@ -505,7 +505,7 @@ pub(crate) fn run(
             deferred_error.map_or(Ok(()), Err)
         })();
         status.pending.store(
-            !library.is_empty()
+            !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
                 || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
@@ -543,7 +543,7 @@ pub(crate) fn run(
                     SyncStatus::Attention
                 });
                 // Reauthenticate after errors. No rejected or malformed response consumes an award.
-                if error==Failure::Authentication {verified=false;}
+                if error==Failure::Authentication {verified=false;status.pending.store(true,std::sync::atomic::Ordering::Release);}
                 let quiet_offline = error == Failure::Network
                     && (active.as_ref().is_some_and(|g| g.ready)
                         || (active.is_none() && auth.is_some()));
@@ -575,6 +575,11 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    #[test]
+    fn authentication_expiry_is_distinct_from_retryable_request_failure() {
+        for code in ["expired_token","invalid_credentials","access_denied"] {assert_eq!(success(serde_json::json!({"Success":false,"Code":code})),Err(Failure::Authentication));}
+        assert_eq!(success(serde_json::json!({"Success":false,"Code":"not_found"})),Err(Failure::Rejected));
+    }
     #[test]
     #[ignore = "manual trusted-branch live-account smoke test"]
     fn live_ra_read_only_smoke() {

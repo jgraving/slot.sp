@@ -22,4 +22,4 @@ jobs:
         env:
           RA_TEST_USERNAME: ${{ secrets.RA_TEST_USERNAME }}
           RA_TEST_PASSWORD: ${{ secrets.RA_TEST_PASSWORD }}
-        run: cargo test --locked -p slot-achievements --lib live_ra_read_only_smoke -- --ignored --exact network::tests::live_ra_read_only_smoke --nocapture
+        run: cargo test --locked -p slot-achievements --lib network::tests::live_ra_read_only_smoke -- --ignored --exact --nocapture

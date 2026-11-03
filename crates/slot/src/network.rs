@@ -305,7 +305,7 @@ impl Menu {
             self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_pending.clear();self.pin_rejected=None;self.notice.clear(); self.changed();
         } else {
             self.edit(field, match field {
-                Field::CreateVault => "Create unlock passphrase", Field::ConfirmVault => "Repeat unlock passphrase", _ => "Unlock credentials",
+                Field::CreateVault => "Choose device code", Field::ConfirmVault => "Repeat device code", _ => "Enter device code",
             }, "", true, 12, 128);
         }
     }
