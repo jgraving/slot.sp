@@ -300,3 +300,16 @@ Branch feat/fork-ota-time depends on fix/ra-background-progress / PR #190. Sourc
 - Automatic time defaults off, matching upstream's opt-in behavior and preserving existing manual clock setups. Its switch can enable background correction after Wi-Fi connects. Local checks passed before this default adjustment; the readiness test now covers the off→on→off sequence.
 
 Local OTA source/default checks pass; full CI is running. This branch includes PR #190 and remains a separate draft for OTA/BaseOS device testing.
+
+### Native walkthrough timing follow-up
+
+- PR #190: all six workflows pass on 16ac082; ARM64 System artifact 13257020164 and native-review artifact 13255334115 are present. Light GLES/dark GL Network and PIN captures reviewed locally; neutral volume/kid-time examples reviewed.
+- Local OTA native walkthrough completed the correct separate-parent-code UI but its immediate on-disk assertion raced the existing asynchronous settings writer. Added a bounded wait for that write, preserving the assertion instead of removing it. Runtime behavior is unchanged by this fixture correction.
+- Expanded the OTA native walkthrough to capture Updates, the disconnected-check pill and Automatic time off/on states. No actual update request is sent by the disconnected fixture. Fresh CI will include these additional pages.
+
+### Native UI review corrections
+
+- Updates' initial helper/status value overlapped its action label. Removed the helper and limited inline state to short Checking/Downloading/Available/Retry labels; detailed failures remain pills. A staged update now offers an actual Restart to install action through the existing safe restart flow.
+- Correction to earlier native diagnosis: parent-method marker changes are synchronous, not handled by the asynchronous settings writer. A traced clean walkthrough confirmed correct removal. The generated mock card is now reset before each example run so rerunning into an old output folder cannot inherit old PIN/parent settings. Keep the final marker assertion (bounded wait) and verify the clean walkthrough again. No production kid-menu change was made.
+
+- Clean native OTA light/GLES walkthrough now passes end to end, including the parent-method marker assertion. Updated restart-action regression passes locally. Final change is UI/status and test-fixture cleanup; rerun required CI on this revision.

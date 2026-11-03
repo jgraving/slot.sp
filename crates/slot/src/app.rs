@@ -4479,6 +4479,7 @@ impl App {
         let linking=self.link_active();
         if let Some(network) = &mut self.network {if linking{network.suspend_for_link();}network.set_battery(self.battery);network.update();
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}}
+        if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
         self.step_net_time();
         self.tick_quick_controls();
         self.sync_display_schedule();

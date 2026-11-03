@@ -23,7 +23,7 @@ fn main(){
     }
     let dir=std::path::PathBuf::from(std::env::args().nth(1).unwrap());std::fs::create_dir_all(&dir).unwrap();
     let width=std::env::args().nth(3).and_then(|s|s.parse().ok()).unwrap_or(640);
-    let root=dir.join("card");slot::root::ensure(&root);
+    let root=dir.join("card");if root.exists(){std::fs::remove_dir_all(&root).unwrap();}slot::root::ensure(&root);
     let mut state=slot_store::SlotState::default();state.clock_set=true;state.clock_12h=true;state.appearance=if std::env::args().nth(4).as_deref()==Some("light"){slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(&root,&state).unwrap();
     for (i,name) in ["Aurora","Borealis","Celeste"].into_iter().enumerate(){let mut rom=vec![0;256];rom[0xa0..0xa6].copy_from_slice(b"REVIEW");rom[0]=i as u8;std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")),rom).unwrap();}
     let surface=support::Egl::new(std::env::args().nth(2).as_deref()!=Some("gl"));let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
@@ -35,6 +35,9 @@ fn main(){
     for b in [Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}a.save("pin-ready");a.tap(Btn::Start);a.save("pin-confirm");a.code();a.wait_io();a.save("pin-set");
     a.home();a.nav(QuickRow::Wifi);a.save("wifi-tile");a.tap(Btn::A);a.save("wifi-off");
     a.tap(Btn::A);a.settle();a.save("wifi-on");
+    for _ in 0..4{a.tap(Btn::Down);}a.save("network-updates-row");a.tap(Btn::A);a.save("updates-settings");
+    a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.tap(Btn::Down);a.save("automatic-time-off");
+    a.tap(Btn::Right);a.save("automatic-time-on");a.tap(Btn::Left);for _ in 0..5{a.tap(Btn::Up);}
     for _ in 0..6{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
@@ -54,7 +57,12 @@ fn main(){
     assert!(root.join("Config/kids/use-device-pin").exists());a.tap(Btn::B);a.tap(Btn::A);a.save("parent-device-pin-prompt");
     for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("parent-device-pin-verified");
     assert!(a.f.app().kid_menu.as_ref().unwrap().focus_info().is_some());a.tap(Btn::Down);a.tap(Btn::Left);a.save("parent-separate-code-setup");
-    for _ in 0..2 {for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2]{a.tap(b);}}a.save("parent-separate-code-set");assert!(!root.join("Config/kids/use-device-pin").exists());
+    for _ in 0..2 {for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2]{a.tap(b);}}a.save("parent-separate-code-set");
+    let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
+    while root.join("Config/kids/use-device-pin").exists() {
+        assert!(std::time::Instant::now()<deadline,"parent-method write did not finish");
+        std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);
+    }
 
 }
 #[cfg(not(target_os="linux"))] fn main(){}

@@ -34,6 +34,7 @@ pub struct Menu {
     update_bytes: u64,
     update_message: String,
     update_staged: bool,
+    restart_requested: bool,
     battery: Option<slot_power::Battery>,
     pub visible: bool,
     pub face: Option<TexId>,
@@ -87,7 +88,7 @@ impl Menu {
         let secrets = Secrets::default();
         Self {
             updates:update::update_jobs(root.clone()),releases:Vec::new(),update_busy:false,update_installing:None,
-            update_bytes:0,update_message:"Choose Check for updates".into(),update_staged:false,battery:None,
+            update_bytes:0,update_message:String::new(),update_staged:false,restart_requested:false,battery:None,
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
             visible: false, face: None, progress_face: None, page: Page::Wifi,
             selected: 0, revision: 0, keyboard: None, code: None,
@@ -146,6 +147,7 @@ impl Menu {
     }
     pub fn automatic_time_ready(&self)->bool {self.prefs.automatic_time && self.wifi_connected()}
     pub fn set_battery(&mut self,battery:Option<slot_power::Battery>) {self.battery=battery;}
+    pub fn take_update_restart(&mut self)->bool {std::mem::take(&mut self.restart_requested)}
     fn open_updates(&mut self) {self.page=Page::Updates;self.selected=0;self.notice.clear();self.changed();}
     fn check_updates(&mut self) {
         if !self.wifi_connected() {self.say("Connect to Wi-Fi first");return;}
@@ -166,7 +168,7 @@ impl Menu {
         while let Some(event)=self.updates.take() {
             match event {
                 UpdateEvent::Progress(bytes)=> {self.update_bytes=bytes;self.face=None;continue;}
-                UpdateEvent::Available(releases)=> {self.releases=releases;self.update_message="Choose an update".into();}
+                UpdateEvent::Available(releases)=> {self.releases=releases;self.update_message="Available".into();}
                 UpdateEvent::UpToDate=> {self.releases.clear();self.update_message="Up to date".into();}
                 UpdateEvent::Staged=> {self.update_staged=true;self.update_message="Restart to install".into();self.say("Update ready · restart to install");}
                 UpdateEvent::Cancelled=> {self.update_message="Cancelled".into();}
@@ -428,7 +430,7 @@ impl Menu {
                 Action::GbaDown(Btn::Up|Btn::Down) if !self.update_busy=> {
                     let count=self.rows().len();self.selected=(self.selected+if action==Action::GbaDown(Btn::Down){1}else{count-1})%count;self.changed();
                 }
-                Action::GbaDown(Btn::A) if !self.update_busy=> {if self.selected==0 {self.check_updates();}else {self.install_update(self.selected-1);}}
+                Action::GbaDown(Btn::A) if !self.update_busy=> {if self.update_staged {self.restart_requested=true;}else if self.selected==0 {self.check_updates();}else {self.install_update(self.selected-1);}}
                 _=>{},
             }
             return;
@@ -607,7 +609,10 @@ impl Menu {
                 ("Automatic time".into(),if self.prefs.automatic_time {"On"}else{"Off"}.into(),true),
             ],
             Page::Updates => {
-                let mut rows=vec![("Check for updates".into(),self.update_message.clone(),false)];
+                if self.update_staged {return vec![("Restart to install".into(),String::new(),false)];}
+                let status=if self.update_busy {if self.update_installing.is_some() {"Downloading…"}else{"Checking…"}}
+                    else {match self.update_message.as_str() {""=>"","Up to date"=>"Up to date","Available"=>"Available","Cancelled"=>"Cancelled",_=>"Retry"}};
+                let mut rows=vec![("Check for updates".into(),status.into(),false)];
                 for release in &self.releases {
                     rows.push((if release.kind==Kind::Slot {"slot.sp"}else{"BaseOS"}.into(),release.version.clone(),false));
                 }
@@ -1079,6 +1084,7 @@ mod tests {
         m.face=Some(TexId::from_raw(1));m.take_update_events();
         assert!(m.face.is_none());assert_eq!(m.update_bytes,50);assert!(m.update_staged&&!m.update_busy);
         assert_eq!(m.update_message,"Restart to install");
+        assert_eq!(m.rows()[0].0,"Restart to install");m.input(Action::GbaDown(Btn::A));assert!(m.take_update_restart());assert!(!m.take_update_restart());
     }
 
 }
