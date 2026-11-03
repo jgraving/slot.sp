@@ -12,7 +12,7 @@ pub fn credential_code_face_on(canvas: crate::Canvas, instruction: &str, count: 
     for i in 0..16 {
         let x=left+(i%8)*40+12; let y=208+(i/8)*44;
         let colour=if (i as usize)<count {[164,220,211,255]}else{[120,120,130,160]};
-        crate::page::rounded(&mut face.rgba,face.w,(x,y,16,16),8,colour);
+        crate::page::rounded(&mut face.rgba,face.w,(x,y,16,16),7,colour);
     }
     let detail=crate::quick_description_face(&["A/B/X/Y, D-pad and shoulder buttons", &format!("{} of 16 · checks after the last button",count.min(16))]);
     let x=face.w.saturating_sub(detail.w)/2; crate::plate::blit(&mut face.rgba,face.w,&detail.rgba,detail.w,detail.h,x,302);
@@ -42,4 +42,18 @@ pub fn button_code_face(code: &[u8]) -> UndoFace {
         }
     }
     UndoFace { rgba, w, h }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn credential_dots_render_at_every_entry_length_on_both_panels() {
+        for w in [640.0,720.0] {for count in 0..=16 {
+            let face=credential_code_face_on(crate::Canvas{w,h:480.0},"Enter your 16-button unlock code",count);
+            assert_eq!(face.rgba.len(),(face.w*face.h*4)as usize);
+            let left=face.w.saturating_sub(320)/2+12;
+            assert!(face.rgba[((208*face.w+left+8)*4+3)as usize]>0);
+        }}
+    }
 }
