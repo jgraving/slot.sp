@@ -2214,6 +2214,7 @@ impl App {
     }
 
     pub fn input_context(&self) -> slot_input::Context {
+        if self.network.as_ref().is_some_and(|m|m.visible) { return slot_input::Context::Menu; }
         let overlaid = self.parent_controls_open()
             || self.game_menu_open()
             || self.in_game_menu().is_some()
@@ -2229,6 +2230,10 @@ impl App {
             _ if shelf => slot_input::Context::Shelf,
             _ => slot_input::Context::Menu,
         }
+    }
+
+    pub fn literal_menu_buttons(&self) -> bool {
+        self.parent_controls_open() || self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard())
     }
 
     fn binding_of(&self, row: QuickRow) -> Option<Binding> {

@@ -701,4 +701,25 @@ mod tests {
         menu.last_wifi.busy=wifi::Busy::Idle;assert!(!menu.show_progress());
     }
 
+    #[test]
+    fn a_startup_pin_captures_all_raw_buttons_including_shelf_shortcuts() {
+        use crate::audio::AudioSink;
+        use slot_input::{Context,RawEvent};
+        let root=tempfile::tempdir().unwrap();saved_wifi(root.path());
+        let mut sink=crate::audio::StubSink::new();sink.open(48000).unwrap();
+        let mut state=slot_store::SlotState::default();state.clock_set=true;
+        slot_store::write_slot_state(root.path(),&state).unwrap();
+        let mut session=crate::session::Session::boot_with(root.path().into(),Box::new(sink));
+        assert!(matches!(session.app().phase(),crate::app::Phase::Shelf));
+        session.app_mut().network.as_mut().unwrap().startup();
+        assert_eq!(session.app().input_context(),Context::Menu);
+        assert!(session.app().literal_menu_buttons());
+        for (i,b) in CODE.into_iter().enumerate() {
+            session.feed([RawEvent::Down(b),RawEvent::Up(b)],i as u64*40);
+        }
+        let menu=session.app_mut().network.as_mut().unwrap();
+        assert!(menu.code.is_none(),"all sixteen physical presses must submit the code");
+        wait(menu);assert!(!menu.locked&&menu.wifi_on);
+    }
+
 }

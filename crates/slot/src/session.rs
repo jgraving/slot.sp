@@ -231,10 +231,10 @@ impl Session {
             self.entries = entries;
         }
         for ev in events {
-            // Parent controls are literal button entry, never game shortcuts or
+            // Code and keyboard editors use literal buttons, never game shortcuts or
             // delayed modifier gestures. Apply each edge before the next event.
             let button = match ev { RawEvent::Down(b) | RawEvent::Up(b) => b };
-            if self.app.parent_controls_open()
+            if self.app.literal_menu_buttons()
                 && !self.dozing()
                 && !matches!(button, Btn::Power | Btn::Lid | Btn::VolUp | Btn::VolDown)
             {
@@ -274,7 +274,7 @@ impl Session {
                 self.act(action);
             }
         }
-        if self.app.capturing() || self.app.parent_controls_open() || self.dozing() {
+        if self.app.capturing() || self.app.literal_menu_buttons() || self.dozing() {
             self.gestures.cancel_display_ramps();
         }
         actions.extend(self.gestures.tick(now));
