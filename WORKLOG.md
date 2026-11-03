@@ -279,3 +279,7 @@ PR #190 runtime is 16ac082; full CI/render/package validation still running. PR 
 - Locally ran production Network/PIN walkthroughs in light GLES/640 and dark desktop GL/720 and reviewed connected Wi-Fi and six-button hint captures. Reviewed neutral volume/kid-time captures; all adaptive neutral-colour and unchanged green-charging tests passed.
 - Runtime code is unchanged after this validation. Later commits are recovery documentation only. No PR #190 merge requested; draft remains for handheld testing.
 - A single recovery entry point now exists at CURRENT_WORK.md on this branch; AGENTS.md routes future agents to it. Main requires changes through a PR, so the entry point will reach main when this PR merges.
+
+### Combined handoff complete
+
+Dependent PR #191 also passes all six workflows on runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd. Combined System artifact 13257574576 includes both PRs. CURRENT_WORK.md is the entry point for the next chat and links both detailed branch logs. No further runtime changes followed final verification; both PRs remain draft for handheld review.
