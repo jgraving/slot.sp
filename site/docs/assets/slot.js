@@ -243,13 +243,15 @@
         player?.takeControl();
         if(button.dataset.hardware==='menu'&&event.button===0){holdMenu();button.setPointerCapture(event.pointerId);}
       });
-      for(const name of ['pointerup','pointercancel','lostpointercapture','blur'])button.addEventListener(name,releaseMenu);
       button.addEventListener('click', () => {
         const hardware=button.dataset.hardware;
         // Menu-only features deliberately do not masquerade as other actions.
         send(({a:'insert',left:'left',right:'right',up:'up',down:'down'})[hardware]||'noop');
       });
       if(button.dataset.hardware==='menu') {
+        // Pointerdown precedes focus transfer. A different button losing focus
+        // must not cancel a MENU hold that has just begun.
+        for(const name of ['pointerup','pointercancel','lostpointercapture','blur'])button.addEventListener(name,releaseMenu);
         button.addEventListener('keydown',event=>{if([' ','Enter'].includes(event.key)){event.preventDefault();holdMenu();}});
         button.addEventListener('keyup',event=>{if([' ','Enter'].includes(event.key)){event.preventDefault();releaseMenu();}});
       }
