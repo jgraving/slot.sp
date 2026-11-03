@@ -248,3 +248,7 @@ User requests removal of unencrypted storage/selectors and a six-button minimum 
 
 - First RA revision compiled and all 134 core library tests passed. UI icon checks found the bundled font has no gamepad glyph. Replaced that glyph with vector artwork in the shared box instead of weakening the visibility tests.
 - Encrypted-only and neutral meter edits are ready for a fresh CI run. Source-level whitespace check passes. Previous confirmation-prompt implementation has been removed under the user's superseding direction.
+
+### Separate OTA/time integration starting
+
+Branch feat/fork-ota-time depends on fix/ra-background-progress / PR #190. Source references: upstream slot commit 87788eafba77bc93ba11048d22f1c2f08f792a91 (OTA) and 4f402cb8bc20431facb03c3277640a9ed8e9bdfb (network time). Adaptation plan before edits: use jgraving/slot.sp GitHub stable releases and slot.sp-System.zip asset with digest/source verification; stage a new System tree and swap at next launch with recovery, leaving Config/Games/Saves untouched. BaseOS only for detected BASEOS_TARGET/BASEOS_VERSION with baseos-update compatibility verdict, verified digest/size, explicit install action and low-battery gate. Preserve encrypted supplicant networking; never import upstream wifi.conf. Integrate nonblocking network time using actual connected network and a user toggle, preserving UTC offset and display schedules. No hardware OS update will be run in this session. Runtime toolchain installation is being attempted to validate locally. Not implemented yet.
