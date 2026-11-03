@@ -16,7 +16,13 @@ pub struct Config {
     pub password: String,
 }
 
-impl Drop for Config { fn drop(&mut self) { use zeroize::Zeroize; self.password.zeroize(); self.token.zeroize(); } }
+impl Drop for Config {
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.password.zeroize();
+        self.token.zeroize();
+    }
+}
 
 impl Config {
     pub fn read(path: &Path) -> Result<Self, &'static str> {

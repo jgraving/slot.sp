@@ -34,6 +34,8 @@ jobs:
           python3 card/test-wifi-security.py
       - name: Build test System folder
         run: task dist:device OUT=dist-network
+      - name: Validate both bundled cores
+        run: SLOT_REQUIRE_CORES=1 cargo test --locked -p slot-retro --test gba_achievements
       - name: Package test build
         run: |
           cd dist-network

@@ -80,7 +80,9 @@ impl Tracked {
 
 impl RetroCore for Tracked {
     fn achievement_tracking(&mut self, on: bool) {
-        if self.tracking != on { self.timeline += 1; }
+        if self.tracking != on {
+            self.timeline += 1;
+        }
         self.tracking = on;
     }
 
@@ -96,7 +98,9 @@ impl RetroCore for Tracked {
     }
     fn run_frame(&mut self, input: ButtonMask) {
         self.core.run_frame(input);
-        if self.tracking { self.snapshot(); }
+        if self.tracking {
+            self.snapshot();
+        }
     }
     fn run_frame_linked(&mut self, p1: ButtonMask, p2: ButtonMask) {
         self.core.run_frame_linked(p1, p2);

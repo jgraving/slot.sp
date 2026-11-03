@@ -292,7 +292,9 @@ pub(crate) fn run(
     let mut rescanned = Instant::now();
     let mut badges = crate::badges::Queue::new(&dir);
     loop {
-        if status.stopped.load(std::sync::atomic::Ordering::Acquire) { return; }
+        if status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+            return;
+        }
         match loads.recv_timeout(Duration::from_millis(200)) {
             Ok(mut load) => {
                 while let Ok(newer) = loads.try_recv() {
@@ -387,8 +389,12 @@ pub(crate) fn run(
                         e
                     }
                 })?;
-                *status.auth.lock().unwrap() = Some((logged_in.username.clone(), logged_in.token.clone()));
-                {use zeroize::Zeroize;config.password.zeroize();}
+                *status.auth.lock().unwrap() =
+                    Some((logged_in.username.clone(), logged_in.token.clone()));
+                {
+                    use zeroize::Zeroize;
+                    config.password.zeroize();
+                }
                 auth = Some(logged_in);
                 verified = true;
             }

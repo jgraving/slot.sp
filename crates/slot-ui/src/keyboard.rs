@@ -89,7 +89,10 @@ pub struct Keyboard {
 }
 
 impl Drop for Keyboard {
-    fn drop(&mut self) { use zeroize::Zeroize; self.text.zeroize(); }
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.text.zeroize();
+    }
 }
 
 impl Keyboard {
@@ -110,7 +113,9 @@ impl Keyboard {
         }
     }
 
-    pub fn title(&self)->&str {&self.title}
+    pub fn title(&self) -> &str {
+        &self.title
+    }
 
     pub fn text(&self) -> &str {
         &self.text

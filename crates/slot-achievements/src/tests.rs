@@ -696,3 +696,65 @@ fn artwork_identity_follows_rom_bytes_instead_of_its_filename() {
     std::fs::write(&moved, b"different rom bytes").unwrap();
     assert!(artwork_title(root.path(), &moved).is_none());
 }
+
+#[test]
+fn ram_credentials_prepare_games_without_creating_plaintext_account_files() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("Games/GBA")).unwrap();
+    std::fs::write(root.path().join("Games/GBA/Test.gba"), b"fixture").unwrap();
+    let (calls, _) = mpsc::channel();
+    let service = Service::spawn(
+        root.path().into(),
+        Server { calls },
+        Some(Config {
+            enabled: true,
+            username: "Player".into(),
+            password: "fixture-password".into(),
+            token: String::new(),
+        }),
+    );
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
+    let token = service
+        .take_token()
+        .expect("login token is delivered in memory");
+    assert_eq!(token.0, "Player");
+    assert!(!root.path().join("Config/retroachievements.toml").exists());
+    let store = Store::open(root.path(), "Player").unwrap();
+    assert!(!store.dir.join("auth.json").exists());
+    for entry in std::fs::read_dir(&store.dir).unwrap().flatten() {
+        if entry.path().is_file() {
+            let bytes = std::fs::read(entry.path()).unwrap();
+            assert!(!bytes.windows(16).any(|b| b == b"fixture-password"));
+        }
+    }
+}
+
+#[test]
+fn rewind_display_frames_do_not_unlock_an_achievement() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Test.gba");
+    std::fs::write(&rom, b"fixture ROM").unwrap();
+    let store = Store::open(root.path(), "Player").unwrap();
+    let hash = library::hash(&store.dir, &rom).unwrap();
+    storage::write(
+        &store.dir.join(format!("{hash}.json")),
+        &(game(), std::collections::BTreeSet::<u32>::new()),
+    )
+    .unwrap();
+    let service = Service::start_with(root.path().into(), Offline);
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| {
+        service
+            .take_notice()
+            .is_some_and(|n| n.title.starts_with("Achievements ready"))
+    });
+    core.achievement_tracking(false);
+    core.run_frame(ButtonMask(0));
+    core.run_frame(ButtonMask(1));
+    wait_for(|| service.flush_ready());
+    assert!(Store::open(root.path(), "Player")
+        .unwrap()
+        .unlocks
+        .is_empty());
+}

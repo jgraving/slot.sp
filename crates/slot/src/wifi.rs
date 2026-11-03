@@ -223,7 +223,10 @@ fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<Wi
             Job::Join(ssid, mut psk) if on => {
                 set(&|v| v.busy = Busy::Joining(ssid.clone()));
                 let joined = radio.join(&ssid, psk.as_deref());
-                if let Some(secret) = &mut psk {use zeroize::Zeroize;secret.zeroize();}
+                if let Some(secret) = &mut psk {
+                    use zeroize::Zeroize;
+                    secret.zeroize();
+                }
                 if let Err(e) = &joined {
                     eprintln!("slot: wifi: join {ssid:?}: {e}");
                 }
@@ -404,7 +407,8 @@ fn backend(root: &Path) -> Box<dyn WifiBackend> {
 }
 
 pub fn conf_path(root: &Path) -> PathBuf {
-    let _ = root; PathBuf::from("/run/slotwifi.conf")
+    let _ = root;
+    PathBuf::from("/run/slotwifi.conf")
 }
 
 /// A pretend radio with a handful of networks in range, for the desktop and the tests. An open
@@ -590,13 +594,18 @@ mod device {
         }
 
         fn ctrl(&self) -> Result<Ctrl, String> {
-            if Path::new("/run/slotlink.session").exists() || !Path::new("/run/slotwifi.owner").exists() { return Err("Wi-Fi is unavailable during link play".into()); }
+            if Path::new("/run/slotlink.session").exists()
+                || !Path::new("/run/slotwifi.owner").exists()
+            {
+                return Err("Wi-Fi is unavailable during link play".into());
+            }
             Ctrl::open(&Path::new(CTRL_DIR).join("wlan0"))
                 .map_err(|e| format!("The Wi-Fi did not answer: {e}"))
         }
 
         fn ask(ctrl: &Ctrl, cmd: &str) -> Result<String, String> {
-            ctrl.request(cmd).map_err(|e| format!("Wi-Fi control request failed: {e}"))
+            ctrl.request(cmd)
+                .map_err(|e| format!("Wi-Fi control request failed: {e}"))
         }
 
         fn ok(ctrl: &Ctrl, cmd: &str) -> Result<(), String> {

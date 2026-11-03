@@ -2,7 +2,10 @@
 //! networks and devices.
 
 use crate::bitmaps::ButtonLegend;
-fn button_legend(button: ButtonLegend)->(Vec<u8>,u32,u32){let f=crate::quick_menu::button_face(button);(f.rgba,f.w,f.h)}
+fn button_legend(button: ButtonLegend) -> (Vec<u8>, u32, u32) {
+    let f = crate::quick_menu::button_face(button);
+    (f.rgba, f.w, f.h)
+}
 use crate::text;
 
 pub const INK: [u8; 4] = [0xf6, 0xf4, 0xef, 0xff];
@@ -89,13 +92,6 @@ impl Legend {
     pub fn new(button: ButtonLegend, label: &str) -> Legend {
         Legend {
             buttons: vec![button],
-            label: label.into(),
-        }
-    }
-
-    pub fn pair(first: ButtonLegend, second: ButtonLegend, label: &str) -> Legend {
-        Legend {
-            buttons: vec![first, second],
             label: label.into(),
         }
     }

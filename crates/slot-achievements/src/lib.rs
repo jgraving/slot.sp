@@ -132,7 +132,10 @@ pub struct Service {
 }
 
 impl Drop for Service {
-    fn drop(&mut self) { self.enabled.store(false, Ordering::Release); self.status.stopped.store(true, Ordering::Release); }
+    fn drop(&mut self) {
+        self.enabled.store(false, Ordering::Release);
+        self.status.stopped.store(true, Ordering::Release);
+    }
 }
 
 impl Service {
@@ -140,7 +143,9 @@ impl Service {
     pub fn configured(root: PathBuf, config: Config) -> Self {
         Self::spawn(root, network::Http::new(), Some(config))
     }
-    pub fn take_token(&self) -> Option<(String, String)> { self.status.auth.lock().unwrap().take() }
+    pub fn take_token(&self) -> Option<(String, String)> {
+        self.status.auth.lock().unwrap().take()
+    }
 
     pub fn start(root: PathBuf) -> Self {
         Self::configured(root, Config::default())
@@ -150,7 +155,11 @@ impl Service {
     fn start_with(root: PathBuf, transport: impl network::Transport + Send + 'static) -> Self {
         Self::spawn(root, transport, None)
     }
-    fn spawn(root: PathBuf, transport: impl network::Transport + Send + 'static, config: Option<Config>) -> Self {
+    fn spawn(
+        root: PathBuf,
+        transport: impl network::Transport + Send + 'static,
+        config: Option<Config>,
+    ) -> Self {
         let (controls, control_rx) = mpsc::channel();
         let (frames, frame_rx) = mpsc::sync_channel(QUEUE_SIZE);
         let (notice_tx, notices) = mpsc::channel();
@@ -262,25 +271,27 @@ fn run(
     status: Arc<Status>,
     transport: impl network::Transport + Send + 'static,
 ) {
-    let config = if let Some(config) = supplied { config } else {
-    #[cfg(not(test))]
-    return;
-    #[cfg(test)]
-    {
-    let config_path = root.join("Config/retroachievements.toml");
-    if !config_path.exists() {
+    let config = if let Some(config) = supplied {
+        config
+    } else {
+        #[cfg(not(test))]
         return;
-    }
-    let config = match Config::read(&config_path) {
-        Ok(config) => config,
-        Err(_) => {
-            status.set(SyncStatus::Attention);
-            let _ = notices.send(Notice::status(0, "Invalid RetroAchievements config"));
-            return;
+        #[cfg(test)]
+        {
+            let config_path = root.join("Config/retroachievements.toml");
+            if !config_path.exists() {
+                return;
+            }
+            let config = match Config::read(&config_path) {
+                Ok(config) => config,
+                Err(_) => {
+                    status.set(SyncStatus::Attention);
+                    let _ = notices.send(Notice::status(0, "Invalid RetroAchievements config"));
+                    return;
+                }
+            };
+            config
         }
-    };
-    config
-    }
     };
     if !config.enabled {
         return;
@@ -332,7 +343,9 @@ fn run(
     let mut retried = Instant::now();
     let mut presence_updated = Instant::now();
     loop {
-        if status.stopped.load(Ordering::Acquire) { return; }
+        if status.stopped.load(Ordering::Acquire) {
+            return;
+        }
         if retried.elapsed() >= Duration::from_secs(1) {
             retry_unsaved(&mut unsaved, &store, &notices);
             retried = Instant::now();
@@ -357,7 +370,8 @@ fn run(
                     // Cached games can start evaluating even while the HTTP worker is
                     // waiting on a timeout or preparing another ROM in the library.
                     let dir = store.lock().unwrap().dir.clone();
-                    { // The account-selected cache is usable without network authentication.
+                    {
+                        // The account-selected cache is usable without network authentication.
                         if let Ok(hash) = library::hash(&dir, &load.path) {
                             if let Ok((game, unlocked)) =
                                 storage::read::<(storage::Game, std::collections::BTreeSet<u32>)>(
