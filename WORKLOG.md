@@ -7,12 +7,12 @@ Active PR: https://github.com/jgraving/slot.sp/pull/191
 Current implementation revision: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`
 Status: draft, not merged or released.
 
-## Current state — PR #191 final checks
+## Current state — ready for handheld testing
 
 This is the separate OTA/time draft, stacked on PR #190. Current runtime: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`. PR #190 is fully verified on 16ac082; the OTA branch includes its final encrypted-only/six-button PIN, RA progress/icon, neutral meters, Wi-Fi and quiet-unlock changes.
 
 - OTA downloads target jgraving/slot.sp releases and validate integrity, embedded identity and forward ancestry. BaseOS is a separate explicit model-matched update with compatibility and power gates. Automatic time is opt-in and preserves UTC offset/manual settings.
-- Five of six workflows currently pass: ARM64/package and both bundled cores, website, scaling, blending and shortcuts. Launcher core/UI regressions pass; final production native renders are still running. Verify live results before claiming every workflow green.
+- All six workflows pass on the recorded runtime: ARM64/package and both bundled cores, website, scaling, blending, shortcuts, full launcher/UI regressions and production native renders. All 137 core tests and all 18 update/time integration tests pass.
 - Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576 (present/unexpired when checked).
 - Local light/GLES and dark/desktop-GL walkthroughs pass; Updates, disconnected feedback and automatic-time off/on pages reviewed. Final selected-row highlight was also visually verified. Interrupted-install simulation preserved executable mode, custom System files, Config, Games and Saves.
 - No physical firmware installation was executed. Real BaseOS installation/recovery and live handheld networking/time remain device-test gates; keep this PR draft. Retarget main after #190 merges.
@@ -321,3 +321,13 @@ Local OTA source/default checks pass; full CI is running. This branch includes P
 ### Final packaging checkpoint
 
 Current runtime 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd has a successful ARM64 package/bundled-core run 41692152351, System artifact 13257574576. The last pending workflow is launcher native rendering (41692152466). No runtime changes should follow unless a new failure is found. Update completion evidence and CURRENT_WORK.md when that run finishes.
+
+### Final verified handoff
+
+- Runtime: 810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd. All six exact-head workflows completed/success: launcher 41692152466; ARM64/package 41692152351; website 41692152398; scaling 41692152447; blending 41692152404; shortcuts 41692152430.
+- Device job 126113196756 logs confirm 137 core library tests plus 6 update, 5 network-time and 7 SNTP tests pass. Staged-update and launch shell tests pass. Both bundled cores validate.
+- Combined test build: https://github.com/jgraving/slot.sp/actions/runs/41692152351/artifacts/13257574576.
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41692152466/artifacts/13259275746.
+- Production light/GLES and dark/GL walkthroughs completed locally; Updates, disconnected feedback, automatic-time off/on and the final selected-row highlight were reviewed. Clean generated cards prevent repeat-run state contamination. No production parent-menu change was made.
+- Local interrupted-install simulation successfully resumed with executable mode, custom System files, Config, Games and Saves preserved.
+- This final synchronization changes recovery documentation only and includes the latest PR #190 documentation parent to resolve its worklog conflict. No runtime change follows successful checks. Keep draft for physical BaseOS/RTC/network/recovery testing; do not claim hardware firmware validation.
