@@ -4,8 +4,22 @@ Last updated: 2026-11-03 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `feat/fork-ota-time`
 Active PR: https://github.com/jgraving/slot.sp/pull/191
-Current implementation revision: `810f1a52d0e7913f6abcfe4ab0b4c6d8d46a21cd`
+Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
 Status: draft, not merged or released.
+
+## Current verified follow-up
+
+Combined runtime **92c2e8a470c30ca3add237780d1b32fc932a8156** passes all six workflows: launcher/native 41731781266, ARM64/package 41731781331, website 41731781278, scaling 41731781246, blending 41731781272 and shortcuts 41731781290.
+
+CI device logs confirm **141 core tests**, **31 achievement tests**, **6 updater + 5 network-time + 7 SNTP tests**, complete parent/menu/UI regressions and both bundled GBA cores. Native CI explicitly ran the RA production-compositor fixture and full light/GLES/dark/GL walkthroughs. The local final dark General/code/time/cancellation walkthrough passed with 47 valid PNGs; key light and dark captures were independently reviewed.
+
+- Combined build: https://github.com/jgraving/slot.sp/actions/runs/41731781331/artifacts/13276413591.
+- Combined native review: https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404.
+- Both artifacts were present/unexpired at handoff; recheck later.
+- General starts Device code, Updates, Automatic time, Time zone. Disconnected update/time rows are grey and A routes to Network with short feedback. Clock/offset edits apply immediately without shifting UTC; Done leaves the editor.
+- Includes final #190 RA/cache/controller/floating-pill, empty-code/Done readiness, direct parent cancellation and consistent Device code / Parent code behavior. Shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f also passes all six workflows (138 core tests). No runtime edit followed successful checks.
+- This recovery synchronization explicitly includes parent documentation commit f8932a8ddf855f7e378ac267948dabba81682aba, preserving the stacked PR's mergeability. Later commits change recovery Markdown only.
+- Keep both drafts. Physical heat/radio/RTC, live RA-account/deferred awards and actual BaseOS/launcher interruption/recovery remain handheld gates. No live secrets or real firmware installation used. CURRENT_WORK.md is the entry point; next step is device testing, not repeating development implementation/checks.
 
 ## Previous verified state — followed by active work below
 
@@ -399,3 +413,7 @@ Do not infer actual hardware cooling, live RA-account success or firmware instal
 - Carried all shared RA/controller/cache/PIN/cancel/naming changes through remote shared runtime 285cfa1e586dabffe1720b3cdcd13f1047230d4f. The shared native harness uses platform C char so ARM tests can compile it.
 - Local General checks: 27 targeted network tests, 58 launcher quick-menu tests and all 61 UI library/quick-menu tests passed. Combined full core/clock/menu rerun is running. Light native General/PIN/connectivity/clock captures reviewed. First walkthrough had incomplete PNG output and a final fixture-marker failure; a fresh traced run completed and every PNG validated. Trace showed synchronous correct marker removal, and temporary trace code was removed. Fresh dark review and exact-head CI remain required.
 - No firmware update was installed. No live RA secrets or account tests have been run. Both drafts remain open. Publish the combined revision, then verify six workflows and native outputs on that exact revision before handing over a new test build.
+
+### Final all-green handoff
+
+All six workflows pass on combined source 92c2e8a470c30ca3add237780d1b32fc932a8156. Exact evidence/build/native links are at the top and in CURRENT_WORK.md. Final checkpoint only updates Markdown and carries latest #190 documentation ancestry. Verify docs-only compare and both draft PR mergeability before ending. Remaining work is physical handheld/live-account testing; no follow-up merge/release requested.
