@@ -8,7 +8,11 @@ export function mountSP(stage, video, options={}) {
   if (!stage || stage.dataset.modelReady) return;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const renderer = new T.WebGLRenderer({alpha:true, antialias:true, powerPreference:'low-power'});
-  renderer.setPixelRatio(options.capture ? 1.5 : Math.min(devicePixelRatio, 1.75));
+  const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
+  const software=/swiftshader|llvmpipe|softpipe|software/i.test(debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):'');
+  // Software graphics needs fewer shaded pixels to keep the short native
+  // actions responsive. CSS size, projection and capture quality stay exact.
+  renderer.setPixelRatio(options.capture ? 1.5 : software ? .65 : Math.min(devicePixelRatio, 1.75));
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
   renderer.toneMappingExposure = .95;
