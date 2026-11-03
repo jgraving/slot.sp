@@ -39,10 +39,10 @@ fn main(){
     for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
-    for _ in 0..4{a.tap(Btn::A);}a.tap(Btn::Start);a.wait_io();a.save("wrong-pin");a.code();a.wait_io();a.save("unlocked-reconnected");
+    for _ in 0..4{a.tap(Btn::A);}a.tap(Btn::Start);a.wait_io();a.save("wrong-pin");for _ in 0..4{a.tap(Btn::Select);}a.code();a.wait_io();a.save("unlocked-reconnected");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.settle();for _ in 0..180{a.frame(vec![]);}a.tap(Btn::Menu);a.save("startup-pin-skipped");
-    assert!(a.f.app().settings_notice().unwrap().1.contains("unavailable until unlocked"));
+    assert!(a.f.app().settings_notice().unwrap().1.contains("credentials are locked"));
     a.home();a.nav(QuickRow::Wifi);a.tap(Btn::A);a.tap(Btn::A);a.code();a.wait_io();a.tap(Btn::A);a.settle();a.tap(Btn::B);a.nav(QuickRow::Game);a.tap(Btn::A);
     assert_eq!(a.f.app().quick_menu(),Some(QuickRow::Achievements));a.save("gameplay-achievements-first");a.tap(Btn::A);a.save("achievements-off");a.tap(Btn::A);a.save("achievements-on-shared-unlock");
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.save("achievements-startup-unlock");a.code();a.wait_io();

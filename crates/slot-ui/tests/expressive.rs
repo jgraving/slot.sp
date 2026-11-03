@@ -386,7 +386,7 @@ fn color_temperature_has_one_neutral_to_warm_vocabulary() {
     assert_eq!(QuickValue::temperature(9).text(),"Warm 100%");
     for n in 0..=9 {
         let text=QuickValue::temperature(n).text();
-        let fraction=setting_slider("Color temp",text).unwrap();
+        let fraction=setting_slider("Color temp.",text).unwrap();
         assert!((fraction-n as f32/9.0).abs()<0.01);
     }
 }

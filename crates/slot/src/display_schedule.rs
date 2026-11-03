@@ -60,6 +60,7 @@ impl Menu {
         self.status.clear();
         Some(next)
     }
+    pub fn warmth_preview(&self)->Option<u8> {(self.visible && self.time_field.is_none() && self.selected==3).then_some(self.settings.bedtime.1)}
     pub fn notice_text(&self) -> Option<&str> { (!self.status.is_empty()).then_some(self.status.as_str()) }
     pub fn focus_info(&self) -> (usize,usize) { (self.time_field.unwrap_or(self.selected),0) }
     pub fn page_key(&self) -> u64 { 3000 + u64::from(self.time_field.is_some()) }
@@ -85,10 +86,10 @@ impl Menu {
                 ("Automatic".into(), if self.settings.schedule { "On" } else { "Off" }.into(), true),
                 ("Day begins".into(), slot_ui::clock_text(i64::from(self.settings.day_start)*60,self.twelve), true),
                 ("Night begins".into(), slot_ui::clock_text(i64::from(self.settings.night_start)*60,self.twelve), true),
-                ("Color temp".into(),slot_ui::QuickValue::temperature(self.settings.bedtime.1).settings_text().to_string(),true),
+                ("Color temp.".into(),slot_ui::QuickValue::temperature(self.settings.bedtime.1).settings_text().to_string(),true),
             ], self.selected)
         };
-        let status = if animated { "" } else if self.status.is_empty() && self.time_field.is_none() { "A on a time edits hours and minutes" } else { &self.status };
+        let status = "";
         let mut face = settings_face(canvas, &rows, selected, 0, status, 0.0);
         let heading = slot_ui::quick_heading_face(title);
         let x = face.w.saturating_sub(heading.w)/2;

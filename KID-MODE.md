@@ -118,3 +118,8 @@ The recovery file contains the four buttons in plain text. Keep access to the ca
 ---
 
 [Buttons & shortcuts](CONTROLS.md) · [Games & artwork](LIBRARY.md) · [Audio & headphones](BLUETOOTH.md)
+
+Parent-code entry uses the same masked PIN card as the system PIN. A separate parent code still has
+four button presses; the shared device PIN keeps its chosen length. Remaining play time appears in a
+filled capsule: the filled portion tracks the remaining allowance, and text/icon contrast changes at
+the fill boundary.

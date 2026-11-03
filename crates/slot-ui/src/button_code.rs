@@ -6,20 +6,20 @@ pub fn credential_code_face_on(canvas: crate::Canvas, instruction: &str, count: 
     credential_code_face_with_lock_on(canvas,instruction,count,false)
 }
 pub fn credential_code_face_with_lock_on(canvas:crate::Canvas,instruction:&str,count:usize,locked:bool)->UndoFace {
-    let mut face=crate::parent_footer_face_on(canvas,if locked {9}else{8},false);
-    let title=crate::quick_heading_face("Security PIN");
-    let x=face.w.saturating_sub(title.w)/2; crate::plate::blit(&mut face.rgba,face.w,&title.rgba,title.w,title.h,x,0);
+    masked_pin_face_on(canvas,"Security PIN",instruction,count,if locked {9}else{8})
+}
+pub fn masked_pin_face_on(canvas:crate::Canvas,title:&str,instruction:&str,count:usize,footer:u8)->UndoFace {
+    let mut face=crate::parent_footer_face_on(canvas,footer,false);
+    let title=crate::quick_heading_face(title);
+    let x=face.w.saturating_sub(title.w)/2;crate::plate::blit(&mut face.rgba,face.w,&title.rgba,title.w,title.h,x,0);
     let words=crate::quick_value_face(instruction,true);
-    let x=face.w.saturating_sub(words.w)/2; crate::plate::blit(&mut face.rgba,face.w,&words.rgba,words.w,words.h,x,146);
-    let dots=count.max(4).min(12) as u32;
+    let x=face.w.saturating_sub(words.w)/2;crate::plate::blit(&mut face.rgba,face.w,&words.rgba,words.w,words.h,x,146);
+    let dots=count.clamp(4,12)as u32;
     let left=face.w.saturating_sub(dots*32)/2;
     for i in 0..dots {
-        let x=left+i*32+7; let y=222;
         let colour=if (i as usize)<count {[164,220,211,255]}else{[120,120,130,160]};
-        crate::page::rounded(&mut face.rgba,face.w,(x,y,18,18),8,colour);
+        crate::page::rounded(&mut face.rgba,face.w,(left+i*32+7,222,18,18),8,colour);
     }
-    let detail=crate::quick_description_face(&["A/B/X/Y, D-pad and shoulder buttons", &format!("{} presses · Start to finish",count)]);
-    let x=face.w.saturating_sub(detail.w)/2; crate::plate::blit(&mut face.rgba,face.w,&detail.rgba,detail.w,detail.h,x,302);
     face
 }
 

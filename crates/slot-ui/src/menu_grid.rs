@@ -8,7 +8,7 @@ pub const TILE_H:f32=120.0;
 
 pub fn is_page(page:&[QuickRow])->bool {page==QuickRow::MAIN || page==QuickRow::SETTINGS || page==QuickRow::PLAY}
 pub fn columns(row:QuickRow,hidden:&[QuickRow])->usize {if row.page()==QuickRow::MAIN {4}else{row.shown(hidden).len().min(3).max(1)}}
-pub fn position(row:QuickRow,hidden:&[QuickRow])->[f32;2]{let n=columns(row,hidden);let i=row.position(hidden);[(i%n)as f32,(i/n)as f32]}
+pub fn position(row:QuickRow,hidden:&[QuickRow])->[f32;2]{let n=columns(row,hidden);let i=row.position(hidden);let count=(row.shown(hidden).len()-i/n*n).min(n);[(n-count)as f32/2.0+(i%n)as f32,(i/n)as f32]}
 pub fn rect(canvas:Canvas,index:usize)->[f32;4] {cell(canvas,index,8,4,false)}
 pub fn cell(canvas:Canvas,index:usize,count:usize,cols:usize,pause:bool)->[f32;4] {
     let rows=count.div_ceil(cols);
@@ -34,9 +34,15 @@ pub fn navigate(row:QuickRow,hidden:&[QuickRow],dx:i32,dy:i32)->QuickRow {
         let n=(rows.len()-start).min(columns);
         start+((i-start) as i32+dx).rem_euclid(n as i32) as usize
     }else {
-        let col=i%columns;
-        let count=(rows.len()+columns-1-col)/columns;
-        ((i/columns) as i32+dy).rem_euclid(count as i32) as usize*columns+col
+        let next_row=(i as i32/columns as i32+dy).rem_euclid(rows.len().div_ceil(columns)as i32)as usize;
+        let start=next_row*columns;
+        let count=(rows.len()-start).min(columns);
+        let current=position(row,hidden)[0];
+        let col=(0..count).min_by(|&a,&b| {
+            let centre=|c:usize|(columns-count)as f32/2.0+c as f32;
+            (centre(a)-current).abs().total_cmp(&(centre(b)-current).abs())
+        }).unwrap_or(0);
+        start+col
     };
     rows[next]
 }
@@ -51,7 +57,7 @@ pub fn tile_face_label(row:QuickRow,lit:bool,label_override:Option<&str>)->UndoF
         QuickRow::Game|QuickRow::PlayGameplay=>("Gameplay",r##"<path fill-rule="evenodd" d="M14 12h20q7 0 9 9l3 14q1 7-5 7-2 0-7-6H14q-5 6-7 6-6 0-5-7l3-14q2-9 9-9z M12 19v4H8v4h4v4h4v-4h4v-4h-4v-4z M31 20a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M38 27a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>"##),
         QuickRow::Power=>("Power & lid",r##"<path d="M22 3h4v20h-4zM16 9v5a14 14 0 1 0 16 0V9a19 19 0 1 1-16 0"/>"##),
         QuickRow::Controls|QuickRow::PlayControls=>("Device\ncontrols",r##"<path fill-rule="evenodd" d="M17 4h14v13h13v14H31v13H17V31H4V17h13z M21 21v6h6v-6z"/>"##),
-        QuickRow::Wifi=>("Wi-Fi",r##"<path d="M3 16q21-21 42 0l-4 5q-17-17-34 0zM11 25q13-13 26 0l-4 5q-9-9-18 0zM19 35q5-5 10 0l-5 7z"/>"##),
+        QuickRow::Wifi=>("Network",r##"<path d="M3 16q21-21 42 0l-4 5q-17-17-34 0zM11 25q13-13 26 0l-4 5q-9-9-18 0zM19 35q5-5 10 0l-5 7z"/>"##),
         QuickRow::Kids=>("Parental\ncontrols",crate::icon::SMILEY_PATH),
         QuickRow::Resume=>("Resume",r##"<path d="M15 6q-3-2-3 2v32q0 4 3 2l27-16q3-2 0-4z"/>"##),
         QuickRow::ExitGame=>("Exit game",r##"<path d="M7 5h18v5H12v28h13v5H7zM30 13l13 11-13 11v-8H18v-6h12z"/>"##),

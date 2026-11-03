@@ -1,12 +1,12 @@
 # Wi-Fi and RetroAchievements test build
 
 This branch adds optional Wi-Fi and GBA achievement tracking. Both start off.
-About moves to General; Wi-Fi takes its existing grid square. RetroAchievements is
+About moves to General; Network takes its existing grid square. RetroAchievements is
 the first entry under Gameplay. The grid still has eight entries.
 
 ## Connect
 
-Open Settings → Wi-Fi. Turn Wi-Fi on, select a nearby WPA/WPA2 personal or open
+Open Settings → Network. Turn Wi-Fi on, select a nearby WPA/WPA2 personal or open
 network, and enter its password. Other network lets you enter a hidden SSID.
 Enterprise networks and WPA3-only networks are not supported in this test build.
 
@@ -15,7 +15,7 @@ space, L1/R1 switches symbols, Select reveals a secret, Start submits and Menu c
 
 ## Security PIN and saved credentials
 
-Wi-Fi is one menu: On/Off, Reconnect, Credential storage, Scan networks, Other network,
+Network is one menu: On/Off, Reconnect, Credential storage, Scan networks, Other network,
 then nearby networks. Each network has a signal icon and its detected security type.
 Scanning uses the same progress indicator as Bluetooth. WPA3-only, enterprise, WEP
 and enhanced-open networks are shown but cannot be joined in this build.
@@ -27,11 +27,11 @@ to unlock saved Wi-Fi and RetroAchievements credentials. Choose **Button code** 
 - **Button code:** enter four or more presses using A/B/X/Y, the D-pad and shoulder
   buttons. You choose the length; press **Start** to finish, then repeat the sequence
   and press Start again. Select deletes a press; Menu cancels. Held buttons do not
-  repeat. Only masked dots and the number of presses are shown, even for long PINs.
+  repeat. Only masked dots are shown, even for long PINs. During unlock, a correct sequence is accepted automatically without Start. Incorrect prefixes stay silent and remain editable; continue typing or use Select to delete. No stored PIN length is displayed.
 - **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
   Choose a long, unpredictable sequence or passphrase for stronger protection.
 
-PINs shorter than eight button presses get a yellow **!** notification because they
+PINs shorter than eight button presses get a yellow warning-triangle notification because they
 are easier to guess. There is no recovery copy of the device PIN on the card.
 
 **Credentials** is an inline Left/Right picker shared by Wi-Fi and
@@ -56,7 +56,7 @@ session and resumes the requested connection or account action.
 
 **Startup access** under Security PIN chooses between **PIN optional**
 (the default, allowing games without a PIN) and **Require PIN**. With games allowed, Menu skips startup unlock and
-a pill says Wi-Fi and RetroAchievements are unavailable until unlocked. With Require
+a pill says “Saved credentials are locked.” Saved services become available after unlocking. With Require
 PIN, the launcher stays on the unlock card until the correct PIN or passphrase is
 entered, even when Wi-Fi and achievements are off. This is a launcher access lock:
 the SD card, games and saves remain readable. Only the saved credentials are encrypted.
@@ -120,3 +120,15 @@ Keep Saves/RetroAchievements when backing up: it contains pending unlocks.
 The networking code needs the OS image's wpa_supplicant, wpa_cli, ip, rfkill and
 udhcpc tools. Actual hardware association, DHCP, TLS clock behavior, real-core RAM
 mapping, battery cost and live server acceptance are the main device checks.
+
+### PIN entry and feedback
+
+Button PINs accept A, B, X, Y, the four D-pad directions and L1, R1, L2, R2.
+Start finishes setup and confirmation; Select deletes, and Menu cancels when startup access allows it.
+Unsupported input briefly shows the permitted button icons. The separate four-button parent code uses
+the same masked card as the device PIN. It completes after four presses; the device PIN has no fixed length.
+
+Yellow triangle pills indicate a caution, such as a short PIN. Red circled alerts indicate a more serious
+condition, such as credentials saved without encryption. Short messages stay in the interface; this guide
+explains the consequences. The wider Wi-Fi arcs show signal strength in network lists and a connection
+in the status bar.

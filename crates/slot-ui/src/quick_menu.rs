@@ -558,12 +558,12 @@ impl QuickRow {
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",
             QuickRow::Brightness | QuickRow::PlayBrightness => "Brightness",
-            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp",
+            QuickRow::BlueLight | QuickRow::PlayBlueLight => "Color temp.",
             QuickRow::DateTime => "Date & Time",
             QuickRow::ClockFormat => "Clock format",
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
-            QuickRow::Wifi => "Wi-Fi",
+            QuickRow::Wifi => "Network",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::SecurityPin => "Security PIN",
             QuickRow::DisplaySchedule => "Night mode",
@@ -1353,6 +1353,7 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        10 => vec![with_hint(button_face(ButtonLegend::Select), "Delete", hint, true)],
         11 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
             with_hint(button_pair(ButtonLegend::Left,ButtonLegend::Right), "Method", hint, false),
@@ -1442,21 +1443,12 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
     face
 }
 pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
-    let mut face=UndoFace{rgba:vec![0;28*28*4],w:28,h:28};
-    for y in 0..28 {for x in 0..28 {
-        let mut coverage=0u32;
-        for sy in 0..4 {for sx in 0..4 {
-            let dx=x as f32+(sx as f32+0.5)/4.0-14.0;
-            let dy=y as f32+(sy as f32+0.5)/4.0-25.0;
-            let r=(dx*dx+dy*dy).sqrt();
-            let wedge=dy<0.0&&dx.abs()<=-dy;
-            let dot=r<2.3;
-            let arc=wedge&&((bars>=1&&(r-8.0).abs()<1.3)||(bars>=2&&(r-15.0).abs()<1.3)||(bars>=3&&(r-22.0).abs()<1.3));
-            if dot||arc {coverage+=1;}
-        }}
-        let at=((y*28+x)*4)as usize;face.rgba[at..at+4].copy_from_slice(&[ink[0],ink[1],ink[2],(coverage*255/16)as u8]);
-    }}
-    face
+    let mut paths=String::from(r#"<circle cx="14" cy="24" r="1.9"/>"#);
+    for (level,path) in [(1,"M10 18.6Q14 15.2 18 18.6"),(2,"M6 13.2Q14 6.6 22 13.2"),(3,"M2 7.5Q14-2 26 7.5")] {
+        if bars>=level {paths.push_str(&format!(r#"<path d="{path}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>"#));}
+    }
+    let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}">{paths}</g></svg>"##,ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);
+    UndoFace{rgba:crate::art::render_svg(&svg,28,28).expect("Wi-Fi signal"),w:28,h:28}
 }
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;
@@ -1543,20 +1535,12 @@ pub fn kid_time_text(seconds: u64) -> String {
 }
 
 /// One quiet line of remaining time and a bar, above the native menu footer.
-pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {
-    let Some(font)=text::font(text::Role::Detail) else {return UndoFace{rgba:vec![],w:0,h:0}};
-    let layout=text::fit_preserving_case(font,&kid_time_text(seconds),480.0,1,20.0,20.0);
-    let width=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking));
-    let (w,h)=((width.ceil() as u32+40).max(300),36);
-    let mut face=UndoFace{rgba:vec![0;(w*h*4) as usize],w,h};
-    crate::expressive::raster_round(&mut face,0.0,0.0,w as f32,h as f32,h as f32/2.0,[0.10,0.12,0.14,0.98]);
-    text::draw_centred(&mut face.rgba,w,24,&layout,[246,244,239]);
-    let span=(w-40) as f32;
-    crate::expressive::raster_round(&mut face,20.0,27.0,span,5.0,2.5,[0.35,0.39,0.42,1.0]);
-    let fraction=seconds.min(budget) as f32/budget.max(1) as f32;
-    if fraction>0.0 {crate::expressive::raster_round(&mut face,20.0,27.0,span*fraction,5.0,2.5,crate::expressive::ACCENT);}
-    crate::expressive::raster_round(&mut face,18.5+span*fraction,24.0,3.0,11.0,1.0,[0.96,0.96,0.94,1.0]);
-    face
+pub fn kid_time_meter(seconds: u64, budget: u64) -> UndoFace {kid_time_meter_on(seconds,budget,false)}
+pub fn kid_time_meter_on(seconds: u64, budget: u64, light: bool) -> UndoFace {
+    let label=kid_time_text(seconds);
+    let font=text::font(text::Role::Value).expect("time meter font");
+    let width=(text::line_width(font,&label,20.0,0.0).ceil()as u32+80).clamp(240,520);
+    crate::filled_meter_face(&label,None,seconds.min(budget)as f32/budget.max(1)as f32,light,width,44)
 }
 
 fn parent_label_face(label: &str, lit: bool, has_value: bool, width: u32) -> UndoFace {

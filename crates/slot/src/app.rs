@@ -2388,14 +2388,8 @@ impl App {
     }
 
     fn description(&self, row: QuickRow) -> Option<(TexId, u32, u32)> {
-        let faces = self.quick_menu_faces.as_ref()?;
-        if row.shortcut().is_some() || row.carousel_action().is_some() {
-            Some(faces.descriptions[1])
-        } else if row.binds() {
-            Some(faces.descriptions[0])
-        } else {
-            None
-        }
+        let _ = row;
+        None
     }
 
     pub fn carousel(&self) -> CarouselKeys {
@@ -4001,7 +3995,7 @@ impl App {
     }
 
     pub fn blue_light(&self) -> u8 {
-        self.state.blue_light
+        self.display_schedule.as_ref().and_then(|m|m.warmth_preview()).unwrap_or(self.state.blue_light)
     }
 
     pub fn brightness(&self) -> u8 {
@@ -7328,6 +7322,8 @@ impl App {
         self.delete_shot_faces = faces;
     }
 
+    pub fn hud_meter_key(&self)->(HudKind,u8,slot_ui::Icon) {self.hud.meter_key()}
+    pub fn set_hud_meter_faces(&mut self,faces:[TexId;2]) {self.hud.set_meter_faces(faces);}
     pub fn set_icon_faces(&mut self, faces: Vec<TexId>) {
         self.hud.set_icons(faces);
     }
@@ -7345,6 +7341,7 @@ impl App {
         if let Some(menu)=self.network.as_ref().filter(|m|!m.visible) {
             if let Some(message)=menu.take_toast() {return Some((0xA0000000,message.into()));}
         }
+        if self.capture.is_some() {return Some((0xB0000000 ^ self.settings_notice_revision,"Press a button or chord".into()));}
         let (page,message)=if let Some(menu)=self.network.as_ref().filter(|m|m.visible) {
             (menu.page_key(),menu.notice_text()?.to_string())
         } else if let Some(menu)=&self.display_schedule {

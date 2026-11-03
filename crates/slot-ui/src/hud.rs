@@ -157,6 +157,7 @@ pub struct Hud {
     alarm: Option<Millis>,
     alarm_toast: Option<Toast>,
     icons: Vec<TexId>,
+    meter_faces: Option<[TexId;2]>,
     toasts: Vec<TexId>,
     link: LinkBadge,
     link_faces: Vec<TexId>,
@@ -170,6 +171,9 @@ impl Hud {
     pub fn set_icons(&mut self, icons: Vec<TexId>) {
         self.icons = icons;
     }
+
+    pub fn meter_key(&self) -> (HudKind,u8,Icon) {(self.kind,self.value.min(self.kind.max()),self.glyph())}
+    pub fn set_meter_faces(&mut self,faces:[TexId;2]) {self.meter_faces=Some(faces);}
 
     pub fn set_toasts(&mut self, toasts: Vec<TexId>) {
         self.toasts = toasts;
@@ -323,6 +327,22 @@ impl Hud {
 
     fn draw_bar(&self, canvas: Canvas, alpha: f32, offset: f32, now: Millis, out: &mut Vec<Draw>) {
         let y = 8.0 + offset + self.slide_state(now).0;
+        if self.kind!=HudKind::Rewind {
+            let (w,h)=(crate::METER_W as f32,crate::METER_H as f32);
+            let x=canvas.centred(w);
+            let level=self.visual_state(now).0;
+            if let Some([empty,filled])=self.meter_faces {
+                out.push(Draw::Tex{x,y,w,h,tex:empty,alpha});
+                if level>0.0 {out.push(Draw::Part{x,y,w:w*level,h,tex:filled,alpha,uv:[0.0,0.0,level,1.0]});}
+            } else {
+                // Shape-only fallback while foreground artwork is being uploaded.
+                let colours=crate::battery::charge_colours(false);
+                crate::expressive::rounded(out,x,y,w,h,h/2.0,colours.track);
+                let begin=out.len();crate::expressive::rounded(out,x,y,w,h,h/2.0,colours.fill);
+                crate::quick_menu::clip_quads(out,begin,[x,y,x+w*level,y+h]);
+            }
+            return;
+        }
         let x = canvas.centred(360.0);
         crate::expressive::rounded(
             out,

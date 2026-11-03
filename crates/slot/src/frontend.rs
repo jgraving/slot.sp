@@ -36,7 +36,8 @@ const ALERT_INK: [u8; 3] = [0xf0, 0xb4, 0x3c];
 
 pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
-    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
+    kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
+    hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
     network_tex: Option<TexId>,
     network_old_tex: Option<TexId>,
     network_page: Option<u64>,
@@ -207,7 +208,7 @@ impl Frontend {
             .app_mut()
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
-            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
+            menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
             network_tex: None,
             network_old_tex: None,
             network_page: None,
@@ -898,14 +899,27 @@ impl Frontend {
             },
             &mut self.switcher,
         );
-        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter());
+        let meter=self.session.app().kid_menu.as_ref().and_then(|m|m.remaining_meter()).map(|(s,b)|(s,b,light));
         if self.kid_meter_key!=meter {
-            if let Some((seconds,budget))=meter {
-                let face=slot_ui::kid_time_meter(seconds,budget);let size=(face.w,face.h);
-                let tex=upload(compositor,&mut self.kid_meter_tex,face);
+            if let Some((seconds,budget,light))=meter {
+                let face=slot_ui::kid_time_meter_on(seconds,budget,light);let size=(face.w,face.h);
+                let tex=upload_rgba(compositor,&mut self.kid_meter_tex,face.w,face.h,&face.rgba);
                 self.session.app_mut().set_kid_meter_face((tex,size.0,size.1));
             }
             self.kid_meter_key=meter;
+        }
+        let (kind,value,icon)=self.session.app().hud_meter_key();
+        let meter_key=Some((kind,value,icon,light));
+        if self.hud_meter_key!=meter_key {
+            let max=if kind==slot_ui::HudKind::Brightness || kind==slot_ui::HudKind::BlueLight {9}else{100};
+            let label=format!("{}%",(u32::from(value)*100+max/2)/max);
+            let mut faces=vec![];
+            for (i,fraction) in [0.0,1.0].into_iter().enumerate() {
+                let face=slot_ui::filled_meter_face(&label,Some(icon),fraction,light,slot_ui::METER_W,slot_ui::METER_H);
+                faces.push(upload_rgba(compositor,&mut self.hud_meter_tex[i],face.w,face.h,&face.rgba));
+            }
+            self.session.app_mut().set_hud_meter_faces([faces[0],faces[1]]);
+            self.hud_meter_key=meter_key;
         }
         self.draws.clear();
         self.session.app().draw(&mut self.draws);

@@ -13,17 +13,17 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 | **Power & lid** | Lid behavior, sleep, shutdown timer and startup animation. | [Sleep & power](POWER-OPTIONS.md) |
 | **Device controls** | Game buttons, carousel buttons, shortcuts and the on-device reference. | [Buttons & shortcuts](CONTROLS.md) |
 | **Parental controls** | Approved games, daily allowance, session timer or bedtime, maximum volume and either a separate parent code or the device PIN. | [Kid mode](KID-MODE.md) |
-| **Wi-Fi** | Connect, scan networks and choose Encrypted, Session only or explicitly confirmed Unencrypted storage. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
+| **Network** | Connect, scan networks and choose Encrypted, Session only or explicitly confirmed Unencrypted storage. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
 
 ![The complete settings home](previews/current/light/settings.png)
 
 ## Security PIN
 
 **Security PIN** is first in **General**. Choose a button sequence of any length
-(at least four presses, with Start to submit) or a keyboard passphrase. Encrypted
+(at least four presses, with Start to finish setup) or a keyboard passphrase. Encrypted
 credential storage is the default; setup opens this page directly when a PIN is needed.
-Short PINs get a yellow **!** warning; Unencrypted storage needs confirmation and gets
-a red **!** warning. Switching to Encrypted deletes its plaintext copy after saving.
+Short PINs get a yellow triangle warning; Unencrypted storage needs confirmation and gets
+a red alert warning. Switching to Encrypted deletes its plaintext copy after saving.
 
 **Startup access** can require the PIN to use the launcher or allow games while
 credentials stay locked. Skipping optional startup unlock shows an unavailable
@@ -45,7 +45,7 @@ In kid mode, **Settings** opens four tiles: Sound, Screen, Buttons & shortcuts a
 
 ## Status icons and notices
 
-The battery indicator shows the percentage. A lightning bolt inside it means the charger is connected. A slashed speaker means the active output is muted or its volume is zero. Bluetooth and headphones icons show the audio connection. The Wi-Fi icon appears alongside them while connected. Yellow **!** pills warn about short PINs; red **!** pills warn that unencrypted credentials are readable on the card.
+The battery indicator shows the percentage. A lightning bolt inside it means the charger is connected. A slashed speaker means the active output is muted or its volume is zero. Bluetooth and headphones icons show the audio connection. The Wi-Fi icon appears alongside them while connected. Yellow triangle pills warn about short PINs; red alert pills warn that unencrypted credentials are readable on the card.
 
 Connecting a charger briefly shows a charging notice and plays a tone. Short notices also report audio connections, setting changes and errors. An error includes a next step, such as waking the headphones and trying again.
 

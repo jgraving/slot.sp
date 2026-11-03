@@ -82,7 +82,7 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Display", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Wi-Fi"]
+        ["General", "Display", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Network"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
@@ -98,11 +98,11 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
-        ["Brightness", "Color temp", "Night mode", "UI theme", "Wallpaper", "Wallpaper Tint", "Shell Color", "Game Titles", "Carousel motion", "Game Boy Advance", "Game Boy Color", "Game Boy"]
+        ["Brightness", "Color temp.", "Night mode", "UI theme", "Wallpaper", "Wallpaper Tint", "Shell Color", "Game Titles", "Carousel motion", "Game Boy Advance", "Game Boy Color", "Game Boy"]
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
-        ["Brightness", "Color temp", "Night mode"]
+        ["Brightness", "Color temp.", "Night mode"]
     );
     assert_eq!(
         QuickRow::SCREEN_GBA.map(QuickRow::label),
@@ -403,7 +403,7 @@ fn in_game_rows_read_as_the_menu_shows_them() {
         (QuickRow::ColourCorrection, "Color Correction"),
         (QuickRow::Palette, "Palette"),
         (QuickRow::PlayBrightness, "Brightness"),
-        (QuickRow::PlayBlueLight, "Color temp"),
+        (QuickRow::PlayBlueLight, "Color temp."),
     ];
     for (row, label) in labels {
         assert_eq!(row.label(), label);
@@ -631,4 +631,24 @@ fn carousel_names_and_jump_letters_are_native_larger_type() {
     let mut out=vec![];
     slot_ui::draw_slot_name_sized(slot_ui::Canvas::FRAMED,slot_ui::Printed::new(slot_ui::TexId::from_raw(44),letter.w),letter.h,1.0,&mut out);
     assert!(matches!(out[0],slot_ui::Draw::Tex{y,h,..}if y+h<480.0-slot_ui::MOUTH_H));
+}
+
+#[test]
+fn pause_grid_vertical_moves_reach_the_next_row_from_every_column() {
+    use slot_ui::{menu_grid,QuickRow};
+    let optional=[QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
+    for mask in 0..16 {
+        let hidden:Vec<_>=optional.iter().enumerate().filter(|(i,_)|mask&(1<<i)!=0).map(|(_,r)|*r).collect();
+        let rows=QuickRow::Resume.shown(&hidden);
+        let cols=menu_grid::columns(QuickRow::Resume,&hidden);
+        let count=rows.len().div_ceil(cols);
+        for &row in &rows {
+            let current=row.position(&hidden)/cols;
+            for dy in [-1,1] {
+                let next=menu_grid::navigate(row,&hidden,0,dy);
+                let expected=(current as i32+dy).rem_euclid(count as i32)as usize;
+                assert_eq!(next.position(&hidden)/cols,expected,"{row:?} stalled at hidden mask {mask}");
+            }
+        }
+    }
 }

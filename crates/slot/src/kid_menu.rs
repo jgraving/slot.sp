@@ -171,9 +171,9 @@ impl Menu {
     }
     fn code_instruction(&self) -> &str {
         match self.page {
-            Page::Set => "Choose 4 buttons",
-            Page::Confirm => "Repeat your 4 buttons",
-            Page::Unlock => "Enter your 4-button code",
+            Page::Set => "Choose a PIN",
+            Page::Confirm => "Repeat your PIN",
+            Page::Unlock => "Enter your PIN",
             _ => "",
         }
     }
@@ -273,7 +273,8 @@ impl Menu {
     }
     pub fn page_key(&self) -> u64 {match self.page {Page::Child if !self.child_in_game=>2010,Page::ChildSound=>2011,Page::ChildScreen=>2012,_=>2000+self.page as u64}}
     pub fn notice_text(&self) -> Option<&str> {
-        (self.gate.remaining(Instant::now()) == 0 && !self.status.is_empty() && !self.status.starts_with("Recovery:") && !self.status.starts_with("Use A/B"))
+        if self.page==Page::Unlock && self.gate.remaining(Instant::now())>0 {return Some("Wait a moment, then retry");}
+        (!self.status.is_empty() && !self.status.starts_with("Recovery:") && !self.status.starts_with("Use A/B"))
             .then_some(self.status.as_str())
     }
     pub fn screen_face(&self) -> UndoFace { self.screen_face_on(slot_ui::Canvas::FRAMED) }
@@ -345,7 +346,7 @@ impl Menu {
                 ("Time".into(), time, true),
                 ("Volume limit".into(), format!("{}%", self.draft.volume_limit), true),
             ];
-            let status = if animated || self.status == "Parent code saved" { "" } else { &self.status };
+            let status = "";
             let mut face = settings_face(canvas, &rows, self.selected, if self.selected==1 {11}else{0}, status, 0.0);
             let heading=slot_ui::quick_heading_face("Parental controls");
             let x=face.w.saturating_sub(heading.w)/2;
@@ -356,7 +357,7 @@ impl Menu {
             let minutes = self.time_minutes();
             let rows = vec![("Hours".into(), if self.twelve && self.draft.rule==Rule::Until {let hour=minutes/60;format!("{} {}",if hour%12==0 {12}else{hour%12},if hour<12 {"AM"}else{"PM"})}else{(minutes/60).to_string()}, true),
                 ("Minutes".into(), format!("{:02}", minutes % 60), true)];
-            let mut face = settings_face(canvas, &rows, self.time_selected, 0, if animated { "" } else { &self.status }, 0.0);
+            let mut face = settings_face(canvas, &rows, self.time_selected, 0, "", 0.0);
             let title=slot_ui::quick_heading_face(if self.draft.rule==Rule::Until {"Bedtime"}else{"Play limit"});let x=face.w.saturating_sub(title.w)/2;blit(&mut face,&title,x,0);
             return face;
         }
@@ -368,25 +369,12 @@ impl Menu {
         let left = (face.w - title.w) / 2;
         blit(&mut face, &title, left, 0);
         if self.entering_code() {
-            // Keep one instruction and the slots centred in the shared
-            // card. Setup/confirmation change the instruction, never its title.
-            let instruction = slot_ui::quick_value_face(self.code_instruction(), true);
-            let left = (face.w - instruction.w) / 2;
-            blit(&mut face, &instruction, left, 160);
-            let buttons = slot_ui::button_code_face(&self.code);
-            let left = ((face.w - buttons.w) as i32 / 2 + self.code_offset()) as u32;
-            blit(&mut face, &buttons, left, 200);
-        }
-        let cooldown = self.gate.remaining(Instant::now());
-        let retry = format!("Try again in {cooldown} seconds");
-        let status = if self.page == Page::Unlock && cooldown > 0 { &retry }
-        else if self.status.starts_with("Recovery:") || self.status.starts_with("Use A/B") {
-            ""
-        } else if animated { "" } else { &self.status };
-        if !status.is_empty() {
-            let status = slot_ui::quick_description_face(&[status]);
-            let left = face.w.saturating_sub(status.w) / 2;
-            blit(&mut face, &status, left, 332);
+            face=slot_ui::masked_pin_face_on(canvas,"Parent code",self.code_instruction(),self.code.len(),1);
+            if self.code_offset()!=0 {
+                // Only the shared dot row shakes on a rejected separate code.
+                let shift=self.code_offset();let original=face.rgba.clone();
+                for y in 220..244 {for x in 0..face.w {let i=((y*face.w+x)*4)as usize;face.rgba[i..i+4].fill(0);let from=x as i32-shift;if (0..face.w as i32).contains(&from){let at=((y*face.w+from as u32)*4)as usize;face.rgba[i..i+4].copy_from_slice(&original[at..at+4]);}}}
+            }
         }
         face
     }
@@ -678,11 +666,12 @@ impl Menu {
             _ => None,
         };
         if let Some(button) = button {
+            self.status.clear();
             if self.code.len() < 4 {
                 self.code.push(button);
                 if self.code.len() == 4 { self.complete_code(wall); }
             }
-        }
+        } else if matches!(action,Action::GbaDown(_)) {self.status="PIN_BUTTONS".into();}
     }
 }
 fn duration_label(minutes: u32) -> String {

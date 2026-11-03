@@ -118,8 +118,8 @@ pub fn settings_notice_face_on(message:&str,canvas:Canvas,light:bool)->UndoFace 
     settings_notice_face_toned_on(message,canvas,light,NoticeTone::Neutral)
 }
 pub fn settings_notice_face_toned_on(message:&str,canvas:Canvas,light:bool,tone:NoticeTone)->UndoFace {
-    let warning;
-    let message=if tone!=NoticeTone::Neutral {warning=format!("! {message}");warning.as_str()}else{message};
+    if message=="PIN_BUTTONS" {return pin_buttons_notice_face(light);}
+    let prefix=if tone==NoticeTone::Neutral {0}else{36};
     if let Some(percent)=message.strip_prefix("Charging: ") {return charging_notice_face(percent,light);}
     let Some(font) = text::font(text::Role::Detail) else {
         return UndoFace {
@@ -129,20 +129,29 @@ pub fn settings_notice_face_toned_on(message:&str,canvas:Canvas,light:bool,tone:
         };
     };
     let layout =
-        text::fit_preserving_case(font, message, (canvas.w - 112.0).min(520.0), 2, 18.0, 16.0);
+        text::fit_preserving_case(font, message, (canvas.w - 112.0 - prefix as f32).min(520.0), 2, 18.0, 16.0);
     let width = layout
         .lines
         .iter()
         .map(|line| text::line_width(font, line, layout.px, layout.tracking))
         .fold(0.0_f32, f32::max);
-    let w = (width.ceil() as u32 + 32).min(canvas.w as u32 - 64).max(64);
+    let w = (width.ceil() as u32 + 32 + prefix).min(canvas.w as u32 - 64).max(64);
     let h = 24 * layout.lines.len().max(1) as u32 + 20;
     let mut face = UndoFace {
         rgba: vec![0; (w * h * 4) as usize],
         w,
         h,
     };
-    text::draw_centred(&mut face.rgba,w,h,&layout,match tone {NoticeTone::Warning=>[45,33,8],NoticeTone::Danger=>[255,248,245],NoticeTone::Neutral=>if light {slot_gfx::ui_palette::INK}else{[246,244,239]}});
+    let ink=match tone {NoticeTone::Warning=>[45,33,8],NoticeTone::Danger=>[255,248,245],NoticeTone::Neutral=>if light {slot_gfx::ui_palette::INK}else{[246,244,239]}};
+    let mut words=vec![0;((w-prefix)*h*4)as usize];
+    text::draw_centred(&mut words,w-prefix,h,&layout,ink);
+    crate::plate::blit(&mut face.rgba,w,&words,w-prefix,h,prefix,0);
+    if prefix>0 {
+        let outline=if tone==NoticeTone::Danger {r#"<circle cx="12" cy="12" r="9"/>"#}else{r#"<path d="M10.3 3.8a2 2 0 0 1 3.4 0l8 14a2 2 0 0 1-1.7 3H4a2 2 0 0 1-1.7-3z"/>"#};
+        let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="#{:02x}{:02x}{:02x}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{outline}<path d="M12 8v5m0 3v.2"/></g></svg>"##,ink[0],ink[1],ink[2]);
+        let icon=crate::art::render_svg(&svg,26,26).expect("severity icon");
+        crate::plate::blit(&mut face.rgba,w,&icon,26,26,14,(h-26)/2);
+    }
     face
 }
 
@@ -163,5 +172,21 @@ fn charging_notice_face(percent:&str,light:bool)->UndoFace {
     crate::plate::blit(&mut face.rgba,w,&bolt,26,30,18,11);
     let level=percent.trim_end_matches('%').parse::<f32>().unwrap_or(0.0).clamp(0.0,100.0)/100.0;
     for (i,pixel) in face.rgba.chunks_exact_mut(4).enumerate(){if (i as u32%w)as f32>=w as f32*level && pixel[3]>0 {pixel[..3].copy_from_slice(&colours.empty_ink);}}
+    face
+}
+
+/// Only invalid PIN input requests this transient row of permitted controller icons.
+fn pin_buttons_notice_face(light:bool)->UndoFace {
+    use crate::bitmaps::ButtonLegend::*;
+    let buttons=[A,B,X,Y,Up,Down,Left,Right,L1,R1,L2,R2];
+    let faces:Vec<_>=buttons.into_iter().map(|button|crate::quick_menu::controller_button_face(button,26)).collect();
+    let width=faces.iter().map(|f|f.w).sum::<u32>()+8*11+32;
+    let mut face=UndoFace{rgba:vec![0;(width*48*4)as usize],w:width,h:48};
+    let mut x=16;
+    for glyph in faces {
+        let rgba=if light {slot_gfx::ui_palette::light_texture(&glyph.rgba)}else{glyph.rgba};
+        crate::plate::blit(&mut face.rgba,width,&rgba,glyph.w,glyph.h,x,(48-glyph.h)/2);
+        x+=glyph.w+8;
+    }
     face
 }

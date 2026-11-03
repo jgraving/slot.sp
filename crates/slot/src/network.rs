@@ -44,6 +44,8 @@ pub struct Menu {
     keyboard: Option<(Field, Keyboard)>,
     code: Option<Field>,
     code_text: Zeroizing<String>,
+    button_attempt: Option<Zeroizing<String>>,
+    button_checked: usize,
     pending_ssid: Option<String>,
     secrets: Secrets,
     first_pass: Zeroizing<String>,
@@ -89,7 +91,7 @@ impl Menu {
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
             visible: false, face: None, progress_face: None, page: Page::Wifi,
             selected: 0, revision: 0, keyboard: None, code: None,
-            code_text: Zeroizing::new(String::new()), pending_ssid: None,
+            code_text: Zeroizing::new(String::new()), button_attempt:None, button_checked:0, pending_ssid: None,
             secrets, first_pass: Zeroizing::new(String::new()),
             creating_method: Method::Buttons, method, prefs, encrypted, locked: encrypted,
             pending_jobs: 0, after_unlock: None, forget_confirmation: None,
@@ -104,7 +106,7 @@ impl Menu {
         self.open_security();self.parent_unlock=true;self.parent_authenticated=false;self.return_to_shelf=false;self.unlock(None);
     }
     pub fn take_parent_authenticated(&mut self)->bool {std::mem::take(&mut self.parent_authenticated)}
-    fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("This sets a device PIN for encrypted credentials");}
+    fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("Set a PIN to encrypt credentials");}
     pub fn open(&mut self) { self.open_wifi(); }
     pub fn open_wifi(&mut self) {
         self.visible = true; self.page = Page::Wifi; self.selected = 0; self.changed();
@@ -137,7 +139,7 @@ impl Menu {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
     pub fn show_progress(&self) -> bool {
-        self.visible && (self.pending_jobs > 0 || self.last_wifi.busy != wifi::Busy::Idle)
+        self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle)
     }
     pub fn repeats(&self, btn: Btn) -> bool {
         self.code.is_none() && (matches!(btn, Btn::Up | Btn::Down | Btn::Left | Btn::Right) || self.keyboard.is_some())
@@ -206,6 +208,16 @@ impl Menu {
     pub fn update(&mut self) {
         while let Ok(reply) = self.worker.results.try_recv() {
             self.pending_jobs = self.pending_jobs.saturating_sub(1);
+            if reply.operation==Operation::Unlock {
+                if let Some(attempt)=self.button_attempt.take() {
+                    // Cancelling/deleting entry invalidates a late result. Wrong prefixes
+                    // remain silent and never clear the typed sequence or disclose length.
+                    if self.code!=Some(Field::Unlock) || !self.code_text.starts_with(attempt.as_str()) {continue;}
+                    if reply.result.is_err() {continue;}
+                    self.short_pin=attempt.len()<8;
+                    self.code=None;self.code_text.zeroize();self.button_checked=0;
+                }
+            }
             match reply.result {
                 Ok(Response::Unlocked(secrets)) => {
                     if self.remembers() { self.secrets = secrets; }
@@ -224,8 +236,8 @@ impl Menu {
                 }
                 Ok(Response::Created(method)) => {
                     self.encrypted = true; self.locked = false; self.method = Some(method);
-                    if self.short_pin {self.warn("Short PIN: easy to guess if someone copies the SD card",slot_ui::NoticeTone::Warning);}
-                    else {self.say("Security PIN set; shared by Wi-Fi and achievements");}
+                    if self.short_pin {self.warn("Short PIN: easy to guess",slot_ui::NoticeTone::Warning);}
+                    else {self.say("Security PIN saved");}
                     if std::mem::take(&mut self.encrypt_after_setup) {
                         self.pending_storage=Some(Storage::Encrypted);self.submit(Job::Save(self.secrets.clone()));
                     }
@@ -239,13 +251,13 @@ impl Menu {
                 Ok(Response::Saved) => {
                     if let Some(storage) = self.pending_storage.take() {
                         if remove_plain(&self.root).is_err() {
-                            self.warn("Could not delete unencrypted credentials; retry switching",slot_ui::NoticeTone::Danger);
+                            self.warn("Could not delete plaintext; try again",slot_ui::NoticeTone::Danger);
                         } else {
                             let was_plain=self.prefs.unencrypted;
                             self.prefs.unencrypted=false;self.prefs.remember=Some(storage==Storage::Encrypted);self.store_preferences();
                             if was_plain && storage==Storage::Encrypted {
-                                if self.short_pin {self.warn("Unencrypted credentials deleted. Short PINs are easy to guess",slot_ui::NoticeTone::Warning);}
-                                else {self.say("Unencrypted credentials deleted; encrypted storage enabled");}
+                                if self.short_pin {self.warn("Plaintext deleted · short PIN",slot_ui::NoticeTone::Warning);}
+                                else {self.say("Unencrypted credentials deleted");}
                             }
                             else {self.say(if storage==Storage::Encrypted {"Credentials saved encrypted"}else{"Saved credentials deleted; session only"});}
                         }
@@ -258,6 +270,7 @@ impl Menu {
                 }
             }
         }
+        self.try_button_unlock();
         if self.pending_jobs == 0 { if let Some((username, token)) = self.service.as_ref().and_then(|s| s.take_token()) {
             self.secrets.username = username; self.secrets.token = token; self.secrets.password.zeroize();
             self.save_secrets(); self.say("Signed in to RetroAchievements");
@@ -289,7 +302,7 @@ impl Menu {
     fn prompt(&mut self, field: Field) {
         let method = if field == Field::Unlock { self.method.unwrap_or(Method::Passphrase) } else { self.creating_method };
         if method == Method::Buttons {
-            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.notice.clear(); self.changed();
+            self.keyboard = None; self.code = Some(field); self.code_text.zeroize(); self.button_checked=0;self.notice.clear(); self.changed();
         } else {
             self.edit(field, match field {
                 Field::CreateVault => "Create unlock passphrase", Field::ConfirmVault => "Repeat unlock passphrase", _ => "Unlock credentials",
@@ -310,7 +323,7 @@ impl Menu {
         self.pending_ssid = None; self.after_unlock = None; self.forget_confirmation = None;
         if self.return_to_shelf {
             self.return_to_shelf = false; self.visible = false;
-            self.toast=Some(("Wi-Fi and RetroAchievements unavailable until unlocked".into(),Instant::now()));
+            self.toast=Some(("Saved credentials are locked".into(),Instant::now()));
         }
         self.notice.clear(); self.changed();
     }
@@ -320,7 +333,7 @@ impl Menu {
         if self.encrypted && self.locked {self.unlock(Some(AfterUnlock::Storage(storage)));return;}
         if storage==Storage::Unencrypted {
             self.confirm_unencrypted=true;self.forget_pin=false;self.forget_confirmation=Some(false);
-            self.warn("Passwords and tokens will be readable on the SD card",slot_ui::NoticeTone::Danger);
+            self.warn("Credentials readable on SD card",slot_ui::NoticeTone::Danger);
         } else if storage==Storage::Session {
             self.confirm_unencrypted=false;self.forget_pin=false;self.forget_confirmation=Some(false);self.changed();
         } else {
@@ -330,7 +343,7 @@ impl Menu {
     fn use_unencrypted(&mut self) {
         if write_plain(&self.root,&self.secrets).is_err() {self.warn("Could not save unencrypted credentials",slot_ui::NoticeTone::Danger);return;}
         self.prefs.unencrypted=true;self.prefs.remember=Some(false);self.store_preferences();
-        self.warn("Unencrypted: passwords and tokens are readable on the SD card",slot_ui::NoticeTone::Danger);
+        self.warn("Credentials stored unencrypted",slot_ui::NoticeTone::Danger);
     }
     fn pin_ready(&mut self)->bool {
         if self.remembers() && !self.encrypted {self.setup_pin();false}else{true}
@@ -366,14 +379,20 @@ impl Menu {
             wifi::Security::Unsupported => {},
         }
     }
+    fn try_button_unlock(&mut self) {
+        if self.code!=Some(Field::Unlock) || self.pending_jobs>0 || self.code_text.len()<network_vault::MIN_CODE_LEN || self.button_checked==self.code_text.len() {return;}
+        let text=Zeroizing::new(self.code_text.to_string());
+        self.button_checked=text.len();self.button_attempt=Some(Zeroizing::new(text.to_string()));
+        self.submit(Job::Unlock(text));
+    }
     pub fn input(&mut self, action: Action) {
-        if self.pending_jobs > 0 { return; }
         if let Some(field) = self.code {
             match action {
                 Action::QuickMenu => self.cancel_editor(),
-                Action::GbaDown(Btn::Select) => { self.code_text.pop(); self.changed(); }
+                Action::GbaDown(Btn::Select) => { self.code_text.pop(); self.button_checked=0;self.changed();self.try_button_unlock(); }
+                Action::GbaDown(Btn::Start) if field==Field::Unlock => {self.try_button_unlock();}
                 Action::GbaDown(Btn::Start) => {
-                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("Use at least 4 button presses"); }
+                    if self.code_text.len() < network_vault::MIN_CODE_LEN { self.say("At least 4 presses"); }
                     else {
                         let text=std::mem::replace(&mut self.code_text,Zeroizing::new(String::new()));
                         self.code=None; self.accept(field,text);
@@ -384,14 +403,14 @@ impl Menu {
                         Btn::Up=>Some(4), Btn::Down=>Some(5), Btn::Left=>Some(6), Btn::Right=>Some(7),
                         Btn::L1=>Some(8), Btn::R1=>Some(9), Btn::L2=>Some(10), Btn::R2=>Some(11), _=>None };
                     if let Some(digit) = digit {
-                        self.code_text.push((b'a'+digit) as char); self.changed();
-
-                    }
+                        self.code_text.push((b'a'+digit) as char);self.notice.clear();self.changed();self.try_button_unlock();
+                    } else {self.say("PIN_BUTTONS");}
                 }
                 _ => {},
             }
             return;
         }
+        if self.pending_jobs > 0 { return; }
         if self.keyboard.is_some() {
             let input = match action {
                 Action::QuickMenu => Some(KeyInput::Cancel),
@@ -451,7 +470,7 @@ impl Menu {
                     if !self.encrypted {self.say("Set Security PIN first");}
                     else {self.prefs.lock_device=!self.prefs.lock_device;self.store_preferences();self.changed();}
                 }
-                3 => { if self.root.join("Config/kids/use-device-pin").exists() {self.say("Choose a separate parent code before forgetting the device PIN");}
+                3 => { if self.root.join("Config/kids/use-device-pin").exists() {self.say("Set a separate parent code first");}
                     else if self.encrypted {self.confirm_unencrypted=false;self.forget_pin=true;self.forget_confirmation=Some(false);self.changed();} }
                 _=>{},
             },
@@ -501,7 +520,7 @@ impl Menu {
             Field::AccountPassword => { self.secrets.password = text.to_string(); self.secrets.token.zeroize(); self.service = None; self.save_secrets(); }
             Field::CreateVault => { self.first_pass = text; self.prompt(Field::ConfirmVault); }
             Field::ConfirmVault => {
-                if self.first_pass.as_str() != text.as_str() { self.first_pass.zeroize(); self.prompt(Field::CreateVault); self.say("Codes did not match; choose again"); return; }
+                if self.first_pass.as_str() != text.as_str() { self.first_pass.zeroize(); self.prompt(Field::CreateVault); self.say("PINs did not match"); return; }
                 self.first_pass.zeroize(); let saved=if self.remembers() {self.secrets.clone()} else {Secrets::default()};
                 self.short_pin=self.creating_method==Method::Buttons && text.len()<8;self.submit(Job::Create(text, saved, self.creating_method)); self.say("Encrypting credentials");
             }
@@ -586,8 +605,8 @@ impl Menu {
             return face;
         }
         if let Some(field) = self.code {
-            let instruction = match field { Field::CreateVault => "Choose a button PIN (4+ presses)", Field::ConfirmVault => "Repeat your button PIN", _ => "Enter your button PIN" };
-            return slot_ui::credential_code_face_with_lock_on(canvas,instruction,self.code_text.len(),self.return_to_shelf && self.prefs.lock_device);
+            let instruction = match field { Field::CreateVault => "Choose a PIN", Field::ConfirmVault => "Repeat your PIN", _ => "Enter your PIN" };
+            return slot_ui::masked_pin_face_on(canvas,"Security PIN",instruction,self.code_text.len(),if field==Field::Unlock {if self.return_to_shelf && self.prefs.lock_device {10}else{1}}else{8});
         }
         let rows = self.rows();
         let selected = self.focus_info().0;
@@ -595,20 +614,9 @@ impl Menu {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
             slot_ui::wifi_settings_face_on(canvas, &rows, selected, 5, &signals)
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
-        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {if self.confirm_unencrypted {"Store unencrypted?"}else if self.forget_pin {"Forget Security PIN?"} else {"Use session only?"}} else { match self.page {Page::Wifi=>"Wi-Fi", Page::Achievements=>"RetroAchievements", Page::Security=>"Security PIN"} });
+        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {if self.confirm_unencrypted {"Store unencrypted?"}else if self.forget_pin {"Forget Security PIN?"} else {"Use session only?"}} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Security PIN"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
-        if self.page == Page::Security && self.forget_confirmation.is_none() {
-            let lines: &[&str] = match self.creating_method {
-                Method::Buttons => &["Choose four or more button presses", "Longer, unpredictable PINs are harder to guess"],
-                Method::Passphrase => &["At least 12 characters", "Stronger protection if the card is copied"],
-            };
-            let detail = slot_ui::quick_description_face(lines);
-            let x=face.w.saturating_sub(detail.w)/2; blit(&mut face, &detail, x, 300);
-        }
-        if self.forget_confirmation.is_some() {
-            let detail = slot_ui::quick_description_face(if self.confirm_unencrypted {&["Passwords and tokens will be readable", "on the SD card. Select below and press A."]}else{&["Current session stays signed in", "Next restart needs the credentials again"]});
-            let x=face.w.saturating_sub(detail.w)/2; blit(&mut face, &detail, x, 300);
-        }
+
         face
     }
     pub fn flush_ready(&self) -> bool { self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
@@ -749,7 +757,7 @@ mod tests {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();
         assert_eq!(menu.rows()[2].1,"Encrypted");assert!(!plain_path(root.path()).exists());
         menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.page,Page::Security);
-        assert!(!menu.wifi_on);assert!(menu.notice_text().unwrap().contains("device PIN for encrypted credentials"));
+        assert!(!menu.wifi_on);assert!(menu.notice_text().unwrap().contains("PIN to encrypt credentials"));
         assert_eq!(menu.selected,1);
         menu.open_achievements();menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.page,Page::Security);
         assert!(!menu.prefs.achievements);
@@ -761,7 +769,9 @@ mod tests {
         assert!(menu.visible && menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
         submit_code(&mut menu,&[Btn::A;4]);wait(&mut menu);
         assert!(menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
-        submit_code(&mut menu,&CODE);wait(&mut menu);
+        assert_eq!(menu.code_text.as_str(),"aaaa");assert!(menu.notice_text().is_none());
+        for _ in 0..4 {menu.input(Action::GbaDown(Btn::Select));}
+        buttons(&mut menu,&CODE);wait(&mut menu);
         assert!(!menu.locked && menu.wifi_on && !menu.visible);
         let until=Instant::now()+Duration::from_secs(5);
         while menu.last_wifi.connected.is_none() {menu.update();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
@@ -774,7 +784,7 @@ mod tests {
     fn cancelling_startup_or_connection_never_turns_on_the_radio() {
         let root=tempfile::tempdir().unwrap();saved_wifi(root.path());
         let mut menu=Menu::new(root.path().into());menu.startup();menu.input(Action::QuickMenu);
-        menu.update();assert_eq!(menu.take_toast(),Some("Wi-Fi and RetroAchievements unavailable until unlocked"));assert!(!menu.visible && !menu.wifi_on && menu.locked);assert!(menu.after_unlock.is_none());
+        menu.update();assert_eq!(menu.take_toast(),Some("Saved credentials are locked"));assert!(!menu.visible && !menu.wifi_on && menu.locked);assert!(menu.after_unlock.is_none());
         menu.startup();assert!(!menu.visible,"the cancelled card must not reopen this boot");
         menu.open_wifi();menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.code,Some(Field::Unlock));
         menu.input(Action::QuickMenu);assert!(!menu.wifi_on && menu.after_unlock.is_none());
@@ -853,7 +863,7 @@ mod tests {
         let stale=root.path().join("Config/.network-credentials.json.123.4.tmp");std::fs::write(&stale,b"plain-fixture-password").unwrap();
         menu.set_storage(Storage::Encrypted);assert!(plain_path(root.path()).exists());wait(&mut menu);assert!(!stale.exists());
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
-        assert!(menu.notice_text().unwrap().contains("Unencrypted credentials deleted"));
+        assert!(menu.notice_text().unwrap().contains("Plaintext deleted"));
         let reader=Worker::new(root.path());reader.jobs.send(Job::Unlock(Zeroizing::new("acgj".into()))).unwrap();
         match reader.results.recv_timeout(Duration::from_secs(10)).unwrap().result.unwrap() {Response::Unlocked(secrets)=>assert_eq!(secrets.wifi_password,"plain-fixture-password"),_=>panic!("expected saved encrypted payload")}
     }
@@ -903,7 +913,8 @@ mod tests {
         let mut now=0;
         while app.network.as_ref().unwrap().pending_jobs>0 {now+=10;app.tick_ms(now);std::thread::sleep(Duration::from_millis(5));assert!(now<20000);}
         assert!(app.kid_menu.as_ref().unwrap().focus_info().is_none());
-        for b in CODE {app.apply(Action::GbaDown(b));}app.apply(Action::GbaDown(Btn::Start));
+        for _ in 0..4 {app.apply(Action::GbaDown(Btn::Select));}
+        for b in CODE {app.apply(Action::GbaDown(b));}
         while app.network.as_ref().unwrap().pending_jobs>0 {now+=10;app.tick_ms(now);std::thread::sleep(Duration::from_millis(5));assert!(now<20000);}
         assert!(!app.network.as_ref().unwrap().visible);assert!(app.kid_menu.as_ref().unwrap().focus_info().is_some());
     }
@@ -916,7 +927,7 @@ mod tests {
         menu.set_storage(Storage::Encrypted);assert_eq!(menu.page,Page::Security);
         menu.input(Action::GbaDown(Btn::A));submit_code(&mut menu,&CODE);submit_code(&mut menu,&CODE);wait(&mut menu);
         assert_eq!(menu.storage(),Storage::Encrypted);assert!(!plain_path(root.path()).exists());
-        assert!(menu.notice_text().unwrap().contains("Unencrypted credentials deleted"));
+        assert!(menu.notice_text().unwrap().contains("Plaintext deleted"));
     }
     #[test]
     fn failed_encryption_keeps_the_unencrypted_copy_and_reports_the_failure() {
@@ -927,6 +938,31 @@ mod tests {
         menu.set_storage(Storage::Encrypted);wait(&mut menu);
         assert_eq!(menu.storage(),Storage::Unencrypted);assert_eq!(read_plain(root.path()).unwrap().wifi_password,"still-needed");
         assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Danger);assert!(!menu.notice_text().unwrap().contains("deleted"));
+    }
+
+    #[test]
+    fn variable_pin_checks_silently_and_accepts_more_input_while_worker_is_busy() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        let long:Vec<_>=CODE.into_iter().cycle().take(8).collect();
+        menu.open_security();menu.selected=1;menu.input(Action::GbaDown(Btn::A));
+        submit_code(&mut menu,&long);submit_code(&mut menu,&long);wait(&mut menu);
+        let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);
+        buttons(&mut menu,&long[..4]);assert!(!menu.show_progress());wait(&mut menu);
+        assert!(menu.locked);assert_eq!(menu.code_text.len(),4);assert!(menu.notice_text().is_none());
+        buttons(&mut menu,&long[4..]);wait(&mut menu);
+        assert!(!menu.locked);assert!(menu.code.is_none());
+        // Fast typing must preserve all presses while an older prefix is being derived.
+        let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);
+        buttons(&mut menu,&long);assert_eq!(menu.code_text.len(),8);wait(&mut menu);
+        assert!(!menu.locked);assert!(menu.code_text.is_empty());
+    }
+    #[test]
+    fn cancelling_a_pending_automatic_pin_check_cannot_unlock_later() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
+        let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);
+        buttons(&mut menu,&CODE);assert!(menu.pending_jobs>0);
+        menu.input(Action::QuickMenu);wait(&mut menu);
+        assert!(menu.locked);assert!(menu.code.is_none());assert!(!menu.parent_authenticated);
     }
 
 }

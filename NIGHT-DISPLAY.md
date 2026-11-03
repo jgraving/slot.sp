@@ -58,3 +58,8 @@ The presets are stored in `Config/display.txt`. The menu and shortcuts update th
 ---
 
 [Appearance & screen](DISPLAY.md) · [Buttons & shortcuts](CONTROLS.md)
+
+Highlight **Color temp.** in the Night mode menu to preview the night preset, even during the day.
+Left/Right adjusts the saved night preset. Moving to another row or closing the menu ends the preview
+and restores the active day/night setting, including automatic scheduling. Previewing does not change
+brightness or create a schedule override.

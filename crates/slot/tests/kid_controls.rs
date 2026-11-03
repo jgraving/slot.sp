@@ -449,7 +449,7 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     raw_tap(&mut s, &mut time, Btn::A);
     assert!(s.app().kid_menu.as_ref().unwrap().entering_code());
     assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose 4 buttons");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Choose a PIN");
     let empty = s.app().kid_menu.as_ref().unwrap().screen_face().rgba;
     for (i, b) in [Btn::A, Btn::B].into_iter().enumerate() {
         raw_tap(&mut s, &mut time, b);
@@ -470,7 +470,7 @@ fn raw_parent_setup_shows_settings_records_buttons_and_requires_matching_confirm
     raw_tap(&mut s, &mut time, Btn::Y);
     assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[0], "Parent code");
     assert!(!dir.join("code").exists());
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Repeat your 4 buttons");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2], "Repeat your PIN");
     preview_menu(&s, "parent-confirm-empty.png");
     for b in [Btn::A; 4] { raw_tap(&mut s, &mut time, b); }
     assert!(!dir.join("code").exists(), "mismatched confirmation created a code");
@@ -1038,7 +1038,7 @@ fn hardware_level_feedback_is_drawn_after_parent_chrome_and_the_remaining_time_p
     app.set_icon_faces(Icon::ALL.into_iter().enumerate().map(|(i,_)|TexId::from_raw(10000+i)).collect());app.set_kid_meter_face((TexId::from_raw(9923),300,36));app.note_custom_menu_face();app.update(1.0);
     for action in [Action::VolumeDown,Action::BrightnessDown] {
         app.apply(action);app.kid_menu.as_mut().unwrap().face=Some(TexId::from_raw(9920));app.note_custom_menu_face();app.tick_ms(app.now()+180);let mut out=vec![];app.draw(&mut out);
-        let foreground=out.iter().position(|d|matches!(d,Draw::RoundRect{w:360.0,h:48.0,..})).expect("level pill missing over parents");
+        let foreground=out.iter().position(|d|matches!(d,Draw::RoundRect{w:176.0,h:52.0,..})).expect("level pill missing over parents");
         for id in [9920,9921,9922,9923] {let i=out.iter().rposition(|d|matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(id))).unwrap();assert!(i<foreground,"level pill painted behind {id}");}
         assert!(out.iter().skip(foreground).all(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==TexId::from_raw(9920))),"parent texture covers feedback");
     }
@@ -1058,7 +1058,7 @@ fn shoulder_code_roundtrips_through_raw_setup_confirmation_and_unlock() {
     raw_tap(&mut s,&mut time,Btn::Select);
     assert_eq!(s.app().kid_menu.as_ref().unwrap().entered_buttons(),&[8,9]);
     raw_tap(&mut s,&mut time,Btn::L2);raw_tap(&mut s,&mut time,Btn::R2);
-    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2],"Repeat your 4 buttons");
+    assert_eq!(s.app().kid_menu.as_ref().unwrap().lines()[2],"Repeat your PIN");
     for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2] {raw_tap(&mut s,&mut time,b);}
     let recovery=std::fs::read_to_string(Policy::directory(d.path()).join("parent-code.txt")).unwrap();
     assert!(recovery.contains("L1 R1 L2 R2"));
