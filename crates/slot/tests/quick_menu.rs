@@ -747,7 +747,8 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
     assert!(!drawn(&open, 403), "Resume is on the carousel menu");
     for _ in 0..3 {press(&mut a,Btn::Right);}
     press(&mut a, Btn::A);
-    assert_eq!(a.quick_menu(), Some(QuickRow::FastForward));
+    assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
+    press(&mut a, Btn::Down);
     for _ in 0..30 {
         a.update(1.0 / 60.0);
     }

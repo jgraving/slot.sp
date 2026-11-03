@@ -2,7 +2,7 @@
 
 This branch adds optional Wi-Fi and GBA achievement tracking. Both start off.
 About moves to General; Wi-Fi takes its existing grid square. RetroAchievements is
-under Gameplay. The grid still has eight entries.
+the first entry under Gameplay. The grid still has eight entries.
 
 ## Connect
 
@@ -13,22 +13,53 @@ Enterprise networks and WPA3-only networks are not supported in this test build.
 Use the D-pad to select keyboard keys and A to type. B deletes, X shifts, Y adds a
 space, L1/R1 switches symbols, Select reveals a secret, Start submits and Menu cancels.
 
-Credential storage offers two choices:
+## Security PIN and saved credentials
 
-- **This session only** is the default. Wi-Fi and account credentials stay in memory
-  and are forgotten on power-off. Nothing connects automatically after restarting.
-- **Save encrypted** requires a passphrase of at least 12 characters, entered twice.
-  After restarting, unlock it from Credential storage before using the saved account
-  or network. Then turn Wi-Fi on and select the network. The key is never stored on
-  the card. A forgotten unlock passphrase cannot be recovered; forget the saved
-  credentials and enter them again.
+Wi-Fi is one menu: On/Off, Reconnect, Credential storage, Scan networks, Other network,
+then nearby networks. Each network has a signal icon and its detected security type.
+Scanning uses the same progress indicator as Bluetooth. WPA3-only, enterprise, WEP
+and enhanced-open networks are shown but cannot be joined in this build.
 
-Both settings screens use the same encrypted credential file. The main preferences
-file contains only the achievement enable switch. The supplicant receives passwords
-through its Unix control socket; it never saves networks to the card. The vault uses
-Argon2id and authenticated ChaCha20-Poly1305 encryption. This protects a removed card
-against someone without the passphrase; it does not protect an already unlocked,
-running device. Choose a strong passphrase, not a short PIN.
+**General → Security PIN** sets the shared unlock secret for Wi-Fi and
+RetroAchievements. Choose **Button code** or **Passphrase**, then **Set Security PIN**:
+
+- **Button code:** enter 16 presses using A/B/X/Y, the D-pad and shoulder buttons,
+  then repeat them. The last press submits automatically. Select deletes a press;
+  Menu cancels. Held buttons do not repeat into the code. The dots hide your sequence.
+- **Passphrase:** use the keyboard to enter at least 12 characters, then repeat it.
+  A long, hard-to-guess passphrase gives stronger protection than a predictable code.
+
+This Security PIN is separate from the four-button parental-controls code. No recovery
+copy is written to the card. Remember it or keep it somewhere safe yourself.
+
+**Credential storage** is an inline Left/Right picker in both Wi-Fi and
+RetroAchievements. The choice is shared:
+
+- **Session only** is the default. Wi-Fi passwords and account credentials stay in
+  memory and disappear on power-off.
+- **Encrypted** saves them under your Security PIN. Set the PIN in General first;
+  choosing Encrypted without one shows that instruction. Creating a PIN alone does
+  not enable credential saving.
+
+After a restart with Wi-Fi or RetroAchievements enabled and encrypted credentials
+saved, an unlock card appears after startup. One successful unlock covers both
+features for that session. Wi-Fi reconnects after the code is accepted; there is no
+second Connect press. Turning on Wi-Fi, choosing Reconnect, or enabling achievements
+also prompts if the saved credentials are locked. Menu cancels the card and leaves
+the connection waiting. Nothing connects using locked credentials.
+
+Switching back to Session only asks before removing the saved credential copy. It
+keeps your Security PIN and the current session. **General → Security PIN → Forget
+Security PIN** removes the PIN and its saved credentials after confirmation; this is
+also the reset path if you forget the code. Pending achievements and game saves are
+kept. Enter the Wi-Fi/account details again afterward.
+
+Both features share one encrypted file. Its key is never stored on the card. The
+supplicant receives passwords through its Unix control socket and never saves them
+to the card. The vault uses Argon2id and authenticated ChaCha20-Poly1305 encryption.
+It protects a removed card against someone without your secret, not a device that
+is already running and unlocked. A short PIN or an obvious repeated button pattern
+is easier to guess; the button option requires 16 presses for this reason.
 
 Link play takes ownership of the radio and turns home Wi-Fi off. Reconnect manually
 after link play. Cached achievements can continue during gpSP link play, but the
@@ -36,7 +67,7 @@ mGBA two-console cable path is excluded.
 
 ## Set up achievements
 
-Open Settings → Gameplay → RetroAchievements. Enter the account username and
+Open Settings → Gameplay → RetroAchievements, the first Gameplay entry. Enter the account username and
 password, enable achievements and choose Sign in / sync. A successful sign-in
 replaces the account password in memory with the emulator login token. If encrypted
 storage is unlocked, that token is saved encrypted too.
@@ -52,7 +83,7 @@ if sign-in fails after a cold start. Certificate verification is never disabled.
 
 Prepared games can earn achievements without internet. Unlocks are saved before their
 notification appears, remain pending across restarts and upload later. Re-enable the
-account by unlocking encrypted credentials after reboot, or enter the account again
+account by entering the shared Security PIN after reboot, or enter the account again
 for session-only storage. Save files and local achievement caches are independent of
 credential storage. Sign out and disabling tracking preserve pending unlocks.
 

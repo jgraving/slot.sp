@@ -31,6 +31,7 @@ pub struct Network {
     /// The strongest signal heard for it, in dBm.
     pub signal: i32,
     pub security: Security,
+    pub encryption: String,
     pub saved: bool,
 }
 
@@ -288,17 +289,35 @@ pub fn parse_scan_results(text: &str, saved: &[String]) -> Vec<Network> {
         }
         let signal = level.trim().parse().unwrap_or(-100);
         match networks.iter_mut().find(|n| n.ssid == ssid) {
-            Some(seen) => seen.signal = seen.signal.max(signal),
+            Some(seen) if signal > seen.signal => {
+                seen.signal = signal;
+                seen.security = security(flags);
+                seen.encryption = encryption(flags).into();
+            }
+            Some(_) => {},
             None => networks.push(Network {
                 saved: saved.contains(&ssid),
                 ssid,
                 signal,
                 security: security(flags),
+                encryption: encryption(flags).into(),
             }),
         }
     }
     networks.sort_by(|a, b| b.signal.cmp(&a.signal).then_with(|| a.ssid.cmp(&b.ssid)));
     networks
+}
+
+/// Report the advertised authentication family separately from join support.
+pub fn encryption(flags: &str) -> &'static str {
+    if flags.contains("WEP") { "WEP" }
+    else if flags.contains("EAP") { "Enterprise" }
+    else if flags.contains("SAE") && flags.contains("PSK") { "WPA2/3" }
+    else if flags.contains("SAE") { "WPA3" }
+    else if flags.contains("OWE") { "OWE" }
+    else if flags.contains("WPA2") || flags.contains("RSN") { "WPA2" }
+    else if flags.contains("WPA") || flags.contains("PSK") { "WPA" }
+    else { "Open" }
 }
 
 /// What a network asks for to join, from its scan flags.
@@ -454,6 +473,10 @@ impl WifiBackend for SimWifi {
                 ssid: ssid.to_string(),
                 signal,
                 security,
+                encryption: match security {
+                    Security::Open => "Open", Security::Personal => "WPA2",
+                    Security::Unsupported => "Enterprise",
+                }.into(),
                 saved: self.saved.iter().any(|s| s == ssid),
             })
             .collect())
@@ -790,6 +813,7 @@ mod tests {
             ssid: String::new(),
             signal,
             security: Security::Open,
+            encryption: "Open".into(),
             saved: false,
         };
         assert_eq!(at(-45).bars(), 3);
@@ -920,4 +944,13 @@ mod tests {
         std::thread::sleep(Duration::from_millis(50));
         assert_eq!(wifi.view(), WifiView::default());
     }
+    #[test]
+    fn names_keep_detected_encryption_and_the_strongest_access_points_metadata() {
+        let found=parse_scan_results(RESULTS,&[]);
+        assert_eq!(found[0].encryption,"WPA2");assert_eq!(found[1].encryption,"WPA3");
+        assert_eq!(found[2].encryption,"Open");assert_eq!(found[3].encryption,"Enterprise");
+        assert_eq!(encryption("[WPA2-PSK+SAE-CCMP][ESS]"),"WPA2/3");
+        assert_eq!(encryption("[WEP][ESS]"),"WEP");assert_eq!(encryption("[OWE][ESS]"),"OWE");
+    }
+
 }

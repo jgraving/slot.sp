@@ -40,6 +40,8 @@ jobs:
           cargo run --locked -p slot --no-default-features --example accessibility_review -- "$SLOT_QOL_PREVIEW/accessibility-gl" gl 720
           cargo run --locked -p slot --no-default-features --example gallery_review -- "$SLOT_QOL_PREVIEW/gallery-gles" gles 640
           cargo run --locked -p slot --no-default-features --example gallery_review -- "$SLOT_QOL_PREVIEW/gallery-gl" gl 720
+          cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-light-gles" gles 640 light
+          cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-dark-gl" gl 720 dark
       - uses: actions/upload-artifact@v7
         with:
           retention-days: 1

@@ -119,6 +119,7 @@ pub enum QuickRow {
     FrameBlending,
     Wifi,
     Achievements,
+    SecurityPin,
 }
 
 impl QuickRow {
@@ -128,7 +129,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents)
     }
-    pub const ALL: [QuickRow; 108] = [
+    pub const ALL: [QuickRow; 109] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -237,6 +238,7 @@ impl QuickRow {
         QuickRow::FrameBlending,
         QuickRow::Wifi,
         QuickRow::Achievements,
+        QuickRow::SecurityPin,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -257,7 +259,7 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 13] = [
+    pub const GENERAL: [QuickRow; 14] = [
         QuickRow::Wallpaper,
         QuickRow::WallpaperTint,
         QuickRow::ShellColour,
@@ -270,6 +272,7 @@ impl QuickRow {
         QuickRow::CarouselMotion,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
+        QuickRow::SecurityPin,
         QuickRow::About,
     ];
 
@@ -351,6 +354,7 @@ impl QuickRow {
     ];
 
     pub const GAME: [QuickRow; 9] = [
+        QuickRow::Achievements,
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
@@ -359,7 +363,6 @@ impl QuickRow {
         QuickRow::LeftStick,
         QuickRow::AutoLoad,
         QuickRow::EjectSave,
-        QuickRow::Achievements,
     ];
 
     pub const PLAY: [QuickRow; 7] = [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
@@ -389,6 +392,7 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
+            QuickRow::SecurityPin => &QuickRow::GENERAL,
             QuickRow::Achievements => &QuickRow::GAME,
             QuickRow::LidClose
             | QuickRow::SleepTimeout
@@ -466,7 +470,7 @@ impl QuickRow {
             QuickRow::GbaShader => Some(QuickRow::ScreenGba),
             QuickRow::GbcShader => Some(QuickRow::ScreenGbc),
             QuickRow::GbShader => Some(QuickRow::ScreenGb),
-            QuickRow::FastForward => Some(QuickRow::Game),
+            QuickRow::Achievements => Some(QuickRow::Game),
             QuickRow::PlayScreen => Some(QuickRow::Settings),
             QuickRow::PlayBrightness => Some(QuickRow::PlayScreen),
             QuickRow::GameUp => Some(QuickRow::ControlsInGame),
@@ -563,6 +567,7 @@ impl QuickRow {
             QuickRow::About => "About",
             QuickRow::Wifi => "Wi-Fi",
             QuickRow::Achievements => "RetroAchievements",
+            QuickRow::SecurityPin => "Security PIN",
             QuickRow::DisplaySchedule => "Night mode",
             QuickRow::FavoriteSort => "Sort Favorites",
             QuickRow::GameDetails | QuickRow::PlayDetails => "Game Details",
@@ -663,6 +668,7 @@ impl QuickRow {
                 | QuickRow::About
                 | QuickRow::Wifi
                 | QuickRow::Achievements
+                | QuickRow::SecurityPin
                 | QuickRow::Reference
                 | QuickRow::PlayReference
                 | QuickRow::DisplaySchedule
@@ -1398,6 +1404,45 @@ pub fn parent_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], se
 }
 pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32) -> UndoFace {
     parent_settings_face_render(canvas,rows,selected,footer,status,reserve,false)
+}
+/// Network rows reserve a signal icon and preserve the SSID's exact case.
+pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, first_network: usize, signals: &[u8]) -> UndoFace {
+    let mut labels = rows.to_vec();
+    for row in labels.iter_mut().skip(first_network) { row.0.clear(); }
+    let mut face = parent_settings_face_animated_on(canvas, &labels, selected, 0, "", 0.0);
+    let visible = rows.len().min(QUICK_VISIBLE);
+    let start = selected.saturating_sub(visible/2).min(rows.len().saturating_sub(visible));
+    for (i, (name, _, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network) {
+        let lit=i==selected; let ink=if lit {MENU_INK}else{DIM_INK};
+        let y=crate::expressive::ROW_TOP+(i-start) as f32*QUICK_PITCH+TYPE_DROP;
+        let icon=wifi_signal_face(signals.get(i-first_network).copied().unwrap_or(1),ink);
+        parent_blit(&mut face,&icon,QUICK_LABEL_X,y+6.0);
+        if let Some(font)=text::font(if lit {text::Role::Focus}else{text::Role::Menu}) {
+            let layout=text::fit_preserving_case(font,name,canvas.w-322.0,1,26.0,26.0);
+            let w=layout.lines.first().map_or(0.0,|line|text::line_width(font,line,layout.px,layout.tracking)).ceil() as u32+2*MENU_PAD;
+            let mut label=UndoFace{rgba:vec![0;(w*MENU_H*4)as usize],w,h:MENU_H};
+            text::draw_centred(&mut label.rgba,w,MENU_H,&layout,ink);
+            parent_blit(&mut face,&label,QUICK_LABEL_X+34.0-MENU_PAD as f32,y);
+        }
+    }
+    face
+}
+pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
+    let mut face=UndoFace{rgba:vec![0;28*28*4],w:28,h:28};
+    for y in 0..28 {for x in 0..28 {
+        let mut coverage=0u32;
+        for sy in 0..4 {for sx in 0..4 {
+            let dx=x as f32+(sx as f32+0.5)/4.0-14.0;
+            let dy=y as f32+(sy as f32+0.5)/4.0-25.0;
+            let r=(dx*dx+dy*dy).sqrt();
+            let wedge=dy<0.0&&dx.abs()<=-dy;
+            let dot=r<2.3;
+            let arc=wedge&&((bars>=1&&(r-8.0).abs()<1.3)||(bars>=2&&(r-15.0).abs()<1.3)||(bars>=3&&(r-22.0).abs()<1.3));
+            if dot||arc {coverage+=1;}
+        }}
+        let at=((y*28+x)*4)as usize;face.rgba[at..at+4].copy_from_slice(&[ink[0],ink[1],ink[2],(coverage*255/16)as u8]);
+    }}
+    face
 }
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;

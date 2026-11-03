@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'site/docs'
 GUIDES = ['GUIDE', 'GETTING-STARTED', 'CONTROLS', 'LIBRARY', 'PLAYING',
           'SCREENSHOTS', 'DISPLAY', 'NIGHT-DISPLAY', 'BLUETOOTH', 'KID-MODE',
-          'POWER-OPTIONS', 'LINK-PLAY', 'CART-STUDIO', 'SETTINGS']
+          'POWER-OPTIONS', 'LINK-PLAY', 'CART-STUDIO', 'SETTINGS', 'RETROACHIEVEMENTS']
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

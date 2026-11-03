@@ -23,6 +23,7 @@ nav = [
     { "Screenshots" = "features/screenshots.md" },
     { "Sleep & power" = "features/power-options.md" },
     { "Link play" = "features/link-play.md" },
+    { "Wi-Fi & achievements" = "features/retroachievements.md" },
     { "Cart Studio guide" = "features/cart-studio.md" },
     { "Reference" = ["features/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
   ] },

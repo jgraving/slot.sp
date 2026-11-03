@@ -6,16 +6,27 @@ Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> t
 
 | Tile | Use it for | Instructions |
 | :--- | :--- | :--- |
-| **General** | Light or Dark menus, SP color, wallpaper, Favorites order, carousel motion, Recents, game names, startup animation, carousel sounds, clock format and date/time. | [Appearance & screen](DISPLAY.md) |
+| **General** | Light or Dark menus, SP color, wallpaper, Favorites order, carousel motion, Recents, game names, startup animation, carousel sounds, clock format, date/time, Security PIN and About. | [Appearance & screen](DISPLAY.md) |
 | **Screen** | Brightness, screen warmth and day/night schedules, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
 | **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects. | [Audio & headphones](BLUETOOTH.md) |
-| **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. | [Playing & saving](PLAYING.md) |
+| **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. RetroAchievements is the first entry. | [Playing & saving](PLAYING.md) |
 | **Power & lid** | Lid behavior, sleep and shutdown timer. | [Sleep & power](POWER-OPTIONS.md) |
 | **Device controls** | Game buttons, carousel buttons, shortcuts and the on-device reference. | [Buttons & shortcuts](CONTROLS.md) |
 | **Parental controls** | Approved games, daily allowance, session timer or bedtime, maximum volume and the four-button parent code. | [Kid mode](KID-MODE.md) |
-| **About** | Version and credits. Press <kbd>X</kbd> to restart the launcher. | [Credits](https://jakegraving.com/slot.sp/credits/) |
+| **Wi-Fi** | Connect, scan nearby networks and choose Session only or Encrypted credential storage. | [Wi-Fi & achievements](RETROACHIEVEMENTS.md) |
 
 ![The complete settings home](previews/current/light/settings.png)
+
+## Security PIN
+
+Set the shared **Security PIN** under **General** before choosing **Encrypted** in
+Wi-Fi or RetroAchievements. Choose a 16-button code or a keyboard passphrase. The
+same PIN unlocks both features for the current session. After a restart with either
+feature enabled and credentials saved, an animated card asks you to unlock them.
+See [PIN setup, reconnecting and resetting](RETROACHIEVEMENTS.md#security-pin-and-saved-credentials).
+
+Session only needs no PIN and stores no credentials on the card. About is also
+under General; press <kbd>X</kbd> there to restart the launcher.
 
 ## During a game
 

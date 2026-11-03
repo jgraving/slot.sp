@@ -1028,7 +1028,7 @@ impl App {
     }
 
     fn repeats(&self, btn: Btn) -> bool {
-        if self.network.as_ref().is_some_and(|m|m.visible) { return true; }
+        if let Some(menu)=self.network.as_ref().filter(|m|m.visible) { return menu.repeats(btn); }
         if self.display_schedule.is_some() { return true; }
         let vertical = matches!(btn, Btn::Up | Btn::Down);
         if let Some(menu)=&self.bluetooth {return !menu.busy() && (vertical || menu.slider_selected());}
@@ -1410,6 +1410,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
+            | QuickRow::SecurityPin
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -3303,7 +3304,7 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::About => {
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
@@ -3379,9 +3380,10 @@ impl App {
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
             }
-            QuickRow::Wifi | QuickRow::Achievements => {
+            QuickRow::Wifi | QuickRow::Achievements
+            | QuickRow::SecurityPin => {
                 if let Some(menu) = &mut self.network {
-                    if row == QuickRow::Wifi { menu.open_wifi(); } else { menu.open_achievements(); }
+                    if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
             QuickRow::About => self.phase = Phase::About,
@@ -3669,6 +3671,7 @@ impl App {
             | QuickRow::About
             | QuickRow::Wifi
             | QuickRow::Achievements
+            | QuickRow::SecurityPin
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
             | QuickRow::PlayDetails
@@ -4431,6 +4434,16 @@ impl App {
         self.panel_lit() && self.screen > 0.0
     }
 
+    /// Startup credential prompts wait for the boot intro and other modal pages.
+    pub fn startup_network(&mut self) {
+        if self.kids.active || self.link_active() || self.kid_menu.is_some()
+            || self.bluetooth.is_some() || self.display_schedule.is_some()
+            || !matches!(self.phase, Phase::Shelf | Phase::Playing { .. }) {
+            return;
+        }
+        if let Some(menu)=self.network.as_mut().filter(|m|!m.visible) { menu.startup(); }
+    }
+
     pub fn tick_ms(&mut self, now: Millis) {
         self.clock = self.clock.max(now as f64);
         self.timers();
@@ -4934,21 +4947,28 @@ impl App {
         }
     }
 
+    fn draw_network_progress(&self, out: &mut Vec<Draw>) {
+        if let Some(tex)=self.network.as_ref().filter(|m|m.visible&&m.show_progress()).and_then(|m|m.progress_face) {
+            out.push(Draw::Tex{x:self.canvas().centred(96.),y:192.,w:96.,h:96.,tex,alpha:self.menu_motion.reveal()});
+        }
+    }
     fn draw_scene(&self, out: &mut Vec<Draw>) {
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) && self.draw_quick_controls(out) {return;}
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
             if let Some(tex) = self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face)
                 .or_else(||self.display_schedule.as_ref().and_then(|m| m.face))
                 .or_else(|| self.kid_menu.as_ref().and_then(|m| m.face)) {
-                if matches!(self.phase,Phase::Playing{..}) && self.kid_menu.is_some() {
+                if matches!(self.phase,Phase::Playing{..}) && (self.kid_menu.is_some() || self.network.as_ref().is_some_and(|m|m.visible)) {
                     self.push_game(out);
                     self.draw_cached_overlay(tex,out);
+                    self.draw_network_progress(out);
                     self.draw_status_bar(out);
                     return;
                 }
                 self.draw_background(out);
                 self.draw_menu_shelf(out);
                 self.draw_cached_overlay(tex, out);
+                self.draw_network_progress(out);
                 draw_empty_slot(self.canvas(), self.slot_faces, out);
                 self.draw_status_bar(out);
                 return;

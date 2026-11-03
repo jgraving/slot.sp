@@ -10,7 +10,36 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use zeroize::{Zeroize, Zeroizing};
 
 const MAGIC: &[u8; 8] = b"SLOTNET1";
+const BUTTON_MAGIC: &[u8; 8] = b"SLOTBTN1";
 const MAX_FILE: usize = 32 * 1024;
+pub const CODE_LEN: usize = 16;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Method { Buttons, Passphrase }
+impl Method {
+    fn magic(self) -> &'static [u8; 8] {
+        match self { Self::Buttons => BUTTON_MAGIC, Self::Passphrase => MAGIC }
+    }
+    fn from_magic(bytes: &[u8]) -> Option<Self> {
+        if bytes == BUTTON_MAGIC { Some(Self::Buttons) }
+        else if bytes == MAGIC { Some(Self::Passphrase) } else { None }
+    }
+    fn validate(self, secret: &str) -> Result<(), &'static str> {
+        match self {
+            Self::Buttons if secret.len() == CODE_LEN && secret.bytes().all(|b| (b'a'..=b'l').contains(&b)) => Ok(()),
+            Self::Buttons => Err("Use exactly 16 button presses"),
+            Self::Passphrase if secret.chars().count() >= 12 => Ok(()),
+            Self::Passphrase => Err("Use at least 12 characters"),
+        }
+    }
+}
+/// Only the input method is public; no code, hint, hash or recovery key is stored.
+pub fn method(root: &Path) -> Option<Method> {
+    use std::io::Read;
+    let mut bytes = [0; 8];
+    std::fs::File::open(vault_path(root)).ok()?.read_exact(&mut bytes).ok()?;
+    Method::from_magic(&bytes)
+}
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Secrets {
     pub ssid: String,
@@ -31,8 +60,9 @@ impl Drop for Secrets {
 struct Key {
     bytes: Zeroizing<[u8; 32]>,
     salt: [u8; 16],
+    method: Method,
 }
-fn derive(pass: &str, salt: [u8; 16]) -> Result<Key, &'static str> {
+fn derive_for(pass: &str, salt: [u8; 16], method: Method) -> Result<Key, &'static str> {
     let mut bytes = Zeroizing::new([0; 32]);
     // 19 MiB, two passes; executed on a worker, never the render thread.
     let params =
@@ -40,7 +70,7 @@ fn derive(pass: &str, salt: [u8; 16]) -> Result<Key, &'static str> {
     argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params)
         .hash_password_into(pass.as_bytes(), &salt, bytes.as_mut())
         .map_err(|_| "Cannot unlock credentials")?;
-    Ok(Key { bytes, salt })
+    Ok(Key { bytes, salt, method })
 }
 fn encrypt(path: &Path, key: &Key, secrets: &Secrets) -> Result<(), &'static str> {
     let mut payload =
@@ -53,7 +83,7 @@ fn encrypt(path: &Path, key: &Key, secrets: &Secrets) -> Result<(), &'static str
         aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key.bytes.as_ref())
             .map_err(|_| "Cannot save credentials")?,
     );
-    let mut header = Vec::from(MAGIC.as_slice());
+    let mut header = Vec::from(key.method.magic().as_slice());
     header.extend_from_slice(&key.salt);
     header.extend_from_slice(&nonce);
     key_aead
@@ -76,12 +106,13 @@ fn decrypt(path: &Path, pass: &str) -> Result<(Key, Secrets), &'static str> {
     file.take((MAX_FILE + 1) as u64)
         .read_to_end(&mut blob)
         .map_err(|_| "Cannot read encrypted credentials")?;
-    if blob.len() < 52 || blob.len() > MAX_FILE || &blob[..8] != MAGIC {
+    if blob.len() < 52 || blob.len() > MAX_FILE {
         return Err("Invalid encrypted credentials");
     }
+    let method = Method::from_magic(&blob[..8]).ok_or("Invalid encrypted credentials")?;
     let salt = blob[8..24].try_into().unwrap();
     let nonce = blob[24..36].try_into().unwrap();
-    let key = derive(pass, salt)?;
+    let key = derive_for(pass, salt, method)?;
     let key_aead = aead::LessSafeKey::new(
         aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key.bytes.as_ref())
             .map_err(|_| "Cannot unlock credentials")?,
@@ -93,19 +124,23 @@ fn decrypt(path: &Path, pass: &str) -> Result<(Key, Secrets), &'static str> {
             aead::Aad::from(header),
             payload,
         )
-        .map_err(|_| "Wrong passphrase or damaged credentials")?;
+        .map_err(|_| "Wrong unlock code or damaged credentials")?;
     let secrets = serde_json::from_slice(plain).map_err(|_| "Invalid encrypted credentials")?;
     Ok((key, secrets))
 }
 pub enum Job {
-    Create(Zeroizing<String>, Secrets),
+    Create(Zeroizing<String>, Secrets, Method),
     Unlock(Zeroizing<String>),
     Save(Secrets),
     Forget,
 }
+pub enum Response { Unlocked(Secrets), Created(Method), Saved, Forgotten }
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Operation { Unlock, Create, Save, Forget }
+pub struct Reply { pub operation: Operation, pub result: Result<Response, &'static str> }
 pub struct Worker {
     pub jobs: Sender<Job>,
-    pub results: Receiver<Result<Option<Secrets>, &'static str>>,
+    pub results: Receiver<Reply>,
 }
 impl Worker {
     pub fn new(root: &Path) -> Self {
@@ -115,41 +150,43 @@ impl Worker {
         std::thread::spawn(move || {
             let mut key = None;
             for job in requests {
+                let operation = match &job {
+                    Job::Unlock(_) => Operation::Unlock, Job::Create(..) => Operation::Create,
+                    Job::Save(_) => Operation::Save, Job::Forget => Operation::Forget,
+                };
                 let result = match job {
                     Job::Unlock(pass) => decrypt(&path, &pass).map(|(next, secrets)| {
                         key = Some(next);
-                        Some(secrets)
+                        Response::Unlocked(secrets)
                     }),
-                    Job::Create(pass, secrets) => (|| {
-                        if pass.chars().count() < 12 {
-                            return Err("Use at least 12 characters");
-                        }
+                    Job::Create(pass, secrets, method) => (|| {
+                        method.validate(&pass)?;
                         let mut salt = [0; 16];
                         SystemRandom::new()
                             .fill(&mut salt)
                             .map_err(|_| "Cannot save credentials")?;
-                        let next = derive(&pass, salt)?;
+                        let next = derive_for(&pass, salt, method)?;
                         encrypt(&path, &next, &secrets)?;
                         key = Some(next);
-                        Ok(None)
+                        Ok(Response::Created(method))
                     })(),
                     Job::Save(secrets) => match &key {
-                        Some(key) => encrypt(&path, key, &secrets).map(|_| None),
+                        Some(key) => encrypt(&path, key, &secrets).map(|_| Response::Saved),
                         None => Err("Unlock credentials first"),
                     },
                     Job::Forget => match std::fs::remove_file(&path) {
                         Ok(()) => {
                             key = None;
-                            Ok(None)
+                            Ok(Response::Forgotten)
                         }
                         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                             key = None;
-                            Ok(None)
+                            Ok(Response::Forgotten)
                         }
                         Err(_) => Err("Cannot remove saved credentials"),
                     },
                 };
-                if responses.send(result).is_err() {
+                if responses.send(Reply { operation, result }).is_err() {
                     break;
                 }
             }
@@ -170,7 +207,7 @@ mod tests {
         let mut secrets = Secrets::default();
         secrets.wifi_password = "not-in-plaintext".into();
         secrets.token = "account-secret".into();
-        let key = derive("a long test passphrase", [1; 16]).unwrap();
+        let key = derive_for("a long test passphrase", [1; 16], Method::Passphrase).unwrap();
         encrypt(&path, &key, &secrets).unwrap();
         let mut bytes = std::fs::read(&path).unwrap();
         assert!(!bytes.windows(16).any(|b| b == b"not-in-plaintext"));
@@ -185,4 +222,19 @@ mod tests {
         std::fs::write(&path, bytes).unwrap();
         assert!(decrypt(&path, "a long test passphrase").is_err());
     }
+    #[test]
+    fn method_header_is_authenticated_and_legacy_passphrase_files_still_unlock() {
+        let root=tempfile::tempdir().unwrap();let path=vault_path(root.path());
+        let code="abcdefghijklacgj";
+        Method::Buttons.validate(code).unwrap();assert!(Method::Buttons.validate("abcd").is_err());
+        let mut secrets=Secrets::default();secrets.wifi_password="network-password".into();
+        let key=derive_for(code,[2;16],Method::Buttons).unwrap();encrypt(&path,&key,&secrets).unwrap();
+        assert_eq!(method(root.path()),Some(Method::Buttons));
+        assert_eq!(decrypt(&path,code).unwrap().1.wifi_password,"network-password");
+        let mut bytes=std::fs::read(&path).unwrap();assert!(!bytes.windows(code.len()).any(|v|v==code.as_bytes()));
+        bytes[..8].copy_from_slice(MAGIC);std::fs::write(&path,bytes).unwrap();assert!(decrypt(&path,code).is_err());
+        let legacy=derive_for("a long test passphrase",[3;16],Method::Passphrase).unwrap();encrypt(&path,&legacy,&secrets).unwrap();
+        assert_eq!(method(root.path()),Some(Method::Passphrase));assert!(decrypt(&path,"a long test passphrase").is_ok());
+    }
+
 }

@@ -38,6 +38,8 @@ pub struct Frontend {
     menu_chrome_cache: Vec<(slot_ui::UndoFace,TexId,usize)>,
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64)>,
     network_tex: Option<TexId>,
+    network_old_tex: Option<TexId>,
+    network_page: Option<u64>,
     bluetooth_tex: Option<TexId>,
     bluetooth_old_tex: Option<TexId>,
     bluetooth_page: Option<u64>,
@@ -205,6 +207,8 @@ impl Frontend {
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,
             network_tex: None,
+            network_old_tex: None,
+            network_page: None,
             bluetooth_tex: None,
             bluetooth_old_tex: None,
             bluetooth_page: None,
@@ -721,18 +725,19 @@ impl Frontend {
             .bluetooth
             .as_ref()
             .is_some_and(|m| m.show_progress()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.show_progress());
+        let network_busy=self.session.app().network.as_ref().is_some_and(|m|m.show_progress());
         if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
             self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
             self.spinner_frames=None;
         }
-        let progress = if sound_busy {
+        let progress = if sound_busy || network_busy {
             self.bluetooth_spinner
                 .get((self.start.elapsed().as_millis() / slot_ui::LOADING_FRAME_MS % slot_ui::LOADING_FRAMES as u128) as usize)
                 .copied()
         } else {
             None
         };
-        self.session.app_mut().set_quick_control_progress(progress);
+        self.session.app_mut().set_quick_control_progress(if sound_busy {progress}else{None});
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         let mut chrome_updates=vec![];
@@ -741,7 +746,7 @@ impl Frontend {
                 std::mem::swap(&mut self.bluetooth_tex, &mut self.bluetooth_old_tex);
                 self.bluetooth_page=Some(menu.page_key()); menu.face=None;
             }
-            menu.progress_face = progress;
+            menu.progress_face = if sound_busy {progress}else{None};
             let lines = menu.lines();
             if lines != self.bluetooth_lines || menu.face.is_none() {
                 let face=crate::bluetooth::screen_face_without_switches(&lines,sound_footer_ink,sound_canvas);
@@ -780,6 +785,11 @@ impl Frontend {
         self.cart_faces.sync(self.session.app_mut(), compositor);
         let network_light=self.session.app().light();
         if let Some(menu) = self.session.app_mut().network.as_mut().filter(|m|m.visible) {
+            if self.network_page != Some(menu.page_key()) {
+                std::mem::swap(&mut self.network_tex,&mut self.network_old_tex);
+                self.network_page=Some(menu.page_key()); menu.face=None;
+            }
+            menu.progress_face=if network_busy {progress}else{None};
             if menu.face.is_none() { menu.face=Some(upload_menu_face(compositor,&mut self.network_tex,&mut self.menu_chrome_cache,menu.screen_face_on(sound_canvas,network_light),&mut chrome_updates)); }
         }
         if let Some(menu) = &mut self.session.app_mut().display_schedule {
@@ -1013,6 +1023,7 @@ impl Frontend {
         if self.rebuild.is_some() {
             return;
         }
+        if self.boot_intro.is_none() || self.boot_intro_cancelled { self.session.app_mut().startup_network(); }
         self.session.feed(events, now);
         let dt = self.last.elapsed().as_secs_f32();
         self.last = Instant::now();
@@ -1044,6 +1055,7 @@ impl Frontend {
         self.boot_intro_cancelled |= events
             .iter()
             .any(|event| matches!(event, slot_input::RawEvent::Down(_)));
+        if self.boot_intro.is_none() || self.boot_intro_cancelled { self.session.app_mut().startup_network(); }
         self.session.feed(events, now);
         self.session.update(dt);
     }
