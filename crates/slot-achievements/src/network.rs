@@ -335,7 +335,8 @@ pub(crate) fn run(
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
         }
-        // Metadata preparation and badge downloads each occupy half of a cache refresh.
+        badges.maintain();
+        // Publish independent game and artwork phases before attempting HTTP.
         status.pending.store(
             !library.is_empty()
                 || library_failed > 0
@@ -416,7 +417,7 @@ pub(crate) fn run(
                         let mut store = store.lock().unwrap();
                         store.ack(unlock.id).map_err(|_| Failure::Invalid)?;
                         if store.unlocks.values().all(|u| u.synced) {
-                            let _ = notices.send(Notice::status(0, "Achievements synced"));
+                            let _ = notices.send(Notice::status(0, "Unlocks uploaded"));
                         }
                     }
                     Err(Failure::Network) => return Err(Failure::Network),
@@ -516,7 +517,7 @@ pub(crate) fn run(
         match result {
             Ok(()) => {
                 problem = if library_failed > 0 { "Some games could not be prepared" }
-                    else if badges.waiting { "Artwork will retry" } else { "" };
+                    else if badges.waiting { badges.problem } else { "" };
                 status.set(if library_failed > 0 || badges.waiting {
                     SyncStatus::Attention
                 } else if !library.is_empty()
@@ -751,11 +752,11 @@ fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining:
     next_attempt: Instant, problem: &'static str) {
     let (badges_done, badges_total) = badges.counts();
     let detail = crate::SyncDetail {
-        status: status.get(), authenticated, games_done: total.saturating_sub(remaining),
+        status: status.get(), authenticated,catalog_ready:true,artwork_ready:!badges.discovery_pending(), games_done: total.saturating_sub(remaining),
         games_total: total, games_failed: failed, badges_done, badges_total,
         pending_awards: store.lock().unwrap().unlocks.values().filter(|u| !u.synced).count(),
         retry_seconds: if matches!(status.get(), SyncStatus::Offline | SyncStatus::Attention) {
-            if problem=="Artwork will retry" {badges.retry_seconds()}else{next_attempt.saturating_duration_since(Instant::now()).as_secs()}
+            if badges.waiting && problem==badges.problem {badges.retry_seconds()}else{next_attempt.saturating_duration_since(Instant::now()).as_secs()}
         } else { 0 }, problem,
     };
     *status.detail.lock().unwrap() = detail;

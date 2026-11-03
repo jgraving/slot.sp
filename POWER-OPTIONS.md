@@ -58,7 +58,8 @@ Open **Menu → General → Date & Time**.
 | :--- | :--- |
 | <kbd>Left</kbd> / <kbd>Right</kbd> | Choose a field. |
 | <kbd>Up</kbd> / <kbd>Down</kbd> | Change its value. |
-| <kbd>A</kbd> | Set the clock. |
+| <kbd>A</kbd> | Enter or leave field editing. |
+| <kbd>Start</kbd> | Done; return to settings (or continue first setup). |
 | <kbd>B</kbd> | Return to settings. |
 
 **General → Clock format** chooses 12-hour or 24-hour time. The status clock, Date & Time editor, scheduled display changes and parental bedtime use that choice. The last field is your time zone's offset from UTC. This time is also used by games with clocks and by kid-mode limits.
@@ -73,3 +74,5 @@ Lid behavior and the shutdown timer are saved in `Config/power.txt`. Change them
 ---
 
 [Day & night](NIGHT-DISPLAY.md) · [Playing & saving](PLAYING.md) · [Kid mode](KID-MODE.md)
+
+Changes in Settings apply immediately, including the UTC offset; no save press is required. Changing the offset preserves UTC and changes the displayed local time. Choose the offset for your location; daylight-saving changes are manual. First-boot clock setup still needs Done to continue.

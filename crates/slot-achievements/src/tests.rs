@@ -178,6 +178,7 @@ fn badge_cache_survives_restart_and_repairs_corrupt_images() {
     assert_eq!(requests.try_iter().count(), 1);
     let mut restarted = badges::Queue::new(&store.dir);
     restarted.enqueue(&game());
+    restarted.maintain();
     assert!(!restarted.pending());
     // Notifications carry a local path even offline, with no network dependency.
     assert_eq!(load_badge(&path).unwrap().width, 2);
@@ -326,7 +327,7 @@ fn offline_unlock_is_durable_then_syncs_without_reopening_the_game() {
     wait_for(|| {
         online
             .take_notice()
-            .is_some_and(|n| n.title == "Achievements synced")
+            .is_some_and(|n| n.title == "Unlocks uploaded")
     });
     assert!(Store::open(root.path(), "Player").unwrap().unlocks[&7].synced);
     assert_eq!(
@@ -608,6 +609,7 @@ fn cache_percentage_counts_unique_badges_and_resumes_from_disk() {
     assert_eq!(queue.percent(), 50); // Failures never count as completed downloads.
     let mut restarted = badges::Queue::new(&store.dir);
     restarted.enqueue(&data);
+    restarted.maintain();
     assert_eq!(restarted.percent(), 50);
     restarted.step(&mut http);
     assert_eq!(restarted.percent(), 100);

@@ -45,6 +45,8 @@ pub enum SyncStatus {
 pub struct SyncDetail {
     pub status: SyncStatus,
     pub authenticated: bool,
+    pub catalog_ready:bool,
+    pub artwork_ready:bool,
     pub games_done: usize,
     pub games_total: usize,
     pub games_failed: usize,
@@ -55,7 +57,7 @@ pub struct SyncDetail {
     pub problem: &'static str,
 }
 impl Default for SyncDetail {
-    fn default() -> Self { Self { status: SyncStatus::Disabled, authenticated: false,
+    fn default() -> Self { Self { status: SyncStatus::Disabled, authenticated: false,catalog_ready:false,artwork_ready:false,
         games_done: 0, games_total: 0, games_failed: 0, badges_done: 0, badges_total: 0,
         pending_awards: 0, retry_seconds: 0, problem: "" } }
 }
@@ -84,6 +86,7 @@ struct Status {
 impl Status {
     fn set(&self, value: SyncStatus) {
         self.network.store(value as u8, Ordering::Release);
+        self.detail.lock().unwrap().status=value;
     }
 
     fn get(&self) -> SyncStatus {

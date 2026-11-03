@@ -921,7 +921,7 @@ impl Frontend {
         let meter=self.session.app().network.as_ref().and_then(|m|m.floating_progress()).map(|(label,done,total)|(label,done,total,light));
         if self.network_meter_key!=meter {
             self.session.app_mut().network_meter_face=if let Some((label,done,total,light))=&meter {
-                let face=slot_ui::filled_meter_face(&format!("{label} {done} / {total}"),Some(Icon::Gamepad),*done as f32/(*total).max(1)as f32,*light,400,40);
+                let face=slot_ui::filled_meter_face(&format!("{label} {done}/{total}"),Some(Icon::Gamepad),*done as f32/(*total).max(1)as f32,*light,400,40);
                 let tex=upload_rgba(compositor,&mut self.network_meter_tex,face.w,face.h,&face.rgba);Some((tex,face.w,face.h))
             }else{None};
             self.network_meter_key=meter;
@@ -1087,6 +1087,8 @@ impl Frontend {
         self.switcher.thumbs.len() + self.switcher.spare.len()
     }
 
+    #[cfg(test)]
+    pub(crate) fn app_mut_for_review(&mut self)->&mut crate::app::App {self.session.app_mut()}
     pub fn app(&self) -> &crate::app::App {
         self.session.app()
     }

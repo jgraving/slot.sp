@@ -132,7 +132,7 @@ impl Menu {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
     pub fn achievements_busy(&self) -> bool {
-        self.service.as_ref().is_some_and(|s| s.sync_pending() || s.sync_status() == slot_achievements::SyncStatus::Syncing)
+        self.service.as_ref().is_some_and(|s| s.sync_pending() || s.sync_status() == slot_achievements::SyncStatus::Syncing || self.last_sync.progress().is_some() || self.last_sync.pending_awards>0)
     }
     pub fn show_progress(&self) -> bool {
         self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle)
@@ -382,7 +382,7 @@ impl Menu {
                     if field==Field::Unlock && self.code_text.len()>=4 && !self.button_pending.contains(&self.code_text.len()) {self.button_pending.push(self.code_text.len());}
                     self.changed();self.try_button_unlock();
                 }
-                Action::GbaDown(Btn::Start) if field==Field::Unlock => {self.try_button_unlock();}
+                Action::GbaDown(Btn::Start) if field==Field::Unlock => {if self.code_text.len()<network_vault::MIN_CODE_LEN {self.pin_rejected=Some(Instant::now());self.say("Use 6+ presses");}self.try_button_unlock();}
                 Action::GbaDown(Btn::Start) => {
                     if self.code_text.len() < network_vault::MIN_CODE_LEN { self.pin_rejected=Some(Instant::now());self.say("Use 6+ presses"); }
                     else {
@@ -552,8 +552,8 @@ impl Menu {
         if self.page == Page::Achievements && self.service.is_some() {
             let d = self.last_sync;
             rows.extend([
-                (if d.games_total>0 && d.games_done==d.games_total && d.games_failed==0 {"Games ready"}else{"Game data"}.into(), if d.games_total==0 {"No GBA games".into()}else{format!("{} / {}", d.games_done, d.games_total)}, false),
-                ("Artwork".into(), if d.badges_total==0 {"None queued".into()}else{format!("{} / {}", d.badges_done, d.badges_total)}, false),
+                (if d.games_total>0 && d.games_done==d.games_total && d.games_failed==0 {"Games ready"}else{"Game data"}.into(), if !d.catalog_ready {"Reading library…".into()}else if d.games_total==0 {"No GBA games".into()}else{format!("{} / {}", d.games_done, d.games_total)}, false),
+                ("Artwork".into(), if !d.catalog_ready || !d.artwork_ready {"Reading artwork…".into()}else if d.badges_total==0 {"None queued".into()}else{format!("{} / {}", d.badges_done, d.badges_total)}, false),
                 ("Uploads waiting".into(), d.pending_awards.to_string(), false),
                 ("Games to retry".into(), d.games_failed.to_string(), false),
             ]);
@@ -599,7 +599,7 @@ impl Menu {
         }
         if let Some(field) = self.code {
             let instruction = match field { Field::CreateVault => "Choose a code", Field::ConfirmVault => "Repeat your code", _ => "Enter your code" };
-            let minimum=if field==Field::Unlock {0}else{network_vault::MIN_CODE_LEN};
+            let minimum=network_vault::MIN_CODE_LEN;
             let footer=if field==Field::Unlock {if self.return_to_shelf && self.prefs.lock_device {10}else{1}}else if self.code_text.len()<minimum {12}else{8};
             let u=self.pin_rejected.map_or(0.0,|t|(t.elapsed().as_secs_f32()/0.36).clamp(0.0,1.0));
             let shake=((u*std::f32::consts::TAU*3.0).sin()*10.0*(1.0-u)).round()as i32;
@@ -620,7 +620,7 @@ impl Menu {
     pub fn floating_progress(&self)->Option<(String,u64,u64)> {
         if !self.visible || self.is_keyboard() || self.forget_confirmation.is_some() {return None;}
         if self.page==Page::Achievements && self.service.is_some() {
-            return self.last_sync.progress().map(|(phase,done,total)|(phase.to_string(),done as u64,total as u64));
+            return self.last_sync.progress().map(|(phase,done,total)|(if self.last_sync.retry_seconds>0 {format!("{phase} · retry {}s",self.last_sync.retry_seconds)}else{phase.to_string()},done as u64,total as u64));
         }
         None
     }
@@ -786,7 +786,7 @@ mod tests {
         assert!(menu.visible && menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
         submit_code(&mut menu,&[Btn::A;4]);wait(&mut menu);
         assert!(menu.locked && !menu.wifi_on);assert_eq!(menu.code,Some(Field::Unlock));
-        assert_eq!(menu.code_text.as_str(),"aaaa");assert!(menu.notice_text().is_none());
+        assert_eq!(menu.code_text.as_str(),"aaaa");assert_eq!(menu.notice_text(),Some("Use 6+ presses"));
         for _ in 0..4 {menu.input(Action::GbaDown(Btn::Select));}
         buttons(&mut menu,&CODE);wait(&mut menu);
         assert!(!menu.locked && menu.wifi_on && !menu.visible);
@@ -975,6 +975,37 @@ mod tests {
         assert_eq!(read_plain(root.path()).unwrap().token,"keep-token");assert!(!m.wifi_on && m.service.is_none());
     }
 
+    #[cfg(target_os="linux")]
+    #[test]
+    #[ignore = "requires Mesa EGL; produces production-compositor review captures"]
+    fn native_ra_progress_review() {
+        use slot_gfx::Compositor;
+        use slot_input::{InputSource,RawEvent,Millis};
+        struct Empty;impl InputSource for Empty {fn poll(&mut self,_:Millis)->Vec<RawEvent>{vec![]}}
+        let dir=std::path::PathBuf::from(std::env::var_os("SLOT_QOL_PREVIEW").expect("preview directory"));
+        for (name,width,light) in [("ra-light-gles",640,true),("ra-dark-gl",720,false)] {
+            let output=dir.join(name);std::fs::create_dir_all(&output).unwrap();let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
+            let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+            let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+            for i in 0..90 {f.advance_at(&mut Empty,i*17,1.0/60.0);f.compose(&mut g);}
+            let m=f.app_mut_for_review().network.as_mut().unwrap();m.open_achievements();m.prefs.achievements=true;m.selected=6;m.secrets.username="Preview".into();m.secrets.token="fixture".into();
+            let mut review_tick=2000;
+            m.service=Some(slot_achievements::Service::configured(root.path().into(),slot_achievements::Config::default()));
+            for (shot,done,total,badges,status,problem,retry) in [
+                ("game-data",6,900,5,slot_achievements::SyncStatus::Syncing,"",0),
+                ("artwork-downloading",900,900,175,slot_achievements::SyncStatus::Syncing,"",0),
+                ("artwork-retry",900,900,175,slot_achievements::SyncStatus::Attention,"Artwork server unavailable",20),
+                ("up-to-date",900,900,800,slot_achievements::SyncStatus::Ready,"",0)] {
+                for _ in 0..60 {
+                review_tick+=17;f.advance_at(&mut Empty,review_tick,1.0/60.0);
+                let m=f.app_mut_for_review().network.as_mut().unwrap();m.last_sync=slot_achievements::SyncDetail{catalog_ready:true,artwork_ready:true,authenticated:true,games_done:done,games_total:total,badges_done:badges,badges_total:800,status,problem,retry_seconds:retry,..Default::default()};m.face=None;m.notice.clear();
+                f.compose(&mut g);
+                }
+                let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
+        }
+    }
     #[test]
     fn early_done_preserves_entry_and_enables_hint_only_at_minimum() {
         let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());m.prompt(Field::CreateVault);
@@ -1011,3 +1042,7 @@ mod tests {
     }
 
 }
+
+#[cfg(all(test,target_os="linux"))]
+#[path="../../slot-ui/examples/support/mod.rs"]
+mod review_surface;

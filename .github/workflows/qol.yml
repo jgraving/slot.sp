@@ -29,6 +29,7 @@ jobs:
       - name: Render expressive menus through GLES and desktop GL
         id: renders
         run: |
+          cargo test --locked -p slot --no-default-features --lib network::tests::native_ra_progress_review -- --ignored --exact
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-light-gles" gles 640 light
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-dark-gl" gl 720 dark
           cargo run --locked -p slot-ui --example expressive_menu_preview -- "$SLOT_QOL_PREVIEW/expressive-gles" gles 640
