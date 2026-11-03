@@ -423,7 +423,7 @@ impl Menu {
                         else if self.encrypted { self.pending_storage = Some(Storage::Session); self.submit(Job::Save(Secrets::default())); }
                         else if remove_plain(&self.root).is_ok() {self.prefs.unencrypted=false;self.prefs.remember=Some(false);self.store_preferences();self.say("Saved credentials deleted; session only");}
                         else {self.warn("Could not delete unencrypted credentials",slot_ui::NoticeTone::Danger);}
-                    }
+                    } else {self.notice.clear();self.notice_tone=slot_ui::NoticeTone::Neutral;self.confirm_unencrypted=false;}
                 }
                 _=>{},
             }
@@ -505,7 +505,7 @@ impl Menu {
                 self.first_pass.zeroize(); let saved=if self.remembers() {self.secrets.clone()} else {Secrets::default()};
                 self.short_pin=self.creating_method==Method::Buttons && text.len()<8;self.submit(Job::Create(text, saved, self.creating_method)); self.say("Encrypting credentials");
             }
-            Field::Unlock => { self.submit(Job::Unlock(text)); self.say("Unlocking credentials"); }
+            Field::Unlock => {self.short_pin=self.method==Some(Method::Buttons)&&text.len()<8; self.submit(Job::Unlock(text)); self.say("Unlocking credentials"); }
         }
     }
     fn connect(&mut self) {
@@ -620,12 +620,14 @@ fn read_plain(root:&std::path::Path)->Option<Secrets> {
 }
 fn write_plain(root:&std::path::Path,secrets:&Secrets)->std::io::Result<()> {
     let bytes=Zeroizing::new(serde_json::to_vec(secrets)?);
+    std::fs::create_dir_all(root.join("Config"))?;
     slot_store::atomic_write(&plain_path(root),&bytes)
 }
 fn remove_plain(root:&std::path::Path)->std::io::Result<()> {
     // Include interrupted atomic writes of this credential file, not unrelated files.
     let config=root.join("Config");
-    if let Ok(entries)=std::fs::read_dir(&config) {
+    let entries=match std::fs::read_dir(&config) {Ok(entries)=>entries,Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(()),Err(e)=>return Err(e)};
+    {
         for entry in entries {
             let entry=entry?;let name=entry.file_name();let name=name.to_string_lossy();
             let suffix=name.strip_prefix(".network-credentials.json.").and_then(|n|n.strip_suffix(".tmp"));
@@ -893,10 +895,11 @@ mod tests {
     fn shared_parent_pin_is_verified_even_if_credentials_are_already_unlocked() {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
         std::fs::create_dir_all(root.path().join("Config/kids")).unwrap();std::fs::write(root.path().join("Config/kids/use-device-pin"),b"1\n").unwrap();
+        crate::parent_code::Gate::new(root.path().join("Config/kids/code")).set(&[0,1,2,3]).unwrap();
         menu.visible=false;let mut app=crate::app::App::new(vec![]);app.network=Some(menu);
         app.kid_menu=Some(crate::kid_menu::Menu::new(root.path().into(),crate::kid_policy::Policy::default()));
         app.apply(Action::GbaDown(Btn::A));assert!(app.network.as_ref().unwrap().parent_unlock);
-        for b in [Btn::A;4] {app.apply(Action::GbaDown(b));}app.apply(Action::GbaDown(Btn::Start));
+        for b in [Btn::A,Btn::B,Btn::X,Btn::Y] {app.apply(Action::GbaDown(b));}app.apply(Action::GbaDown(Btn::Start));
         let mut now=0;
         while app.network.as_ref().unwrap().pending_jobs>0 {now+=10;app.tick_ms(now);std::thread::sleep(Duration::from_millis(5));assert!(now<20000);}
         assert!(app.kid_menu.as_ref().unwrap().focus_info().is_none());

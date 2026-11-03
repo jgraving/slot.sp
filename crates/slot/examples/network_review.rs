@@ -54,6 +54,11 @@ fn main(){
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);a.f=f;a.save("startup-lock-required");a.tap(Btn::Menu);a.save("startup-lock-cancel-blocked");assert!(a.f.app().network.as_ref().unwrap().visible);a.code();a.wait_io();
     a.home();a.nav(QuickRow::General);a.tap(Btn::A);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::A);
     for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{a.tap(b);}}a.save("long-pin-entry");a.tap(Btn::Start);for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("long-pin-set");
+    a.home();a.nav(QuickRow::Kids);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::Right);a.save("parent-device-pin-choice");
+    assert!(root.join("Config/kids/use-device-pin").exists());a.tap(Btn::B);a.tap(Btn::A);a.save("parent-device-pin-prompt");
+    for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("parent-device-pin-verified");
+    assert!(a.f.app().kid_menu.as_ref().unwrap().focus_info().is_some());a.tap(Btn::Down);a.tap(Btn::Left);a.save("parent-separate-code-setup");
+    for _ in 0..2 {for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2]{a.tap(b);}}a.save("parent-separate-code-set");assert!(!root.join("Config/kids/use-device-pin").exists());
 
 }
 #[cfg(not(target_os="linux"))] fn main(){}
