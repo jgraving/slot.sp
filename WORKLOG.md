@@ -5,7 +5,7 @@ Repository: jgraving/slot.sp
 Active branch: `main`
 Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
 Current implementation revision: `92c2e8a470c30ca3add237780d1b32fc932a8156`
-Status: merged into main; not released.
+Status: merged into main; automatic main build release published.
 
 ## Merged handoff — 2026-11-03
 
@@ -450,3 +450,11 @@ Before edits: user asks why OS changes trigger full 3D website checks. pages.yml
 ### Website CI scoping implementation ready
 
 Replaced wildcard root Markdown triggers with the 15 published guide inputs from prepare-site.py. Added a change-classification job; guide changes run build/link/navigation only, while homepage/model/media/shared template/style/font/config changes also run model/video checks. OS sources and recovery notes trigger no website workflow. Manual dispatch and CI classifier/workflow changes run everything. Deployment explicitly accepts an intentionally skipped model job after successful website build, but blocks a failed required model or failed build. Six local routing/integration regressions pass and the workflow YAML parses. This website-workflow change will exercise full website CI once; device runtime is unchanged.
+
+### Merged-main double-check and RA reply completed — 2026-11-04 (Europe/Zurich)
+
+Actual main 356c30749a98d103c249af1f95355047b25c5818 passed all configured push workflows: Launcher/native 41735091909, ARM64 build/release and device regressions 41735092008, website 41735092013. This is fresh CI on the real merged commit, in addition to the six passing premerge source suites. The serialized first-merge build also passed. Automatic release: https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.03-356c307. No manual release dispatch was issued.
+
+After rechecking main membership, all three results and the issue's author/comments, posted the authorized reply to #182 tagging @demifiend9: https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916. Reply covers merged GBA softcore support, initial internet preparation, cached offline tracking/queued reconnect uploads, current exclusions, guide and the verified main build. The posted body and tag were read back successfully. No issue closure requested or performed.
+
+Website CI routing helpers/tests live under site/scripts so they also fit the existing website-only exclusions in the device release workflow. This avoids causing an OS release build just for the new website CI helper. Six routing/integration regressions pass after relocation and YAML validation passes. PR #192 changes only website CI and recovery notes; it must pass its normal applicable latest-head checks before merging. No skip marker is used on its final implementation commit. CI-scope/workflow changes deliberately exercise all website jobs once; future OS-only/recovery edits trigger no website jobs, and guide-only edits skip 3D checks. Keep remaining physical/live-account caveats as testing notes, not unmerged feature work.

@@ -4,8 +4,8 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location('scope', ROOT / 'tools/site-ci-scope.py')
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location('scope', ROOT / 'site/scripts/ci-scope.py')
 scope = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scope)
 
@@ -31,7 +31,7 @@ class WebsiteRouting(unittest.TestCase):
                      'site/overrides/main.html', 'site/zensical.toml',
                      'site/scripts/check-sp-video.cjs', 'previews/sp-model/model.glb',
                      'previews/interactive/provenance.json', 'tools/prepare-site.py',
-                     '.github/workflows/pages.yml', 'tools/site-ci-scope.py']:
+                     '.github/workflows/pages.yml', 'site/scripts/ci-scope.py']:
             self.assertEqual(scope.classify([path]), (True, True), path)
 
     def test_manual_dispatch_checks_everything(self):

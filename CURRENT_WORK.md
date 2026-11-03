@@ -2,7 +2,7 @@
 
 Updated 2026-11-03. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.
 
-## Merged; final main CI double-check in progress
+## Merged and double-checked
 
 The user authorized merging after passing tests. Both PRs are merged:
 - [#190: RA and code UI](https://github.com/jgraving/slot.sp/pull/190): 169ad506577db458f690dd613402feea07430f5a.
@@ -14,7 +14,7 @@ All six workflows passed on each tested runtime: #190 at 285cfa1e586dabffe1720b3
 - [Native captures](https://github.com/jgraving/slot.sp/actions/runs/41731781266/artifacts/13277792404).
 - [Detailed worklog on main](https://github.com/jgraving/slot.sp/blob/main/WORKLOG.md).
 
-Artifacts were present/unexpired at handoff; recheck before sharing later. No release was published.
+Artifacts were present/unexpired at handoff; recheck before sharing later. The automatic main build release is [build-2026.11.03-356c307](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.03-356c307).
 
 ## Current behavior
 
@@ -34,6 +34,10 @@ Optional manually dispatched **RetroAchievements live smoke test** reads GitHub 
 
 Next-chat prompt: Continue jgraving/slot.sp from main. Read CURRENT_WORK.md and WORKLOG.md first. PRs #190 and #191 are merged; preserve completed behavior and log new work before editing.
 
-## Latest check status
+## Main verification and issue reply
 
-User accepted that the unchanged code had passed, and requested a second check because GitHub showed the later documentation head without green CI. The agent reverified all six source suites and the Markdown-only difference to actual merged main 356c307. Automatic main push checks are running: launcher 41735091909, build/release 41735092008, pages 41735092013. This documentation update uses normal CI; wait for its applicable checks before merging it. No new runtime edits or manual release dispatch were made.
+Fresh CI on actual merged main 356c307 passed launcher/native 41735091909, ARM64 build/device/release 41735092008 and website 41735092013. The source revisions had also passed all six premerge workflows; later differences were recovery Markdown. GitHub's previous missing-green display was caused by those later documentation heads, not a failed code suite.
+
+[Replied to RA request #182](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916), tagging its verified author @demifiend9, after main checks passed. No issue closure was requested.
+
+Website CI scoping in [#192](https://github.com/jgraving/slot.sp/pull/192): OS/recovery-only changes do not start website jobs; published guides retain build/link/navigation checks without 3D; model/homepage/shared assets/templates/config changes run 3D/video checks too. Manual dispatch and CI-routing changes exercise everything. Deployment allows an intentionally unnecessary model job to skip while blocking build/required-model failures. Six local routing regressions and YAML validation pass; use the PR's latest-head Actions as the merge condition. No new device runtime changes are part of this CI/docs follow-up.

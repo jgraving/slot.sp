@@ -28,8 +28,8 @@ on:
       - 'tools/check-site-navigation.cjs'
       - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
-      - 'tools/site-ci-scope.py'
-      - 'tools/test-site-ci-scope.py'
+      - 'site/scripts/ci-scope.py'
+      - 'site/scripts/test-ci-scope.py'
   push:
     branches: [main]
     paths:
@@ -58,8 +58,8 @@ on:
       - 'tools/check-site-navigation.cjs'
       - 'tools/check-page-motion.cjs'
       - '.github/workflows/pages.yml'
-      - 'tools/site-ci-scope.py'
-      - 'tools/test-site-ci-scope.py'
+      - 'site/scripts/ci-scope.py'
+      - 'site/scripts/test-ci-scope.py'
   workflow_dispatch:
 
 permissions:
@@ -82,14 +82,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Test website CI routing
-        run: python3 tools/test-site-ci-scope.py
+        run: python3 site/scripts/test-ci-scope.py
       - id: scope
         name: Detect website and model dependencies
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
           FORCE_WEBSITE_CHECKS: ${{ github.event_name == 'workflow_dispatch' }}
-        run: python3 tools/site-ci-scope.py
+        run: python3 site/scripts/ci-scope.py
 
   model:
     needs: changes

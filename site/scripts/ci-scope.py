@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def guides():
@@ -17,7 +17,7 @@ def guides():
 
 
 SHARED = {
-    '.github/workflows/pages.yml', 'tools/site-ci-scope.py', 'tools/test-site-ci-scope.py',
+    '.github/workflows/pages.yml', 'site/scripts/ci-scope.py', 'site/scripts/test-ci-scope.py',
     'tools/prepare-site.py', 'crates/slot-ui/assets/fonts/profiles.json',
     'licenses/GoogleSansFlex-OFL.txt', 'site/zensical.toml',
 }
