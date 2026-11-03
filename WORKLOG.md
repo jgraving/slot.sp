@@ -11,7 +11,7 @@ Status: draft, not merged or released.
 
 PR #186 is merged. PR #190 contains the current requested follow-ups: phase-specific RA progress/counts and controller status, stable library passes, flatter Wi-Fi arcs, encrypted-only credentials with six-plus button PIN creation and legacy upgrade/migration, neutral adaptive adjustment/kid-time pills, and no stale “Credentials unlocked” notification on page entry. Separate four-button parent codes are unchanged.
 
-- Runtime revision: 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3. Full launcher regression step passed; light/dark native walkthroughs and the ARM64 build are still running. Scaling, blending and shortcut checks passed. Final workflow/artifact results must be verified before handoff.
+- Runtime revision: 16ac0826febc8cc800c0de6d8f24fdee64a1c7b3. All six workflows pass, including all 135 core library tests, the complete launcher/UI regressions, native light/dark walkthroughs, both bundled cores, ARM64 packaging, scaling, blending, shortcuts and website checks.
 - Local: 27 achievement tests passed (one deliberate public-endpoint test ignored); targeted UI/icon/meter/notice tests pass. Core tests pass except an unchanged control-socket test blocked by the local sandbox; it remains enabled in CI.
 - Separate OTA/time draft: https://github.com/jgraving/slot.sp/pull/191 on feat/fork-ota-time, based on this PR. Automatic time is opt-in; updates target this fork's releases and preserve Config/games/saves. Physical BaseOS/recovery tests remain outstanding.
 - No follow-up PR is merged; #186 was merged with user authorization. Detailed chronological checkpoints below include superseded requests; this section states the final requested behavior.
@@ -270,3 +270,12 @@ Before editing: user reports Credentials unlocked appearing on entering Network 
 ### Current durable handoff
 
 PR #190 runtime is 16ac082; full CI/render/package validation still running. PR #191 adds OTA/time separately. Latest user concern (stale unlock notices) is fixed and covered; no implication that Wi-Fi was disconnected. Keep both draft pending device tests and record final Actions links/artifacts before ending.
+
+### PR #190 final validation
+
+- Independently verified all six exact-revision Actions runs on 16ac082: launcher 41686624436; ARM64/package 41686624422; scaling 41686624187; blending 41686624018; shortcuts 41686624177; website 41686624335. Every run completed/success.
+- Test build: https://github.com/jgraving/slot.sp/actions/runs/41686624422/artifacts/13257020164 (present/unexpired when checked).
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41686624436/artifacts/13255334115.
+- Locally ran production Network/PIN walkthroughs in light GLES/640 and dark desktop GL/720 and reviewed connected Wi-Fi and six-button hint captures. Reviewed neutral volume/kid-time captures; all adaptive neutral-colour and unchanged green-charging tests passed.
+- Runtime code is unchanged after this validation. Later commits are recovery documentation only. No PR #190 merge requested; draft remains for handheld testing.
+- A single recovery entry point now exists at CURRENT_WORK.md on this branch; AGENTS.md routes future agents to it. Main requires changes through a PR, so the entry point will reach main when this PR merges.
