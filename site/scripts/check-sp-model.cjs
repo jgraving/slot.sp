@@ -172,6 +172,11 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       for(const key of ['a','b','x','y','menu','select','start','left','right','up','down']) {
         const hit=await keyButton(page,key).evaluate(el=>{const r=el.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;});
         assert(hit,`${width}: ${key} target must track its physical button`);
+        const offset=await keyButton(page,key).evaluate(el=>{
+          const r=el.getBoundingClientRect(),stage=el.closest('.sp-stage').getBoundingClientRect();
+          return Math.hypot(r.x+r.width/2-stage.x-parseFloat(el.style.left)*stage.width/100,r.y+r.height/2-stage.y-parseFloat(el.style.top)*stage.height/100);
+        });
+        assert(offset<1,`${width}: ${key} hit target is centered on its projected mesh`);
       }
       await keyButton(page,'right').click();await waitScreen(page,'shelf',1);
       await keyButton(page,'a').click();await waitScreen(page,'seated',1);
