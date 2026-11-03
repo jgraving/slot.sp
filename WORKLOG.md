@@ -91,3 +91,13 @@ User requested:
 - Rename Wi-Fi submenu to Network.
 
 Current step: recover a local checkout and inspect rendering/input paths. No runtime edits yet. Continue existing PR #186; do not merge or release.
+
+### Follow-up scope and implementation checkpoint
+
+- Local clone recovered successfully; work is now in the actual repo checkout.
+- Added user steering: silently auto-check button PIN prefixes from four presses onward; correct code continues immediately, failed checks preserve entry and never disclose stored length. Keep setup confirmation explicit.
+- Remove small explanatory copy from settings cards; use brief contextual notices and keep details in the website guide.
+- Wi-Fi artwork should retain radio arcs (user reversed the solid-shape request), but be wider and cleaner.
+- Implementation plan: shared filled-meter artwork with contrast-aware text/icons, asynchronous prefix verification that accepts input while checking, focus-only warmth preview without writing temporary values to state, and spatial D-pad navigation for incomplete grid rows.
+- Source audit found the grid currently ignores vertical moves from a column absent on the next row. Fix by selecting the nearest visible tile in that row.
+- No Rust toolchain is installed in this environment. Build, regression tests and production native captures will run through existing CI on the pushed revision.
