@@ -54,8 +54,8 @@ After a restart with either feature enabled and encrypted credentials saved, an
 animated unlock card appears. One successful unlock covers both features for that
 session and resumes the requested connection or account action.
 
-**Startup access** under Security PIN chooses between **Allow games without PIN**
-(the default) and **Require PIN**. With games allowed, Menu skips startup unlock and
+**Startup access** under Security PIN chooses between **PIN optional**
+(the default, allowing games without a PIN) and **Require PIN**. With games allowed, Menu skips startup unlock and
 a pill says Wi-Fi and RetroAchievements are unavailable until unlocked. With Require
 PIN, the launcher stays on the unlock card until the correct PIN or passphrase is
 entered, even when Wi-Fi and achievements are off. This is a launcher access lock:

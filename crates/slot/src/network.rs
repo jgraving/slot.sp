@@ -530,7 +530,7 @@ impl Menu {
             Page::Security => vec![
                 ("Unlock with".into(),match self.creating_method {Method::Buttons=>"Button code",Method::Passphrase=>"Passphrase"}.into(),true),
                 (if self.encrypted {"Change Security PIN"} else {"Set Security PIN"}.into(),if self.locked {"Locked"} else if self.encrypted {"Set"} else {"Not set"}.into(),false),
-                ("Startup access".into(),if self.prefs.lock_device {"Require PIN"}else{"Allow games without PIN"}.into(),true),
+                ("Startup access".into(),if self.prefs.lock_device {"Require PIN"}else{"PIN optional"}.into(),true),
                 ("Forget Security PIN".into(),String::new(),false),
             ],
             Page::Wifi => vec![

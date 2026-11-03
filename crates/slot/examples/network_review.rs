@@ -14,7 +14,7 @@ fn main(){
         fn tap(&mut self,b:Btn){self.frame(vec![RawEvent::Down(b)]);self.frame(vec![RawEvent::Up(b)]);}
         fn settle(&mut self){for _ in 0..45 {self.frame(vec![]);}}
         fn save(&mut self,name:&str){self.settle();self.capture(name);}
-        fn capture(&mut self,name:&str){let mut e=png::Encoder::new(std::fs::File::create(self.dir.join(format!("{name}.png"))).unwrap(),self.width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&self.g.read_frame()).unwrap();}
+        fn capture(&mut self,name:&str){assert_eq!(self.f.app().canvas().w,self.width as f32,"restart capture must use the actual panel width");let mut e=png::Encoder::new(std::fs::File::create(self.dir.join(format!("{name}.png"))).unwrap(),self.width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&self.g.read_frame()).unwrap();}
         fn nav(&mut self,to:QuickRow){for _ in 0..32 {let at=self.f.app().quick_menu().unwrap();if at==to{return;}assert_eq!(at.page(),to.page());let b=if at.page()==QuickRow::MAIN {let a=at.position(&[]);let b=to.position(&[]);if a%4<b%4 {Btn::Right}else if a%4>b%4 {Btn::Left}else {Btn::Down}}else {Btn::Down};self.tap(b);}panic!("cannot reach {to:?}");}
         fn wait_io(&mut self){let until=std::time::Instant::now()+std::time::Duration::from_secs(10);while !self.f.app().network.as_ref().unwrap().flush_ready(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));self.frame(vec![]);}self.settle();}
         fn code(&mut self){for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{self.tap(b);}self.tap(Btn::Start);}
@@ -37,21 +37,21 @@ fn main(){
     a.tap(Btn::Down);a.tap(Btn::Down);a.save("storage-picker");a.wait_io();a.save("storage-encrypted");
     a.tap(Btn::Up);a.tap(Btn::Up);a.tap(Btn::A);a.settle();a.save("wifi-on");
     for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
-    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);a.f=f;
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
     for _ in 0..4{a.tap(Btn::A);}a.tap(Btn::Start);a.wait_io();a.save("wrong-pin");a.code();a.wait_io();a.save("unlocked-reconnected");
-    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);a.f=f;
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.settle();for _ in 0..180{a.frame(vec![]);}a.tap(Btn::Menu);a.save("startup-pin-skipped");
     assert!(a.f.app().settings_notice().unwrap().1.contains("unavailable until unlocked"));
     a.home();a.nav(QuickRow::Wifi);a.tap(Btn::A);a.tap(Btn::A);a.code();a.wait_io();a.tap(Btn::A);a.settle();a.tap(Btn::B);a.nav(QuickRow::Game);a.tap(Btn::A);
     assert_eq!(a.f.app().quick_menu(),Some(QuickRow::Achievements));a.save("gameplay-achievements-first");a.tap(Btn::A);a.save("achievements-off");a.tap(Btn::A);a.save("achievements-on-shared-unlock");
-    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);a.f=f;a.save("achievements-startup-unlock");a.code();a.wait_io();
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.save("achievements-startup-unlock");a.code();a.wait_io();
     a.home();a.nav(QuickRow::Wifi);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::Down);a.tap(Btn::Right);a.save("unencrypted-confirm");
     assert!(!root.join("Config/network-credentials.json").exists());a.tap(Btn::Down);a.tap(Btn::A);a.wait_io();a.save("unencrypted-enabled");
     assert!(root.join("Config/network-credentials.json").exists());a.tap(Btn::Left);a.wait_io();a.save("unencrypted-deleted");assert!(!root.join("Config/network-credentials.json").exists());
     a.home();a.nav(QuickRow::General);a.tap(Btn::A);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::SecurityPin));a.tap(Btn::A);
     a.tap(Btn::Down);a.tap(Btn::Down);a.tap(Btn::Right);a.save("startup-lock-setting");
-    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);a.f=f;a.save("startup-lock-required");a.tap(Btn::Menu);a.save("startup-lock-cancel-blocked");assert!(a.f.app().network.as_ref().unwrap().visible);a.code();a.wait_io();
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;a.save("startup-lock-required");a.tap(Btn::Menu);a.save("startup-lock-cancel-blocked");assert!(a.f.app().network.as_ref().unwrap().visible);a.code();a.wait_io();
     a.home();a.nav(QuickRow::General);a.tap(Btn::A);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::A);
     for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{a.tap(b);}}a.save("long-pin-entry");a.tap(Btn::Start);for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("long-pin-set");
     a.home();a.nav(QuickRow::Kids);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::Right);a.save("parent-device-pin-choice");
