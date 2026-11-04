@@ -621,7 +621,7 @@ impl Menu {
             Page::Sharing=> match self.selected {
                 0=>self.toggle_sharing(),
                 1=>{self.prefs.sharing_keep=!self.prefs.sharing_keep;self.store_preferences();self.changed();if self.prefs.sharing_keep {self.warn("Keep off on public Wi-Fi",slot_ui::NoticeTone::Warning);}},
-                2=>{if self.sharing.view.active {self.say("Finder · Go → Connect to Server");}else{self.say("Turn on file sharing first");}},
+                2=>{if self.sharing.view.active {self.say("Open this address in your file manager");}else{self.say("Turn on file sharing first");}},
                 4=>{if self.unlocked(){self.sharing_reveal=!self.sharing_reveal;self.changed();}},
                 5=>{if self.unlocked(){match crate::sharing::password(){Ok(password)=>{self.sharing.request(None);self.secrets.sharing_password=password.to_string();self.save_secrets();self.sharing_reveal=true;self.say("Sharing password changed");},Err(error)=>self.say(error)}}},
                 6=>{self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");},
@@ -701,7 +701,7 @@ impl Menu {
             Page::Sharing=>vec![
                 ("Sharing".into(),if self.sharing.view.busy {"Working…"}else if self.sharing.view.active {"On"}else{"Off"}.into(),true),
                 ("Keep on after reboot".into(),if self.prefs.sharing_keep {"On"}else{"Off"}.into(),true),
-                ("Connect in Finder".into(),self.last_wifi.ip.as_ref().map(|ip|format!("smb://{ip}")).unwrap_or_else(||"Not connected".into()),false),
+                ("Server address".into(),self.last_wifi.ip.as_ref().map(|ip|format!("smb://{ip}")).unwrap_or_else(||"Not connected".into()),false),
                 ("Username".into(),"slot".into(),false),
                 ("Password".into(),if self.locked {"Locked".into()}else if self.sharing_reveal {self.secrets.sharing_password.clone()}else{"Press A to show".into()},false),
                 ("New password".into(),String::new(),false),

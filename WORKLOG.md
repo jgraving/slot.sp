@@ -2,6 +2,8 @@
 
 ## Device services and settings follow-up — 2026-11-04
 
+- Follow-up review: use “Server address” and “Open this address in your file manager” on the device so the SMB instructions apply across platforms. The user cannot retest SMB on hardware right now. The existing System artifact predates this copy-only adjustment. New branch CI will package the revised build.
+
 Active branch `fix/device-services-ux`, based on main `1d45793`. Investigate Finder SMB access and direct SD content sharing, background RetroAchievements and Wi-Fi, slot.sp/BaseOS release detection, the update check spinner, automatic clock controls, and a per-game Cart Studio shortcut. Next: reproduce source-level failures, preserve credential and firmware safety boundaries, and publish a reviewable test build. Physical Mac and handheld verification pending.
 
 - User supplied the offline RG34XXSP report from build `b4bf214e`. Association completed, but no IPv4, DHCP process, default route or resolver was present. The Wi-Fi watcher was alive and the SD script lacked execute permission. The watcher previously invoked that SD script directly. It now uses a private executable runtime copy. A fixture starting from a mode-0644 SD script passes and invokes DHCP; handheld verification remains pending.
