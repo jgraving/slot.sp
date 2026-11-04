@@ -1,7 +1,7 @@
 name: Network and achievements test build
 on:
   pull_request:
-    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', 'card/System/slotsmb.sh', 'card/test-smb*', 'tools/*samba*', 'taskfile.yml', '.github/workflows/network-review.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'card/System/slotwifi.sh', 'card/test-wifi-diagnostics.py', 'card/System/slotlink.sh', 'card/System/slotsmb.sh', 'card/test-smb*', 'tools/*samba*', 'taskfile.yml', '.github/workflows/network-review.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -84,6 +84,7 @@ jobs:
           sh card/test-update.sh
           sh card/test-launch.sh
           python3 card/test-wifi-security.py
+          python3 card/test-wifi-diagnostics.py
       - name: Build test System folder
         run: task dist:device OUT=dist-network
       - name: Validate both bundled cores

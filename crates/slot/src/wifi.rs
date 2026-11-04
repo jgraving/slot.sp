@@ -53,6 +53,8 @@ pub enum Busy {
     Starting,
     Scanning,
     Joining(String),
+    /// Associated, but DHCP has not supplied a usable IPv4 address yet.
+    Addressing,
 }
 
 /// Everything the pages show of the radio, as last seen.
@@ -169,14 +171,16 @@ impl Wifi {
 }
 
 fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<WifiView>>) {
+    let mut address_wait = AddressWait::default();
     let set = |f: &dyn Fn(&mut WifiView)| f(&mut view.lock().unwrap_or_else(|e| e.into_inner()));
     loop {
         let on = view.lock().unwrap_or_else(|e| e.into_inner()).on;
-        let job = match jobs.recv_timeout(POLL) {
+        let job = match jobs.recv_timeout(if address_wait.since.is_some() { Duration::from_secs(1) } else { POLL }) {
             Ok(job) => job,
             Err(RecvTimeoutError::Timeout) if on => {
                 let status = radio.status();
-                set(&|v| take_status(v, &status));
+                let mut v = view.lock().unwrap_or_else(|e| e.into_inner());
+                address_wait.update(&mut v, &status, std::time::Instant::now());
                 continue;
             }
             Err(RecvTimeoutError::Timeout) => continue,
@@ -199,6 +203,7 @@ fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<Wi
                             take_scan(v, &found);
                             take_status(v, &status);
                         });
+                        address_wait.update(&mut view.lock().unwrap_or_else(|e| e.into_inner()), &status, std::time::Instant::now());
                     }
                     Err(e) => {
                         eprintln!("slot: wifi: on: {e}");
@@ -210,6 +215,7 @@ fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<Wi
                 }
             }
             Job::Off => {
+                address_wait = AddressWait::default();
                 radio.down();
                 set(&|v| *v = WifiView::default());
             }
@@ -217,11 +223,12 @@ fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<Wi
                 set(&|v| v.busy = Busy::Scanning);
                 let found = radio.scan();
                 set(&|v| {
-                    v.busy = Busy::Idle;
+                    v.busy = if address_wait.since.is_some() { Busy::Addressing } else { Busy::Idle };
                     take_scan(v, &found);
                 });
             }
             Job::Join(ssid, mut psk) if on => {
+                address_wait = AddressWait::default();
                 set(&|v| v.busy = Busy::Joining(ssid.clone()));
                 let joined = radio.join(&ssid, psk.as_deref());
                 if let Some(secret) = &mut psk {
@@ -232,13 +239,18 @@ fn work(mut radio: Box<dyn WifiBackend>, jobs: Receiver<Job>, view: Arc<Mutex<Wi
                     eprintln!("slot: wifi: join {ssid:?}: {e}");
                 }
                 let status = radio.status();
-                let found = radio.scan();
-                set(&|v| {
+                // Publish association immediately; do not wait for another scan before DHCP feedback.
+                {
+                    let mut v = view.lock().unwrap_or_else(|e| e.into_inner());
                     v.busy = Busy::Idle;
-                    take_scan(v, &found);
-                    take_status(v, &status);
+                    take_status(&mut v, &status);
                     v.error = joined.as_ref().err().map(JoinError::to_string);
-                });
+                    if joined.is_ok() {
+                        address_wait.update(&mut v, &status, std::time::Instant::now());
+                    }
+                }
+                let found = radio.scan();
+                set(&|v| take_scan(v, &found));
             }
             Job::Forget(ssid) if on => {
                 if let Err(e) = radio.forget(&ssid) {
@@ -269,7 +281,58 @@ fn take_scan(view: &mut WifiView, found: &Result<Vec<Network>, String>) {
 
 fn take_status(view: &mut WifiView, status: &Status) {
     view.connected = status.ssid.clone().filter(|_| status.connected());
-    view.ip = status.ip.clone().filter(|_| status.connected());
+    view.ip = status.ip.clone().filter(|ip| status.connected() && usable_ipv4(ip));
+}
+
+/// An address usable for this IPv4 network path; DHCP has not finished for an
+/// unspecified, loopback or link-local address.
+pub(crate) fn usable_ipv4(value: &str) -> bool {
+    value.parse::<std::net::Ipv4Addr>().is_ok_and(|ip|
+        !ip.is_unspecified() && !ip.is_loopback() && !ip.is_link_local()
+        && !ip.is_multicast() && !ip.is_broadcast())
+}
+
+const ADDRESS_TIMEOUT: Duration = Duration::from_secs(30);
+const ADDRESS_ERROR: &str = "No IP address · reconnect or save diagnostics";
+#[derive(Default)]
+struct AddressWait {
+    since: Option<std::time::Instant>,
+    timed_out: bool,
+}
+impl AddressWait {
+    fn update(&mut self, view: &mut WifiView, status: &Status, now: std::time::Instant) {
+        let was_connected = view.connected.is_some() && view.ip.is_some();
+        take_status(view, status);
+        if status.connected() && view.ip.is_some() {
+            self.since = None;
+            self.timed_out = false;
+            if view.busy == Busy::Addressing { view.busy = Busy::Idle; }
+            view.error = None;
+        } else if status.connected() {
+            if self.timed_out {
+                view.busy = Busy::Idle;
+                view.error = Some(ADDRESS_ERROR.into());
+                return;
+            }
+            let since = *self.since.get_or_insert(now);
+            if now.duration_since(since) >= ADDRESS_TIMEOUT {
+                self.since = None;
+                self.timed_out = true;
+                view.busy = Busy::Idle;
+                view.error = Some(ADDRESS_ERROR.into());
+            } else {
+                view.busy = Busy::Addressing;
+            }
+        } else {
+            if self.since.take().is_some() {
+                view.busy = Busy::Idle;
+                view.error = Some("Wi-Fi disconnected before getting an IP address".into());
+            } else if was_connected {
+                view.error = Some("Wi-Fi disconnected · reconnect".into());
+            }
+            // Preserve a timeout until reconnect or an actual address arrives.
+        }
+    }
 }
 
 /// The networks in a `SCAN_RESULTS` reply, strongest first: one entry a name, the hidden ones
@@ -951,6 +1014,52 @@ mod tests {
         assert_eq!(found[2].encryption,"Open");assert_eq!(found[3].encryption,"Enterprise");
         assert_eq!(encryption("[WPA2-PSK+SAE-CCMP][ESS]"),"WPA2/3");
         assert_eq!(encryption("[WEP][ESS]"),"WEP");assert_eq!(encryption("[OWE][ESS]"),"OWE");
+    }
+
+    #[test]
+    fn dhcp_progress_covers_ten_second_delay_and_finishes_only_with_an_address() {
+        let now=std::time::Instant::now();let mut wait=AddressWait::default();let mut view=WifiView::default();
+        let mut status=Status{state:"COMPLETED".into(),ssid:Some("Home".into()),ip:None};
+        wait.update(&mut view,&status,now);assert_eq!(view.busy,Busy::Addressing);assert!(view.error.is_none());
+        wait.update(&mut view,&status,now+Duration::from_secs(10));assert_eq!(view.busy,Busy::Addressing);assert!(view.ip.is_none());
+        status.ip=Some("192.168.1.2".into());wait.update(&mut view,&status,now+Duration::from_secs(11));
+        assert_eq!(view.busy,Busy::Idle);assert!(view.ip.is_some());assert!(view.error.is_none());
+    }
+    #[test]
+    fn dhcp_timeout_stays_visible_and_a_late_lease_recovers() {
+        let now=std::time::Instant::now();let mut wait=AddressWait::default();let mut view=WifiView::default();
+        let mut status=Status{state:"COMPLETED".into(),ssid:Some("Home".into()),ip:Some("0.0.0.0".into())};
+        wait.update(&mut view,&status,now);wait.update(&mut view,&status,now+ADDRESS_TIMEOUT);
+        assert_eq!(view.busy,Busy::Idle);assert_eq!(view.error.as_deref(),Some(ADDRESS_ERROR));assert!(view.ip.is_none());
+        wait.update(&mut view,&status,now+Duration::from_secs(60));assert_eq!(view.busy,Busy::Idle);assert!(view.error.is_some());
+        status.ip=Some("192.168.1.2".into());wait.update(&mut view,&status,now+Duration::from_secs(61));assert!(view.error.is_none());assert!(view.ip.is_some());
+    }
+    #[test]
+    fn disconnect_while_getting_an_address_stops_spinner_and_reports_failure() {
+        let now=std::time::Instant::now();let mut wait=AddressWait::default();let mut view=WifiView::default();
+        wait.update(&mut view,&Status{state:"COMPLETED".into(),ssid:Some("Home".into()),ip:None},now);
+        wait.update(&mut view,&Status{state:"DISCONNECTED".into(),..Default::default()},now+Duration::from_secs(2));
+        assert_eq!(view.busy,Busy::Idle);assert!(view.error.as_deref().unwrap().contains("disconnected"));assert!(view.connected.is_none());
+    }
+    struct DelayedIp { inner:SimWifi, lease:std::sync::Arc<std::sync::atomic::AtomicBool> }
+    impl WifiBackend for DelayedIp {
+        fn up(&mut self)->Result<(),String>{self.inner.up()}
+        fn down(&mut self){self.inner.down()}
+        fn scan(&mut self)->Result<Vec<Network>,String>{self.inner.scan()}
+        fn join(&mut self,s:&str,p:Option<&str>)->Result<(),JoinError>{self.inner.join(s,p)}
+        fn forget(&mut self,s:&str)->Result<(),String>{self.inner.forget(s)}
+        fn status(&mut self)->Status{let mut s=self.inner.status();if !self.lease.load(std::sync::atomic::Ordering::SeqCst){s.ip=None;}s}
+    }
+    #[test]
+    fn worker_keeps_address_progress_and_off_cancels_it() {
+        use std::sync::atomic::{AtomicBool,Ordering};
+        let lease=std::sync::Arc::new(AtomicBool::new(false));
+        let wifi=Wifi::spawn(Box::new(DelayedIp{inner:SimWifi::default(),lease:lease.clone()}));
+        wifi.turn_on();assert!(settled(&wifi,|v|v.on&&v.busy==Busy::Idle).on);
+        wifi.join("Home-5G",Some(SimWifi::PASSWORD));assert_eq!(settled(&wifi,|v|v.busy==Busy::Addressing).busy,Busy::Addressing);
+        lease.store(true,Ordering::SeqCst);let ready=settled(&wifi,|v|v.ip.is_some());assert!(ready.ip.is_some());assert_eq!(ready.busy,Busy::Idle);
+        lease.store(false,Ordering::SeqCst);wifi.join("Home-5G",Some(SimWifi::PASSWORD));assert_eq!(settled(&wifi,|v|v.busy==Busy::Addressing).busy,Busy::Addressing);
+        wifi.turn_off();assert_eq!(settled(&wifi,|v|!v.on),WifiView::default());
     }
 
 }

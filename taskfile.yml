@@ -92,6 +92,7 @@ tasks:
   test:card:
     desc: Test the scripts slot ships on the card, off-device
     cmds:
+      - python3 card/test-wifi-diagnostics.py
       - sh card/test-slotlink.sh
       - sh card/test-led.sh
       - sh card/test-lid.sh

@@ -1437,11 +1437,11 @@ pub fn parent_settings_face_animated_on(canvas: Canvas, rows: &[(String,String,b
 /// Network rows reserve a signal icon and preserve the SSID's exact case.
 pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, first_network: usize, signals: &[u8]) -> UndoFace {
     let mut labels = rows.to_vec();
-    for row in labels.iter_mut().skip(first_network) { row.0.clear(); }
+    for row in labels.iter_mut().skip(first_network).take(signals.len()) { row.0.clear(); }
     let mut face = parent_settings_face_animated_on(canvas, &labels, selected, 0, "", 0.0);
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible/2).min(rows.len().saturating_sub(visible));
-    for (i, (name, value, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network) {
+    for (i, (name, value, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network && *i<first_network+signals.len()) {
         let lit=i==selected; let ink=if lit {MENU_INK}else{DIM_INK};
         let y=crate::expressive::ROW_TOP+(i-start) as f32*QUICK_PITCH+TYPE_DROP;
         let icon=wifi_signal_face(signals.get(i-first_network).copied().unwrap_or(1),ink);

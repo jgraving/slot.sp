@@ -83,3 +83,26 @@ Only the upload inbox is shared. The installed game library, wallpapers, saves, 
 Sharing turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks your vault and the same saved Wi-Fi network reconnects. A short warning pill appears when enabling this option. Network changes revoke sharing; it is also paused during gameplay, Cart Studio, link play, kid mode, sleep and shutdown. A dropped connection requires enabling it again. Use a trusted home network; the saved network name does not identify a router cryptographically.
 
 The build includes Samba and its private runtime; it does not require installing a different BaseOS. The matching **slot.sp-network-sources.zip** download contains corresponding source and dependency provenance.
+
+
+### Wi-Fi connection progress and diagnostic reports
+
+After Wi-Fi joins the router, **Getting an IP address…** keeps the progress
+indicator active while DHCP finishes. This can take ten seconds or more. A
+usable IPv4 address completes the connection; after 30 seconds without one,
+slot shows **No IP address · reconnect or save diagnostics**. A late address
+still recovers automatically. Updates stay unavailable until the address arrives.
+
+If connecting fails, leave the device on the affected network and choose
+**Settings → Network → Save Wi-Fi report**. This is the final row; from the
+Wi-Fi toggle you can press Up to reach it. Wait for **Saved Diagnostics/wifi-NNNN.txt**,
+then shut down normally and read that file from the **Diagnostics** folder on
+the slot SD card using your computer. Attach the newest file to the issue along
+with your handheld model and what happened. Collection takes at most about
+12 seconds for command probes, plus the SD write; it works without Internet.
+
+Reports contain build identity and fixed status fields for association, IP
+presence, routing, resolver configuration and DHCP/watcher processes. They
+exclude network names, IP/MAC addresses, passwords, account tokens and raw logs.
+Nothing is uploaded automatically, no connection settings are changed, and each
+export creates a new file. Delete reports from the card when no longer needed.
