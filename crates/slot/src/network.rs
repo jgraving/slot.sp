@@ -242,6 +242,9 @@ impl Menu {
             }).collect()
     }
     fn changed(&mut self) { self.face = None; self.revision = self.revision.wrapping_add(1); }
+    pub(crate) fn dismiss_automatic_time_notice(&mut self) {
+        if self.toast.as_ref().is_some_and(|(text,_)|text=="Automatic time is on") {self.toast=None;}
+    }
     pub(crate) fn automatic_time_notice(&mut self) {
         self.toast_tone=slot_ui::NoticeTone::Neutral;
         self.toast=Some(("Automatic time is on".into(),Instant::now()));
@@ -685,7 +688,7 @@ impl Menu {
             Page::Sharing=>vec![
                 ("Sharing".into(),if self.sharing.view.busy {"Working…"}else if self.sharing.view.active {"On"}else{"Off"}.into(),true),
                 ("Keep on after reboot".into(),if self.prefs.sharing_keep {"On"}else{"Off"}.into(),true),
-                ("Finder".into(),self.last_wifi.ip.as_ref().map(|ip|format!("smb://{ip}/SDCard")).unwrap_or_else(||"Not connected".into()),false),
+                (String::new(),self.last_wifi.ip.as_ref().map(|ip|format!("smb://{ip}/SDCard")).unwrap_or_else(||"Not connected".into()),false),
                 ("Username".into(),"slot".into(),false),
                 ("Password".into(),if self.locked {"Locked".into()}else if self.sharing_reveal {self.secrets.sharing_password.clone()}else{"Press A to show".into()},false),
                 ("New password".into(),String::new(),false),
@@ -936,12 +939,13 @@ mod tests {
                 let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);
                 encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
-            for (name,busy) in [("updates-spinner",true),("updates-versions",false)] {
+            for (name,busy) in [("updates-spinner",true),("updates-versions",false),("sharing-long-address",false)] {
                 for _ in 0..90 {
                     tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);
                     let m=f.app_mut_for_review().network.as_mut().unwrap();
                     m.visible=true;m.page=Page::Updates;m.selected=0;m.notice.clear();m.update_busy=busy;
                     m.last_wifi.busy=wifi::Busy::Idle;m.baseos_message="1.4.0 available".into();m.face=None;
+                    if name=="sharing-long-address" {m.page=Page::Sharing;m.last_wifi.ip=Some("192.168.100.200".into());m.sharing.view.active=true;m.sharing.view.busy=false;}
                     f.compose(&mut g);
                 }
                 let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);

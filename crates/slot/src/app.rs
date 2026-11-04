@@ -2967,6 +2967,9 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        if matches!(action,Action::GbaDown(_)|Action::Insert|Action::QuickMenu) {
+            if let Some(menu)=&mut self.network {menu.dismiss_automatic_time_notice();}
+        }
         if self.custom_menu_key().is_some() && matches!(action, Action::GbaDown(_)) {
             self.settings_notice_revision=self.settings_notice_revision.wrapping_add(1);
         }
