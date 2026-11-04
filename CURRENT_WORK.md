@@ -1,8 +1,8 @@
-# Active photo-slot handoff
+# Current handoff — slot/About merged
 
-2026-11-04: `fix/photo-slot-proportions`, [draft PR #195](https://github.com/jgraving/slot.sp/pull/195). Runtime `07227db624154adb27863808d156ec6ba4e64ad6` is pushed and verified; later checkpoints are previews/recovery notes only. Photo-matched shell proportions, sharp reversible About reveal, live General card motion and seated-cartridge preservation are complete. Fresh 326-test validation and device compilation pass. All five GitHub workflows pass on that runtime, including ARM64 packaging/both cores and native visual/motion review. Build and capture links are recorded in WORKLOG.md.
+2026-11-04: continue from **main**. [PR #195](https://github.com/jgraving/slot.sp/pull/195) merged as `218bfe06215255001321ef43744e3153b2ab110f` after the user's approval and verification of all five passing PR workflows. The source is the validated runtime `07227db` plus previews and recovery notes; 326 targeted tests pass.
 
-Read the active section of [WORKLOG.md](https://github.com/jgraving/slot.sp/blob/fix/photo-slot-proportions/WORKLOG.md) before continuing. All requested source and native review videos are on this branch. Keep #194 separate; no merge/release requested. Remaining user step is physical handheld review. Do not repeat reconstruction.
+Photo-matched proportions, sharp reversible About reveal, live General-card motion and seated-cartridge preservation are complete. All review videos/screenshots are on main. Read [WORKLOG.md](https://github.com/jgraving/slot.sp/blob/main/WORKLOG.md) for evidence and recovery details. Normal main build/release and launcher checks are running; no post-merge success is claimed yet. Keep #194 separate. Do not repeat reconstruction.
 
 ---
 

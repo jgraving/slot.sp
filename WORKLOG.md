@@ -1,5 +1,12 @@
 # Development recovery log
 
+## Merged slot/About handoff — 2026-11-04
+
+- User approved merging to main after tests passed. PR #195 merged as `218bfe06215255001321ef43744e3153b2ab110f`; GitHub PR state and main ref were verified. Continue from main. This supersedes the earlier draft-only/no-merge instructions below.
+- Rechecked all five successful workflows on runtime `07227db624154adb27863808d156ec6ba4e64ad6`; the later branch changes were only recovery Markdown and preview artifacts. The existing 326-test fresh validation remains applicable. Main was unchanged from the tested PR base before merge.
+- Automatic main build/release https://github.com/jgraving/slot.sp/actions/runs/41803285822 and launcher checks https://github.com/jgraving/slot.sp/actions/runs/41803285869 have started. Post-merge completion/release publication is not yet claimed. No further runtime changes were made.
+- All code, review videos and screenshots are on main. #194 remains separate and unmerged. Physical handheld review remains unverified.
+
 ## Active recovery: photo-matched slot and About reveal — 2026-11-04
 
 ### Final source, previews and validation
