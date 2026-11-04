@@ -1,6 +1,8 @@
-# Wi-Fi diagnostics and address-wait feedback
+# Wi-Fi diagnostics complete
 
-Active branch: `fix/wifi-diagnostics`, based on main `75f54551`. See the newest WORKLOG.md entry. Implementing offline diagnostic export and accurate DHCP progress/errors for issue #182; user authorized a reply after reviewable implementation. No merge or release requested.
+Continue from `main`. PR #200 merged as `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`; its tree equals source `6053032e41426b4d83e1c3bb788151f866327728`, which passed all six workflows. The post-merge ARM64 release build also passed. [Published build](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-b4bf214) includes Settings → Network → Save Wi-Fi report, progress through IP assignment, address-timeout/disconnection warnings and late recovery.
+
+[Replied to demifiend9](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6633575440) with the exact release, offline report instructions and the maintainer's lack of an RG34xxSP. Next evidence needed is the reporter's Diagnostics/wifi-NNNN.txt; the device-specific root cause is not confirmed. Do not reconstruct this work or promise a hardware fix. See the newest WORKLOG.md entry. Earlier active branch instructions are superseded.
 
 ---
 
