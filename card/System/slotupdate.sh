@@ -62,6 +62,10 @@ for f in slot launch_frontend.sh; do
     put "$f" || { say "UPDATE FAILED - RESTART TO RETRY"; exit 1; }
 done
 sync
+# Installation is now durable. Retire the ready marker durably before deleting
+# recovery files, so interrupted cleanup cannot look like an incomplete update.
+rm -f "$NEW/.manifest"
+sync
 rm -rf "$NEW"
 sync
 say "UPDATE COMPLETE"

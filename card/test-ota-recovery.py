@@ -115,6 +115,19 @@ class Recovery(unittest.TestCase):
         self.preserved()
         self.env['PATH']=os.environ['PATH']; self.completed()
 
+    def test_interrupted_cleanup_does_not_block_a_completed_install(self):
+        bin_dir=self.root/'bin'; bin_dir.mkdir()
+        script=bin_dir/'rm'
+        script.write_text('#!/bin/sh\nif [ "$1" = -rf ]; then\n '+shutil.which('rm')+' -f "$2/slot"\n kill -KILL "$PPID"\n exit 1\nfi\nexec '+shutil.which('rm')+' "$@"\n')
+        script.chmod(0o755)
+        self.env['PATH']=str(bin_dir)+os.pathsep+os.environ['PATH']
+        self.assertNotEqual(self.run_installer(),0)
+        for name in FILES:
+            self.assertEqual((self.system/name).read_bytes(),b'new')
+        self.preserved()
+        self.env['PATH']=os.environ['PATH']
+        self.completed()
+
     def test_preparation_errors_abort_before_copy(self):
         for command in ['mkdir','rm']:
             with self.subTest(command=command):
