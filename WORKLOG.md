@@ -2,6 +2,8 @@
 
 ## Device services and settings follow-up — 2026-11-04
 
+- Follow-up requested: shorten the device menu to File sharing, show hidden password dots with an A-button Show/Hide hint, support custom passwords through the on-device keyboard, and remove Inbox imports. Verify keyboard input, password persistence and rotation, server provisioning, direct library refresh, and device CI. Hardware SMB verification is pending.
+
 - Follow-up review: use “Server address” and “Open this address in your file manager” on the device so the SMB instructions apply across platforms. The user cannot retest SMB on hardware right now. The existing System artifact predates this copy-only adjustment. New branch CI will package the revised build.
 
 Active branch `fix/device-services-ux`, based on main `1d45793`. Investigate Finder SMB access and direct SD content sharing, background RetroAchievements and Wi-Fi, slot.sp/BaseOS release detection, the update check spinner, automatic clock controls, and a per-game Cart Studio shortcut. Next: reproduce source-level failures, preserve credential and firmware safety boundaries, and publish a reviewable test build. Physical Mac and handheld verification pending.
