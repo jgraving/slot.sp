@@ -71,6 +71,25 @@ fn setup(
     (d, a, calls)
 }
 #[test]
+fn deep_sleep_waits_for_the_open_editor_to_commit_before_suspending() {
+    let (d, mut a, calls) = setup(false, 0);
+    a.open_studio();
+    let editor=a.studio.as_mut().unwrap();
+    editor.model.shell=Some(slot_store::ShellChoice {outline:slot_store::Outline::Auto,colour:[12,34,56],finish:slot_store::ShellFinish::Clear});
+    a.apply(Action::LidClose);
+    assert!(a.studio.as_ref().unwrap().busy());
+    a.suspend_if_requested();
+    assert!(calls.lock().unwrap().is_empty());
+    let deadline=std::time::Instant::now()+Duration::from_secs(5);
+    while calls.lock().unwrap().is_empty() {
+        assert!(std::time::Instant::now()<deadline,"editor save prevented sleep");
+        std::thread::sleep(Duration::from_millis(5));
+        a.tick_ms(a.now()+17);a.suspend_if_requested();
+    }
+    assert_eq!(calls.lock().unwrap().len(),1);
+    assert!(slot_store::scan(d.path()).unwrap().iter().any(|c|c.shell.is_some_and(|s|s.colour==[12,34,56])));
+}
+#[test]
 fn deep_sleep_cancels_if_lid_reopens_and_power_wake_does_not_sleep_again() {
     let (_d, mut a, calls) = setup(false, 0);
     a.apply(Action::LidClose);
