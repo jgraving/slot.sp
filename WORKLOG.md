@@ -1,5 +1,11 @@
 # Development recovery log
 
+## OTA safety audit — 2026-11-04
+
+Implemented preflight rejection of staged/installed symlink components and non-file destination collisions before any installation write, plus a sync of the recovery source before replacement. The archive unpacker now verifies actual decompressed lengths against declared lengths. Recovery tests pass: partial-copy errors and process death at each of seven replacement points (14 fault cases), retries, executable modes, custom files and Config/Games/Saves preservation, redirected paths, directory collisions, and sync failure. Existing updater/launcher shell tests pass. All 11 updater Rust integration tests pass (offline, locked), including integrity, truncation and expanded-size regressions. Fault tests are wired into launcher, device and release CI; launcher triggers include shell-only changes. GitHub validation of this combined source is next. No automatic rollback is claimed: the design retains staging and refuses to launch a partial installation until retry succeeds. Physical power-loss/FAT behavior and the external BaseOS firmware writer remain unverified.
+
+User requests a full OTA safety double-check. Starting from main 9f436a4, review release identity/ancestry, checksum and archive boundaries, staged installation, cancellation, disk errors and recovery. Branch fix/ota-install-recovery. Before edits: installer destination parents are not checked for symlinks/directory collisions, allowing writes outside System on a customized card. Add preflight rejection before any mutation and deterministic interrupted-copy/retry coverage. Preserve Config/Games/Saves and existing custom System files. No physical firmware installation or real power-cut test will be performed.
+
 ## Merged Studio/sharing/security handoff — 2026-11-04
 
 PR #194 merged into main as `286077e1854cd0c305afcbedfb18533fa73bc7d2` after all six workflows passed on exact source `7d0334ca5f88714e07e6e7ba774f7ad6d6c58e20`. Verified main base was unchanged and the actual merged tree equals that tested source. Continue from main. This supersedes earlier draft-only/in-progress instructions; #113 remains a separate design draft.

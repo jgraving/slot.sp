@@ -157,6 +157,7 @@ fn unpack(dir: &Path, zip: &[u8], release:&Release) -> Result<(), UpdateFail> {
         let name=rel.to_string_lossy().replace('\\',"/");
         if listed.contains(&name) || name==MANIFEST {return Err(UpdateFail::Bad);}
         if name.bytes().any(|c|c<32||c==127) {return Err(UpdateFail::Bad);}
+        let expected_size=entry.size();
         let mode=entry.unix_mode().unwrap_or(0o644)&0o777;
         let out = dir.join(&rel);
         if let Some(parent) = out.parent() {
@@ -164,7 +165,7 @@ fn unpack(dir: &Path, zip: &[u8], release:&Release) -> Result<(), UpdateFail> {
         }
         let mut bytes = Vec::new();
         entry.take(64*1024*1024+1).read_to_end(&mut bytes).map_err(|_| UpdateFail::Bad)?;
-        if bytes.len()>64*1024*1024 {return Err(UpdateFail::Bad);}
+        if bytes.len()>64*1024*1024 || bytes.len() as u64 != expected_size {return Err(UpdateFail::Bad);}
         let mut file=std::fs::File::create(&out).map_err(|_|UpdateFail::Bad)?;
         file.write_all(&bytes).map_err(|_|UpdateFail::Bad)?;
         file.sync_all().map_err(|_|UpdateFail::Bad)?;

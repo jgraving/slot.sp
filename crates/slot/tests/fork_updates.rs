@@ -124,3 +124,26 @@ fn newer_or_diverged_test_builds_are_never_offered_an_older_stable_launcher() {
         assert_eq!(result,UpdateEvent::UpToDate);
     }
 }
+
+#[test]
+fn inconsistent_expanded_size_cannot_bypass_staging_budget() {
+    let d=tempfile::tempdir().unwrap();let r=parse_release(&release().to_string()).unwrap();
+    let mut bytes=package(SHA,Some("System/extra"));
+    entry_metadata(&mut bytes,"System/extra",0o100644,Some(1));
+    assert!(stage(d.path(),&bytes,&r).is_err());
+    assert!(!d.path().join(STAGING).exists());
+}
+#[test]
+fn failed_download_checks_never_touch_installed_or_user_files() {
+    let d=tempfile::tempdir().unwrap();
+    for path in ["System/slot","Config/settings","Games/game.gba","Saves/game.sav"] {
+        let p=d.path().join(path);std::fs::create_dir_all(p.parent().unwrap()).unwrap();std::fs::write(p,b"keep").unwrap();
+    }
+    let bytes=package(SHA,None);let mut r=parse_release(&release().to_string()).unwrap();r.size=bytes.len() as u64;
+    // Correct size, incorrect digest; then correct digest with truncation.
+    assert_eq!(install_with(d.path(),&mut |_|Ok(bytes.clone()),&r),UpdateEvent::Failed(UpdateFail::Checksum));
+    r.sha256=ring::digest::digest(&ring::digest::SHA256,&bytes).as_ref().try_into().unwrap();
+    assert_eq!(install_with(d.path(),&mut |_|Ok(bytes[..bytes.len()-1].to_vec()),&r),UpdateEvent::Failed(UpdateFail::Download));
+    assert!(!d.path().join(STAGING).exists());
+    for path in ["System/slot","Config/settings","Games/game.gba","Saves/game.sav"] {assert_eq!(std::fs::read(d.path().join(path)).unwrap(),b"keep");}
+}

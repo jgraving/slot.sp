@@ -1,3 +1,9 @@
+# Active OTA safety audit
+
+Continue on `fix/ota-install-recovery`. User requests OTA safety review; inspect WORKLOG.md for findings and test status. Main baseline 9f436a4. No physical installation authorized or performed.
+
+---
+
 # Current handoff — Studio, sharing and security merged
 
 Updated 2026-11-04 (Europe/Berlin). Continue from **main**. Read AGENTS.md, then WORKLOG.md before new work.

@@ -6,24 +6,47 @@ set -eu
 SD="${SLOT_ROOT:-/mnt/sdcard}"
 SYS="$SD/System"
 NEW="$SD/System.new"
-[ -d "$NEW" ] || exit 0
+[ -e "$NEW" ] || [ -L "$NEW" ] || exit 0
+# Refuse redirected trees before cleanup or installation can touch their targets.
+[ -d "$NEW" ] && [ ! -L "$NEW" ] && [ ! -L "$SYS" ] || exit 1
+[ ! -e "$SYS" ] || [ -d "$SYS" ] || exit 1
 if [ ! -f "$NEW/.manifest" ]; then
     rm -rf "$NEW"
     exit 0
 fi
 SPLASH="${AGS_SPLASH:-/usr/bin/baseos-splash}"
 say() { "$SPLASH" --important -1 "$1" 2>/dev/null || true; }
+# Validate every component, including existing destination parents. Checking only
+# the leaf would still follow a symlinked System/samba (or staged) directory.
+regular_path() {
+    base="$1"; rest="$2"
+    while :; do
+        part="${rest%%/*}"
+        base="$base/$part"
+        [ ! -L "$base" ] || return 1
+        if [ "$rest" = "$part" ]; then
+            [ ! -e "$base" ] || [ -f "$base" ] || return 1
+            return 0
+        fi
+        [ ! -e "$base" ] || [ -d "$base" ] || return 1
+        rest="${rest#*/}"
+    done
+}
+[ ! -L "$NEW/.manifest" ] || exit 1
 # Validate everything before touching the installed tree. Config/Games/Saves
 # are outside this directory and are never installation destinations.
 while IFS= read -r f; do
     case "$f" in
-        ""|/*|..|../*|*/../*|*/..|./*|*/./*|*\\*) say "UPDATE INVALID"; exit 1 ;;
+        ""|/*|..|../*|*/../*|*/..|.|./*|*/./*|*/.|*//*|*/|*\\*) say "UPDATE INVALID"; exit 1 ;;
     esac
+    regular_path "$NEW" "$f" && regular_path "$SYS" "$f" || { say "UPDATE INVALID PATH"; exit 1; }
     [ -f "$NEW/$f" ] && [ ! -L "$NEW/$f" ] || { say "UPDATE INCOMPLETE"; exit 1; }
 done < "$NEW/.manifest"
 for f in slot launch_frontend.sh mgba_libretro.so gpsp_libretro.so build-info.json; do
     grep -qxF "$f" "$NEW/.manifest" || { say "UPDATE INCOMPLETE"; exit 1; }
 done
+# Make the complete recovery source durable before replacing installed files.
+sync
 say "UPDATING SLOT.SP"
 put() {
     mkdir -p "$(dirname "$SYS/$1")"
