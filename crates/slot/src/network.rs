@@ -158,6 +158,10 @@ impl Menu {
     pub fn wifi_connected(&self) -> bool {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
+    fn achievements_network_ready(&self) -> bool {
+        // The desktop launcher uses a simulated Wi-Fi menu and the host network for HTTPS.
+        !cfg!(all(feature = "device", target_os = "linux")) || self.wifi_connected()
+    }
     pub fn achievements_busy(&self) -> bool {
         self.service.as_ref().is_some_and(|s| s.sync_pending() || s.sync_status() == slot_achievements::SyncStatus::Syncing || self.last_sync.progress().is_some() || self.last_sync.pending_awards>0)
     }
@@ -296,7 +300,7 @@ impl Menu {
         if self.credentials_ready() && self.prefs.achievements && !self.secrets.username.is_empty() {
             self.service = Some(slot_achievements::Service::configured_with_wifi(self.root.clone(), slot_achievements::Config {
                 enabled: true, username: self.secrets.username.clone(), password: self.secrets.password.clone(), token: self.secrets.token.clone(),
-            }, self.wifi_connected()));
+            }, self.achievements_network_ready()));
         }
     }
     pub fn suspend_for_link(&mut self) {
@@ -372,7 +376,7 @@ impl Menu {
             self.save_secrets(); self.say("Signed in to RetroAchievements");
         }}
         self.apply_wifi_view(self.wifi.view());
-        if let Some(service) = &self.service { service.set_wifi_connected(self.wifi_connected()); }
+        if let Some(service) = &self.service { service.set_wifi_connected(self.achievements_network_ready()); }
         self.take_diagnostics();
         self.step_sharing();
         if let Some(service) = &self.service {
