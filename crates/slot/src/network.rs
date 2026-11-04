@@ -635,7 +635,7 @@ impl Menu {
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
                 ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
-                ("Network sharing".into(),if self.sharing.view.active {"On"}else{"Off"}.into(),false),
+                ("Network sharing".into(),if self.sharing.view.active {"Active"}else{""}.into(),false),
             ],
             Page::Sharing=>vec![
                 ("Sharing".into(),if self.sharing.view.busy {"Working…"}else if self.sharing.view.active {"On"}else{"Off"}.into(),true),
@@ -897,6 +897,29 @@ mod tests {
         assert!(menu.keyboard.is_none());
         assert_eq!(menu.secrets.ssid, "Home");
         assert_eq!(menu.secrets.wifi_password, "home-secret");
+    }
+    #[test]
+    fn sharing_is_password_protected_and_resets_on_reboot_unless_opted_in() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);
+        assert!(!menu.prefs.sharing_enabled&&!menu.prefs.sharing_keep);
+        menu.wifi_on=true;menu.last_wifi=wifi::WifiView{on:true,connected:Some("Home".into()),ip:Some("192.168.1.10".into()),..Default::default()};
+        menu.toggle_sharing();assert!(menu.prefs.sharing_enabled);assert_eq!(menu.secrets.sharing_password.len(),16);
+        wait(&mut menu);
+        let password=menu.secrets.sharing_password.clone();let encrypted=std::fs::read(network_vault::vault_path(root.path())).unwrap();
+        assert!(!encrypted.windows(password.len()).any(|b|b==password.as_bytes()));
+        let reboot=Menu::new(root.path().into());assert!(!reboot.prefs.sharing_enabled);assert!(reboot.locked);assert!(!reboot.sharing.view.active);
+        menu.prefs.sharing_keep=true;menu.prefs.sharing_enabled=true;menu.store_preferences();
+        let mut reboot=Menu::new(root.path().into());assert!(reboot.prefs.sharing_enabled&&reboot.prefs.sharing_keep);reboot.step_sharing();assert!(!reboot.sharing.view.active,"vault must be unlocked before persistent sharing starts");
+        menu.wifi_on=true;menu.last_wifi=wifi::WifiView{on:true,connected:Some("Public".into()),ip:Some("10.0.0.2".into()),..Default::default()};
+        menu.step_sharing();assert!(!menu.prefs.sharing_enabled,"another SSID must revoke enablement");
+    }
+    #[test]
+    fn sharing_page_keeps_password_hidden_until_requested_and_warns_on_persistence() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.page,Page::Sharing);
+        menu.secrets.sharing_password="ABCDEFGH23456789".into();assert!(!menu.rows()[4].1.contains("ABCDEFGH"));
+        menu.selected=1;menu.input(Action::GbaDown(Btn::A));assert!(menu.prefs.sharing_keep);assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Warning);
+        menu.input(Action::GbaDown(Btn::B));assert_eq!(menu.page,Page::Wifi);assert!(!menu.sharing_reveal);
     }
     const CODE: [Btn;6] = [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }

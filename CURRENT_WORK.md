@@ -1,3 +1,18 @@
+# Active development — device Studio and encrypted uploads
+
+Updated 2026-11-04 (Europe/Zurich). Read AGENTS.md and WORKLOG.md first.
+
+- Branch: `feat/device-studio-network-sharing`
+- Draft PR: https://github.com/jgraving/slot.sp/pull/194
+- Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
+- User requested upstream on-device Cart Studio plus Samba/discovery for uploading games. Final preference: **sharing turns off on reboot by default**, with an option to keep it on for the chosen network. Password required in either case; credentials are stored in the existing encrypted vault.
+- Preserve Select quick controls. Open the editor from Settings > Gameplay > Cart Studio. Retain fork renderer/cards/icons, offline custom colors/finish/shape/title labels, Wi-Fi/RA/audio/code and kid restrictions.
+- Sharing exports only Inbox/GB, GBC and GBA via encrypted SMB3, then imports on explicit stop/import without overwriting games. Network loss stops without importing unfinished transfers. Samba/wsdd2 have a separate private runtime; sources are a matching ZIP. Discovery is tied to sharing. Persistent enablement waits for vault unlock and matching Wi-Fi.
+- Initial CI on 80b639f failed: Samba configure needed parser/Kerberos prerequisites; existing menu tests needed the new row/hidden-row expectations. Corrections, native editor captures and additional persistence/import/security tests are in progress. No device build or all-green result claimed yet.
+- Keep draft. No merge/release requested. Do not treat a settings screen or host simulator as evidence of real Samba service availability; inspect the native ARM64 server integration and device-package jobs.
+
+## Previous merged baseline
+
 # Current development handoff
 
 Updated 2026-11-04. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.

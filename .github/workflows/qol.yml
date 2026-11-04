@@ -21,6 +21,7 @@ jobs:
       - name: Test favorites, history, and settings
         run: |
           python3 card/test-bluetooth.py
+          python3 card/test-smb-security.py
           sh card/test-update.sh
           sh card/test-launch.sh
           cargo check --locked -p slot --no-default-features --features device
@@ -32,6 +33,8 @@ jobs:
         id: renders
         run: |
           cargo test --locked -p slot --no-default-features --lib network::tests::native_ra_progress_review -- --ignored --exact
+          cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-light-gles" gles 640 light
+          cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-dark-gl" gl 720 dark
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-light-gles" gles 640 light
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-dark-gl" gl 720 dark
           cargo run --locked -p slot-ui --example expressive_menu_preview -- "$SLOT_QOL_PREVIEW/expressive-gles" gles 640

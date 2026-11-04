@@ -47,7 +47,7 @@ if [ "$1" = prepare ]; then
     # A generated 80-bit password uses an unambiguous controller-readable alphabet.
     [ "${#password}" -eq 16 ] || exit 1
     case "$password" in *[!ABCDEFGHJKLMNPQRSTUVWXYZ23456789]*) exit 1;; esac
-    printf 'root = slot\n' > "$STATE/users"
+    printf 'nobody = slot\n' > "$STATE/users"
     cat > "$STATE/smb.conf" <<CONF
 [global]
     server role = standalone server
@@ -73,6 +73,7 @@ if [ "$1" = prepare ]; then
     state directory = $STATE/state
     cache directory = $STATE/cache
     pid directory = $STATE
+    ncalrpc dir = $STATE/ncalrpc
     log file = /dev/null
     log level = 0
     load printers = no
@@ -89,7 +90,7 @@ if [ "$1" = prepare ]; then
     browseable = yes
     read only = no
     guest ok = no
-    valid users = root
+    valid users = nobody
     force user = root
     follow symlinks = no
     wide links = no
@@ -98,7 +99,7 @@ if [ "$1" = prepare ]; then
     delete veto files = no
     max connections = 4
 CONF
-    printf '%s\n%s\n' "$password" "$password" | samba smbpasswd -s -a -c "$STATE/smb.conf" root >/dev/null 2>&1
+    printf '%s\n%s\n' "$password" "$password" | samba smbpasswd -s -a -c "$STATE/smb.conf" nobody >/dev/null 2>&1
     unset password
     samba testparm -s "$STATE/smb.conf" >/dev/null 2>&1
     exit 0

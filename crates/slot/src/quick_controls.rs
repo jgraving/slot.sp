@@ -19,6 +19,7 @@ impl App {
     pub(crate) fn set_quick_control_progress(&mut self,tex:Option<TexId>){self.quick_card.progress=tex;}
     pub fn quick_controls_open(&self)->bool {self.quick_card.shown}
     pub(super) fn quick_control_input(&mut self,action:Action)->bool {
+        if self.studio.is_some(){return false;}
         if matches!(action,Action::LidClose|Action::PowerPress|Action::PowerTap|Action::PowerHold|Action::PowerOff) {
             if let Some(menu)=&mut self.quick_bluetooth {menu.cancel_pending();}
             self.quick_card.shown=false;self.quick_card.held=None;self.quick_card.pending_settings=None;return false;

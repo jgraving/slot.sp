@@ -101,12 +101,12 @@ fn screen_shows_the_palette_only_when_palettes_are_live() {
     ];
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::CartStudio, QuickRow::WallpaperTint, QuickRow::Palette, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
     a.set_palette_live(true);
     assert_eq!(
         a.in_game_hidden(),
-        [&[QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
+        [&[QuickRow::CartStudio, QuickRow::WallpaperTint, QuickRow::Bezel, QuickRow::LeftStick][..], &empty].concat()
     );
 }
 

@@ -4,6 +4,14 @@
 
 Find scanned labels and logos, design your own labels, and choose cartridge colors and finishes. Edit one game or several together, then save to the card or export a ZIP.
 
+## Edit on the handheld
+
+Choose a cartridge on the carousel, then open **Settings → Gameplay → Cart Studio**. Your existing Select controls stay the same.
+
+Use the D-pad and the button hints to change the label, shell color, finish or Game Boy cartridge shape. The custom color picker supports RGB and hex values. **B** goes back within the editor; **Save & close** saves the changes and updates the carousel. If saving fails, the editor stays open so you can retry.
+
+Color, finish, shape and title labels work offline. With Wi-Fi connected, **Label** looks up the game's checksum in the upstream artwork catalog and offers scanned labels or logos when available. Your ROM stays on the card. There may be no catalog match for a hack or uncommon revision. The editor is unavailable during games, link play and kid mode.
+
 ## Your files stay on your device
 
 Cart Studio runs in your browser. Your game files, labels and edits are never uploaded to or stored on a Studio server.

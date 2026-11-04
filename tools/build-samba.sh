@@ -25,7 +25,7 @@ if [ ! -x "$work/install/sbin/smbd" ]; then
     mkdir -p "$work/source"
     tar -xzf "$work/samba.tar.gz" -C "$work/source" --strip-components=1
     cd "$work/source"
-    ./configure --prefix="$work/install" --without-ad-dc --without-ads --without-winbind \
+    ./configure --prefix="$work/install" --with-system-mitkrb5 --without-ad-dc --without-ads --without-winbind \
         --without-ldap --without-pam --without-json --disable-cups --disable-iprint --disable-avahi \
         --disable-python --without-acl-support --without-quotas --without-systemd --without-gpgme \
         --without-libarchive --without-regedit --without-utmp --without-syslog --without-libunwind \

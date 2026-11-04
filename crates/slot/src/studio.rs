@@ -120,7 +120,7 @@ impl Studio {
         let mut plain = cart.clone();
         plain.shell = None;
         let auto = shell_for(&plain);
-        let sheet = if wifi { vec![LabelKind::Real, LabelKind::Logo, LabelKind::Title] } else { vec![LabelKind::Title] };
+        let sheet = if wifi { vec![LabelKind::Real, LabelKind::Logo] } else { vec![LabelKind::Title] };
         let artless = cart.label.is_none();
         let title = slot_ui::label_text(&cart);
         let cart_shell = cart.shell;

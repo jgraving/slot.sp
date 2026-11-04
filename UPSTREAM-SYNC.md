@@ -111,3 +111,8 @@ The existing mGBA build stamp includes every patch hash, so this change forces
 a rebuild. Release packaging includes the patch and its provenance as before.
 Native ARM64 build, device regressions, binary and source-material checks run
 on the integration branch. Final Game Boy display behavior needs handheld review.
+
+
+## 2026-11-04 — on-device cartridge editor
+
+Selectively adapted `BrandonKowalski/slot` main (v1.13.0 / 0b95d32fea8b8c429e7539d5e448ebf88ff47ef8) Studio state/palette controls, label composition, checksum/art catalog schema and shell-choice writeback. slot.sp retains its carousel controls, renderer, label cleanup, shell assets, favorite star, card layout, typography, encrypted Wi-Fi and kid rules. The on-device frontend uses existing slot.sp menu surfaces and bitmap button hints; bitmap previews bypass theme recoloring. The upstream browser card manager and its unauthenticated HTTP service are not enabled. SMB3 inbox sharing/discovery is a separate fork implementation with encrypted credential storage, explicit lifecycle and isolated upload import.

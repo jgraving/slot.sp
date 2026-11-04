@@ -3171,7 +3171,6 @@ impl App {
         let now = self.now();
         match self.phase {
             Phase::Shelf => match action {
-                Action::GbaDown(Btn::Select) if self.core_picker.is_none() => self.open_studio(),
                 Action::GbaDown(Btn::Start) if self.core_picker.is_none() => {
                     self.open_core_picker()
                 }
@@ -5563,6 +5562,7 @@ impl App {
         self.draw_outgoing_menu(over_game,out);
         if !self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard()) {if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}}
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+        if let Some(art)=self.studio.as_ref().and_then(|m|m.art_face) {slot_ui::expressive::draw_cached_menu(self.canvas(),art,frame,out);}
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));

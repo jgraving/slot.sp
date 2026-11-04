@@ -16,8 +16,29 @@ jobs:
     container: debian:trixie
     steps:
       - uses: actions/checkout@v7
+      - name: Runtime security-update cache window
+        id: week
+        run: echo "week=$(date -u +%G%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v5
+        id: samba-cache
+        with:
+          path: |
+            vendor/samba
+            vendor/samba-sources
+          key: samba-4.25.1-trixie-arm64-${{ steps.week.outputs.week }}-${{ hashFiles('tools/build-samba.sh', 'tools/samba-build-env.sh') }}
       - name: Build maintained Samba and discovery with private dependencies
+        if: steps.samba-cache.outputs.cache-hit != 'true'
         run: bash tools/samba-build-env.sh
+      - uses: actions/cache/save@v5
+        if: steps.samba-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            vendor/samba
+            vendor/samba-sources
+          key: ${{ steps.samba-cache.outputs.cache-primary-key }}
+      - name: Install test interpreter for a cached runtime
+        if: steps.samba-cache.outputs.cache-hit == 'true'
+        run: apt-get update && apt-get install -y --no-install-recommends python3
       - name: Exercise real SMB authentication, encryption, uploads and shutdown
         run: python3 card/test-smb-integration.py vendor/samba
       - uses: actions/upload-artifact@v7
@@ -54,7 +75,7 @@ jobs:
         run: |
           cargo check --locked -p slot --no-default-features --features device
           cargo test --locked -p slot-achievements -p slot-retro --lib
-          cargo test --locked -p slot --no-default-features --lib --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code --test fork_updates --test net_time --test sntp -- --test-threads=1
+          cargo test --locked -p slot --no-default-features --lib --test studio_state --test device_studio_sharing --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code --test fork_updates --test net_time --test sntp -- --test-threads=1
           cargo test --locked -p slot-ui --lib --test quick_menu
           sh card/test-slotlink.sh
           sh card/test-update.sh
