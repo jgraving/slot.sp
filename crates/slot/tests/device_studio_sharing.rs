@@ -156,3 +156,27 @@ fn artwork_catalog_cannot_inject_paths_or_hosts() {
     }
     assert!(slot::art::safe_asset("GBA/Labels/Metroid Fusion.png"));
 }
+
+#[test]
+fn custom_game_boy_title_is_sized_for_the_edited_cartridge_shape() {
+    let root=common::tmp_root_with_gb_carts(&["Pocket"]);
+    let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut model=Studio::new(cart,false);model.applied(LabelKind::Title);model.ground=Some([30,80,120]);
+    model.shell=Some(ShellChoice{outline:Outline::Rounded,colour:[70,80,90],finish:ShellFinish::Clear});
+    let saved=slot::studio_menu::save(root.path(),&model,&Artwork::default(),None).unwrap();
+    let (_,w,h)=slot_ui::decode_png(saved.label.as_ref().unwrap()).unwrap();
+    assert_eq!((w,h),slot_ui::label_size(&saved));
+    assert_eq!(slot_store::scan(root.path()).unwrap()[0].shell,model.shell);
+}
+
+#[test]
+fn scanned_label_conversion_preserves_transparent_corners_instead_of_flattening_black() {
+    let (w,h)=(64,32);let mut pixels=vec![0;w*h*4];
+    for y in 0..h {for x in 0..w {let i=(y*w+x)*4;pixels[i..i+4].copy_from_slice(if x<4&&y<4 {&[255,255,255,0]}else{&[80,160,120,255]});}}
+    let mut png=Vec::new();{let mut encoder=png::Encoder::new(&mut png,w as u32,h as u32);encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&pixels).unwrap();}
+    let converted=slot::art::make::real_label(&png,Platform::Gba).unwrap();
+    let root=tempfile::tempdir().unwrap();let path=root.path().join("label.png");fs::write(&path,converted).unwrap();
+    let (pixels,w,h)=slot_ui::decode_png(&path).unwrap();assert_eq!(pixels[3],0);
+    assert_eq!(pixels[((h/2*w+w/2)*4+3)as usize],255);
+    assert_eq!(slot_ui::cover_label(&path,240,124),slot_ui::cover_label_bytes(&fs::read(path).unwrap(),240,124));
+}

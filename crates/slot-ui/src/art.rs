@@ -7,9 +7,14 @@ pub fn cover(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
 
 /// Clean eligible scanned-label corners on the handheld without editing the PNG.
 pub fn cover_label(path: &Path, w: u32, h: u32) -> Option<Vec<u8>> {
-    let (mut src, sw, sh) = decode(path)?;
-    crate::label_mask::clear_corner_background(&mut src, sw, sh);
-    let mut art=cover_rgba(&src, sw, sh, w, h)?;
+    cover_label_bytes(&std::fs::read(path).ok()?,w,h)
+}
+
+/// The editor and downloaded labels use the same alpha-aware cleanup as the shelf.
+pub fn cover_label_bytes(bytes:&[u8],w:u32,h:u32)->Option<Vec<u8>> {
+    let (mut src,sw,sh)=decode_png_bytes(bytes)?;
+    crate::label_mask::clear_corner_background(&mut src,sw,sh);
+    let mut art=cover_rgba(&src,sw,sh,w,h)?;
     crate::label_mask::round_sharp_corners(&mut art,w,h);
     Some(art)
 }

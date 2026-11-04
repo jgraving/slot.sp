@@ -584,43 +584,32 @@ fn label(model: &Studio, art: &Artwork, original: Option<&[u8]>) -> Option<Vec<u
                 })
                 .or_else(|| art.logo.clone())
         }
-        LabelKind::Title => model
-            .preview_ground()
-            .map(|c| art::make::text_label(&model.cart, c)),
+        LabelKind::Title => model.preview_ground().map(|c| {
+            let mut edited=model.cart.clone();edited.shell=model.shell;
+            art::make::text_label(&edited,c)
+        }),
     }
 }
 fn preview(model: &Studio, art: &Artwork, original: Option<&[u8]>) -> CartFace {
     let mut cart = model.cart.clone();
     cart.shell = model.shell;
     let bytes = label(model, art, original);
-    let art = bytes
-        .as_deref()
-        .and_then(|b| slot_ui::house_label::Label::full(b, cart.platform))
-        .and_then(|l| {
-            let (w, h) = slot_ui::label_size(&cart);
-            l.covered(w, h)
-        });
+    let (w,h)=slot_ui::label_size(&cart);
+    let art=bytes.as_deref().and_then(|b|slot_ui::cover_label_bytes(b,w,h));
     let mut face = slot_ui::cart_face_with(&cart, art);
     if slot_ui::shows_interior(&cart) {
-        let under = slot_ui::cart_interior(&cart);
-        for (px, bg) in face
-            .rgba
-            .chunks_exact_mut(4)
-            .zip(under.rgba.chunks_exact(4))
-        {
-            let a = px[3] as u32;
-            let b = bg[3] as u32 * (255 - a) / 255;
-            let total = a + b;
-            if total == 0 {
-                continue;
-            }
-            for c in 0..3 {
-                px[c] = ((px[c] as u32 * a + bg[c] as u32 * b) / total) as u8;
-            }
-            px[3] = total as u8;
-        }
+        let mut under=slot_ui::cart_interior(&cart);
+        composite(&mut under,&slot_ui::cart_backing(slot_ui::gb_shell_of(&cart)));
+        composite(&mut under,&face);
+        face=under;
     }
     face
+}
+fn composite(bottom:&mut CartFace,top:&CartFace) {
+    for (bg,px) in bottom.rgba.chunks_exact_mut(4).zip(top.rgba.chunks_exact(4)) {
+        let a=px[3]as u32;let b=bg[3]as u32*(255-a)/255;let total=a+b;if total==0 {continue;}
+        for c in 0..3 {bg[c]=((px[c]as u32*a+bg[c]as u32*b)/total)as u8;}bg[3]=total as u8;
+    }
 }
 pub fn save(
     root: &Path,

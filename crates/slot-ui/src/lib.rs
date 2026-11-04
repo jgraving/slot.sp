@@ -1,5 +1,5 @@
 mod art;
-pub use art::{cover, cover_label};
+pub use art::{cover, cover_label,cover_label_bytes};
 mod bitmaps;
 mod label_mask;
 mod label_fit;

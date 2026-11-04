@@ -2,6 +2,7 @@
 # Build a private, relocatable SMB3-only runtime using maintained Samba sources.
 # Run natively on the target architecture; the ARM64 build uses the device's glibc baseline.
 set -euo pipefail
+script="$(realpath "$0")"
 out="${1:?output directory}"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
@@ -31,7 +32,7 @@ fetch() {
 }
 fetch "https://download.samba.org/pub/samba/stable/samba-$version.tar.gz" "$work/samba.tar.gz" "$sha"
 fetch 'https://deb.debian.org/debian/pool/main/w/wsdd2/wsdd2_1.8.7+dfsg.orig.tar.xz' "$work/wsdd2.tar.xz" "$wsdd_sha"
-build_id="$(sha256sum "$0" | cut -d" " -f1)"
+build_id="$(sha256sum "$script" | cut -d" " -f1)"
 if [ ! -x "$work/install/sbin/smbd" ] || [ "$(cat "$work/install/.slot-build-id" 2>/dev/null || true)" != "$build_id" ]; then
     rm -rf "$work/source" "$work/install"
     mkdir -p "$work/source"
@@ -117,5 +118,5 @@ cp "$work/wsdd2/LICENSE" "$out/licenses/wsdd2-LICENSE.txt"
 printf 'Samba %s\nsource_sha256=%s\nwsdd2_source_sha256=%s\n' "$version" "$sha" "$wsdd_sha" > "$out/build-info.txt"
 for binary in "$out"/bin/*; do strip "$binary"; done
 
-cp "$0" "$sources/build-samba.sh"
+cp "$script" "$sources/build-samba.sh"
 printf 'Corresponding source: slot.sp-network-sources.zip from the same build/release.\n' > "$out/licenses/SOURCES.txt"

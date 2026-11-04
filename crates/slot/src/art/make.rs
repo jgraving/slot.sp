@@ -60,7 +60,9 @@ pub fn as_png(bytes: &[u8]) -> Option<Cow<'_, [u8]>> {
 }
 
 pub fn real_label(scan: &[u8], platform: Platform) -> Option<Vec<u8>> {
-    Label::full(&as_png(scan)?, platform).map(|l| l.png())
+    let (w,h)=slot_ui::house_label::size(platform);
+    let rgba=slot_ui::cover_label_bytes(&as_png(scan)?,w,h)?;
+    encoded(w,h,png::ColorType::Rgba,&rgba)
 }
 
 pub fn logo_label(

@@ -122,7 +122,7 @@ impl Menu {
     fn setup_pin(&mut self) {self.open_security();self.selected=1;self.say("Set a code to encrypt credentials");}
     pub fn open(&mut self) { self.open_wifi(); }
     pub fn open_wifi(&mut self) {
-        self.visible = true; self.page = Page::Wifi; self.selected = 0; self.notice.clear(); self.changed();
+        self.visible = true; self.page = Page::Wifi; self.selected = 0; self.sharing_reveal=false; self.notice.clear(); self.changed();
     }
     pub fn open_achievements(&mut self) {
         self.visible = true; self.page = Page::Achievements; self.selected = 0; self.notice.clear(); self.changed();
@@ -522,7 +522,7 @@ impl Menu {
             self.changed(); return;
         }
         let Action::GbaDown(btn) = action else {
-            if action == Action::QuickMenu { self.visible = false; }
+            if action == Action::QuickMenu { self.visible = false; self.sharing_reveal=false; }
             return;
         };
         if btn == Btn::B && self.page==Page::Sharing {self.page=Page::Wifi;self.selected=4;self.sharing_reveal=false;self.notice.clear();self.changed();return;}
@@ -552,7 +552,7 @@ impl Menu {
                 1 => self.reconnect(),
                 2 => { if self.wifi_on { self.wifi.scan(); self.say("Scanning for networks"); } else { self.say("Turn Wi-Fi on first"); } }
                 3 => { if self.wifi_on && self.unlocked() { self.edit(Field::Ssid, "Network name", "", false, 1, 32); } else if !self.wifi_on { self.say("Turn Wi-Fi on first"); } }
-                4 => {self.page=Page::Sharing;self.selected=0;self.notice.clear();self.changed();}
+                4 => {self.page=Page::Sharing;self.selected=0;self.sharing_reveal=false;self.notice.clear();self.changed();}
                 _ => {
                     if !self.wifi_on { self.say("Turn Wi-Fi on first"); return; }
                     if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(5)).cloned() { self.choose_network(network); }
@@ -920,6 +920,7 @@ mod tests {
         menu.secrets.sharing_password="ABCDEFGH23456789".into();assert!(!menu.rows()[4].1.contains("ABCDEFGH"));
         menu.selected=1;menu.input(Action::GbaDown(Btn::A));assert!(menu.prefs.sharing_keep);assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Warning);
         menu.input(Action::GbaDown(Btn::B));assert_eq!(menu.page,Page::Wifi);assert!(!menu.sharing_reveal);
+        menu.sharing_reveal=true;menu.input(Action::QuickMenu);menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::A));assert!(!menu.sharing_reveal,"reopening must hide the password after Menu closes the page");
     }
     const CODE: [Btn;6] = [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }

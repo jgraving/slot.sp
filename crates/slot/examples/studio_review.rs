@@ -144,7 +144,10 @@ fn main() {
     a.tap(Btn::A);
     a.save("studio-title-applied");
     a.tap(Btn::B);
-    a.tap(Btn::Down);
+    for _ in 0..3 {a.tap(Btn::Down);}
+    a.tap(Btn::Right);a.save("studio-clear-shell");
+    a.tap(Btn::Right);a.save("studio-glitter-shell");
+    for _ in 0..2 {a.tap(Btn::Up);}
     a.tap(Btn::A);
     a.save("studio-label-palette");
     a.tap(Btn::Right);
