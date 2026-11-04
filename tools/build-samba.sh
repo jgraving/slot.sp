@@ -45,7 +45,7 @@ if [ ! -x "$work/install/sbin/smbd" ] || [ "$(cat "$work/install/.slot-build-id"
         --without-prometheus-exporter --without-ratelimitd --disable-cephfs --disable-cephrgw \
         --disable-glusterfs --disable-spotlight --disable-wsp \
         --with-static-modules='!DEFAULT,pdb_smbpasswd,pdb_tdbsam,auth_unix,nss_info_template,idmap_tdb,idmap_passdb,idmap_nss' --with-shared-modules='!DEFAULT,!FORCED' \
-        --nonshared-binary=smbd/smbd,utils/smbpasswd,utils/testparm,client/smbclient,samba-dcerpcd,rpcd_classic \
+        --nonshared-binary=smbd/smbd \
         --disable-rpath-install --disable-rpath-private-install
     make -j "${SLOT_BUILD_JOBS:-4}"
     make install

@@ -5531,7 +5531,7 @@ impl App {
             },
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
-            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4004=>{
+            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4005=>{
                 let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
                 slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
