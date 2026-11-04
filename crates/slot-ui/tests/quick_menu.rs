@@ -170,7 +170,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::DisplaySchedule,
             QuickRow::Wifi,
             QuickRow::Achievements,
-            QuickRow::SecurityPin, QuickRow::Updates, QuickRow::TimeZone, QuickRow::CartStudio, QuickRow::CartEdit, QuickRow::CartCore
+            QuickRow::SecurityPin, QuickRow::Updates, QuickRow::TimeZone, QuickRow::CartStudio
         ]
     );
     for page in [

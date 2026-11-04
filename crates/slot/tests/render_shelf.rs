@@ -130,37 +130,24 @@ fn let_it_hop(app: &mut App) {
 }
 
 #[test]
-fn start_opens_cartridge_actions_and_emulator_still_renders() {
+fn start_opens_studio_for_gb_and_renders_the_emulator_picker_for_gba() {
     let Some((_g, _s, mut c)) = compositor() else {
         eprintln!("no GL on this host, skipping");
         return;
     };
 
     let d = common::tmp_root_with_gb_carts(&["Tetris", "Zzz"]);
-    let twin = common::tmp_root_with_gb_carts(&["Tetris", "Zzz"]);
     let mut pressed = shelf(&d, &mut c);
-    let mut untouched = shelf(&twin, &mut c);
     pressed.apply(Action::GbaDown(Btn::Start));
-    let_it_hop(&mut pressed);
-    let_it_hop(&mut untouched);
-    let plain = shot(&untouched, &mut c, "gb-plain");
-    let after = shot(&pressed, &mut c, "gb-after-start");
-    assert_eq!(
-        pressed.core_picker(),
-        None,
-        "a Game Boy cart opened the GBA picker"
-    );
-    assert!(
-        after != plain,
-        "START did not open cartridge actions on a Game Boy cart"
-    );
+    assert!(pressed.studio.is_some());
+    assert!(pressed.quick_menu().is_none());
+    assert!(pressed.core_picker().is_none());
 
     let d = common::tmp_root_with_carts(&["Emerald", "Zzz"]);
     let twin = common::tmp_root_with_carts(&["Emerald", "Zzz"]);
     let mut pressed = shelf(&d, &mut c);
     let mut untouched = shelf(&twin, &mut c);
     pressed.apply(Action::GbaDown(Btn::Start));
-    pressed.apply(Action::GbaDown(Btn::Down));pressed.apply(Action::GbaDown(Btn::A));
     let_it_hop(&mut pressed);
     let_it_hop(&mut untouched);
     let plain = shot(&untouched, &mut c, "gba-plain");
