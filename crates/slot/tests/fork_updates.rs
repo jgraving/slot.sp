@@ -147,3 +147,71 @@ fn failed_download_checks_never_touch_installed_or_user_files() {
     assert!(!d.path().join(STAGING).exists());
     for path in ["System/slot","Config/settings","Games/game.gba","Saves/game.sav"] {assert_eq!(std::fs::read(d.path().join(path)).unwrap(),b"keep");}
 }
+
+fn baseos_fixture()->Release {
+    Release{kind:Kind::BaseOs,running:"1.3.0".into(),version:"1.4.0".into(),url:"https://github.com/pvaibhav/BaseOS/releases/download/v1.4.0/baseos-rg35xxsp-1.4.0.bosupd".into(),sha256:ring::digest::digest(&ring::digest::SHA256,b"payload").as_ref().try_into().unwrap(),size:7,source:String::new()}
+}
+#[test]
+fn baseos_staging_preserves_existing_payloads_and_refuses_redirected_downloads() {
+    use std::os::unix::fs::symlink;
+    let r=baseos_fixture();let name=bosupd_name(&r);
+    for collision in ["ready","part-link","ready-link","part-directory"] {
+        let d=tempfile::tempdir().unwrap();let keep=d.path().join("keep");std::fs::write(&keep,b"keep").unwrap();
+        let done=d.path().join(&name);let part=d.path().join(format!("{name}.part"));
+        match collision {
+            "ready"=>std::fs::write(&done,b"existing").unwrap(),
+            "part-link"=>symlink(&keep,&part).unwrap(),
+            "ready-link"=>symlink(&keep,&done).unwrap(),
+            _=>std::fs::create_dir(&part).unwrap(),
+        }
+        let result=install_baseos_with(d.path(),100,&mut |_,_|panic!("must reject before downloading"),&mut ||panic!("must not inspect rejected path"),&r);
+        assert!(matches!(result,UpdateEvent::Failed(_)));
+        assert_eq!(std::fs::read(&keep).unwrap(),b"keep");
+        if collision=="ready" {assert_eq!(std::fs::read(done).unwrap(),b"existing");}
+    }
+}
+#[test]
+fn baseos_failures_never_leave_a_bootable_payload_and_can_retry() {
+    let r=baseos_fixture();let name=bosupd_name(&r);
+    for failure in ["space","download","cancel","length","digest","verdict","missing-status"] {
+        let d=tempfile::tempdir().unwrap();let keep=d.path().join("Config/settings");std::fs::create_dir_all(keep.parent().unwrap()).unwrap();std::fs::write(&keep,b"keep").unwrap();
+        let mut status_called=false;
+        let result=install_baseos_with(d.path(),if failure=="space" {0}else{100},&mut |_,out| {
+            assert_ne!(failure,"space");
+            out.write_all(if failure=="length" {b"short"}else{b"payload"}).unwrap();
+            if failure=="download" {return Err(UpdateFail::Download);}
+            if failure=="cancel" {
+                let t=Ticket::default();t.cancel();let mut read=Stoppable::new(Cursor::new(b"payload"),t);
+                return copy_counted(&mut read,out,r.size,&mut |_|{});
+            }
+            Ok(if failure=="digest" {[0;32]}else{r.sha256})
+        },&mut || {status_called=true;if failure=="missing-status" {None}else{Some(format!("payload: /mnt/sdcard/{name}\nrejected: wrong board\n"))}},&r);
+        assert!(matches!(result,UpdateEvent::Failed(_)),"{failure}");
+        assert_eq!(status_called,matches!(failure,"verdict"|"missing-status"));
+        assert!(!d.path().join(&name).exists());assert!(!d.path().join(format!("{name}.part")).exists());
+        assert_eq!(std::fs::read(&keep).unwrap(),b"keep");
+        // Restarting a partial download starts from byte zero and publishes only
+        // after complete size/digest validation and the matching BaseOS verdict.
+        std::fs::write(d.path().join(format!("{name}.part")),b"stale incomplete").unwrap();
+        assert_eq!(install_baseos_with(d.path(),100,&mut |_,out|{out.write_all(b"payload").unwrap();Ok(r.sha256)},&mut ||Some(format!("payload: /mnt/sdcard/{name}\nWILL APPLY on the next boot\n")),&r),UpdateEvent::Staged);
+        assert_eq!(std::fs::read(d.path().join(&name)).unwrap(),b"payload");
+        assert!(!d.path().join(format!("{name}.part")).exists());
+    }
+}
+#[test]
+fn baseos_verdict_cannot_be_borrowed_from_another_payload() {
+    let name=bosupd_name(&baseos_fixture());
+    for status in [format!("payload: /card/other.bosupd\nWILL APPLY\npayload: /card/{name}\nrejected: incompatible\n"),format!("payload: /card/{name}\nrejected: incompatible\npayload: /card/other.bosupd\nWILL APPLY\n"),"payload: /card/other.bosupd\nWILL APPLY\n".into()] {
+        assert!(will_apply(&status,&name).is_err());
+    }
+}
+#[test]
+fn staging_root_collisions_cannot_modify_an_unrelated_tree() {
+    let d=tempfile::tempdir().unwrap();let outside=tempfile::tempdir().unwrap();
+    let keep=outside.path().join("slot");std::fs::write(&keep,b"keep").unwrap();
+    std::os::unix::fs::symlink(outside.path(),d.path().join(STAGING)).unwrap();
+    let r=parse_release(&release().to_string()).unwrap();
+    assert!(stage(d.path(),&package(SHA,None),&r).is_err());
+    assert_eq!(std::fs::read(&keep).unwrap(),b"keep");
+    assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(),1);
+}

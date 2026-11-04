@@ -103,4 +103,11 @@ grep -Fx 'ip addr flush dev wlan0' "$TMP/run/wifi-commands" >/dev/null || fail "
 grep -Fx 'rfkill block wifi' "$TMP/run/wifi-commands" >/dev/null || fail "did not turn off the owned radio"
 unset AGS_WPA_CLI AGS_IP AGS_RFKILL AGS_CTRL_DIR
 
+# A failed installer must stop before background services or launcher exec.
+setup
+printf '#!/bin/sh\nexit 1\n' > "$TMP/card/System/slotupdate.sh"
+launch
+[ ! -e "$TMP/run/slot-led.pid" ] || fail "started services after a failed update"
+[ ! -e "$TMP/card/Logs/slot-session.log" ] || fail "launched a partial installation"
+
 echo "launch: all passed"

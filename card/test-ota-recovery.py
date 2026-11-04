@@ -99,6 +99,18 @@ class Recovery(unittest.TestCase):
         self.assertNotEqual(self.run_installer(),0)
         self.assertTrue((outside/'.manifest').exists()); self.unchanged()
 
+    def test_final_sync_failure_keeps_complete_stage_for_retry(self):
+        bin_dir=self.root/'bin'; bin_dir.mkdir()
+        counter=self.root/'sync-count'
+        script=bin_dir/'sync'
+        script.write_text('#!/bin/sh\nn=0\n[ ! -f "$COUNT" ] || n=$(cat "$COUNT")\nn=$((n+1))\necho "$n" > "$COUNT"\n[ "$n" -ne 2 ]\n')
+        script.chmod(0o755)
+        self.env.update(PATH=str(bin_dir)+os.pathsep+os.environ['PATH'],COUNT=str(counter))
+        self.assertNotEqual(self.run_installer(),0)
+        self.assertTrue((self.new/'.manifest').exists())
+        self.preserved()
+        self.env['PATH']=os.environ['PATH']; self.completed()
+
     def test_sync_failure_retains_recovery_source(self):
         bin_dir=self.root/'bin'; bin_dir.mkdir()
         script=bin_dir/'sync'; script.write_text('#!/bin/sh\nexit 1\n'); script.chmod(0o755)

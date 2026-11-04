@@ -133,7 +133,15 @@ pub fn verify(bytes: &[u8], release: &Release) -> Result<(), UpdateFail> {
 pub fn stage(root: &Path, zip: &[u8], release:&Release) -> Result<(), UpdateFail> {
     let dir = root.join(STAGING);
     if dir.join(MANIFEST).is_file() {return Err(UpdateFail::Rejected("Restart to finish the staged update".into()));}
-    let _ = std::fs::remove_dir_all(&dir);
+    match std::fs::symlink_metadata(&dir) {
+        Ok(meta) if meta.is_dir() => std::fs::remove_dir_all(&dir).map_err(|_|UpdateFail::Bad)?,
+        Ok(_) => return Err(UpdateFail::Bad),
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound => {},
+        Err(_) => return Err(UpdateFail::Bad),
+    }
+    // Never extract into a leftover tree after failed cleanup (or follow a
+    // replacement symlink at the staging root).
+    std::fs::create_dir(&dir).map_err(|_|UpdateFail::Bad)?;
     let result = unpack(&dir, zip, release);
     if result.is_err() {
         let _ = std::fs::remove_dir_all(&dir);
@@ -471,8 +479,26 @@ pub fn install_baseos_with(
     let name = bosupd_name(release);
     let done = root.join(&name);
     let part = root.join(format!("{name}.part"));
+    // A ready payload belongs to the next boot, not this download attempt.
+    match std::fs::symlink_metadata(&done) {
+        Ok(_) => return UpdateEvent::Failed(UpdateFail::Rejected("Restart to finish the staged BaseOS update".into())),
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound => {},
+        Err(_) => return UpdateEvent::Failed(UpdateFail::Download),
+    }
+    match std::fs::symlink_metadata(&part) {
+        Ok(meta) if meta.is_file() => {
+            if std::fs::remove_file(&part).is_err() {return UpdateEvent::Failed(UpdateFail::Download);}
+        },
+        Ok(_) => return UpdateEvent::Failed(UpdateFail::Bad),
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound => {},
+        Err(_) => return UpdateEvent::Failed(UpdateFail::Download),
+    }
+    let mut published=false;
     let result = download_bosupd(&part, fetch_into, release)
-        .and_then(|()| std::fs::rename(&part, &done).map_err(|_| UpdateFail::Download))
+        .and_then(|()| {
+            std::fs::rename(&part, &done).map_err(|_| UpdateFail::Download)?;
+            published=true;Ok(())
+        })
         .and_then(|()| match status() {
             Some(text) => will_apply(&text, &name).map_err(UpdateFail::Rejected),
             None => Err(UpdateFail::Rejected("BaseOS did not see the update".into())),
@@ -481,7 +507,7 @@ pub fn install_baseos_with(
         Ok(()) => UpdateEvent::Staged,
         Err(e) => {
             let _ = std::fs::remove_file(&part);
-            let _ = std::fs::remove_file(&done);
+            if published {let _ = std::fs::remove_file(&done);}
             UpdateEvent::Failed(e)
         }
     }
@@ -492,7 +518,7 @@ fn download_bosupd(
     fetch_into: &mut FetchInto<'_>,
     release: &Release,
 ) -> Result<(), UpdateFail> {
-    let mut file = std::fs::File::create(part).map_err(|_| UpdateFail::Download)?;
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(part).map_err(|_| UpdateFail::Download)?;
     let digest = fetch_into(&release.url, &mut file)?;
     file.sync_all().map_err(|_| UpdateFail::Download)?;
     let size = file.metadata().map_err(|_| UpdateFail::Download)?.len();
