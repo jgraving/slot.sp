@@ -1,5 +1,12 @@
 # Development recovery log
 
+## Cart Studio shortcut and footer merged — 2026-11-05
+
+[PR #205](https://github.com/jgraving/slot.sp/pull/205) from `fix/cart-studio-hint` merged as `3b7fa8063d5e12712660f8ab2e8cc61ecb0c0ded`. The merged tree matches the tested head `3fd4092fa0793f78f8f918a33fd09bafadf02761`.
+
+- All six pull-request workflows passed on the exact head: [Network and achievements test build](https://github.com/jgraving/slot.sp/actions/runs/41926808640), [Shortcut guide regression checks](https://github.com/jgraving/slot.sp/actions/runs/41926808375), [Blending regression checks](https://github.com/jgraving/slot.sp/actions/runs/41926808684), [Scaling regression checks](https://github.com/jgraving/slot.sp/actions/runs/41926808839), [Launcher quality of life checks](https://github.com/jgraving/slot.sp/actions/runs/41926808470), [pages](https://github.com/jgraving/slot.sp/actions/runs/41926809003). The Pages retry resolved a transient timeout downloading the pinned font.
+- The [post-merge release build](https://github.com/jgraving/slot.sp/actions/runs/41931805005) and [site deployment workflow](https://github.com/jgraving/slot.sp/actions/runs/41931804789) started on the merged commit.
+
 ## Cart Studio shortcut and footer — 2026-11-04
 
 Active branch `fix/cart-studio-hint`, based on main `dd5a6b1`. Remove the Start cartridge settings card and restore direct cartridge controls. Keep the GBA Cart Studio hint in the picker footer, clear of the cartridge. Start now opens Cart Studio directly on GB/GBC and the existing emulator picker on GBA. X opens Cart Studio from that picker, with the hint in the same footer row as Cancel, Swap, and Choose.
