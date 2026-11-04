@@ -124,6 +124,8 @@ pub enum QuickRow {
     AutomaticTime,
     TimeZone,
     CartStudio,
+    CartEdit,
+    CartCore,
 }
 
 impl QuickRow {
@@ -133,7 +135,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::AutomaticTime)
     }
-    pub const ALL: [QuickRow; 113] = [
+    pub const ALL: [QuickRow; 115] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -247,7 +249,11 @@ impl QuickRow {
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
         QuickRow::CartStudio,
+        QuickRow::CartEdit,
+        QuickRow::CartCore,
     ];
+
+    pub const CART: [QuickRow;2] = [QuickRow::CartEdit,QuickRow::CartCore];
 
     pub const MAIN: [QuickRow; 8] = [
         QuickRow::General,
@@ -405,6 +411,7 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
+            QuickRow::CartEdit|QuickRow::CartCore=>&QuickRow::CART,
             QuickRow::SecurityPin | QuickRow::Updates | QuickRow::AutomaticTime | QuickRow::TimeZone => &QuickRow::GENERAL,
             QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
             QuickRow::Achievements | QuickRow::CartStudio => &QuickRow::GAME,
@@ -499,6 +506,7 @@ impl QuickRow {
     /// The title is cached once per page, never built during an animation.
     pub fn heading(self) -> &'static str {
         match self.page()[0] {
+            QuickRow::CartEdit => "Cartridge",
             QuickRow::General => "Settings",
             QuickRow::Resume => "Paused",
             QuickRow::PlayScreen => "Settings",
@@ -576,7 +584,8 @@ impl QuickRow {
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
-            QuickRow::CartStudio => "Cart Studio",
+            QuickRow::CartStudio | QuickRow::CartEdit => "Cart Studio",
+            QuickRow::CartCore => "Emulator",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::SecurityPin => "Device code",
             QuickRow::Updates => "Updates",
@@ -681,7 +690,7 @@ impl QuickRow {
                 | QuickRow::PlaySound
                 | QuickRow::About
                 | QuickRow::Wifi
-                | QuickRow::Achievements | QuickRow::CartStudio
+                | QuickRow::Achievements | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
                 | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
                 | QuickRow::Reference
                 | QuickRow::PlayReference
@@ -1455,6 +1464,13 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
             text::draw_centred(&mut label.rgba,w,MENU_H,&layout,ink);
             parent_blit(&mut face,&label,QUICK_LABEL_X+34.0-MENU_PAD as f32,y);
         }
+    }
+    // The last fixed row opens the file-sharing page.
+    let disclosure = first_network.saturating_sub(1);
+    if disclosure >= start && disclosure < start + visible {
+        let caret = quick_caret_face(true);
+        parent_blit(&mut face, &caret, canvas.w - QUICK_EDGE - caret.w as f32,
+            crate::expressive::ROW_TOP + (disclosure-start) as f32 * QUICK_PITCH + TYPE_DROP);
     }
     face
 }

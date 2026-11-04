@@ -34,6 +34,7 @@ pub(crate) enum Failure {
 }
 
 pub(crate) trait Transport {
+    fn network_problem(&self)->&'static str {"RA server unavailable"}
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure>;
     fn badge(&mut self, _name: &str) -> Result<Vec<u8>, Failure> {
         Err(Failure::Invalid)
@@ -48,6 +49,7 @@ struct WhileActive<T> {
     status: Arc<Status>,
 }
 impl<T: Transport> Transport for WhileActive<T> {
+    fn network_problem(&self)->&'static str {self.inner.network_problem()}
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
         if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
             return Err(Failure::Network);
@@ -86,7 +88,18 @@ fn send_sensitive(http: &mut impl Transport, mut fields: Vec<(&str, String)>) ->
     result
 }
 
-pub(crate) struct Http(ureq::Agent);
+pub(crate) struct Http(ureq::Agent, &'static str);
+fn transport_problem(error:&ureq::Error)->&'static str {
+    match error {
+        ureq::Error::HostNotFound=>"DNS lookup failed",
+        ureq::Error::Timeout(_)=>"Server request timed out",
+        ureq::Error::Tls(_)|ureq::Error::Rustls(_)=>"TLS failed · check date/time",
+        ureq::Error::StatusCode(429)=>"Server rate limit · retrying",
+        ureq::Error::StatusCode(500..=599)=>"Server temporarily unavailable",
+        ureq::Error::StatusCode(_)=>"Server refused the request",
+        _=>"Network connection failed",
+    }
+}
 
 impl Http {
     pub(crate) fn new() -> Self {
@@ -101,11 +114,13 @@ impl Http {
                 ))
                 .build()
                 .into(),
+            "Network connection failed",
         )
     }
 }
 
 impl Transport for Http {
+    fn network_problem(&self)->&'static str {self.1}
     fn badge(&mut self, name: &str) -> Result<Vec<u8>, Failure> {
         crate::badges::path(std::path::Path::new(""), name).ok_or(Failure::Invalid)?;
         self.0
@@ -126,7 +141,7 @@ impl Transport for Http {
             .0
             .post(API)
             .send_form(form)
-            .map_err(|_| Failure::Network)?;
+            .map_err(|error| {self.1=transport_problem(&error);Failure::Network})?;
         response
             .body_mut()
             .with_config()
@@ -396,6 +411,7 @@ pub(crate) fn run(
             .swap(false, std::sync::atomic::Ordering::AcqRel)
         {
             next_attempt = Instant::now();
+            badges.network_available();
         }
         if Instant::now() < next_attempt {
             continue;
@@ -583,7 +599,7 @@ pub(crate) fn run(
                 next_attempt = Instant::now() + Duration::from_secs(3);
             }
             Err(error) => {
-                problem = match error { Failure::Network => "RA server unavailable",
+                problem = match error { Failure::Network => http.network_problem(),
                     Failure::Authentication => "Check username or password",
                     Failure::Rejected => "Server rejected a request",
                     Failure::Invalid => "Game data or storage error" };

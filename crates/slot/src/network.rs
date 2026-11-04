@@ -33,11 +33,13 @@ pub struct Menu {
     sharing_allowed:bool,
     sharing_reveal:bool,
     sharing_library:Vec<slot_store::Cart>,
+    shared_snapshot:Option<Vec<slot_store::Cart>>,
     updates: Box<dyn UpdateJobs>,
     releases: Vec<update::Release>,
     update_busy: bool,
     update_installing: Option<update::Release>,
     update_bytes: u64,
+    baseos_message:String,
     update_message: String,
     update_staged: bool,
     restart_requested: bool,
@@ -97,9 +99,9 @@ impl Menu {
         let migrating_plain = has_plain_residue(&root);
         let secrets = Secrets::default();
         Self {
-            sharing:crate::sharing::Sharing::new(root.clone()),sharing_allowed:true,sharing_reveal:false,sharing_library:Vec::new(),
+            sharing:crate::sharing::Sharing::new(root.clone()),sharing_allowed:true,sharing_reveal:false,sharing_library:Vec::new(),shared_snapshot:None,
             updates:update::update_jobs(root.clone()),releases:Vec::new(),update_busy:false,update_installing:None,
-            update_bytes:0,update_message:String::new(),update_staged:false,restart_requested:false,battery:None,
+            update_bytes:0,baseos_message:"Not checked".into(),update_message:String::new(),update_staged:false,restart_requested:false,battery:None,
             diagnostics: None,
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
             visible: false, face: None, progress_face: None, page: Page::Wifi,
@@ -162,7 +164,7 @@ impl Menu {
     pub fn automatic_time_ready(&self)->bool {self.prefs.automatic_time && self.wifi_connected()}
     pub fn automatic_time_enabled(&self)->bool {self.prefs.automatic_time}
     pub fn toggle_automatic_time(&mut self) {
-        if !self.wifi_connected() {self.require_wifi("automatic time");return;}
+        if !self.prefs.automatic_time && !self.wifi_connected() {self.require_wifi("automatic time");return;}
         self.prefs.automatic_time=!self.prefs.automatic_time;self.store_preferences();self.changed();
     }
     pub fn require_wifi(&mut self,feature:&str) {
@@ -173,7 +175,7 @@ impl Menu {
     }
     fn save_diagnostics(&mut self) {
         if self.diagnostics.is_some() {self.say("Saving Wi-Fi report…");return;}
-        self.diagnostics=Some(crate::wifi_diagnostics::start(self.root.clone(),self.last_wifi.clone()));
+        self.diagnostics=Some(crate::wifi_diagnostics::start(self.root.clone(),self.last_wifi.clone(),self.sharing.view.clone(),self.last_sync));
         self.say("Saving Wi-Fi report…");
     }
     fn take_diagnostics(&mut self) {
@@ -208,6 +210,7 @@ impl Menu {
     fn take_update_events(&mut self) {
         while let Some(event)=self.updates.take() {
             match event {
+                UpdateEvent::BaseOsStatus(message)=>{self.baseos_message=message;self.changed();continue;},
                 UpdateEvent::Progress(bytes)=> {self.update_bytes=bytes;self.face=None;continue;}
                 UpdateEvent::Available(releases)=> {self.releases=releases;self.update_message="Available".into();}
                 UpdateEvent::UpToDate=> {self.releases.clear();self.update_message="Up to date".into();}
@@ -223,7 +226,7 @@ impl Menu {
         }
     }
     pub fn show_progress(&self) -> bool {
-        self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle || self.diagnostics.is_some())
+        self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle || self.diagnostics.is_some() || self.update_busy || self.sharing.view.busy)
     }
     pub fn repeats(&self, btn: Btn) -> bool {
         self.code.is_none() && (matches!(btn, Btn::Up | Btn::Down | Btn::Left | Btn::Right) || self.keyboard.is_some())
@@ -239,7 +242,11 @@ impl Menu {
             }).collect()
     }
     fn changed(&mut self) { self.face = None; self.revision = self.revision.wrapping_add(1); }
-    fn say(&mut self, message: impl Into<String>) { self.notice_tone=slot_ui::NoticeTone::Neutral;self.notice = message.into(); self.changed(); }
+    pub(crate) fn automatic_time_notice(&mut self) {
+        self.toast_tone=slot_ui::NoticeTone::Neutral;
+        self.toast=Some(("Automatic time is on".into(),Instant::now()));
+    }
+    pub(crate) fn say(&mut self, message: impl Into<String>) { self.notice_tone=slot_ui::NoticeTone::Neutral;self.notice = message.into(); self.changed(); }
     fn warn(&mut self,message:&str,tone:slot_ui::NoticeTone) {self.say(message);self.notice_tone=tone;}
     pub fn notice_tone(&self)->slot_ui::NoticeTone {
         if self.visible {self.notice_tone}else{self.toast_tone}
@@ -602,7 +609,6 @@ impl Menu {
                 1=>{self.prefs.sharing_keep=!self.prefs.sharing_keep;self.store_preferences();self.changed();if self.prefs.sharing_keep {self.warn("Keep off on public Wi-Fi",slot_ui::NoticeTone::Warning);}},
                 4=>{if self.unlocked(){self.sharing_reveal=!self.sharing_reveal;self.changed();}},
                 5=>{if self.unlocked(){match crate::sharing::password(){Ok(password)=>{self.sharing.request(None);self.secrets.sharing_password=password.to_string();self.save_secrets();self.sharing_reveal=true;self.say("Sharing password changed");},Err(error)=>self.say(error)}}},
-                6=>{self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");},
                 _=>{},
             },
             Page::Updates => {},
@@ -674,25 +680,27 @@ impl Menu {
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
                 ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else if self.last_wifi.busy == wifi::Busy::Addressing {"Getting IP…".into()} else if self.last_wifi.connected.is_some() && self.last_wifi.ip.is_none() {"No IP address".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
-                ("Network sharing".into(),if self.sharing.view.active {"Active"}else{""}.into(),false),
+                ("Network file sharing".into(),String::new(),false),
             ],
             Page::Sharing=>vec![
                 ("Sharing".into(),if self.sharing.view.busy {"Working…"}else if self.sharing.view.active {"On"}else{"Off"}.into(),true),
                 ("Keep on after reboot".into(),if self.prefs.sharing_keep {"On"}else{"Off"}.into(),true),
-                ("Address".into(),self.last_wifi.ip.clone().unwrap_or_else(||"Not connected".into()),false),
+                ("Finder".into(),self.last_wifi.ip.as_ref().map(|ip|format!("smb://{ip}/SDCard")).unwrap_or_else(||"Not connected".into()),false),
                 ("Username".into(),"slot".into(),false),
                 ("Password".into(),if self.locked {"Locked".into()}else if self.sharing_reveal {self.secrets.sharing_password.clone()}else{"Press A to show".into()},false),
                 ("New password".into(),String::new(),false),
-                ("Import uploads".into(),String::new(),false),
             ],
             Page::Updates => {
                 if self.update_staged {return vec![("Restart to install".into(),String::new(),false)];}
-                let status=if self.update_busy {if self.update_installing.is_some() {"Downloading…"}else{"Checking…"}}
+                let status=if self.update_busy {if self.update_installing.is_some() {"Downloading…"}else{""}}
                     else {match self.update_message.as_str() {""=>"","Up to date"=>"Up to date","Available"=>"Available","Cancelled"=>"Cancelled",_=>"Retry"}};
                 let mut rows=vec![("Check for updates".into(),status.into(),false)];
                 for release in &self.releases {
                     rows.push((if release.kind==Kind::Slot {"slot.sp"}else{"BaseOS"}.into(),release.version.clone(),false));
                 }
+                rows.push(("Installed slot.sp".into(),crate::build_info::Build::current().version.into(),false));
+                rows.push(("Installed BaseOS".into(),crate::baseos::var("BASEOS_VERSION").unwrap_or_else(||"Unknown".into()),false));
+                rows.push(("BaseOS check".into(),self.baseos_message.clone(),false));
                 rows
             },
             Page::Achievements => vec![
@@ -766,7 +774,7 @@ impl Menu {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
             slot_ui::wifi_settings_face_on(canvas, &rows, selected, 5, &signals)
         } else { slot_ui::parent_settings_face_animated_on(canvas, &rows, selected, 0, "", 0.0) };
-        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Device code?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Device code", Page::Updates=>"Updates", Page::Sharing=>"Network sharing"} });
+        let title = slot_ui::quick_heading_face(if self.forget_confirmation.is_some() {"Forget Device code?"} else { match self.page {Page::Wifi=>"Network", Page::Achievements=>"RetroAchievements", Page::Security=>"Device code", Page::Updates=>"Updates", Page::Sharing=>"Network file sharing"} });
         blit(&mut face, &title, (canvas.w as u32).saturating_sub(title.w)/2, 0);
 
         face
@@ -781,9 +789,10 @@ impl Menu {
         None
     }
     pub fn set_sharing_allowed(&mut self,allowed:bool) {self.sharing_allowed=allowed;if !allowed {self.sharing.request(None);}}
+    pub fn take_shared_snapshot(&mut self)->Option<Vec<slot_store::Cart>> {self.shared_snapshot.take()}
     pub fn take_shared_games(&mut self)->Vec<slot_store::Cart> {std::mem::take(&mut self.sharing_library)}
     fn toggle_sharing(&mut self) {
-        if self.prefs.sharing_enabled||self.sharing.view.active {self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");return;}
+        if self.prefs.sharing_enabled||self.sharing.view.active {self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.request(None);self.say("File sharing stopped");return;}
         if !self.wifi_connected(){self.say("Connect to Wi-Fi first");return;}
         if !self.unlocked(){return;}
         if !self.sharing_allowed{self.say("Return to the carousel first");return;}
@@ -794,6 +803,7 @@ impl Menu {
     }
     fn step_sharing(&mut self) {
         for event in self.sharing.poll() {match event {
+            crate::sharing::Event::Library(carts)=>self.shared_snapshot=Some(carts),
             crate::sharing::Event::Stopped(import)=>{self.changed();if let Some(import)=import {
                 let text=if import.added.is_empty()&&import.wallpapers==0&&import.skipped==0 {"No new uploads".into()}
                     else {format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped)};
@@ -1117,22 +1127,23 @@ mod tests {
         menu.sharing_reveal=true;menu.input(Action::QuickMenu);menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::A));assert!(!menu.sharing_reveal,"reopening must hide the password after Menu closes the page");
     }
     #[test]
-    fn wallpaper_import_reports_added_files_and_refreshes_stopped_sharing() {
-        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
-        let inbox=root.path().join("Inbox/Wallpapers");std::fs::create_dir_all(&inbox).unwrap();
-        std::fs::write(inbox.join("New.png"),include_bytes!("../../../assets/background_default.png")).unwrap();
-        menu.page=Page::Sharing;menu.sharing.import_uploads();
+    fn direct_card_sharing_has_a_finder_url_and_refreshes_added_and_removed_games() {
+        let root=tempfile::tempdir().unwrap();let mut menu=sharing_fixture(root.path());
+        menu.apply_wifi_view(home_wifi());wait_for_sharing(&mut menu);
+        menu.page=Page::Sharing;
+        assert!(menu.rows()[2].1.ends_with("/SDCard"));
+        assert!(menu.rows().iter().all(|r|r.0!="Import uploads"));
+        std::fs::create_dir_all(root.path().join("Games/GBA")).unwrap();
+        std::fs::write(root.path().join("Games/GBA/New.gba"),[0;192]).unwrap();
+        menu.toggle_sharing();
         let until=Instant::now()+Duration::from_secs(10);
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
-        assert_eq!(menu.notice,"1 added · 0 left in Inbox");assert!(menu.take_shared_games().is_empty());
-        assert_eq!(crate::wallpaper::list(root.path()),["New.png"]);
-        let revision=menu.revision;
-        menu.selected=6;menu.input(Action::GbaDown(Btn::A));
-        assert_eq!(menu.notice,"Importing uploads…");
+        assert_eq!(menu.take_shared_snapshot().unwrap().iter().map(|c|c.stem.as_str()).collect::<Vec<_>>(),["New"]);
+        menu.prefs.sharing_enabled=true;wait_for_sharing(&mut menu);
+        std::fs::remove_file(root.path().join("Games/GBA/New.gba")).unwrap();menu.toggle_sharing();
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
-        assert!(menu.revision>revision,"even an empty stop must invalidate the Working… row");
-        assert_eq!(menu.rows()[0].1,"Off");
-        assert_eq!(menu.notice,"No new uploads","an empty import must replace its progress notice");
+        assert!(menu.take_shared_snapshot().unwrap().is_empty());
+        assert_eq!(menu.notice,"File sharing stopped");
     }
     #[test]
     fn automatic_sharing_stop_does_not_report_an_empty_import() {
@@ -1142,11 +1153,11 @@ mod tests {
         let until=Instant::now()+Duration::from_secs(10);
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
         assert_eq!(menu.notice,"Sharing stopped · disconnected","automatic teardown must not replace other feedback");
-        // Explicitly switching off still imports and reports completion, even with an empty inbox.
+        // Switching off uses direct files and does not run an import.
         menu.set_sharing_allowed(true);wait_for_sharing(&mut menu);menu.toggle_sharing();
-        assert_eq!(menu.notice,"Importing uploads…");
+        assert_eq!(menu.notice,"File sharing stopped");
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
-        assert_eq!(menu.notice,"No new uploads");
+        assert_eq!(menu.notice,"File sharing stopped");
     }
     const CODE: [Btn;6] = [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }
@@ -1465,6 +1476,28 @@ mod tests {
         fn ask(&mut self,job:UpdateJob) {self.asked.lock().unwrap().push(job);}
         fn take(&mut self)->Option<UpdateEvent> {self.events.pop_front()}
         fn cancel(&self)->bool {true}
+    }
+    #[test]
+    fn checking_updates_animates_without_a_checking_text_and_keeps_baseos_detail() {
+        let root=tempfile::tempdir().unwrap();let mut m=Menu::new(root.path().into());
+        m.wifi_on=true;m.last_wifi=home_wifi();m.open_updates();m.updates=Box::new(UpdateFake::default());
+        m.check_updates();assert!(m.show_progress());assert_eq!(m.rows()[0].1,"");
+        m.updates=Box::new(UpdateFake{events:[UpdateEvent::BaseOsStatus("Check failed · retry".into()),UpdateEvent::UpToDate].into(),..Default::default()});
+        m.take_update_events();assert!(!m.show_progress());
+        assert!(m.rows().iter().any(|r|r.0=="BaseOS check" && r.1=="Check failed · retry"));
+    }
+    #[test]
+    fn automatic_time_can_be_disabled_offline_and_refuses_manual_clock_with_a_pill() {
+        let root=tempfile::tempdir().unwrap();let mut app=crate::App::boot(root.path());
+        app.update(10.0);app.confirm_clock();app.update(10.0);
+        let menu=app.network.as_mut().unwrap();menu.prefs.automatic_time=true;menu.wifi_on=false;
+        menu.toggle_automatic_time();assert!(!menu.automatic_time_enabled());
+        menu.prefs.automatic_time=true;
+        app.apply(Action::QuickMenu);app.apply(Action::GbaDown(Btn::A));
+        for _ in 0..7 {app.apply(Action::GbaDown(Btn::Down));}
+        assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::DateTime));
+        app.apply(Action::GbaDown(Btn::A));assert!(app.picker().is_none());
+        assert_eq!(app.settings_notice().unwrap().1,"Automatic time is on");
     }
     #[test]
     fn updater_is_explicit_connected_and_battery_gated() {

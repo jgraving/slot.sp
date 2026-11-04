@@ -7,7 +7,7 @@ pub fn var(key: &str) -> Option<String> {
 }
 
 pub fn var_in(key: &str, env: Option<String>, release: &Path) -> Option<String> {
-    env.or_else(|| lookup(&std::fs::read_to_string(release).ok()?, key))
+    env.filter(|v|!v.trim().is_empty()).or_else(|| lookup(&std::fs::read_to_string(release).ok()?, key))
 }
 
 pub fn lookup(release: &str, key: &str) -> Option<String> {

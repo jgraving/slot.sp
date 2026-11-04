@@ -650,6 +650,30 @@ pub mod ctrl {
     }
 }
 
+/// Read the address actually assigned by DHCP, without relying on a particular supplicant build.
+#[cfg(unix)]
+pub(crate) fn interface_ipv4(name:&str)->Option<String> {
+    unsafe {
+        let mut head=std::ptr::null_mut();
+        if libc::getifaddrs(&mut head)!=0 {return None;}
+        let mut current=head;
+        let mut result=None;
+        while !current.is_null() {
+            let entry=&*current;
+            if !entry.ifa_name.is_null() && !entry.ifa_addr.is_null()
+                && std::ffi::CStr::from_ptr(entry.ifa_name).to_bytes()==name.as_bytes()
+                && (*entry.ifa_addr).sa_family as i32==libc::AF_INET {
+                let addr=&*(entry.ifa_addr as *const libc::sockaddr_in);
+                let ip=std::net::Ipv4Addr::from(addr.sin_addr.s_addr.to_ne_bytes()).to_string();
+                if usable_ipv4(&ip) {result=Some(ip);break;}
+            }
+            current=entry.ifa_next;
+        }
+        libc::freeifaddrs(head);
+        result
+    }
+}
+
 #[cfg(all(feature = "device", unix))]
 mod device {
     use std::path::{Path, PathBuf};
@@ -815,10 +839,12 @@ mod device {
         }
 
         fn status(&mut self) -> Status {
-            self.ctrl()
+            let mut status=self.ctrl()
                 .and_then(|c| Self::ask(&c, "STATUS"))
                 .map(|s| parse_status(&s))
-                .unwrap_or_default()
+                .unwrap_or_default();
+            status.ip=if status.connected() {interface_ipv4("wlan0")}else{None};
+            status
         }
     }
 }

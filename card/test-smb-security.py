@@ -12,17 +12,12 @@ with tempfile.TemporaryDirectory() as d:
         return subprocess.run(['sh',str(script),'prepare',str(root),ip],input=password+'\n',text=True,env=env,capture_output=True)
     assert prepare().returncode==0
     cfg=(run/'slot-smb/smb.conf').read_text()
-    for line in ['server min protocol = SMB3_00','server smb encrypt = required','server signing = mandatory','guest ok = no','follow symlinks = no','wide links = no','bind interfaces only = yes','interfaces = 192.168.1.2/32','valid users = nobody',f'path = {root}/Inbox']:
+    for line in ['server min protocol = SMB3_00','server smb encrypt = required','server signing = mandatory','guest ok = no','follow symlinks = no','wide links = no','bind interfaces only = yes','interfaces = 192.168.1.2/32','valid users = nobody',f'path = {root}']:
         assert line in cfg,line
-    assert str(root/'Config') not in cfg and str(root/'System') not in cfg
+    assert '[SDCard]' in cfg and 'veto files' not in cfg
+    assert not (root/'Inbox').exists(), 'direct card access must not create an import inbox'
     assert 'ABCDEFGH23456789' not in cfg
     assert (run/'slot-smb/smb.conf').stat().st_mode&0o077==0
     assert prepare('weak').returncode!=0
     assert prepare(ip='192.168.1.2\n[evil]').returncode!=0
-    for name in ('GB','GBC','GBA','Wallpapers'):
-        folder=root/'Inbox'/name
-        assert folder.is_dir(),name
-        folder.rmdir();folder.symlink_to(root/'System',target_is_directory=True)
-        assert prepare().returncode!=0,f'followed an Inbox/{name} directory link'
-        folder.unlink();folder.mkdir()
 print('SMB configuration/password/path restrictions passed')

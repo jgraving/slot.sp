@@ -1,4 +1,4 @@
-//! Password-only, encrypted SMB sharing. The SD root is never exported.
+//! Password-only, encrypted SMB sharing of the content SD card.
 use std::{
     fs,
     io::{self, Read},
@@ -26,6 +26,7 @@ pub struct View {
 }
 pub enum Event {
     Running,
+    Library(Vec<slot_store::Cart>),
     // Only an explicit stop/import carries a result; automatic teardown is quiet.
     Stopped(Option<Import>),
     Failed(&'static str),
@@ -85,7 +86,15 @@ impl Sharing {
                         (gen, result)
                     }
                     Command::Stop(gen, import_uploads) => {
+                        let was_running=running.is_some();
                         stop(&mut running);
+                        // Rescan only after writers are gone, including removals and artwork edits.
+                        if was_running && !import_uploads {
+                            if let Ok(mut carts)=slot_store::scan(&root) {
+                                for cart in &mut carts {cart.read_header();}
+                                let _=tx.send((gen,Event::Library(carts)));
+                            }
+                        }
                         (
                             gen,
                             Event::Stopped(if import_uploads {
@@ -144,6 +153,7 @@ impl Sharing {
         let mut events = Vec::new();
         while let Ok((gen, event)) = self.events.try_recv() {
             // An import must never be lost when a network transition overtakes its UI result.
+            if let Event::Library(carts) = event {events.push(Event::Library(carts));continue;}
             if let Event::Stopped(import) = event {
                 if gen == self.generation {
                     self.view = View::default();
@@ -253,8 +263,14 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
         writeln!(input, "{}", start.password.as_str())
             .map_err(|_| "Could not set sharing password")?;
         drop(input);
-        if !setup.wait().map_err(|_| "Sharing unavailable")?.success() {
-            return Err("Sharing unavailable · update System");
+        let status=setup.wait().map_err(|_| "Sharing unavailable")?;
+        if !status.success() {
+            return Err(match status.code() {
+                Some(10)=>"File server missing · update System",
+                Some(12)=>"Sharing account setup failed",
+                Some(13)=>"Sharing configuration failed",
+                _=>"Sharing setup failed · save report",
+            });
         }
         let child = Command::new("sh")
             .arg(script)
@@ -272,7 +288,7 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
             mdns: None,
         });
         let mut ready = false;
-        for _ in 0..30 {
+        for _ in 0..100 {
             std::thread::sleep(Duration::from_millis(100));
             if run
                 .as_mut()
