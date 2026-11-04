@@ -3108,9 +3108,7 @@ impl App {
             picker, from_menu, ..
         } = &mut self.phase
         {
-            if *from_menu && self.clock_return_row == QuickRow::TimeZone
-                && self.network.as_ref().is_some_and(|m|m.automatic_time_enabled())
-            {
+            if *from_menu && self.clock_return_row == QuickRow::TimeZone {
                 match action {
                     Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
                     Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.navigate(1, 0),
@@ -3365,8 +3363,8 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::TimeZone|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
-            QuickRow::DateTime|QuickRow::About => {
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::DateTime|QuickRow::TimeZone|QuickRow::About => {
                 if row == QuickRow::DateTime && self.manual_clock_locked() { return; }
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);

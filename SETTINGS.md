@@ -60,7 +60,7 @@ On a trusted Wi-Fi network, open **Settings → Network → Network file sharing
 - **Windows:** open **SLOTSP** in File Explorer's Network view, or enter `\\DEVICE-IP\Games`.
 - **Linux:** open the discovered SMB server or enter `smb://DEVICE-IP/Games` in your file manager.
 
-These shares write directly to the corresponding folders on the content card. Use **GB**, **GBC**, or **GBA** under **Games** and **Labels**. Finish copying before turning sharing off or launching a game. The carousel refreshes when sharing stops. Changes and deletions through SMB apply to the card immediately. If you have files left in the old Inbox, choose **Import old Inbox** once to move them into the library.
+These shares write directly to the corresponding folders on the content card. Use **GB**, **GBC**, or **GBA** under **Games** and **Labels**. Finish copying and turn sharing off before launching a game or opening Cart Studio. The carousel refreshes when sharing stops. Changes and deletions through SMB apply to the card immediately. If you have files left in the old Inbox, choose **Import old Inbox** once to move them into the library.
 
 Sharing requires authenticated, encrypted SMB3. Saves, Config, System and the rest of the card stay outside the shares. **New password** disconnects existing sessions. Devices must be able to reach each other on the local network.
 
