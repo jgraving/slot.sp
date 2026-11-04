@@ -1,6 +1,6 @@
-# Active OTA safety audit
+# OTA safety review complete
 
-Continue on `fix/ota-install-recovery`. User requests OTA safety review; inspect WORKLOG.md for findings and test status. Main baseline 9f436a4. No physical installation authorized or performed.
+Continue from `main`. PR #198 (`fix/ota-install-recovery`) merged as `b8b359fd1be4507888b6d5f114309384e2791ca9` after all five workflows passed on source `0cb14a5f941fa6c5ca2d93c6639bd6e85493c793`; the merged tree matches the tested source. See the newest WORKLOG.md entry and OTA-REVIEW.md for findings, recovery behavior and hardware limits. This supersedes earlier active-branch instructions. No handheld installation was performed.
 
 ---
 
