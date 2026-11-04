@@ -33,7 +33,7 @@ fn main() {
         shelf.set_faces((0..3).map(TexId::from_raw).collect());
         shelf.select(1);
         for (i, bytes) in slot_ui::shell_slot_faces(colour).iter().enumerate() {
-            png(&dir, &format!("{}.png", i+3), slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
+            png(&dir, &format!("{}.png", i+3), slot_ui::SLOT_TEXTURE_W, slot_ui::SLOT_TEXTURE_H, bytes);
         }
         png(&dir, "5.png", 720, 480, slot_ui::default_background().unwrap());
         let ink=slot_ui::footer_ink(false);

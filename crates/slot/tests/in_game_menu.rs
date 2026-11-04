@@ -874,3 +874,69 @@ fn the_game_menu_uses_one_translucent_tint_to_the_bottom_edge_before_its_card() 
         assert_eq!(out.iter().filter(|d|matches!(d,Draw::Rect{x:0.0,y:0.0,w,h,colour} if *w==a.canvas().w&&*h==480.0&&colour[3]>0.5&&colour[3]<0.95)).count(),1);
     }
 }
+
+fn unique_hardware_rect(out: &[Draw], id: TexId) -> [f32; 4] {
+    let draws: Vec<_> = out.iter().filter_map(|d| match *d {
+        Draw::Tex { x, y, w, h, tex, .. } | Draw::Part { x, y, w, h, tex, .. }
+            if tex == id => Some([x, y, w, h]),
+        _ => None,
+    }).collect();
+    assert_eq!(draws.len(), 1, "expected one carried hardware layer for {id:?}, got {draws:?}");
+    draws[0]
+}
+
+#[test]
+fn about_carries_one_seated_cartridge_and_its_interior_with_the_shell() {
+    for platform in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+        let d = match platform {
+            Platform::Gba => common::tmp_root_with_carts(&["First", "Second"]),
+            Platform::Gb => common::tmp_root_with_gb_carts(&["First", "Second"]),
+            Platform::Gbc => common::tmp_root_with_gbc_carts(&["First", "Second"]),
+        };
+        std::fs::write(d.path().join(slot_store::CART_SHELL_FILE), "First = auto 8090a0 clear\n").unwrap();
+        slot_store::write_slot_state(d.path(), &slot_store::SlotState {
+            clock_set: true, cart: Some("First".into()), cart_platform: Some(platform),
+            ..Default::default()
+        }).unwrap();
+        let mut a = App::boot(d.path());
+        a.set_snapshot(common::StubSnapshot::boxed());
+        a.on_core_ready();
+        frames(&mut a, 120);
+        a.set_game_ready(true);
+        menu_faces(&mut a);
+        let (back, front, interior) = (TexId::from_raw(9200), TexId::from_raw(9201), TexId::from_raw(9202));
+        a.set_slot_faces(back, front);
+        a.set_about_body_face(TexId::from_raw(9203));
+        a.set_sticker_face(TexId::from_raw(9204));
+        for shelf in 0..6 {
+            for index in 0..8 {
+                a.set_cart_face(shelf, index, CART);
+                a.set_cart_interior(shelf, index, interior);
+            }
+        }
+        go_to(&mut a, QuickRow::About);
+        frames(&mut a, 60);
+        let mut initial = vec![];
+        a.draw(&mut initial);
+        let resting = unique_hardware_rect(&initial, CART);
+        let mouth_resting = unique_hardware_rect(&initial, front);
+        press(&mut a, Btn::A);
+        frames(&mut a, 8);
+        let mut raised = vec![];
+        a.draw(&mut raised);
+        let cart = unique_hardware_rect(&raised, CART);
+        let behind = unique_hardware_rect(&raised, interior);
+        let mouth = unique_hardware_rect(&raised, front);
+        assert_eq!(cart, behind, "the transparent interior separated from the {platform:?} cartridge");
+        assert!(mouth[1] < mouth_resting[1] && cart[1] < resting[1], "the {platform:?} cart stayed stationary as the shell rose");
+        let layer = |id| raised.iter().position(|d| matches!(d, Draw::Tex { tex, .. } | Draw::Part { tex, .. } if *tex == id)).unwrap();
+        assert!(layer(back) < layer(interior) && layer(interior) < layer(CART) && layer(CART) < layer(front), "the {platform:?} cartridge escaped the slot depth layers");
+        press(&mut a, Btn::B);
+        frames(&mut a, 90);
+        let mut returned = vec![];
+        a.draw(&mut returned);
+        assert_eq!(unique_hardware_rect(&returned, CART), resting, "{platform:?} seating changed after About");
+        assert_eq!(unique_hardware_rect(&returned, front), mouth_resting);
+        assert!(matches!(a.phase(), Phase::Playing { cart } if cart == "First"));
+    }
+}

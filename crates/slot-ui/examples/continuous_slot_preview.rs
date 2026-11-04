@@ -9,8 +9,8 @@ fn main() {
     ] {
         let mut enc = png::Encoder::new(
             File::create(dir.join(format!("slot-{name}.png"))).unwrap(),
-            slot_ui::SLOT_W,
-            slot_ui::SLOT_H,
+            slot_ui::SLOT_TEXTURE_W,
+            slot_ui::SLOT_TEXTURE_H,
         );
         enc.set_color(png::ColorType::Rgba);
         enc.set_depth(png::BitDepth::Eight);

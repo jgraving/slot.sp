@@ -106,6 +106,7 @@ jobs:
           cargo test -p slot-ui --test battery --test settings_notice --lib --test expressive --test typography --test toggle --test cart_motion --test kid_time --test kid_smiley --test favorite --test power_switch --test quick_menu --test toast --test shelf --test native_shelf --test chrome --test board --test shell_material --test shot_viewer --test polaroids --test hud --test sticker --test cart --test legend --test link_art
           cargo test -p slot-store --lib --tests
           cargo test -p slot-input --lib --tests
+          cargo test --locked -p slot-ui --test about_shell
           cargo test -p slot-gfx --no-default-features --lib --test grade --test layout --test lava
           cargo test -p slot-power --lib --tests
           task test:card

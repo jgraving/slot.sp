@@ -1,3 +1,13 @@
+# Active review — Cart Studio, Samba and credential security
+
+2026-11-04 (Europe/Berlin): user clarified PR #194 is the requested remaining work, and additionally requested a security audit of device-code/PIN encryption for Wi-Fi and RetroAchievements. Continue on `feat/device-studio-network-sharing`, https://github.com/jgraving/slot.sp/pull/194. Evaluate and finish fixes, push checkpoints, run fresh combined CI and merge when verified. This supersedes earlier draft-only instructions below.
+
+Latest main `18a4e7a8abc880e4aaf3c6007d990f5cecbdace4` is being integrated, preserving the merged slot/About work. Review editor persistence/lifecycle, SMB isolation/authentication/teardown, package/OTA compatibility, vault cryptography and asynchronous credential handling. Historical green checks below do not validate this newly combined source. No physical handheld testing or real credentials are being used.
+
+Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
+
+---
+
 # Device Studio and network uploads — ready for device testing
 
 Updated 2026-11-04 (Europe/Berlin). Read AGENTS.md and WORKLOG.md first.
@@ -29,6 +39,16 @@ Remaining physical checks: discovery in Windows File Explorer and macOS Finder o
 Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
 
 ## Previous merged baseline
+
+## Merged slot/About baseline
+
+# Current handoff — slot/About merged
+
+2026-11-04: continue from **main**. [PR #195](https://github.com/jgraving/slot.sp/pull/195) merged as `218bfe06215255001321ef43744e3153b2ab110f` after the user's approval and verification of all five passing PR workflows. The source is the validated runtime `07227db` plus previews and recovery notes; 326 targeted tests pass.
+
+Photo-matched proportions, sharp reversible About reveal, live General-card motion and seated-cartridge preservation are complete. All review videos/screenshots are on main. Read [WORKLOG.md](https://github.com/jgraving/slot.sp/blob/main/WORKLOG.md) for evidence and recovery details. Normal main build/release and launcher checks are running; no post-merge success is claimed yet. Keep #194 separate. Do not repeat reconstruction.
+
+---
 
 # Current development handoff
 

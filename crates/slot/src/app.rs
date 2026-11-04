@@ -22,7 +22,7 @@ use slot_ui::{
     QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
     SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
     TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, 
-    draw_sticker, ease, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
+    ease, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at,
 };
 
@@ -461,6 +461,8 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    about_motion: slot_ui::AboutMotion,
+    about_body_face: Option<TexId>,
     menu_title_motion: std::cell::RefCell<slot_ui::expressive::ChromeMotion>,
     menu_hint_motion: std::cell::RefCell<slot_ui::expressive::ChromeMotion>,
     settings_return_game: Option<String>,
@@ -748,6 +750,8 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            about_motion: slot_ui::AboutMotion::default(),
+            about_body_face: None,
             menu_title_motion: Default::default(),menu_hint_motion:Default::default(),
             settings_return_game:None,about_heading:None,custom_chrome:Default::default(),
             special_menu_cache: Default::default(),
@@ -1866,6 +1870,8 @@ impl App {
     pub fn kid_meter_presence(&self)->f32 {self.kid_meter_motion.value()}
     pub fn kid_meter_visible(&self)->bool {self.kid_meter_presence()>0.001}
     pub fn set_custom_chrome(&mut self,tex:TexId,title:Vec<Draw>,hints:Vec<Draw>){if let Some(p)=self.custom_chrome.iter_mut().find(|p|p.0==tex){*p=(tex,title,hints);}else{self.custom_chrome.push((tex,title,hints));}}
+    pub fn about_reveal(&self) -> f32 { self.about_motion.value() }
+    pub fn set_about_body_face(&mut self, face: TexId) { self.about_body_face = Some(face); }
     pub fn about_heading_needed(&self)->bool {self.about_heading.is_none()}
     pub fn set_about_heading(&mut self,face:(TexId,u32,u32)){self.about_heading=Some(face);}
     pub fn set_sticker_face(&mut self, face: TexId) {
@@ -4239,9 +4245,15 @@ impl App {
         }
         self.step_screen(dt);
         self.step_footer(dt);
-        let custom = self.custom_menu_key();
-        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids));
-        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
+        let about = matches!(self.phase, Phase::About);
+        self.about_motion.update(about, dt);
+        // Keep General's live selection and scroll while About uses its own
+        // spring. A quick Back/reopen never creates a frozen outgoing page.
+        let custom = self.custom_menu_key().filter(|key| *key != 5000);
+        let menu = if about { Some(QuickRow::About) } else {
+            self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids))
+        };
+        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() || (about && self.settings_return_game.is_none()) { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
         let selection=self.studio.as_ref().and_then(|m|m.focus_info()).or_else(||self.network.as_ref().filter(|m|m.visible).map(|m|m.focus_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info())).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
@@ -4978,7 +4990,7 @@ impl App {
         let begin=out.len();self.draw_scene(out);
         let row=self.quick_menu().or_else(||self.in_game_menu_shown());
         let custom=self.custom_menu_key();
-        let active=!self.shutting_down()&&!matches!(self.phase,Phase::Doze{..})&&(row.is_some()||custom.is_some()||self.menu_motion.closing_row().is_some());
+        let active=!self.shutting_down()&&!matches!(self.phase,Phase::Doze{..})&&(row.is_some()||custom.is_some()||self.menu_motion.closing_row().is_some()||self.about_motion.active());
         if active {
             if matches!(self.phase,Phase::Playing{..}|Phase::Ejecting{..}) || self.settings_return_game.is_some() {
                 if let Some(game)=out[begin..].iter().rposition(|d|matches!(d,Draw::Game)) {
@@ -5002,6 +5014,10 @@ impl App {
             let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
                 row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens() || (r==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())))})
             };
+            if let Some((back,front))=self.slot_faces {
+                out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
+            }
+            self.draw_menu_hardware(out);
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();
@@ -5012,16 +5028,13 @@ impl App {
                 let offset=(top-slot_ui::expressive::CARD_TOP)*compact/2.0;
                 for draw in &mut out[chrome..title_end] {if let Draw::Tex{y,..}|Draw::Part{y,..}=draw{*y+=offset;}}
             }
-            self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,out);
+            let mut shown_hints = Vec::new();
+            self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,&mut shown_hints);
+            self.draw_about_hint_backings(&shown_hints, out);
+            out.extend(shown_hints);
             let reveal=self.menu_motion.reveal();
             for d in &mut out[chrome..] {if let Draw::Tex{alpha,..}|Draw::Part{alpha,..}=d {*alpha*=reveal;}}
-            if let Some((back,front))=self.slot_faces {
-                out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
-            }
-            let cart=match &self.phase {Phase::Playing{cart}|Phase::Ejecting{cart,..}=>Some(cart.as_str()),_=>self.settings_return_game.as_deref()};
-            let mouth=out.len();
-            if let Some(cart)=cart {self.draw_seated_mouth(cart,out);}else{draw_empty_slot(self.canvas(),self.slot_faces,out);}
-            if cart.is_some() {shift_down(&mut out[mouth..],self.menu_footer_offset());}
+
         }else {self.menu_title_motion.borrow_mut().reset();self.menu_hint_motion.borrow_mut().reset();}
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) {
             if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
@@ -5217,15 +5230,16 @@ impl App {
                 self.draw_kid_removal(out);
             }
             Phase::About => {
-                let mut body=Vec::new();draw_sticker(self.canvas(),self.sticker_face,&mut body);
-                if let Some(Draw::Tex{x,y,w,h,..})=body.first_mut(){
-                    let rect=slot_ui::expressive::card_rect(self.canvas());let scale=((rect[2]-32.0)/ *w).min(1.0);
-                    *w*=scale;*h*=scale;*x=self.canvas().centred(*w);*y=rect[1]+(rect[3]-*h)/2.0;
-                }
-                if let Some((tex,w,h))=self.about_heading {body.push(Draw::Tex{x:self.canvas().centred(w as f32),y:0.0,w:w as f32,h:h as f32,tex,alpha:1.0});}
-                self.draw_about_legend(&mut body);
-                self.draw_special_sheet(5000,body,out);
-                draw_empty_slot(self.canvas(),self.slot_faces,out);
+                let over_game = self.settings_return_game.is_some();
+                if over_game { self.push_game(out); }
+                let parent = out.len();
+                self.draw_quick_overlay(QuickRow::About, over_game, out);
+                // The live parent remains underneath; only its title/actions
+                // are replaced by About's fixed chrome.
+                let mut i = parent;
+                while i < out.len() { if slot_ui::expressive::is_chrome(&out[i]) { out.remove(i); } else { i += 1; } }
+                if let Some((tex,w,h))=self.about_heading {out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:0.0,w:w as f32,h:h as f32,tex,alpha:1.0});}
+                self.draw_about_legend(out);
                 self.draw_status_bar(out);
                 return;
             }
@@ -5321,7 +5335,7 @@ impl App {
                     if key>=5000 {
                         let begin=out.len();slot_ui::expressive::draw_card(self.canvas(),out);
                         self.draw_special_body(key,self.menu_motion.frame_page(row,&[],Some(key)),out);
-                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     } else if let Some((_,tex))=self.previous_custom_face {
                         let begin=out.len();
@@ -5338,7 +5352,7 @@ impl App {
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
-                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     }
                 } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }|Phase::Ejecting{..}), out);}
@@ -5396,7 +5410,7 @@ impl App {
             if let Some(row)=self.menu_motion.closing_row() {
                 let begin=out.len();
                 self.draw_menu_legends(row,LINK_LEGEND_Y,out);
-                self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                self.transform_settings_panel(&mut out[begin..]);
                 slot_ui::expressive::clip_panel(out,begin,self.canvas());
             }
             return;
@@ -5408,12 +5422,17 @@ impl App {
             self.menu_footer_offset()
         };
         let start = out.len();
+        let common_hardware = self.quick_menu().is_some() || self.in_game_menu_shown().is_some()
+            || self.custom_menu_key().is_some() || self.menu_motion.closing_row().is_some()
+            || self.about_motion.active();
         let row = match &self.phase {
             Phase::Playing { cart } if self.footer > 0.0 => {
                 let row = self.in_game_menu_shown().or(self.footer_row);
-                match row.is_some_and(QuickRow::binds) {
-                    true => draw_empty_slot(self.canvas(), self.slot_faces, out),
-                    false => self.draw_seated_mouth(cart, out),
+                if !common_hardware {
+                    match row.is_some_and(QuickRow::binds) {
+                        true => draw_empty_slot(self.canvas(), self.slot_faces, out),
+                        false => self.draw_seated_mouth(cart, out),
+                    }
                 }
                 row
             }
@@ -5514,7 +5533,7 @@ impl App {
         self.draw_outgoing_menu(false,out);
         let frame=self.menu_motion.frame_page(QuickRow::Kids,&[],Some(key));
         self.draw_special_body(key,frame,out);
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_custom_focus(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>){
@@ -5575,9 +5594,16 @@ impl App {
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
         if let Some((_,total,_,visible))=scroll {slot_ui::expressive::draw_scrollbar(self.canvas(),slot_ui::expressive::ROW_TOP,visible,total,frame.window_start,out);}
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
+    fn transform_settings_panel(&self, draws: &mut [Draw]) {
+        self.menu_motion.transform(self.canvas(), draws);
+        // Keep the returning sheet attached to the same motion even when a
+        // fast Back → Up → A opens a different settings page before settling.
+        if self.about_motion.active() { self.about_motion.transform_parent(self.canvas(), draws); }
+    }
+
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
         if !over_game && self.menu_motion.closing_row().is_none() {
             self.draw_background(out);
@@ -5596,7 +5622,7 @@ impl App {
         if root {self.draw_quick_page(row,over_game,false,out);}
         if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
         if !root {self.draw_quick_page(row,over_game,false,out);}
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
 
@@ -5668,6 +5694,56 @@ impl App {
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
+    }
+
+    fn draw_about_hint_backings(&self, hints: &[Draw], out: &mut Vec<Draw>) {
+        if !self.about_motion.active() { return; }
+        let mut sticker = Vec::new();
+        slot_ui::draw_about_sticker(self.canvas(), self.sticker_face, &mut sticker);
+        self.about_motion.transform(self.canvas(), &mut sticker);
+        let Some(Draw::Tex { x: sx, y: sy, w: sw, h: sh, .. }) = sticker.first().copied() else { return; };
+        // Captions keep their established backdrop contrast. Give each a small
+        // local surface only while the moving black label passes behind it.
+        // Merge crossfading legends on each side so their backings do not stack.
+        let mut bounds: [Option<[f32; 5]>; 2] = [None, None];
+        for d in hints {
+            if let Draw::Tex { x, y, w, h, alpha, .. } | Draw::Part { x, y, w, h, alpha, .. } = *d {
+                // Cached custom pages can put several actions in one broad
+                // atlas slice; never turn that slice into a footer-wide bar.
+                if w > 180.0 || h > 44.0 { continue; }
+                let side = usize::from(x + w / 2.0 > self.canvas().w / 2.0);
+                let b = [x, y, x + w, y + h, alpha];
+                bounds[side] = Some(bounds[side].map_or(b, |a| [a[0].min(b[0]), a[1].min(b[1]), a[2].max(b[2]), a[3].max(b[3]), a[4].max(b[4])]));
+            }
+        }
+        let contrast = self.footer_contrast.unwrap_or([self.light(); 2]);
+        for (side, b) in bounds.into_iter().enumerate().filter_map(|(i,b)|b.map(|b|(i,b))) {
+            if b[2] - b[0] > 180.0 { continue; }
+            let gap = (sx - b[2]).max(b[0] - (sx + sw)).max(sy - b[3]).max(b[1] - (sy + sh));
+            let cover = ((18.0 - gap) / 18.0).clamp(0.0, 1.0);
+            let cover = cover * cover * (3.0 - 2.0 * cover);
+            let alpha = cover * b[4] * self.menu_motion.reveal() * 0.96;
+            let rgb = if contrast[side] { [0.96, 0.975, 0.97] } else { [0.13, 0.145, 0.16] };
+            slot_ui::expressive::rounded(out, b[0] - 6.0, b[1] - 4.0, b[2] - b[0] + 12.0, b[3] - b[1] + 8.0, 20.0, [rgb[0], rgb[1], rgb[2], alpha]);
+        }
+    }
+
+    fn draw_menu_hardware(&self, out: &mut Vec<Draw>) {
+        let cart = match &self.phase {
+            Phase::Playing { cart } | Phase::Ejecting { cart, .. } => Some(cart.as_str()),
+            _ => self.settings_return_game.as_deref(),
+        };
+        let begin = out.len();
+        if let Some(cart) = cart { self.draw_seated_mouth(cart, out); }
+        else { draw_empty_slot(self.canvas(), self.slot_faces, out); }
+        if self.about_motion.active() {
+            // Continue the front shell over the cartridge below the mouth.
+            slot_ui::draw_about_body(self.canvas(), self.about_body_face, out);
+            slot_ui::draw_about_sticker(self.canvas(), self.sticker_face, out);
+            self.about_motion.transform(self.canvas(), &mut out[begin..]);
+            if cart.is_some() { shift_down(&mut out[begin..], self.menu_footer_offset() * (1.0 - self.about_motion.value())); }
+            self.about_motion.clip_hardware(self.canvas(), out, begin);
+        } else if cart.is_some() { shift_down(&mut out[begin..], self.menu_footer_offset()); }
     }
 
     fn draw_seated_mouth(&self, stem: &str, out: &mut Vec<Draw>) {
