@@ -2,6 +2,13 @@
 
 ## Active #194 completion and credential security review — 2026-11-04
 
+### Review fixes: reproducible Samba runtime packaging
+
+- Combined main checkpoint is published as `914382328b5703a7aec8b6cd28579e717da1bfd8`; normal six PR workflows started. Review found no runtime merge conflict; CURRENT_WORK routing is reconciled.
+- Repeated Samba packaging reused stale private libraries/conversion data and could overwrite source provenance with an incomplete manifest. Rebuilds now recreate only a recognized generated runtime output, preserve source/build caches, regenerate dependency provenance and include the preparation helper in corresponding sources. Both ARM64 workflows include the new helper in their cache key and exercise it on cached and fresh builds.
+- Six fixture regressions pass, including repeat/interrupted preparation, preserving cached sources, and refusing unrelated, symlinked or overlapping output paths. SMB config security, shell syntax and simulated updater checks pass. Full current ARM64 server/package checks remain CI work.
+- Review also identified upload/session, editor-label persistence, plaintext-residue cleanup and RA cancellation issues; separate fixes and regressions are in progress. No existing passing results are being attributed to those unfinished changes.
+
 User clarified the remaining PR is Cart Studio/Samba #194 (OTA #191 is already merged), requests evaluation/completion, and adds review of device-code/PIN encryption protecting Wi-Fi and RetroAchievements credentials. Finish concrete bugs, publish regular checkpoints, validate combined source and merge after passing checks. Earlier draft-only restrictions are superseded.
 
 Before further runtime edits: integrate latest main `18a4e7a8abc880e4aaf3c6007d990f5cecbdace4` into feature head `5425afe078d14a7b2fdcaf059778fc3791e1ec4b`. Only CURRENT_WORK.md conflicts; preserve both histories and add this active routing. Independent reviews cover editor, SMB lifecycle/isolation, private-runtime packaging/OTA, vault cryptography and asynchronous auth/secret exposure. Fresh device/native/security checks will follow fixes. Previous b21dd2f test evidence remains historical until current source is checked. Hardware discovery/transfers and physical SD threat limits remain explicit; no live secrets or device update will be used.

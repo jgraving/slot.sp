@@ -4,13 +4,13 @@
 set -euo pipefail
 script="$(realpath "$0")"
 out="${1:?output directory}"
-mkdir -p "$out"
-out="$(cd "$out" && pwd)"
 work="${SLOT_SAMBA_BUILD:-$PWD/.samba-build}"
-mkdir -p "$work"
-work="$(cd "$work" && pwd)"
 sources="${2:-${out}-sources}"
-mkdir -p "$sources"
+# A rebuild must refresh every private dependency and regenerate its provenance.
+# Keep downloaded sources/compiled Samba separate from the generated runtime.
+python3 "$(dirname "$script")/prepare-samba-output.py" "$out" "$sources" "$work"
+out="$(cd "$out" && pwd)"
+work="$(cd "$work" && pwd)"
 sources="$(cd "$sources" && pwd)"
 version=4.25.1
 sha=7f367545bca69aa96897628f82f0f04d4b66b3bcb36cb978b9bb952c4b4c428d
@@ -123,4 +123,5 @@ for binary in "$out"/bin/*; do strip "$binary"; done
 
 cp "$script" "$sources/build-samba.sh"
 cp "$(dirname "$script")/samba-build-env.sh" "$sources/samba-build-env.sh"
+cp "$(dirname "$script")/prepare-samba-output.py" "$sources/prepare-samba-output.py"
 printf 'Corresponding source: slot.sp-network-sources.zip from the same build/release.\n' > "$out/licenses/SOURCES.txt"

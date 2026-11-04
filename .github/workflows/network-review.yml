@@ -25,7 +25,7 @@ jobs:
           path: |
             vendor/samba
             vendor/samba-sources
-          key: samba-4.25.1-trixie-arm64-${{ steps.week.outputs.week }}-${{ hashFiles('tools/build-samba.sh', 'tools/samba-build-env.sh') }}
+          key: samba-4.25.1-trixie-arm64-${{ steps.week.outputs.week }}-${{ hashFiles('tools/build-samba.sh', 'tools/samba-build-env.sh', 'tools/prepare-samba-output.py') }}
       - name: Build maintained Samba and discovery with private dependencies
         if: steps.samba-cache.outputs.cache-hit != 'true'
         run: bash tools/samba-build-env.sh
@@ -40,7 +40,9 @@ jobs:
         if: steps.samba-cache.outputs.cache-hit == 'true'
         run: apt-get update && apt-get install -y --no-install-recommends python3
       - name: Exercise real SMB authentication, encryption, uploads and shutdown
-        run: python3 card/test-smb-integration.py vendor/samba
+        run: |
+          python3 tools/test-samba-output.py
+          python3 card/test-smb-integration.py vendor/samba
       - uses: actions/upload-artifact@v7
         with:
           name: samba-runtime
