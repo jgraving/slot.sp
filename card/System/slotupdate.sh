@@ -39,7 +39,7 @@ while IFS= read -r f; do
     case "$f" in
         ""|/*|..|../*|*/../*|*/..|.|./*|*/./*|*/.|*//*|*/|*\\*) say "UPDATE INVALID"; exit 1 ;;
     esac
-    regular_path "$NEW" "$f" && regular_path "$SYS" "$f" || { say "UPDATE INVALID PATH"; exit 1; }
+    regular_path "$NEW" "$f" && regular_path "$SYS" "$f" && regular_path "$SYS" "$f.slot-update" || { say "UPDATE INVALID PATH"; exit 1; }
     [ -f "$NEW/$f" ] && [ ! -L "$NEW/$f" ] || { say "UPDATE INCOMPLETE"; exit 1; }
 done < "$NEW/.manifest"
 for f in slot launch_frontend.sh mgba_libretro.so gpsp_libretro.so build-info.json; do
@@ -49,8 +49,9 @@ done
 sync
 say "UPDATING SLOT.SP"
 put() {
-    mkdir -p "$(dirname "$SYS/$1")"
-    rm -f "$SYS/$1.slot-update"
+    # put is called in an OR-list: errexit does not guard commands in here.
+    mkdir -p "$(dirname "$SYS/$1")" || return 1
+    rm -f "$SYS/$1.slot-update" || return 1
     cp -p "$NEW/$1" "$SYS/$1.slot-update" && mv -f "$SYS/$1.slot-update" "$SYS/$1"
 }
 while IFS= read -r f; do

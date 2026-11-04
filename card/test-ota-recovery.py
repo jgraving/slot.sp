@@ -78,12 +78,15 @@ class Recovery(unittest.TestCase):
                         fixture.doCleanups()
 
     def test_redirected_parents_and_directory_collision_fail_before_any_write(self):
-        for where in ['destination', 'staging', 'leaf']:
+        for where in ['destination', 'staging', 'leaf', 'temporary']:
             with self.subTest(where=where):
                 fixture=Recovery(); fixture.setUp()
                 try:
                     outside=fixture.root/'outside'; outside.mkdir(); (outside/'sentinel').write_bytes(b'keep')
-                    if where=='leaf':
+                    if where=='temporary':
+                        p=fixture.system/'gpsp_libretro.so.slot-update'; p.mkdir()
+                        (p/'gpsp_libretro.so').symlink_to(outside/'sentinel')
+                    elif where=='leaf':
                         p=fixture.system/'gpsp_libretro.so'; p.unlink(); p.mkdir()
                     else:
                         p=(fixture.system if where=='destination' else fixture.new)/'samba'
@@ -91,6 +94,7 @@ class Recovery(unittest.TestCase):
                     self.assertNotEqual(fixture.run_installer(),0)
                     self.assertEqual((fixture.system/'slot').read_bytes(),b'old')
                     self.assertEqual(list(outside.iterdir()),[outside/'sentinel'])
+                    self.assertEqual((outside/'sentinel').read_bytes(),b'keep')
                     fixture.preserved()
                 finally: fixture.doCleanups()
 
@@ -110,6 +114,20 @@ class Recovery(unittest.TestCase):
         self.assertTrue((self.new/'.manifest').exists())
         self.preserved()
         self.env['PATH']=os.environ['PATH']; self.completed()
+
+    def test_preparation_errors_abort_before_copy(self):
+        for command in ['mkdir','rm']:
+            with self.subTest(command=command):
+                fixture=Recovery(); fixture.setUp()
+                try:
+                    bin_dir=fixture.root/'bin'; bin_dir.mkdir()
+                    script=bin_dir/command; script.write_text('#!/bin/sh\nexit 1\n'); script.chmod(0o755)
+                    fixture.env['PATH']=str(bin_dir)+os.pathsep+os.environ['PATH']
+                    self.assertNotEqual(fixture.run_installer(),0)
+                    fixture.unchanged()
+                    self.assertTrue((fixture.new/'.manifest').exists())
+                    fixture.env['PATH']=os.environ['PATH']; fixture.completed()
+                finally: fixture.doCleanups()
 
     def test_sync_failure_retains_recovery_source(self):
         bin_dir=self.root/'bin'; bin_dir.mkdir()

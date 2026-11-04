@@ -2,9 +2,9 @@ name: Launcher quality of life checks
 on:
   push:
     branches: [main]
-    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
   pull_request:
-    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
 permissions:
   contents: read
 jobs:

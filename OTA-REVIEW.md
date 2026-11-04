@@ -7,6 +7,7 @@ Reviewed 2026-11-04 on `fix/ota-install-recovery`, PR #198, against main `9f436a
 | Failure | Correction and evidence |
 | --- | --- |
 | Existing `System` parent symlinks could redirect installation outside `System`; destination directories could cause a false-success replacement. | Validate the staged and installed path components before the first replacement. Real shell-installer tests reject links and directory collisions without modifying user data or the external target. |
+| A conflicting temporary directory could redirect a copy because shell errexit is suppressed inside the error-handled put function. | Preflight temporary paths and explicitly return on mkdir/rm failure. The regression reproduced an external-target overwrite before the fix and passes afterward; injected preparation failures stop before copying. |
 | A recovery source not fully flushed before replacement weakens retry after interruption. | Sync staging before the first replacement; retain it until the final installed-tree sync succeeds. Tests fail both pre-install and post-copy sync and verify retry. |
 | ZIP metadata could understate expanded length and bypass aggregate accounting. | Require actual decompressed length to equal declared length, alongside existing per-file/total bounds, CRC, path and symlink checks. Crafted metadata regression passes. |
 | Launcher staging ignored failure to remove an incomplete old tree. | Abort on failed cleanup and require exclusive creation of a fresh staging directory. Reject a redirected staging root. |
@@ -21,7 +22,7 @@ Reviewed 2026-11-04 on `fix/ota-install-recovery`, PR #198, against main `9f436a
 - BaseOS tests cover no space, download failure, cancellation, short data, incorrect digest, rejection, missing status, a verdict for the wrong payload, stale partial retry, ready-file preservation and redirected paths. Failure leaves no newly staged bootable payload in these fixtures.
 - The UI requires Wi-Fi and explicit selection. BaseOS starts only with a known battery of at least 20% or charging/full status. Cancellation cannot interrupt committed staging; shutdown/restart waits for the update job to settle.
 
-Local evidence: all **15 Rust updater integration tests**, **five shell-installer recovery test methods** (including the 14 injected interruption cases), and existing updater/launcher shell suites pass. GitHub launcher/device/release workflows run these regressions. Exact-head CI completion is recorded separately in WORKLOG.md.
+Local evidence: all **15 Rust updater integration tests**, **six shell-installer recovery test methods** (including the 14 injected interruption cases), and existing updater/launcher shell suites pass. GitHub launcher/device/release workflows run these regressions. Exact-head CI completion is recorded separately in WORKLOG.md.
 
 ## Limits and recovery expectations
 

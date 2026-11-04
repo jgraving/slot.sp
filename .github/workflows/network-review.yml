@@ -1,7 +1,7 @@
 name: Network and achievements test build
 on:
   pull_request:
-    paths: ['crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', 'card/System/slotsmb.sh', 'card/test-smb*', 'tools/*samba*', 'taskfile.yml', '.github/workflows/network-review.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'card/System/slotwifi.sh', 'card/System/slotlink.sh', 'card/System/slotsmb.sh', 'card/test-smb*', 'tools/*samba*', 'taskfile.yml', '.github/workflows/network-review.yml']
   workflow_dispatch:
 permissions:
   contents: read
