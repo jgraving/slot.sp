@@ -1,7 +1,7 @@
 use std::process::Command;
 
 fn git(args: &[&str]) -> Option<String> {
-    let out = Command::new("git").args(args).output().ok()?;
+    let out = Command::new("git").env("TZ", "UTC").args(args).output().ok()?;
     if !out.status.success() {
         return None;
     }
@@ -30,16 +30,18 @@ fn main() {
             git(&["rev-parse", "--short=8", "HEAD"])
         })
         .unwrap_or_else(|| "unknown".into());
-    let version = git(&["describe", "--tags", "--abbrev=0"])
-        .map(|t| t.trim_start_matches('v').to_string())
-        .unwrap_or_else(|| env!("CARGO_PKG_VERSION").into());
-    let date = Command::new("date")
-        .args(["-u", "+%Y-%m-%d"])
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .map(|s| s.trim().to_string())
+    // Match the release workflow's UTC source date, independent of when the build runs.
+    let date = git(&["show", "-s", "--date=format-local:%Y-%m-%d", "--format=%cd", "HEAD"])
         .unwrap_or_else(|| "unknown".into());
+    let version = git(&["describe", "--exact-match", "--tags", "--match", "v[0-9]*"])
+        .map(|tag| tag.trim_start_matches('v').to_string())
+        .unwrap_or_else(|| {
+            if date == "unknown" || hash == "unknown" {
+                env!("CARGO_PKG_VERSION").into()
+            } else {
+                format!("{}-{}", date.replace('-', "."), &hash[..7])
+            }
+        });
 
     println!("cargo:rustc-env=SLOT_GIT_HASH={hash}");
     println!("cargo:rustc-env=SLOT_VERSION={version}");

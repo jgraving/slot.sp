@@ -65,8 +65,8 @@ with tempfile.TemporaryDirectory() as tmp:
         try:
             with socket.create_connection(('127.0.0.1',1445),.1):return True
         except OSError:return False
-    def client(command,ok=True,protection='encrypt',authfile=auth,port=1445,protocol='SMB3'):
-        args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'//127.0.0.1/Games','-p',str(port),'-m',protocol,f'--client-protection={protection}','-A',str(authfile),'-c',command]
+    def client(command,ok=True,protection='encrypt',authfile=auth,port=1445,protocol='SMB3',share='Games'):
+        args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),f'//127.0.0.1/{share}','-p',str(port),'-m',protocol,f'--client-protection={protection}','-A',str(authfile),'-c',command]
         result=subprocess.run(args,text=True,capture_output=True,timeout=15,env=env)
         if ok:assert result.returncode==0,(result.stdout,result.stderr)
         else:assert result.returncode!=0,(result.stdout,result.stderr)
@@ -80,8 +80,8 @@ with tempfile.TemporaryDirectory() as tmp:
         # Finder and Explorer enumerate shares through named-pipe SRVSVC, not just direct file access.
         enumerate_args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'-L','127.0.0.1','-p','1445','-m','SMB3','--client-protection=encrypt','-A',str(auth)]
         enumeration=subprocess.run(enumerate_args,text=True,capture_output=True,timeout=15,env=env)
-        assert enumeration.returncode==0 and 'Games' in enumeration.stdout,(enumeration.stdout,enumeration.stderr)
-        listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA','Wallpapers'));assert 'Config' not in listing and 'secret' not in listing
+        assert enumeration.returncode==0 and all(name in enumeration.stdout for name in ('Games','Labels','Wallpapers')),(enumeration.stdout,enumeration.stderr)
+        listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA'));assert 'Config' not in listing and 'secret' not in listing
         bad=root/'bad-auth';bad.write_text('username = slot\npassword = WRONG\n');bad.chmod(0o600)
         client('ls',False,authfile=bad)
         client('ls',False,protocol='SMB2')
@@ -93,18 +93,19 @@ with tempfile.TemporaryDirectory() as tmp:
             client(f'put {source} GBA/Privacy.gba',protection='off',port=probe.port)
             assert probe.encrypted>0,'no encrypted SMB3 transform frames observed'
             assert not probe.plain_file_commands,('plaintext file operations',probe.plain_file_commands)
-        assert (root/'Inbox/GBA/Privacy.gba').read_bytes()==source.read_bytes()
+        assert (root/'Games/GBA/Privacy.gba').read_bytes()==source.read_bytes()
         client(f'put {source} GBA/Uploaded.gba')
-        assert (root/'Inbox/GBA/Uploaded.gba').read_bytes()==source.read_bytes()
+        assert (root/'Games/GBA/Uploaded.gba').read_bytes()==source.read_bytes()
         client(f'put {source} GBA/Étoile.gba')
-        assert (root/'Inbox/GBA/Étoile.gba').read_bytes()==source.read_bytes()
+        assert (root/'Games/GBA/Étoile.gba').read_bytes()==source.read_bytes()
         wallpaper=root/'wallpaper.png'
         wallpaper.write_bytes((script.parents[2]/'assets/background_default.png').read_bytes())
-        client(f'put {wallpaper} Wallpapers/Uploaded.png')
-        assert (root/'Inbox/Wallpapers/Uploaded.png').read_bytes()==wallpaper.read_bytes()
-        (root/'Inbox/private-link').symlink_to(root/'Config/secret')
+        client(f'put {wallpaper} Uploaded.png',share='Wallpapers')
+        assert (root/'Wallpapers/Uploaded.png').read_bytes()==wallpaper.read_bytes()
+        (root/'Games/private-link').symlink_to(root/'Config/secret')
         client(f'get private-link {root}/leaked',False)
         client(f'get ../Config/secret {root}/leaked',False)
+        client('ls',False,share='Config')
         assert not (root/'leaked').exists() or not (root/'leaked').read_bytes()
     except BaseException:
         for log in sorted((run/'slot-smb').glob('test-log.*')):

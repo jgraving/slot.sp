@@ -9,6 +9,42 @@ import unittest
 SCRIPT = Path(__file__).resolve().parent / 'System/slotwifi.sh'
 
 class Diagnostics(unittest.TestCase):
+    def test_non_executable_sd_script_still_starts_dhcp(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sd, run, control, net = (root / name for name in ('sd', 'run', 'control', 'net'))
+            for path in (sd, run, control, net / 'wlan0'):
+                path.mkdir(parents=True)
+            source = sd / SCRIPT.name
+            source.write_bytes(SCRIPT.read_bytes())
+            source.chmod(0o644)
+            (control / 'wlan0').touch()
+            (run / 'slotwifi.owner').touch()
+            marker = root / 'dhcp-started'
+            wpa = root / 'wpa-cli'
+            wpa.write_text("""#!/bin/sh
+case "$*" in
+  *ping) echo PONG ;;
+  *" -a "*) while [ "$1" != -a ]; do shift; done; "$2" wlan0 CONNECTED ;;
+esac
+""")
+            dhcp = root / 'dhcp'
+            dhcp.write_text(f'#!/bin/sh\nprintf "%s" "$*" > "{marker}"\n')
+            for path in (wpa, dhcp):
+                path.chmod(0o700)
+            env = dict(os.environ, AGS_NET_SYS=str(net), AGS_RUN=str(run), AGS_CTRL_DIR=str(control),
+                       AGS_WPA_CLI=str(wpa), AGS_UDHCPC=str(dhcp), AGS_IP='/bin/true',
+                       AGS_RFKILL='/bin/true')
+            subprocess.run(['/bin/sh', str(source), 'up'], env=env, check=True, timeout=3)
+            self.assertIn('-i wlan0', marker.read_text())
+            self.assertFalse(os.access(source, os.X_OK))
+            action = run / 'slotwifi-action'
+            self.assertTrue(os.access(action, os.X_OK))
+            report = subprocess.check_output(['/bin/sh', str(source), 'diagnostics'], env=env, text=True)
+            self.assertIn('callback_executable=yes', report)
+            subprocess.run(['/bin/sh', str(source), 'down'], env=env, check=True, timeout=3)
+            self.assertFalse(action.exists())
+
     def test_allowlisted_facts_without_running_network_commands_or_reading_secrets(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

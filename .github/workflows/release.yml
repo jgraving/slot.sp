@@ -166,6 +166,9 @@ jobs:
       contents: write
       actions: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v8
         with:
           name: release-downloads
@@ -181,7 +184,7 @@ jobs:
             tag="$GITHUB_REF_NAME"
             title="slot.sp — $tag"
           else
-            date="$(date -u +%Y.%m.%d)"
+            date="$(TZ=UTC git show -s --date=format-local:%Y.%m.%d --format=%cd "$GITHUB_SHA")"
             tag="build-${date}-${GITHUB_SHA:0:7}"
             title="slot.sp — $date (${GITHUB_SHA:0:7})"
           fi

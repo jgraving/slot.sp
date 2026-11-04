@@ -31,6 +31,7 @@ pub(crate) enum Failure {
     Rejected,
     Authentication,
     Invalid,
+    MissingArtwork,
 }
 
 pub(crate) trait Transport {
@@ -49,22 +50,26 @@ struct WhileActive<T> {
 }
 impl<T: Transport> Transport for WhileActive<T> {
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
             return Err(Failure::Network);
         }
         let mut response = self.inner.call(fields);
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
             if let Ok(value) = &mut response { wipe_strings(value); }
             return Err(Failure::Network);
         }
         response
     }
     fn badge(&mut self, name: &str) -> Result<Vec<u8>, Failure> {
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
             return Err(Failure::Network);
         }
         let response = self.inner.badge(name);
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
             return Err(Failure::Network);
         }
         response
@@ -113,7 +118,10 @@ impl Transport for Http {
                 "https://media.retroachievements.org/Badge/{name}.png"
             ))
             .call()
-            .map_err(|_| Failure::Network)?
+            .map_err(|error| match error {
+                ureq::Error::StatusCode(404 | 410) => Failure::MissingArtwork,
+                _ => Failure::Network,
+            })?
             .body_mut()
             .with_config()
             .limit(crate::badges::MAX_BYTES)
@@ -389,6 +397,12 @@ pub(crate) fn run(
                 || active.as_ref().is_some_and(|game| !game.online),
             std::sync::atomic::Ordering::Release,
         );
+        if status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
+            status.set(SyncStatus::Offline);
+            publish_detail(&status, verified, library_total, library.len(), library_failed,
+                &badges, &store, Instant::now(), "Waiting for Wi-Fi");
+            continue;
+        }
         publish_detail(&status, verified, library_total, library.len(), library_failed,
             &badges, &store, next_attempt, problem);
         if status
@@ -396,6 +410,9 @@ pub(crate) fn run(
             .swap(false, std::sync::atomic::Ordering::AcqRel)
         {
             next_attempt = Instant::now();
+            delay = 30;
+            warned = false;
+            badges.reconnect();
         }
         if Instant::now() < next_attempt {
             continue;
@@ -403,7 +420,8 @@ pub(crate) fn run(
         if should_rescan(rescanned.elapsed(), library.len()) {
             let (total,pending)=crate::library::scan(&root,&dir,now());
             library_total=total;
-            if !pending.is_empty() {library=pending;library_failed=0;}
+            library = pending;
+            library_failed = 0;
             badges.scan();
             rescanned = Instant::now();
         }
@@ -586,7 +604,7 @@ pub(crate) fn run(
                 problem = match error { Failure::Network => "RA server unavailable",
                     Failure::Authentication => "Check username or password",
                     Failure::Rejected => "Server rejected a request",
-                    Failure::Invalid => "Game data or storage error" };
+                    Failure::Invalid | Failure::MissingArtwork => "Game data or storage error" };
                 status.set(if error == Failure::Network {
                     SyncStatus::Offline
                 } else {
@@ -606,7 +624,7 @@ pub(crate) fn run(
                         Failure::Network => "Achievements need internet once",
                         Failure::Rejected => "Achievement sync needs attention",
                         Failure::Authentication => "Achievements: check account config",
-                        Failure::Invalid => "Achievements: data or storage error",
+                        Failure::Invalid | Failure::MissingArtwork => "Achievements: data or storage error",
                     };
                     let _ = notices.send(Notice::status(generation, title));
                     warned = true;

@@ -770,6 +770,7 @@ fn ram_credentials_prepare_games_without_creating_plaintext_account_files() {
             password: "fixture-password".into(),
             token: String::new(),
         }),
+        true,
     );
     wait_for(|| service.sync_status() == SyncStatus::Ready);
     let token = service

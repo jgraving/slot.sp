@@ -1441,6 +1441,12 @@ pub fn wifi_settings_face_on(canvas: Canvas, rows: &[(String,String,bool)], sele
     let mut face = parent_settings_face_animated_on(canvas, &labels, selected, 0, "", 0.0);
     let visible = rows.len().min(QUICK_VISIBLE);
     let start = selected.saturating_sub(visible/2).min(rows.len().saturating_sub(visible));
+    let sharing = first_network.saturating_sub(1);
+    if (start..start+visible).contains(&sharing) && first_network > 0 {
+        let arrow = quick_caret_face(true);
+        let y = crate::expressive::ROW_TOP+(sharing-start) as f32*QUICK_PITCH+TYPE_DROP;
+        parent_blit(&mut face,&arrow,canvas.w-QUICK_EDGE-arrow.w as f32,y);
+    }
     for (i, (name, value, _)) in rows.iter().enumerate().skip(start).take(visible).filter(|(i,_)| *i>=first_network && *i<first_network+signals.len()) {
         let lit=i==selected; let ink=if lit {MENU_INK}else{DIM_INK};
         let y=crate::expressive::ROW_TOP+(i-start) as f32*QUICK_PITCH+TYPE_DROP;
@@ -1653,6 +1659,7 @@ pub fn core_button_legends() -> Vec<UndoFace> {
             true,
         ),
         with_hint(button_face(ButtonLegend::A), "Choose", None, false),
+        with_hint(button_face(ButtonLegend::X), "Cart Studio", None, true),
     ]
 }
 

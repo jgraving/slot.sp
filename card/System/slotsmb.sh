@@ -1,5 +1,5 @@
 #!/bin/sh
-# Private SMB3 upload inbox. Password arrives on stdin; runtime secrets stay in RAM.
+# Private SMB3 library shares. Password arrives on stdin; runtime secrets stay in RAM.
 set -eu
 # Never write SMB session material to a card crash dump.
 ulimit -c 0
@@ -43,7 +43,8 @@ if [ "$1" = prepare ]; then
     [ ! -L "$STATE" ] || exit 1
     umask 077
     mkdir -p "$STATE" "$STATE/private" "$STATE/lock" "$STATE/cache" "$STATE/state"
-    for dir in "$SD/Inbox" "$SD/Inbox/GB" "$SD/Inbox/GBC" "$SD/Inbox/GBA" "$SD/Inbox/Wallpapers"; do
+    for dir in "$SD/Games" "$SD/Games/GB" "$SD/Games/GBC" "$SD/Games/GBA" \
+        "$SD/Labels" "$SD/Labels/GB" "$SD/Labels/GBC" "$SD/Labels/GBA" "$SD/Wallpapers"; do
         [ ! -L "$dir" ] || exit 1
         mkdir -p "$dir"
     done
@@ -89,9 +90,11 @@ if [ "$1" = prepare ]; then
     allow insecure wide links = no
     max smbd processes = 8
     deadtime = 5
-[Games]
-    path = $SD/Inbox
-    comment = Upload games and PNG wallpapers, then turn sharing off to import
+CONF
+    for folder in Games Labels Wallpapers; do
+        cat >> "$STATE/smb.conf" <<CONF
+[$folder]
+    path = $SD/$folder
     browseable = yes
     read only = no
     guest ok = no
@@ -104,6 +107,7 @@ if [ "$1" = prepare ]; then
     delete veto files = no
     max connections = 4
 CONF
+    done
     printf '%s\n%s\n' "$password" "$password" | samba smbpasswd -s -a -c "$STATE/smb.conf" nobody >/dev/null 2>&1
     unset password
     samba testparm -s "$STATE/smb.conf" >/dev/null 2>&1

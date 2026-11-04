@@ -26,8 +26,10 @@ pub struct View {
 }
 pub enum Event {
     Running,
-    // Only an explicit stop/import carries a result; automatic teardown is quiet.
-    Stopped(Option<Import>),
+    Stopped {
+        legacy: Option<Import>,
+        catalog: Option<Vec<slot_store::Cart>>,
+    },
     Failed(&'static str),
 }
 #[derive(Default)]
@@ -65,6 +67,9 @@ impl Sharing {
                             .is_some_and(|c| c.try_wait().ok().flatten().is_some());
                         if died {
                             stop(&mut running);
+                            let _ = tx.send((current_gen, Event::Stopped {
+                                legacy: None, catalog: scan_library(&root),
+                            }));
                             let _ = tx.send((
                                 current_gen,
                                 Event::Failed("Sharing stopped · connection closed"),
@@ -85,18 +90,14 @@ impl Sharing {
                         (gen, result)
                     }
                     Command::Stop(gen, import_uploads) => {
+                        let was_running = running.is_some();
                         stop(&mut running);
-                        (
-                            gen,
-                            Event::Stopped(if import_uploads {
-                                Some(import(&root).unwrap_or_else(|_| Import {
-                                    skipped: 1,
-                                    ..Import::default()
-                                }))
-                            } else {
-                                None
-                            }),
-                        )
+                        let legacy = import_uploads.then(|| import(&root).unwrap_or_else(|_| Import {
+                            skipped: 1,
+                            ..Import::default()
+                        }));
+                        let catalog = if was_running || import_uploads { scan_library(&root) } else { None };
+                        (gen, Event::Stopped { legacy, catalog })
                     }
                 };
                 current_gen = gen;
@@ -144,11 +145,11 @@ impl Sharing {
         let mut events = Vec::new();
         while let Ok((gen, event)) = self.events.try_recv() {
             // An import must never be lost when a network transition overtakes its UI result.
-            if let Event::Stopped(import) = event {
+            if matches!(&event, Event::Stopped { .. }) {
                 if gen == self.generation {
                     self.view = View::default();
                 }
-                events.push(Event::Stopped(import));
+                events.push(event);
                 continue;
             }
             if gen != self.generation {
@@ -175,6 +176,14 @@ impl Sharing {
         self.wanted.as_ref()
     }
 }
+fn scan_library(root: &Path) -> Option<Vec<slot_store::Cart>> {
+    let mut carts = slot_store::scan(root).ok()?;
+    for cart in &mut carts {
+        cart.read_header();
+    }
+    Some(carts)
+}
+
 pub fn password() -> Result<Zeroizing<String>, &'static str> {
     use ring::rand::SecureRandom;
     let mut bytes = [0u8; 16];
@@ -325,7 +334,7 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
 }
 
 /// Imports are performed only after all SMB writers have stopped. Existing games are never overwritten.
-/// Only flat GB/GBC/GBA games and valid PNG wallpapers are accepted. Other files stay in Inbox.
+/// Legacy Inbox migration accepts flat GB/GBC/GBA games and valid PNG wallpapers.
 pub fn import(root: &Path) -> io::Result<Import> {
     let mut result = Import::default();
     for platform in slot_store::Platform::ALL {

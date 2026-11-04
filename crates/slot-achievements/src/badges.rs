@@ -78,6 +78,7 @@ pub(crate) struct Queue {
     pending: VecDeque<String>,
     checking:VecDeque<String>,
     discovery:VecDeque<PathBuf>,
+    unavailable: BTreeSet<String>,
     validated:BTreeMap<String,(u64,std::time::SystemTime)>,
     retry: Instant,
     pub waiting: bool,
@@ -92,6 +93,7 @@ impl Queue {
             names: BTreeSet::new(),
             known: BTreeSet::new(),
             pending: VecDeque::new(),checking:VecDeque::new(),discovery:VecDeque::new(),validated:BTreeMap::new(),
+            unavailable: BTreeSet::new(),
             retry: Instant::now(),
             waiting: false,problem:"",retry_delay:30,
         };
@@ -109,6 +111,7 @@ impl Queue {
             };
             // Known, unchanged files are never inflated for each referencing game.
             let fresh=self.known.insert(achievement.badge.clone());
+            if self.unavailable.contains(&achievement.badge) { continue; }
             if !fresh && (self.names.contains(&achievement.badge) || self.validated.get(&achievement.badge).copied()==stamp(&path)) {continue;}
             self.names.insert(achievement.badge.clone());
             if path.is_file() {self.checking.push_back(achievement.badge.clone());}
@@ -163,6 +166,13 @@ impl Queue {
         !self.pending.is_empty() || !self.checking.is_empty() || !self.discovery.is_empty()
     }
 
+    pub fn reconnect(&mut self) {
+        if self.waiting {
+            self.retry = Instant::now();
+            self.retry_delay = 30;
+        }
+    }
+
     /// At most one bounded HTTP request per pass. Award uploads and game setup go first.
     /// Badge failures never invalidate authentication or delay achievement evaluation.
     pub fn step(&mut self, http: &mut impl Transport) {
@@ -174,12 +184,28 @@ impl Queue {
             return;
         };
         let target = path(&self.dir, &name).unwrap();
-        let result = if load_badge(&target).is_some() {Ok(())}else {
-            http.badge(&name).map_err(|e|if e==Failure::Network {"Artwork server unavailable"}else{"Artwork response invalid"}).and_then(|bytes| {
-                decode(&bytes).ok_or("Artwork response invalid")?;
-                std::fs::create_dir_all(target.parent().unwrap()).map_err(|_|"Cannot save artwork")?;
-                slot_store::atomic_write(&target,&bytes).map_err(|_|"Cannot save artwork")
-            })
+        let result = if load_badge(&target).is_some() {
+            Ok(())
+        } else {
+            match http.badge(&name) {
+                Err(Failure::MissingArtwork) => {
+                    // A removed badge should never back off the rest of the artwork queue.
+                    self.names.remove(&name);
+                    self.known.remove(&name);
+                    self.unavailable.insert(name);
+                    self.waiting = false;
+                    self.problem = "";
+                    self.retry_delay = 30;
+                    return;
+                }
+                Err(Failure::Network) => Err("Artwork server unavailable"),
+                Err(_) => Err("Artwork response invalid"),
+                Ok(bytes) => (|| {
+                    decode(&bytes).ok_or("Artwork response invalid")?;
+                    std::fs::create_dir_all(target.parent().unwrap()).map_err(|_| "Cannot save artwork")?;
+                    slot_store::atomic_write(&target, &bytes).map_err(|_| "Cannot save artwork")
+                })(),
+            }
         };
         if result.is_ok() {
             self.waiting=false;self.problem="";self.retry_delay=30;self.retry=Instant::now()+Duration::from_secs(3);
