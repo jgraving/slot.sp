@@ -23,6 +23,14 @@ pub const CHIP_W: u32 = 59;
 pub const CHIP_H: u32 = 41;
 pub const SLOT_W: u32 = OUT_W;
 pub const SLOT_H: u32 = 72;
+/// Raster dimensions are separate from logical geometry so About can enlarge
+/// the physical shell without magnifying a one-pixel source edge.
+pub const SLOT_TEXTURE_W: u32 = SLOT_W * 2;
+pub const SLOT_TEXTURE_H: u32 = SLOT_H * 2;
+pub const ABOUT_BODY_W: u32 = 400;
+pub const ABOUT_BODY_H: u32 = 360;
+pub const ABOUT_BODY_TEXTURE_W: u32 = ABOUT_BODY_W * 2;
+pub const ABOUT_BODY_TEXTURE_H: u32 = ABOUT_BODY_H * 2;
 pub const PORT_W: u32 = OUT_W;
 pub const PORT_H: u32 = 58;
 pub const PLUG_W: u32 = 92;

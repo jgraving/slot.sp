@@ -16,8 +16,8 @@ fn main(){
  }).collect());
  for (i,cart) in shelf.carts.iter().enumerate(){let f=slot_ui::cart_face(cart);png(&dir,i as u32,f.w,f.h,&f.rgba);}
  shelf.set_faces((0..3).map(TexId::from_raw).collect());shelf.select(1);
- png(&dir,3,slot_ui::SLOT_W,slot_ui::SLOT_H,slot_ui::slot_back());
- png(&dir,4,slot_ui::SLOT_W,slot_ui::SLOT_H,slot_ui::slot_front());
+ png(&dir,3,slot_ui::SLOT_TEXTURE_W,slot_ui::SLOT_TEXTURE_H,slot_ui::slot_back());
+ png(&dir,4,slot_ui::SLOT_TEXTURE_W,slot_ui::SLOT_TEXTURE_H,slot_ui::slot_front());
  let mut draws=Vec::new();shelf.draw(Canvas{w:640.0,h:480.0},0.0,Some((TexId::from_raw(3),TexId::from_raw(4))),&mut draws);
  let mut csv=File::create(dir.join("draws.csv")).unwrap();
  writeln!(csv,"id,x,y,w,h,alpha,u,v,uw,vh").unwrap();

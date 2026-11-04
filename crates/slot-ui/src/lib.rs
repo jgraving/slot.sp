@@ -5,7 +5,8 @@ mod label_mask;
 mod label_fit;
 pub use bitmaps::{
     link_port, link_port_light, slot_back, slot_back_light, slot_front, slot_front_light,
-    slot_plugged, slot_plugged_light, Mould, SLOT_H, SLOT_W,
+    slot_plugged, slot_plugged_light, Mould, SLOT_H, SLOT_W, SLOT_TEXTURE_W, SLOT_TEXTURE_H,
+    ABOUT_BODY_W, ABOUT_BODY_H, ABOUT_BODY_TEXTURE_W, ABOUT_BODY_TEXTURE_H,
 };
 mod backdrop;
 mod barcode;
@@ -35,7 +36,9 @@ mod plate;
 mod polaroids;
 mod power_menu;
 mod shot_viewer;
-pub use material::{shell_link_port, shell_rgb, shell_slot_faces};
+pub use material::{shell_link_port, shell_rgb, shell_slot_faces, shell_about_body};
+mod about_shell;
+pub use about_shell::{AboutMotion, draw_about_body, draw_about_sticker, ABOUT_STICKER_W, ABOUT_STICKER_Y};
 mod quick_menu;
 mod keyboard;
 mod page;

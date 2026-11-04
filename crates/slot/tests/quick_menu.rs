@@ -1577,3 +1577,140 @@ fn closing_settings_keeps_one_carousel_label_at_a_continuous_position() {
     let mut last=None;
     for _ in 0..45 {a.update(1.0/60.0);let out=frame(&a);let labels:Vec<_>=out.iter().filter_map(|d|match d{Draw::Tex{y,tex,alpha,..}if *tex==TexId::from_raw(9500)=>Some((*y,*alpha)),_=>None}).collect();assert_eq!(labels.len(),1,"the returning carousel was drawn twice");let y=labels[0].0;if let Some(old)=last{assert!(y<=old+0.001,"carousel label reversed/jumped while returning");assert!(old-y<130.0,"carousel label snapped to its destination");}last=Some(y);}
 }
+
+fn about_hardware(a: &mut App) {
+    a.set_slot_faces(TexId::from_raw(9100), TexId::from_raw(9101));
+    a.set_about_body_face(TexId::from_raw(9102));
+    a.set_sticker_face(TexId::from_raw(9103));
+}
+
+fn settings_surface(out: &[Draw]) -> [f32; 4] {
+    out.iter().find_map(|d| match *d {
+        Draw::RoundRect { x, y, w, h, colour, .. }
+            if colour == slot_ui::expressive::SURFACE => Some([x, y, w, h]),
+        _ => None,
+    }).expect("the live General surface")
+}
+
+#[test]
+fn about_lifts_the_hardware_while_general_shrinks_and_returns_to_its_original_layout() {
+    for panel in [(640, 480), (720, 720)] {
+        let (_d, mut a, _) = on_carousel();
+        a.set_panel(panel);
+        fake_faces(&mut a);
+        about_hardware(&mut a);
+        open_at(&mut a, QuickRow::About);
+        let initial = frame(&a);
+        let panel_before = settings_surface(&initial);
+        let mouth_before = placed(&initial, 9101).unwrap();
+        let row_before = placed(&initial, label(QuickRow::About, true)).unwrap();
+
+        press(&mut a, Btn::A);
+        a.update(0.06);
+        let moving = frame(&a);
+        let panel_moving = settings_surface(&moving);
+        let mouth_moving = placed(&moving, 9101).unwrap();
+        assert!(mouth_moving[1] < mouth_before[1], "the shell did not rise on {panel:?}");
+        assert!(panel_moving[2] < panel_before[2], "General did not shrink");
+        assert!(panel_moving[1] > panel_before[1], "General did not slide downward");
+
+        a.update(1.0);
+        let revealed = frame(&a);
+        assert!(placed(&revealed, 9101).unwrap()[1] < 100.0, "the slot never revealed the sticker");
+        assert!(drawn(&revealed, 9102) && drawn(&revealed, 9103));
+        press(&mut a, Btn::B);
+        a.update(1.0);
+        let returned = frame(&a);
+        assert_eq!(a.quick_menu(), Some(QuickRow::About));
+        assert_eq!(settings_surface(&returned), panel_before, "General returned at a different size or position");
+        assert_eq!(placed(&returned, label(QuickRow::About, true)), Some(row_before), "General lost its scroll or selection");
+        assert_eq!(placed(&returned, 9101), Some(mouth_before));
+        assert!(!drawn(&returned, 9103), "the label remained over General");
+    }
+}
+
+#[test]
+fn about_back_and_immediate_reopen_preserve_the_hardware_pose() {
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    about_hardware(&mut a);
+    open_at(&mut a, QuickRow::About);
+    press(&mut a, Btn::A);
+    a.update(0.12);
+    let entering = frame(&a);
+    let entry_reveal = a.about_reveal();
+    assert!(entry_reveal > 0.0 && entry_reveal < 1.0);
+    press(&mut a, Btn::B);
+    a.update(0.0);
+    let reversing = frame(&a);
+    for id in [9100, 9101, 9102, 9103] {
+        assert_eq!(placed(&reversing, id), placed(&entering, id), "Back snapped hardware texture {id}");
+    }
+    a.update(0.06);
+    let leaving = frame(&a);
+    press(&mut a, Btn::A);
+    a.update(0.0);
+    let reopening = frame(&a);
+    for id in [9100, 9101, 9102, 9103] {
+        assert_eq!(placed(&reopening, id), placed(&leaving, id), "reopening snapped hardware texture {id}");
+    }
+    assert!(matches!(a.phase(), Phase::About));
+    a.update(1.0);
+    assert_eq!(a.about_reveal(), 1.0);
+}
+
+#[test]
+fn general_selection_stays_live_during_about_exit_and_rapid_navigation() {
+    let (_d, mut a, _) = on_carousel();
+    fake_faces(&mut a);
+    about_hardware(&mut a);
+    open_at(&mut a, QuickRow::About);
+    press(&mut a, Btn::A);
+    a.update(0.06);
+    press(&mut a, Btn::B);
+    press(&mut a, Btn::Up);
+    a.update(0.0);
+    assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
+    let returning = frame(&a);
+    assert!(drawn(&returning, label(QuickRow::DateTime, true)), "the returning General card retained a stale selection");
+    assert!(!drawn(&returning, label(QuickRow::About, true)), "the old About selection stayed lit");
+    let returning_surface = settings_surface(&returning);
+    press(&mut a, Btn::A);
+    assert!(matches!(a.phase(), Phase::SetClock { .. }), "the shell animation blocked opening Date & time");
+    let clock_surface = settings_surface(&frame(&a));
+    assert_eq!(clock_surface, returning_surface, "opening another page snapped the returning surface");
+    press(&mut a, Btn::B);
+    assert_eq!(a.quick_menu(), Some(QuickRow::DateTime));
+    press(&mut a, Btn::Down);
+    press(&mut a, Btn::A);
+    assert!(matches!(a.phase(), Phase::About));
+    a.update(1.0);
+    press(&mut a, Btn::B);
+    a.update(1.0);
+    assert!(drawn(&frame(&a), label(QuickRow::About, true)));
+}
+
+#[test]
+fn passing_about_sticker_has_local_hint_contrast_without_a_permanent_footer_bar() {
+    let (_d, mut a, _) = on_carousel();
+    a.set_panel((640, 480));
+    a.set_footer_contrast([false; 2]);
+    fake_faces(&mut a);
+    about_hardware(&mut a);
+    open_at(&mut a, QuickRow::About);
+    press(&mut a, Btn::A);
+    a.update(0.22);
+    let moving = frame(&a);
+    let backing = |d: &Draw| matches!(*d, Draw::RoundRect { colour, h, .. }
+        if colour[..3] == [0.13, 0.145, 0.16] && h == slot_ui::MENU_HINT_H as f32 + 8.0);
+    let backs: Vec<_> = moving.iter().enumerate().filter(|(_,d)|backing(d)).collect();
+    assert_eq!(backs.len(), 2, "each footer hint needs its own local contrast surface while the black sticker passes");
+    let sticker = moving.iter().position(|d|matches!(*d, Draw::Tex { tex, .. }|Draw::Part { tex, .. } if tex == TexId::from_raw(9103))).unwrap();
+    let hint = moving.iter().rposition(|d|matches!(*d, Draw::Tex { tex, .. }|Draw::Part { tex, .. } if tex == TexId::from_raw(404))).unwrap();
+    for (i,d) in backs {
+        assert!(i > sticker && i < hint, "hint backing must be over the hardware and under its text");
+        if let Draw::RoundRect { w, colour, .. } = d { assert!(*w < 180.0 && colour[3] > 0.9); }
+    }
+    a.update(1.0);
+    assert!(!frame(&a).iter().any(backing), "the local backings should disappear once the sticker clears the footer");
+}

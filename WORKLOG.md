@@ -1,5 +1,49 @@
 # Development recovery log
 
+## Active recovery: photo-matched slot and About reveal — 2026-11-04
+
+### Final source, previews and validation
+
+- Runtime is published and verified on GitHub as `07227db624154adb27863808d156ec6ba4e64ad6`, PR https://github.com/jgraving/slot.sp/pull/195. Later checkpoint changes only preview artifacts and recovery documentation. No merge or release performed.
+- Fresh isolated build confirms **326 targeted tests pass**, zero failures/ignored, and device-feature compilation succeeds. Source and workflow checks are clean. The earlier shared-target stale example issue was eliminated with separate final-review and validation targets; no assertion was disabled.
+- Definitive native review: five 360-frame About sequences (light/GLES640, dark/GL720, and seated GBA/GB/GBC using the real frontend) pass exact General-card return checks. Three 300-frame cartridge sequences use actual App timing and production geometry/audio, each reaching the stop and returning with exactly one insert/eject sound. All 2,821 PNGs validate; all five MP4s decode and match 60fps, dimensions and expected durations.
+- Committed previews: `previews/about-shell-{light,dark}.mp4`, corresponding settled PNGs, `previews/about-shell-seated-{gba,gb,gbc}.png`, `previews/slot-{gba,gb,gbc}-insert-remove.mp4`, and `previews/slot-photo-comparison.png`. Videos are full-color H.264; cartridge videos include AAC contact audio. The local capture commit `cbbc01e` has the same runtime source as GitHub `07227db`; sticker serial reflects the capture commit.
+- Native review includes sharpness, continuous lip/material, complete GBA cap, tall GB/GBC header clipping, entry/exit/reversal and rapid Back → Up → A. Local hint backings appear only while the moving sticker overlaps footer captions. General remains live and reverses smoothly.
+- GitHub runtime checks: scaling, blending and shortcuts pass. Device workflow https://github.com/jgraving/slot.sp/actions/runs/41800925975 succeeds, including both bundled cores and System packaging. Test build: https://github.com/jgraving/slot.sp/actions/runs/41800925975/artifacts/13307753004 (verified available at handoff). Launcher/native workflow https://github.com/jgraving/slot.sp/actions/runs/41800925968 also succeeds, including the full GLES/GL walkthrough, photo geometry, all About sequences and cartridge motion. Native artifact: https://github.com/jgraving/slot.sp/actions/runs/41800925968/artifacts/13308790499 (verified available). All five applicable workflows pass on runtime `07227db`, without failures or retries.
+- Physical handheld appearance/performance remains for user testing. No hardware deployment, live account action, merge, or release was performed. Resume by checking PR #195 and this section; do not reconstruct the completed work again.
+
+
+### Final runtime polish
+
+- Published and verified test/export checkpoint `cfee4ba29f1d5037233b8015179b4168f101380b` on PR #195. Scaling, blending and shortcuts succeed on that revision; launcher/native and device build are still running.
+- Kept footer actions readable while the black sticker crosses them using small temporary contrast surfaces, drawn over hardware and under hints, removed once the sticker clears. Added a layer-order/size/lifetime regression; app/menu checks now total 228 and the complete targeted set totals 326.
+- About now lazily uploads/reuses one lower-body texture and recolors it during exit. This saves 6,912,000 GPU bytes versus the first checkpoint, with no per-frame rasterization/upload. Final added GPU memory versus main is approximately 6.94 MiB after first About; hardware performance remains unmeasured.
+- The before/after image uses identical native GLES640 views of original main and revised source, rendered from isolated checkouts. Cartridge dimensions/travel are unchanged.
+- Read-only merge-tree against #194 (`5425afe0`) merges runtime/tests/workflows cleanly; both branches' active CURRENT_WORK.md headings conflict and will need documentation reconciliation if combined. This is source compatibility only; no merge requested or performed.
+- Final native exports are being rendered from a fresh checkout-specific target after detecting a stale example executable in the earlier shared target. The initially attempted in-game exports did not exercise the new mode and are not validation evidence. Fresh executable markers are verified before the definitive captures.
+
+### Native review and rapid-navigation correction
+
+- Draft PR: https://github.com/jgraving/slot.sp/pull/195. Runtime checkpoint `30de7b95486128c7f7cd19a6a02cf47c2c313cbc` was published and its branch ref verified.
+- Native GLES640/GL720 geometry review produced 96 captures (4 finishes × 3 platforms × empty/entering/seated/About). Light/dark About sequences each render 360 frames with rapid reversal and compare the restored General card pixels. GBA/GB/GBC motion reviews each validate 300 frames, exactly one insert/eject contact sound, connector stop and shelf return; full-color MP4s are being finalized.
+- Independent inspection caught a surface-size jump on Back → Up → A opening Date & Time before the shell settled. Parent motion now applies to other settings sheets during the remaining shell motion; a regression assertion covers this case. Final captures are being regenerated after that fix.
+- Current relevant local tests: 325 pass (slot app/menu/boot/eject/notices/accessibility 227; UI quick-menu/notices/sticker 51; chrome/material 43; About motion 4). Device-feature compilation previously passed and is being rechecked on final source. GitHub workflows run on the pushed revisions; no remote completion claimed yet.
+- Texture memory: cached GPU slot/body textures total approximately 15.1 MiB across four finishes, about 13.5 MiB more than main's slot-only textures. This is an estimate from dimensions; handheld memory/performance and physical sharpness remain unmeasured.
+
+### Runtime reconstruction checkpoint
+
+- Photo review supports a narrower 400px shell around the existing 308px opening, smaller corner wells and a broad continuous lip; the existing cartridge stop and travel remain unchanged. New native vectors and 2× texture caches include the lower About shell with continuous paint/grain.
+- About now uses a reversible spring to move shell/sticker/cartridge together and recede the live General card. This is a first runtime checkpoint; motion/visual regressions are being exercised before completion.
+- Fresh device-feature compilation passes. Shell material tests: 15 pass, including high-density geometry, neutral hardware, seam/grain and the aperture ratio. Runtime setup smoke checks also passed (77 input, 6 layout); these do not replace the pending full task checks.
+- Native review exporters and MP4 encoders are being added; final captures and remote CI are still pending. Regular publication is via the connected GitHub API because this workspace's CLI has no GitHub push credential.
+
+
+- User explicitly authorized implementation and regular pushes to GitHub. Publish checkpoints on `fix/photo-slot-proportions`; no merge or release requested.
+- Live main is `ab180bfb474a723ac3d44d387273e7ece9ab9028`. The prior log's `93797c63` checkpoint and photo-slot branch are absent remotely; reconstructing from source and the attached photos/screenshots/worklog. Historical validation claims are not current results.
+- Photos are the visual authority. Use independent judgment for opening/body ratio, narrow cheeks, shallow curved lip, screw wells and rear wall. Preserve the already-good cartridge dimensions, seating and insertion/ejection behavior.
+- Recreate General → About shell/sticker reveal, sharp enlarged textures and coordinated live General-card shrink/downward motion, reversing smoothly on Back and rapid input. Preserve seated cartridges, transparent interiors, all finishes/themes, header and actions.
+- Work split: shell geometry/material, About/menu/compositor, native motion exporters/CI. Next: inspect photo comparisons, implement coherent checkpoints, run relevant Rust/device/native checks and publish review videos plus draft PR. Physical handheld verification remains separate.
+
 Last updated: 2026-11-04 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `main`

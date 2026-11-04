@@ -147,6 +147,8 @@ struct WallpaperSync {
 struct AboutFace {
     tex: Option<TexId>,
     battery: Option<u8>,
+    body: Option<TexId>,
+    colour: Option<ShellColour>,
 }
 
 #[derive(Default)]
@@ -389,7 +391,7 @@ impl Frontend {
             .set_gb_cart_backings(notched, rounded);
         let slot = {
             let mut upload =
-                |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
+                |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_TEXTURE_W, slot_ui::SLOT_TEXTURE_H, bytes);
             ShellColour::FINISHES.map(|colour| slot_ui::shell_slot_faces(colour).map(&mut upload))
         };
         let dark_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
@@ -1715,8 +1717,18 @@ fn sync_quick_palette(app: &mut App, compositor: &mut Compositor, state: &mut Qu
 }
 
 fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace) {
-    if !matches!(app.phase(), Phase::About) {
+    if !matches!(app.phase(), Phase::About) && app.about_reveal() == 0.0 {
         return;
+    }
+    // One high-density body texture, loaded on first reveal and reused when
+    // its finish changes. The visible exit always follows the current shell.
+    let colour = app.shell_colour();
+    if state.colour != Some(colour) {
+        let body = upload_rgba(compositor, &mut state.body,
+            slot_ui::ABOUT_BODY_TEXTURE_W, slot_ui::ABOUT_BODY_TEXTURE_H,
+            slot_ui::shell_about_body(colour));
+        app.set_about_body_face(body);
+        state.colour = Some(colour);
     }
     let battery = app.battery().map(|b| b.percent);
     if state.tex.is_some() && state.battery == battery {

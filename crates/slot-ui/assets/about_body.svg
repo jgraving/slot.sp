@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="360" viewBox="0 0 400 360">
+<defs>
+ <linearGradient id="well" x2="0" y2="1"><stop stop-color="#20262a"/><stop offset="1" stop-color="#596168"/></linearGradient>
+ <linearGradient id="metal" x2=".5" y2="1"><stop stop-color="#c8ccca"/><stop offset=".4" stop-color="#a7aeac"/><stop offset="1" stop-color="#707976"/></linearGradient>
+ <g id="screw">
+  <circle r="7.4" fill="#840000"/>
+  <circle r="6.4" fill="#434b4c"/>
+  <circle r="5.9" fill="url(#metal)"/>
+  <path d="M-3 0H3M0-3V3" fill="none" stroke="#d1d5d5" stroke-width="1.7" transform="translate(.15 .2)"/>
+  <path d="M-3 0H3M0-3V3" fill="none" stroke="#354047" stroke-width="1.2"/>
+ </g>
+ <g id="wellScrew">
+  <circle r="10.4" fill="#840000"/>
+  <path d="M-10 0a10 10 0 0 0 20 0" fill="none" stroke="#cc0000" stroke-width=".65"/>
+  <circle r="8.7" fill="url(#well)"/>
+  <ellipse cy=".75" rx="7.8" ry="7.5" fill="#242b30"/>
+  <use href="#screw" transform="translate(0 .75) scale(.7)"/>
+ </g>
+</defs>
+<!-- Continuation of the slot's flat lower deck, with no joining outline.
+     Material grain is evaluated in the slot's world coordinates by material.rs. -->
+<path d="M0 0H400V336Q400 360 376 360H24Q0 360 0 336Z" fill="#ae0000"/>
+<!-- Battery door follows the sticker's raised centre, with a narrow moulded gap. -->
+<path d="M55 147Q55 133 69 133H116Q122 133 128 129L159 111Q165 107 173 107H227Q235 107 241 111L272 129Q278 133 284 133H331Q345 133 345 147V317Q345 331 331 331H69Q55 331 55 317Z" fill="none" stroke="#d10000" stroke-width="1.4" transform="translate(.6 .8)"/>
+<path d="M55 147Q55 133 69 133H116Q122 133 128 129L159 111Q165 107 173 107H227Q235 107 241 111L272 129Q278 133 284 133H331Q345 133 345 147V317Q345 331 331 331H69Q55 331 55 317Z" fill="none" stroke="#660000" stroke-width="1"/>
+<use href="#screw" x="200" y="123"/>
+<!-- A very shallow blank moulding on the battery lid. -->
+<rect x="116" y="223" width="168" height="48" rx="5" fill="none" stroke="#c30000" stroke-width=".8"/>
+<path d="M121 223H279Q284 223 284 228V266" fill="none" stroke="#930000" stroke-width=".8"/>
+<use href="#wellScrew" x="28" y="294"/>
+<use href="#wellScrew" x="372" y="294"/>
+<!-- Lanyard recesses and lower case seam. -->
+<rect x="55" y="341" width="21" height="8" rx="4" fill="#600000"/>
+<rect x="324" y="341" width="21" height="8" rx="4" fill="#600000"/>
+<path d="M24 356H376" stroke="#930000" stroke-width=".7"/>
+</svg>

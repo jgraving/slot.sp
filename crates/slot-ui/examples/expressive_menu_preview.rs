@@ -108,7 +108,7 @@ fn main() {
     let (bolt, _, _) = up(as_undo(status_icon_face(Icon::Charging, ink)));
     let ground = compositor.create_texture(720, 480, default_background().unwrap());
     let parts = shell_slot_faces(slot_store::ShellColour::FINISHES[0]);
-    let slot = parts.map(|f| compositor.create_texture(SLOT_W, SLOT_H, &f));
+    let slot = parts.map(|f| compositor.create_texture(SLOT_TEXTURE_W, SLOT_TEXTURE_H, &f));
     let mut motion = MenuMotion::default();
     let charge_face=settings_notice_face("Charging: 82%",canvas);
     let charge_size=(charge_face.w,charge_face.h);
