@@ -29,7 +29,7 @@ case "$SD" in *'%'*|*'['*|*']'*|*'
 '*|*'
 '*) exit 1;; esac
 TOOLS="$SD/System/samba"
-for name in smbd smbpasswd testparm wsdd2 samba-dcerpcd rpcd_classic; do
+for name in smbd smbpasswd testparm wsdd2 samba-dcerpcd rpcd_classic rpcd_winreg; do
     [ -x "$TOOLS/bin/$name" ] || exit 1
 done
 # No loader or library-path changes escape into the launcher/emulators.
@@ -119,7 +119,7 @@ cleanup() {
 }
 trap cleanup TERM INT EXIT
 printf '%s\n' "$$" > "$STATE/owner"
-samba samba-dcerpcd --foreground --no-process-group --np-only --configfile="$STATE/smb.conf" "$TOOLS/libexec/rpcd_classic" &
+samba samba-dcerpcd --foreground --no-process-group --np-only --configfile="$STATE/smb.conf" "$TOOLS/libexec/rpcd_classic" "$TOOLS/libexec/rpcd_winreg" &
 rpc=$!
 samba smbd --foreground --no-process-group --configfile="$STATE/smb.conf" &
 server=$!

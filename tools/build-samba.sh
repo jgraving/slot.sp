@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build a private, relocatable SMB3-only runtime using maintained Samba sources.
-# Run natively on the target architecture; the ARM64 build uses the device's glibc baseline.
+# Run natively on the target architecture; dependencies stay in a private loader tree.
 set -euo pipefail
 script="$(realpath "$0")"
 out="${1:?output directory}"
@@ -56,7 +56,7 @@ mkdir -p "$work/wsdd2"
 tar -xf "$work/wsdd2.tar.xz" -C "$work/wsdd2" --strip-components=1
 make -C "$work/wsdd2" CFLAGS='-O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong' LDFLAGS='-Wl,-z,relro,-z,now'
 mkdir -p "$out/bin" "$out/lib" "$out/licenses"
-for name in smbd smbpasswd testparm smbclient samba-dcerpcd rpcd_classic; do
+for name in smbd smbpasswd testparm smbclient samba-dcerpcd rpcd_classic rpcd_winreg; do
     src="$work/install/bin/$name"
     [ -f "$src" ] || src="$work/install/sbin/$name"
     [ -f "$src" ] || src="$work/install/libexec/samba/$name"
@@ -65,13 +65,15 @@ done
 cp "$work/wsdd2/wsdd2" "$out/bin/"
 # Samba invokes RPC workers itself; a small wrapper keeps those children on the private loader too.
 mkdir -p "$out/libexec"
-cat > "$out/libexec/rpcd_classic" <<'WRAPPER'
+for worker in rpcd_classic rpcd_winreg; do
+cat > "$out/libexec/$worker" <<'WRAPPER'
 #!/bin/sh
 set -eu
 TOOLS="$(cd "$(dirname "$0")/.." && pwd)"
-exec "$TOOLS/lib/ld-linux-aarch64.so.1" --library-path "$TOOLS/lib" "$TOOLS/bin/rpcd_classic" "$@"
+exec "$TOOLS/lib/ld-linux-aarch64.so.1" --library-path "$TOOLS/lib" "$TOOLS/bin/$(basename "$0")" "$@"
 WRAPPER
-chmod +x "$out/libexec/rpcd_classic"
+chmod +x "$out/libexec/$worker"
+done
 triplet="$(gcc -print-multiarch)"
 cp -aL "/usr/lib/$triplet/gconv" "$out/gconv"
 
@@ -119,4 +121,5 @@ printf 'Samba %s\nsource_sha256=%s\nwsdd2_source_sha256=%s\n' "$version" "$sha" 
 for binary in "$out"/bin/*; do strip "$binary"; done
 
 cp "$script" "$sources/build-samba.sh"
+cp "$(dirname "$script")/samba-build-env.sh" "$sources/samba-build-env.sh"
 printf 'Corresponding source: slot.sp-network-sources.zip from the same build/release.\n' > "$out/licenses/SOURCES.txt"

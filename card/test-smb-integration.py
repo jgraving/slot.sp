@@ -45,6 +45,8 @@ with tempfile.TemporaryDirectory() as tmp:
         source=root/'upload.gba';source.write_bytes(bytes(1024))
         client(f'put {source} GBA/Uploaded.gba')
         assert (root/'Inbox/GBA/Uploaded.gba').read_bytes()==source.read_bytes()
+        client(f'put {source} GBA/Étoile.gba')
+        assert (root/'Inbox/GBA/Étoile.gba').read_bytes()==source.read_bytes()
         wallpaper=root/'wallpaper.png'
         wallpaper.write_bytes((script.parents[2]/'assets/background_default.png').read_bytes())
         client(f'put {wallpaper} Wallpapers/Uploaded.png')
