@@ -45,9 +45,7 @@ fn main(){
     a.tap(Btn::A);a.settle();a.save("wifi-on");
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.save("general-updates-disconnected");
     a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-disabled");
-    a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);
-    assert_eq!(a.f.app().quick_menu(), Some(QuickRow::TimeZone));
-    a.tap(Btn::B);
+    a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::TimeZone));a.tap(Btn::B);
     a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
     a.tap(Btn::B);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-default-off");a.tap(Btn::Down);a.tap(Btn::Right);a.save("sharing-reboot-warning");a.tap(Btn::Left);a.tap(Btn::Up);
     for _ in 0..5 { a.tap(Btn::Down); }
@@ -61,8 +59,8 @@ fn main(){
     assert!(a.f.app().carts().any(|cart| cart.stem == "Delta"));
     a.save("sharing-stopped-library-refreshed");a.tap(Btn::B);
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.tap(Btn::A);a.save("updates-settings");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-off");a.tap(Btn::Right);a.save("automatic-time-on");
-    a.nav(QuickRow::DateTime);a.tap(Btn::A);a.save("manual-time-disabled");
-    assert_eq!(a.f.app().quick_menu(), Some(QuickRow::DateTime));
+    a.nav(QuickRow::DateTime);a.save("manual-time-disabled");a.tap(Btn::A);a.save("manual-time-disabled-notice");
+    a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("automatic-time-zone-manual-fields-dimmed");a.tap(Btn::B);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::TimeZone));
     a.nav(QuickRow::AutomaticTime);a.tap(Btn::Left);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");

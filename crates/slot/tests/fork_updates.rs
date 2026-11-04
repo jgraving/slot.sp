@@ -105,39 +105,6 @@ fn baseos_is_exact_model_stable_version_and_requires_a_verdict() {
     assert!(will_apply("WILL APPLY","baseos-rg35xxsp-1.4.0.bosupd").is_err());
 }
 #[test]
-fn previews_are_opt_in_and_choose_the_highest_compatible_firmware() {
-    fn firmware(version: &str, target: &str, preview: bool, draft: bool) -> Value {
-        let name = format!("baseos-{target}-{version}.bosupd");
-        json!({"draft":draft,"prerelease":preview,"tag_name":format!("v{version}"),
-            "assets":[{"name":name,"state":"uploaded","size":50,
-                "digest":format!("sha256:{}","ab".repeat(32)),
-                "browser_download_url":format!("https://github.com/pvaibhav/BaseOS/releases/download/v{version}/{name}")}]})
-    }
-    let stable = firmware("1.4.0", "rg34xxsp", false, false);
-    let previews = json!([
-        firmware("1.6.0", "rg35xxsp", true, false),
-        firmware("1.5.2", "rg34xxsp", true, false),
-        firmware("1.7.0", "rg34xxsp", true, true),
-        stable.clone(),
-        firmware("1.5.3", "rg34xxsp", true, false),
-    ]);
-    let mut fetch = |url: &str| Ok(match url {
-        LATEST => release(),
-        "https://api.github.com/repos/pvaibhav/BaseOS/releases/latest" => stable.clone(),
-        "https://api.github.com/repos/pvaibhav/BaseOS/releases?per_page=8" => previews.clone(),
-        _ => panic!("unexpected URL {url}"),
-    }.to_string().into_bytes());
-    let running = Running { slot: "11111111", baseos: Some(("rg34xxsp", "v1.4.0")) };
-    assert_eq!(check_with(2_000_000_000, &mut fetch, running), UpdateEvent::UpToDate);
-    let UpdateEvent::Available(offers) = check_with_options(2_000_000_000, &mut fetch, running, true)
-        else { panic!("missing BaseOS preview offer"); };
-    assert_eq!(offers.len(), 1);
-    assert_eq!(offers[0].kind, Kind::BaseOs);
-    assert_eq!(offers[0].version, "1.5.3 (preview)");
-    assert_eq!(bosupd_name(&offers[0]), "baseos-rg34xxsp-1.5.3.bosupd");
-}
-
-#[test]
 fn cancellation_never_commits_an_install_after_the_ticket_is_cancelled() {
     let t=Ticket::default();assert!(t.cancel());assert!(!t.commit());assert_eq!(t.settle(UpdateEvent::Staged),UpdateEvent::Cancelled);
     let mut reader=Stoppable::new(Cursor::new(b"data"),t);assert!(std::io::Read::read(&mut reader,&mut [0;4]).is_err());
@@ -247,4 +214,23 @@ fn staging_root_collisions_cannot_modify_an_unrelated_tree() {
     assert!(stage(d.path(),&package(SHA,None),&r).is_err());
     assert_eq!(std::fs::read(&keep).unwrap(),b"keep");
     assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(),1);
+}
+
+#[test]
+fn baseos_failure_does_not_hide_a_launcher_update() {
+    let body=release().to_string().into_bytes();
+    let result=check_with(2_000_000_000,&mut |url| {
+        if url==LATEST {Ok(body.clone())}
+        else if url.contains("/compare/") {Ok(json!({"status":"ahead"}).to_string().into_bytes())}
+        else {Err(UpdateFail::Offline)}
+    },Running{slot:"22222222",baseos:Some(("rgsp","1.3.0"))});
+    let UpdateEvent::Available(offers)=result else {panic!("{result:?}");};
+    assert_eq!(offers.len(),1);assert_eq!(offers[0].kind,Kind::Slot);
+}
+#[test]
+fn newer_rgsp_baseos_is_offered_even_when_launcher_is_current() {
+    let v=json!({"draft":false,"prerelease":false,"tag_name":"v1.4.0","assets":[{"name":"baseos-rgsp-1.4.0.bosupd","state":"uploaded","size":54917120,"digest":format!("sha256:{}","ab".repeat(32)),"browser_download_url":"https://github.com/pvaibhav/BaseOS/releases/download/v1.4.0/baseos-rgsp-1.4.0.bosupd"}]}).to_string();
+    let result=check_with(2_000_000_000,&mut |url|Ok(if url==LATEST {release().to_string()}else{v.clone()}.into_bytes()),Running{slot:"11111111",baseos:Some(("rgsp","1.3.0"))});
+    let UpdateEvent::Available(offers)=result else {panic!("{result:?}");};
+    assert_eq!(offers.len(),1);assert_eq!(offers[0].kind,Kind::BaseOs);assert_eq!(offers[0].version,"1.4.0");
 }

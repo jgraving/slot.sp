@@ -66,7 +66,6 @@ pub const SLOT_REPO: &str = "jgraving/slot.sp";
 const BASEOS_REPO: &str = "pvaibhav/BaseOS";
 pub const LATEST: &str = "https://api.github.com/repos/jgraving/slot.sp/releases/latest";
 const BASEOS_LATEST: &str = "https://api.github.com/repos/pvaibhav/BaseOS/releases/latest";
-const BASEOS_RELEASES: &str = "https://api.github.com/repos/pvaibhav/BaseOS/releases?per_page=8";
 
 fn release_json(json:&str)->Result<serde_json::Value,UpdateFail> {
     let v:serde_json::Value=serde_json::from_str(json).map_err(|_|UpdateFail::Bad)?;
@@ -89,37 +88,12 @@ pub fn parse_release(json:&str)->Result<Release,UpdateFail> {
     r.source=source.into();Ok(r)
 }
 pub fn parse_baseos(json:&str,target:&str,running:&str)->Option<Release> {
-    let v = release_json(json).ok()?;
-    baseos_asset(&v, target, running)
-}
-
-fn baseos_asset(v: &serde_json::Value, target: &str, running: &str) -> Option<Release> {
-    if target.is_empty() || !target.bytes().all(|c| c.is_ascii_alphanumeric()) {
-        return None;
-    }
-    let version = v["tag_name"].as_str()?.strip_prefix('v')?;
-    if !plain(version) {
-        return None;
-    }
-    let mut release = asset(v, BASEOS_REPO, &format!("baseos-{target}-{version}.bosupd"), Kind::BaseOs).ok()?;
-    release.version = version.into();
-    release.running = running.strip_prefix('v').unwrap_or(running).into();
-    if v["prerelease"] == true {
-        release.version.push_str(" (preview)");
-    }
-    Some(release)
-}
-
-fn baseos_version(release: &Release) -> &str {
-    release.version.strip_suffix(" (preview)").unwrap_or(&release.version)
-}
-
-fn parse_baseos_releases(json: &str, target: &str, running: &str) -> Result<Option<Release>, UpdateFail> {
-    let releases: Vec<serde_json::Value> = serde_json::from_str(json).map_err(|_| UpdateFail::Bad)?;
-    Ok(releases.iter()
-        .filter(|v| v["draft"] == false && v["prerelease"].is_boolean())
-        .filter_map(|v| baseos_asset(v, target, running))
-        .max_by_key(|r| (parts(baseos_version(r)), !r.version.ends_with(" (preview)"))))
+    if target.is_empty()||!target.bytes().all(|c|c.is_ascii_alphanumeric()) {return None;}
+    let v=release_json(json).ok()?;
+    let version=v["tag_name"].as_str()?.strip_prefix('v')?;
+    if !plain(version) {return None;}
+    let mut r=asset(&v,BASEOS_REPO,&format!("baseos-{target}-{version}.bosupd"),Kind::BaseOs).ok()?;
+    r.version=version.into();r.running=running.into();Some(r)
 }
 
 pub fn plain(v: &str) -> bool {
@@ -252,13 +226,13 @@ fn build_day() -> Option<u64> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateJob {
     Check,
-    CheckWithBaseOsPreviews,
     Install(Release),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateEvent {
     Available(Vec<Release>),
+    BaseOsStatus(String),
     UpToDate,
     Progress(u64),
     Staged,
@@ -331,61 +305,51 @@ pub fn check_with(
     fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, UpdateFail>,
     running: Running,
 ) -> UpdateEvent {
-    check_with_options(now_unix, fetch, running, false)
+    check_report_with(now_unix,fetch,running,&mut |_|{})
 }
 
-pub fn check_with_options(
-    now_unix: u64,
-    fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, UpdateFail>,
-    running: Running,
-    previews: bool,
-) -> UpdateEvent {
+fn check_report_with(now_unix:u64, fetch:&mut dyn FnMut(&str)->Result<Vec<u8>,UpdateFail>,
+    running:Running, report:&mut dyn FnMut(String))->UpdateEvent {
     if clock_is_wrong(now_unix) {
         return UpdateEvent::Failed(UpdateFail::Clock);
     }
-    let mut get = |url: &str| fetch(url).and_then(|b| String::from_utf8(b).map_err(|_| UpdateFail::Bad));
-    let slot = (|| {
-        let mut slot = parse_release(&get(LATEST)?)?;
-        slot.running = running.slot.into();
-        if slot.running.is_empty() || !slot.running.bytes().all(|c| c.is_ascii_hexdigit()) {
-            return Err(UpdateFail::Bad);
+    let body = match fetch(LATEST).and_then(|b| String::from_utf8(b).map_err(|_| UpdateFail::Bad)) {
+        Ok(body) => body,
+        Err(e) => return UpdateEvent::Failed(e),
+    };
+    let slot = match parse_release(&body) {
+        Ok(r) => Release {
+            running: running.slot.to_string(),
+            ..r
+        },
+        Err(e) => return UpdateEvent::Failed(e),
+    };
+    let baseos = if let Some((target,version))=running.baseos {
+        match fetch(BASEOS_LATEST).and_then(|b|String::from_utf8(b).map_err(|_|UpdateFail::Bad)) {
+            Ok(json)=>match parse_baseos(&json,target,version) {
+                Some(release) if plain(version)=>{
+                    report(if newer(&release.version,version) {format!("{} available",release.version)}else{"Up to date".into()});
+                    Some(release)
+                },
+                Some(_)=>{report("Installed version unknown".into());None},
+                None=>{report("No compatible release".into());None},
+            },
+            Err(_)=>{report("Check failed · retry".into());None},
         }
-        if slot.source.starts_with(&slot.running) {
-            return Ok(None);
-        }
-        // Only offer a descendant of the installed build, never a downgrade.
-        let url = format!("https://api.github.com/repos/{SLOT_REPO}/compare/{}...{}", slot.running, slot.source);
-        let ancestry: serde_json::Value = serde_json::from_str(&get(&url)?).map_err(|_| UpdateFail::Bad)?;
-        match ancestry["status"].as_str() {
-            Some("ahead") => Ok(Some(slot)),
-            Some("behind" | "diverged" | "identical") => Ok(None),
-            _ => Err(UpdateFail::Bad),
-        }
-    })();
-    let baseos = (|| {
-        let Some((target, version)) = running.baseos else { return Ok(None); };
-        let release = if previews {
-            parse_baseos_releases(&get(BASEOS_RELEASES)?, target, version)?
-        } else {
-            parse_baseos(&get(BASEOS_LATEST)?, target, version)
-        };
-        Ok(release.filter(|r| newer(baseos_version(r), &r.running)))
-    })();
-    let mut offers = Vec::new();
-    let mut failure = None;
-    for result in [slot, baseos] {
-        match result {
-            Ok(Some(release)) => offers.push(release),
-            Ok(None) => {},
-            Err(error) => { failure.get_or_insert(error); }
-        }
+    } else {report("Device/version unavailable".into());None};
+    let mut offers=Vec::new();
+    if !slot.source.starts_with(slot.running.as_str()) {
+        if slot.running.is_empty()||!slot.running.bytes().all(|c|c.is_ascii_hexdigit()) {return UpdateEvent::Failed(UpdateFail::Bad);}
+        // A test build may be newer than stable or on a diverged branch. Never offer
+        // an older launcher just because its source hash differs from this build.
+        let url=format!("https://api.github.com/repos/{SLOT_REPO}/compare/{}...{}",slot.running,slot.source);
+        let ancestry=match fetch(&url).and_then(|b|serde_json::from_slice::<serde_json::Value>(&b).map_err(|_|UpdateFail::Bad)) {Ok(v)=>v,Err(e)=>return UpdateEvent::Failed(e)};
+        match ancestry["status"].as_str() {Some("ahead")=>offers.push(slot),Some("behind"|"diverged"|"identical")=>{},_=>return UpdateEvent::Failed(UpdateFail::Bad)}
     }
-    if !offers.is_empty() {
-        UpdateEvent::Available(offers)
-    } else if let Some(error) = failure {
-        UpdateEvent::Failed(error)
-    } else {
-        UpdateEvent::UpToDate
+    if let Some(baseos)=baseos.filter(|r|newer(&r.version,&r.running)) {offers.push(baseos);}
+    match offers.is_empty() {
+        true => UpdateEvent::UpToDate,
+        false => UpdateEvent::Available(offers),
     }
 }
 
@@ -683,20 +647,17 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
     }
     if ticket.cancelled() {return UpdateEvent::Cancelled;}
     let event = match job {
-        UpdateJob::Check | UpdateJob::CheckWithBaseOsPreviews => {
+        UpdateJob::Check => {
             let target = crate::baseos::var("BASEOS_TARGET");
             let version = crate::baseos::var("BASEOS_VERSION");
-            check_with_options(
+            check_report_with(
                 now_unix(),
-                &mut |url| {
-                    if ticket.cancelled() { return Err(UpdateFail::Offline); }
-                    fetch(url, API_TIMEOUT, &mut |_| {})
-                },
+                &mut |url| fetch(url, API_TIMEOUT, &mut |_| {}),
                 Running {
                     slot: crate::build_info::Build::current().hash,
-                    baseos: if baseos_status().is_some() {target.as_deref().zip(version.as_deref())}else{None},
+                    baseos: target.as_deref().zip(version.as_deref()),
                 },
-                matches!(job, UpdateJob::CheckWithBaseOsPreviews),
+                &mut |message| {let _=tx.send(UpdateEvent::BaseOsStatus(message));},
             )
         }
         UpdateJob::Install(release) => {
@@ -740,11 +701,11 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
 
 #[cfg(feature = "device")]
 fn baseos_status() -> Option<String> {
-    let out = std::process::Command::new("baseos-update")
+    let out = std::process::Command::new("/usr/sbin/baseos-update")
         .arg("status")
         .output()
         .ok()?;
-    Some(String::from_utf8_lossy(&out.stdout).into_owned())
+    out.status.success().then(||String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 #[cfg(not(feature = "device"))]

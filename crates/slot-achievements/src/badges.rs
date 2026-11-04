@@ -78,7 +78,6 @@ pub(crate) struct Queue {
     pending: VecDeque<String>,
     checking:VecDeque<String>,
     discovery:VecDeque<PathBuf>,
-    unavailable: BTreeSet<String>,
     validated:BTreeMap<String,(u64,std::time::SystemTime)>,
     retry: Instant,
     pub waiting: bool,
@@ -93,7 +92,6 @@ impl Queue {
             names: BTreeSet::new(),
             known: BTreeSet::new(),
             pending: VecDeque::new(),checking:VecDeque::new(),discovery:VecDeque::new(),validated:BTreeMap::new(),
-            unavailable: BTreeSet::new(),
             retry: Instant::now(),
             waiting: false,problem:"",retry_delay:30,
         };
@@ -111,7 +109,6 @@ impl Queue {
             };
             // Known, unchanged files are never inflated for each referencing game.
             let fresh=self.known.insert(achievement.badge.clone());
-            if self.unavailable.contains(&achievement.badge) { continue; }
             if !fresh && (self.names.contains(&achievement.badge) || self.validated.get(&achievement.badge).copied()==stamp(&path)) {continue;}
             self.names.insert(achievement.badge.clone());
             if path.is_file() {self.checking.push_back(achievement.badge.clone());}
@@ -153,6 +150,7 @@ impl Queue {
     pub fn counts(&self) -> (usize, usize) {
         (self.known.len().saturating_sub(self.pending.len()+self.checking.len()), self.known.len())
     }
+    pub fn network_available(&mut self) {self.retry=Instant::now();self.waiting=false;self.retry_delay=30;}
     pub fn retry_seconds(&self)->u64 {if self.waiting {self.retry.saturating_duration_since(Instant::now()).as_secs()}else{0}}
     pub fn percent(&self) -> u8 {
         if self.known.is_empty() {
@@ -166,13 +164,6 @@ impl Queue {
         !self.pending.is_empty() || !self.checking.is_empty() || !self.discovery.is_empty()
     }
 
-    pub fn reconnect(&mut self) {
-        if self.waiting {
-            self.retry = Instant::now();
-            self.retry_delay = 30;
-        }
-    }
-
     /// At most one bounded HTTP request per pass. Award uploads and game setup go first.
     /// Badge failures never invalidate authentication or delay achievement evaluation.
     pub fn step(&mut self, http: &mut impl Transport) {
@@ -184,28 +175,12 @@ impl Queue {
             return;
         };
         let target = path(&self.dir, &name).unwrap();
-        let result = if load_badge(&target).is_some() {
-            Ok(())
-        } else {
-            match http.badge(&name) {
-                Err(Failure::MissingArtwork) => {
-                    // A removed badge should never back off the rest of the artwork queue.
-                    self.names.remove(&name);
-                    self.known.remove(&name);
-                    self.unavailable.insert(name);
-                    self.waiting = false;
-                    self.problem = "";
-                    self.retry_delay = 30;
-                    return;
-                }
-                Err(Failure::Network) => Err("Artwork server unavailable"),
-                Err(_) => Err("Artwork response invalid"),
-                Ok(bytes) => (|| {
-                    decode(&bytes).ok_or("Artwork response invalid")?;
-                    std::fs::create_dir_all(target.parent().unwrap()).map_err(|_| "Cannot save artwork")?;
-                    slot_store::atomic_write(&target, &bytes).map_err(|_| "Cannot save artwork")
-                })(),
-            }
+        let result = if load_badge(&target).is_some() {Ok(())}else {
+            http.badge(&name).map_err(|e|if e==Failure::Network {http.network_problem()}else{"Artwork response invalid"}).and_then(|bytes| {
+                decode(&bytes).ok_or("Artwork response invalid")?;
+                std::fs::create_dir_all(target.parent().unwrap()).map_err(|_|"Cannot save artwork")?;
+                slot_store::atomic_write(&target,&bytes).map_err(|_|"Cannot save artwork")
+            })
         };
         if result.is_ok() {
             self.waiting=false;self.problem="";self.retry_delay=30;self.retry=Instant::now()+Duration::from_secs(3);
@@ -247,6 +222,8 @@ mod tests {
         let mut http=Failing(0);q.step(&mut http);assert_eq!(http.0,1);assert!(q.waiting);assert!(q.retry_seconds()>=29);
         for _ in 0..100 {q.step(&mut http);}assert_eq!(http.0,1);
         q.retry=Instant::now();q.step(&mut http);assert_eq!(http.0,2);assert!(q.retry_seconds()>=59);
+        // A restored connection must wake artwork as well as the main RA queue.
+        q.network_available();assert!(!q.waiting);q.step(&mut http);assert_eq!(http.0,3);assert!(q.retry_seconds()<=30);
     }
     #[test]
     #[ignore = "fetches one public RA badge; no account or award request"]

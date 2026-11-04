@@ -1,8 +1,6 @@
-# Device services and settings follow-up
+# Active device follow-up
 
-Active branch `fix/device-services-ux`, based on main `1d45793`. See the newest entry in WORKLOG.md for the RG34XXSP Wi-Fi report, implementation and verification status. Physical DHCP and Finder checks remain pending.
-
----
+Continue on `fix/device-services-ux`, [PR #202](https://github.com/jgraving/slot.sp/pull/202), reconciled with merged PR #203. See WORKLOG.md for verification and hardware follow-up.
 
 # Wi-Fi diagnostics complete
 

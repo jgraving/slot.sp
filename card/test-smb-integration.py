@@ -48,21 +48,11 @@ script=pathlib.Path(__file__).resolve().parent/'System/slotsmb.sh'
 with tempfile.TemporaryDirectory() as tmp:
     root=pathlib.Path(tmp);root.chmod(0o755) # Match the traversable SD root for unprivileged runtime conversion modules.
     (root/'System').mkdir();shutil.copytree(runtime,root/'System/samba')
+    for folder in ('Games/GB','Games/GBC','Games/GBA','Wallpapers','Saves','Labels','Diagnostics'):(root/folder).mkdir(parents=True)
     (root/'Config').mkdir();(root/'Config/secret').write_text('PRIVATE CARD CONTENT')
     run=root/'run';run.mkdir()
     loader=next((root/'System/samba/lib').glob('ld-linux-*.so.*'))
     env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader),SLOT_SMB_TEST_PORT='1445',SLOT_SMB_TEST_INTERFACE='lo',GCONV_PATH=str(root/'System/samba/gconv'))
-    # Model a content card whose mount drops execute permissions. The test
-    # client still needs the original loader, so use a non-executable server copy.
-    card_loader=root/'System/samba/lib/card-loader'
-    shutil.copyfile(loader,card_loader)
-    card_loader.chmod(0o644)
-    env['SLOT_SMB_LOADER']=str(card_loader)
-    for binary in (root/'System/samba/bin').iterdir():
-        if binary.name != 'smbclient':
-            binary.chmod(0o644)
-    for wrapper in (root/'System/samba/libexec').iterdir():
-        wrapper.chmod(0o644)
     password='Arcade shelf@2026!'
     subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
     config=(run/'slot-smb/smb.conf').read_text()
@@ -76,8 +66,8 @@ with tempfile.TemporaryDirectory() as tmp:
         try:
             with socket.create_connection(('127.0.0.1',1445),.1):return True
         except OSError:return False
-    def client(command,ok=True,protection='encrypt',authfile=auth,port=1445,protocol='SMB3',share='Games'):
-        args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),f'//127.0.0.1/{share}','-p',str(port),'-m',protocol,f'--client-protection={protection}','-A',str(authfile),'-c',command]
+    def client(command,ok=True,protection='encrypt',authfile=auth,port=1445,protocol='SMB3'):
+        args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'//127.0.0.1/SDCard','-p',str(port),'-m',protocol,f'--client-protection={protection}','-A',str(authfile),'-c',command]
         result=subprocess.run(args,text=True,capture_output=True,timeout=15,env=env)
         if ok:assert result.returncode==0,(result.stdout,result.stderr)
         else:assert result.returncode!=0,(result.stdout,result.stderr)
@@ -91,8 +81,9 @@ with tempfile.TemporaryDirectory() as tmp:
         # Finder and Explorer enumerate shares through named-pipe SRVSVC, not just direct file access.
         enumerate_args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'-L','127.0.0.1','-p','1445','-m','SMB3','--client-protection=encrypt','-A',str(auth)]
         enumeration=subprocess.run(enumerate_args,text=True,capture_output=True,timeout=15,env=env)
-        assert enumeration.returncode==0 and all(name in enumeration.stdout for name in ('Games','Labels','Wallpapers')),(enumeration.stdout,enumeration.stderr)
-        listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA'));assert 'Config' not in listing and 'secret' not in listing
+        assert enumeration.returncode==0 and 'SDCard' in enumeration.stdout,(enumeration.stdout,enumeration.stderr)
+        listing=client('ls');assert all(p in listing for p in ('Games','Wallpapers','Config','System','Saves','Labels','Diagnostics'))
+        client(f'get Config/secret {root}/read-back');assert (root/'read-back').read_text()=='PRIVATE CARD CONTENT'
         bad=root/'bad-auth';bad.write_text('username = slot\npassword = WRONG\n');bad.chmod(0o600)
         client('ls',False,authfile=bad)
         client('ls',False,protocol='SMB2')
@@ -101,23 +92,30 @@ with tempfile.TemporaryDirectory() as tmp:
         # Observe actual wire frames, so a plaintext file exchange cannot pass unnoticed.
         with EncryptionProbe() as probe:
             client('ls',protection='off',port=probe.port)
-            client(f'put {source} GBA/Privacy.gba',protection='off',port=probe.port)
+            client(f'put {source} Games/GBA/Privacy.gba',protection='off',port=probe.port)
             assert probe.encrypted>0,'no encrypted SMB3 transform frames observed'
             assert not probe.plain_file_commands,('plaintext file operations',probe.plain_file_commands)
         assert (root/'Games/GBA/Privacy.gba').read_bytes()==source.read_bytes()
-        client(f'put {source} GBA/Uploaded.gba')
+        client(f'put {source} Games/GBA/Uploaded.gba')
         assert (root/'Games/GBA/Uploaded.gba').read_bytes()==source.read_bytes()
-        client(f'put {source} GBA/Étoile.gba')
+        client(f'put {source} Games/GBA/Étoile.gba')
         assert (root/'Games/GBA/Étoile.gba').read_bytes()==source.read_bytes()
         wallpaper=root/'wallpaper.png'
         wallpaper.write_bytes((script.parents[2]/'assets/background_default.png').read_bytes())
-        client(f'put {wallpaper} Uploaded.png',share='Wallpapers')
+        client(f'put {wallpaper} Wallpapers/Uploaded.png')
         assert (root/'Wallpapers/Uploaded.png').read_bytes()==wallpaper.read_bytes()
-        (root/'Games/private-link').symlink_to(root/'Config/secret')
-        client(f'get private-link {root}/leaked',False)
-        client(f'get ../Config/secret {root}/leaked',False)
-        client('ls',False,share='Config')
-        assert not (root/'leaked').exists() or not (root/'leaked').read_bytes()
+        # Normal folders support create/read/rename/delete directly; Finder metadata is accepted.
+        client(f'put {source} .DS_Store')
+        for folder in ('Saves','Labels','Config','Diagnostics','System'):
+            client(f'mkdir {folder}/Transfer; put {source} {folder}/Transfer/new; rename {folder}/Transfer/new {folder}/Transfer/renamed; get {folder}/Transfer/renamed {root}/roundtrip')
+            assert (root/'roundtrip').read_bytes()==source.read_bytes()
+            client(f'del {folder}/Transfer/renamed; rmdir {folder}/Transfer')
+        with tempfile.TemporaryDirectory() as outside:
+            secret=pathlib.Path(outside)/'secret';secret.write_text('OUTSIDE SD CARD')
+            (root/'external-link').symlink_to(secret)
+            client(f'get external-link {root}/leaked',False)
+            client(f'get ../secret {root}/leaked',False)
+            assert not (root/'leaked').exists() or not (root/'leaked').read_bytes()
     except BaseException:
         for log in sorted((run/'slot-smb').glob('test-log.*')):
             print(f'{log.name}:\n{log.read_text(errors="replace")[-12000:]}',file=sys.stderr)
@@ -148,4 +146,4 @@ with tempfile.TemporaryDirectory() as tmp:
     finally:
         if parent.poll() is None:parent.terminate();parent.wait()
         if server.poll() is None:os.killpg(server.pid,signal.SIGKILL);server.wait()
-print('Real SMB3: password, encryption, upload isolation and shutdown checks passed')
+print('Real SMB3: password, encryption, full-card access and outside-card isolation and shutdown checks passed')

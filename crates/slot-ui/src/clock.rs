@@ -81,6 +81,7 @@ pub struct ClockPicker {
     cursor: usize,
     editing: bool,
     twelve: bool,
+    automatic: bool,
     offset_only: bool,
 }
 
@@ -98,6 +99,7 @@ impl ClockPicker {
             cursor: 0,
             editing: false,
             twelve: false,
+            automatic: false,
             offset_only: false,
         }
     }
@@ -121,6 +123,7 @@ impl ClockPicker {
             cursor: 0,
             editing: false,
             twelve: false,
+            automatic: false,
             offset_only: false,
         }
     }
@@ -163,7 +166,8 @@ impl ClockPicker {
     pub fn offset_only(&self) -> bool { self.offset_only }
     pub fn editing(&self) -> bool { self.editing }
 
-    pub fn toggle_editing(&mut self) { self.editing = !self.editing; }
+    pub fn set_automatic(&mut self, automatic:bool) {self.automatic=automatic;if automatic && self.cursor()!=Field::Offset {self.editing=false;}}
+    pub fn toggle_editing(&mut self) {if !self.automatic || self.cursor()==Field::Offset { self.editing = !self.editing; }}
 
     pub fn navigate(&mut self, dx: i32, dy: i32) {
         if self.editing {
@@ -215,7 +219,7 @@ impl ClockPicker {
             self.day,
             self.hour,
             self.minute,
-            format!("{}{}",self.offset_text(),if self.twelve {" · 12h"}else{""})
+            format!("{}{}{}",self.offset_text(),if self.twelve {" · 12h"}else{""},if self.automatic {" · automatic"}else{""})
         )
     }
 
@@ -277,9 +281,9 @@ impl ClockPicker {
                         px,
                         18.0_f32.min(px),
                     );
-                    let ink = if self.offset_only && i != Field::ALL.len() - 1 { [112, 116, 128] } else { ink };
                     text::draw_centred(&mut f.rgba, f.w, f.h, &layout, ink);
                 }
+                if (self.automatic || self.offset_only) && i!=5 {for px in f.rgba.chunks_exact_mut(4) {px[3]=(px[3] as f32*0.45) as u8;}}
                 put(f, x as u32, y as u32 + dy);
             }
         }

@@ -50,24 +50,20 @@ The clock, status icons and button hints change between light and dark colors to
 
 ![The About sticker with project, artwork and typeface credits](previews/current/light/about.png)
 
-**Updates** needs a Wi-Fi connection. **Automatic time** corrects UTC in the background and disables **Date & Time** while it is on. You can turn it off while disconnected. **Time zone** still applies your local UTC offset, including any daylight-saving adjustment.
+**Updates** and **Automatic time** follow Device code in General. They are grey without a connected Wi-Fi network; selecting them opens Network with a short explanation. **Time zone** opens the UTC-offset field directly, works offline, and applies changes immediately. Automatic time corrects UTC in the background; choose your own local offset.
 
-## Network game uploads
+
+## File sharing
 
 On a trusted Wi-Fi network, open **Settings → Network → File sharing** and turn **Sharing** on. Choose **Set password** to enter 8–32 printable characters, or use the generated password. Select **Password** to show or hide it. Sign in with username **slot** and the sharing password.
 
-- **macOS:** in Finder, choose **Go → Connect to Server** (⌘K), enter the `smb://` address shown on the handheld and select **Registered User**. Choose **Games**, **Labels**, or **Wallpapers**. To open Games directly, append `/Games` to the address.
-- **Windows:** open **SLOTSP** in File Explorer's Network view, or enter `\\DEVICE-IP\Games`.
-- **Linux:** open the discovered SMB server or enter `smb://DEVICE-IP/Games` in your file manager.
+- **macOS:** in Finder, choose **Go → Connect to Server** (⌘K) and enter the displayed `smb://` address.
+- **Windows:** open **SLOTSP** in File Explorer’s Network view or enter `\\\\DEVICE-IP\\SDCard`.
+- **Linux:** open the discovered server or enter `smb://DEVICE-IP/SDCard` in your file manager.
 
-These shares write directly to the corresponding folders on the content card. Use **GB**, **GBC**, or **GBA** under **Games** and **Labels**. Finish copying and turn sharing off before launching a game or opening Cart Studio. The carousel refreshes when sharing stops. Changes and deletions through SMB apply to the card immediately.
+The **SDCard** share writes directly to the content card. Finish copying and turn sharing off before launching a game, opening Cart Studio, or installing an update. The carousel refreshes when sharing stops. Saving a new password disconnects existing sessions.
 
-Sharing requires authenticated, encrypted SMB3. Saves, Config, System and the rest of the card stay outside the shares. Saving a new password disconnects existing sessions. Devices must be able to reach each other on the local network.
-
-Sharing turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks your vault and the same saved Wi-Fi network reconnects. A short warning pill appears when enabling this option. Network changes revoke sharing; it is also paused during gameplay, Cart Studio, link play, kid mode, sleep and shutdown. A dropped connection requires enabling it again. Use a trusted home network; the saved network name does not identify a router cryptographically.
-
-The build includes Samba and its private runtime; it does not require installing a different BaseOS. The matching **slot.sp-network-sources.zip** download contains corresponding source and dependency provenance.
-
+Sharing requires authenticated, encrypted SMB3. It turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks the vault and the saved network reconnects. Only share on a trusted network.
 
 ### Wi-Fi connection progress
 

@@ -63,3 +63,10 @@ fn no_file_and_no_environment_is_no_value() {
         None
     );
 }
+
+#[test]
+fn empty_exported_values_do_not_mask_installed_identity() {
+    let dir=tempfile::tempdir().unwrap();let release=dir.path().join("baseos-release");
+    std::fs::write(&release,RELEASE).unwrap();
+    assert_eq!(var_in("BASEOS_VERSION",Some(String::new()),&release).as_deref(),Some("1.3.0"));
+}

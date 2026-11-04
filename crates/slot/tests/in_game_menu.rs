@@ -810,13 +810,13 @@ fn settings_opens_the_same_complete_four_column_home_as_the_carousel() {
 }
 #[test]
 fn about_and_clock_return_to_the_same_paused_game_without_powering_it_down() {
-    for row in [QuickRow::About,QuickRow::DateTime,QuickRow::TimeZone] {
+    for row in [QuickRow::About,QuickRow::DateTime] {
         let (_d,mut a)=playing();a.update(1.0);a.apply(Action::QuickMenu);
         common::navigate_in_game_menu(&mut a,QuickRow::Settings);press(&mut a,Btn::A);
         common::navigate_in_game_menu(&mut a,QuickRow::General);
         press(&mut a,Btn::A);for _ in 0..16 {if a.in_game_menu()==Some(row){break;}press(&mut a,Btn::Down);}
         assert_eq!(a.in_game_menu(),Some(row));press(&mut a,Btn::A);a.update(1.0);
-        assert!(matches!((row,a.phase()),(QuickRow::About,Phase::About)|(QuickRow::DateTime|QuickRow::TimeZone,Phase::SetClock{..})));
+        assert!(matches!((row,a.phase()),(QuickRow::About,Phase::About)|(QuickRow::DateTime,Phase::SetClock{..})));
         assert_eq!(a.screen_power(),1.0);
         press(&mut a,Btn::B);assert!(matches!(a.phase(),Phase::Playing{cart}if cart=="Emerald"));assert_eq!(a.in_game_menu(),Some(row));
         press(&mut a,Btn::B);assert_eq!(a.in_game_menu(),Some(QuickRow::General));

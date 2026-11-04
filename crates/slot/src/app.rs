@@ -893,7 +893,7 @@ impl App {
             if app.kid_error {
                 app.open_kid_controls();
             }
-        } else if app.state.clock_set || app.network.as_ref().is_some_and(|m| m.automatic_time_enabled()) {
+        } else if app.state.clock_set {
             app.start();
         } else {
             app.phase = clock_screen(system_secs(), 0, false);
@@ -1185,7 +1185,7 @@ impl App {
         *seed=picker.secs();
         let utc=self.utc_secs()+moved;
         if moved!=0 {if let Some(power)=&mut self.power {power.set_clock(utc);}}
-        self.state.utc_offset_min=offset;if moved!=0 {self.state.clock_set=true;}
+        self.state.utc_offset_min=offset;self.state.clock_set=true;
         self.display_settings.override_until=None;self.sync_display_schedule();self.save_display();self.persist();
     }
 
@@ -1437,7 +1437,7 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
-            | QuickRow::Wifi | QuickRow::CartStudio
+            | QuickRow::Wifi | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
@@ -1845,6 +1845,8 @@ impl App {
             WallpaperPick::File(_) | WallpaperPick::Random
         );
         let mut hidden = vec![];
+        if self.kids.active || self.shelf().carts.is_empty() {hidden.extend([QuickRow::CartStudio,QuickRow::CartEdit]);}
+        if !self.shelf().carts.get(self.shelf().index).is_some_and(|c|c.platform==Platform::Gba) {hidden.push(QuickRow::CartCore);}
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -2590,7 +2592,7 @@ impl App {
                 self.kid_error = true;
                 self.phase = Phase::Shelf;
                 self.open_kid_controls();
-            } else if !self.network.as_ref().is_some_and(|m| m.automatic_time_enabled()) {
+            } else {
                 self.phase = clock_screen(secs, 0, false);
             }
         }
@@ -2965,6 +2967,9 @@ impl App {
     }
 
     pub fn apply(&mut self, action: Action) {
+        if matches!(action,Action::GbaDown(_)|Action::Insert|Action::QuickMenu) {
+            if let Some(menu)=&mut self.network {menu.dismiss_automatic_time_notice();}
+        }
         if self.custom_menu_key().is_some() && matches!(action, Action::GbaDown(_)) {
             self.settings_notice_revision=self.settings_notice_revision.wrapping_add(1);
         }
@@ -3107,6 +3112,11 @@ impl App {
             picker, from_menu, ..
         } = &mut self.phase
         {
+            if self.network.as_ref().is_some_and(|m|m.automatic_time_enabled()) && picker.cursor()!=slot_ui::Field::Offset
+                && matches!(action,Action::GbaDown(Btn::A)|Action::Insert) {
+                if let Some(menu)=&mut self.network {menu.automatic_time_notice();}
+                return;
+            }
             if *from_menu && self.clock_return_row == QuickRow::TimeZone {
                 match action {
                     Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
@@ -3191,10 +3201,10 @@ impl App {
         match self.phase {
             Phase::Shelf => match action {
                 Action::GbaDown(Btn::Start) if self.core_picker.is_none() => {
-                    if self.shelf().carts.get(self.shelf().index).is_some_and(|c| c.platform == Platform::Gba) {
-                        self.open_core_picker();
-                    } else {
-                        self.open_studio();
+                    if !self.shelf().carts.is_empty() {
+                        self.play_held=None;self.shelf_mut().release_hold();
+                        let row=if self.kids.active {QuickRow::CartCore}else{QuickRow::CartEdit};
+                        if !self.hidden_rows().contains(&row) {self.phase=Phase::QuickMenu{row};}
                     }
                 }
                 _ if self.core_picker.is_some() => self.core_picker_input(action),
@@ -3275,6 +3285,7 @@ impl App {
     }
 
     fn quick_menu_input(&mut self, row: QuickRow, action: Action) {
+        if row.page()==QuickRow::CART && action==Action::GbaDown(Btn::Start) {self.phase=Phase::Shelf;return;}
         if row.page()==QuickRow::MAIN {
             let direction=match action {
                 Action::GbaDown(Btn::Left)=>Some((-1,0)),Action::GbaDown(Btn::Right)=>Some((1,0)),
@@ -3364,7 +3375,10 @@ impl App {
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
             QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::TimeZone|QuickRow::About => {
-                if row == QuickRow::DateTime && self.manual_clock_locked() { return; }
+                if row == QuickRow::DateTime && self.network.as_ref().is_some_and(|m| m.automatic_time_enabled()) {
+                    self.open_quick_row(row);
+                    return;
+                }
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
             },
@@ -3415,12 +3429,6 @@ impl App {
         }
     }
 
-    fn manual_clock_locked(&mut self) -> bool {
-        let Some(menu) = self.network.as_mut().filter(|m| m.automatic_time_enabled()) else { return false; };
-        menu.background_notice("Automatic time is on");
-        true
-    }
-
     fn open_quick_row(&mut self, row: QuickRow) {
         if row.toggle() { return self.change_setting(row, true); }
         match row {
@@ -3441,10 +3449,17 @@ impl App {
                 }
             }
             QuickRow::DateTime | QuickRow::TimeZone => {
-                if row == QuickRow::DateTime && self.manual_clock_locked() { return; }
+                let automatic=self.network.as_ref().is_some_and(|m|m.automatic_time_enabled());
+                if automatic && row==QuickRow::DateTime {
+                    if let Some(menu)=&mut self.network {menu.automatic_time_notice();}
+                    return;
+                }
                 self.clock_return_row=row;
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
-                if row==QuickRow::TimeZone {if let Phase::SetClock{picker,..}=&mut self.phase {picker.edit_offset_only();}}
+                if let Phase::SetClock{picker,..}=&mut self.phase {
+                    picker.set_automatic(automatic);
+                    if row==QuickRow::TimeZone {picker.edit_offset_only();}
+                }
             }
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
@@ -3455,7 +3470,8 @@ impl App {
                     if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
-            QuickRow::CartStudio => self.open_studio(),
+            QuickRow::CartStudio | QuickRow::CartEdit => self.open_studio(),
+            QuickRow::CartCore => {self.phase=Phase::Shelf;self.open_core_picker();},
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
@@ -3558,7 +3574,6 @@ impl App {
     }
 
     fn change_setting(&mut self, row: QuickRow, right: bool) {
-        if row == QuickRow::DateTime && self.manual_clock_locked() { return; }
         if row==QuickRow::AutomaticTime {if let Some(m)=&mut self.network {m.toggle_automatic_time();}return;}
 
         if row == QuickRow::Scaling { self.set_picture(self.video_mode.step(right)); return; }
@@ -3742,7 +3757,7 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
-            | QuickRow::Wifi | QuickRow::CartStudio
+            | QuickRow::Wifi | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
@@ -4513,17 +4528,12 @@ impl App {
         self.panel_lit() && self.screen > 0.0
     }
 
-    fn sharing_blocks_library_access(&mut self) -> bool {
-        let Some(menu) = self.network.as_mut().filter(|m| m.sharing_busy()) else { return false; };
-        menu.background_notice("Turn off file sharing first");
-        true
-    }
-
+    /// Startup credential prompts wait for the boot intro and other modal pages.
     pub fn open_studio(&mut self) {
         if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
-        if self.sharing_blocks_library_access() { return; }
         let Some(root)=self.root.clone() else {return;};
         let Some(cart)=self.shelf().carts.get(self.shelf().index).cloned() else {return;};
+        if self.network.as_mut().is_some_and(|m|!m.local_files_ready()) {return;}
         let wifi=self.network.as_ref().is_some_and(|m|m.wifi_connected());
         self.play_held=None;self.shelf_mut().release_hold();
         self.studio=Some(crate::studio_menu::Menu::new(root,cart,wifi));
@@ -4572,15 +4582,9 @@ impl App {
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
             if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
-        if let Some(catalog) = self.network.as_mut().and_then(|m| m.take_sharing_catalog()) {
-            self.catalog = catalog;
-            self.apply_kid_scope();
-            // Clients can replace an image while retaining its name.
-            for (_, shelf) in &mut self.shelves {
-                for i in 0..shelf.carts.len() {
-                    self.orphaned.extend(shelf.take_face(i));
-                    self.orphaned.extend(shelf.take_interior(i));
-                }
+        if matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}) && self.studio.is_none() {
+            if let Some(carts)=self.network.as_mut().and_then(|m|m.take_shared_snapshot()) {
+                self.catalog=carts;self.apply_kid_scope();
             }
         }
         self.step_net_time();
@@ -4789,18 +4793,13 @@ impl App {
             && stocked
                 .iter()
                 .zip(&carts)
-                .all(|(a, b)| a == b)
+                .all(|(a, b)| a.platform == b.platform && a.stem == b.stem)
         {
             return;
         }
-        let shelf = &mut self.shelves[at].1;
-        let old_index = shelf.index;
-        let next_index = shelf.carts.get(old_index).and_then(|old| {
-            carts.iter().position(|cart| cart.platform == old.platform && cart.stem == old.stem)
-        }).unwrap_or_else(|| old_index.min(carts.len().saturating_sub(1)));
-        self.orphaned.extend(shelf.restock(carts));
-        shelf.select(next_index);
-        let empty = shelf.carts.is_empty();
+        let old = self.shelves[at].1.restock(carts);
+        self.orphaned.extend(old);
+        let empty = self.shelves[at].1.carts.is_empty();
         if self.shelf_at == at && empty {
             self.shelf_at = self.next_shelf(1).unwrap_or(0);
         }
@@ -5674,16 +5673,12 @@ impl App {
         frame.entry=1.0; // The whole panel is translated after its layers are composed.
         frame.background = false; // The panel owns one surface behind both pages.
         frame.sliders=[Some(self.slider_motion.value(1,self.state.brightness as f32/9.0)),Some(self.slider_motion.value(2,self.state.blue_light as f32/9.0))];
-        let connected = self.network.as_ref().is_some_and(|m| m.wifi_connected());
-        let automatic = self.network.as_ref().is_some_and(|m| m.automatic_time_enabled());
-        let disabled: &[QuickRow] = match (connected, automatic) {
-            (true, false) => &[],
-            (true, true) => &[QuickRow::DateTime],
-            (false, false) => &[QuickRow::Updates, QuickRow::AutomaticTime],
-            (false, true) => &[QuickRow::Updates, QuickRow::DateTime],
-        };
+        let mut disabled=Vec::new();
+        if !self.network.as_ref().is_some_and(|m|m.wifi_connected()) {disabled.push(QuickRow::Updates);}
+        if self.network.as_ref().is_some_and(|m|m.automatic_time_enabled()) {disabled.push(QuickRow::DateTime);}
+        else if !self.network.as_ref().is_some_and(|m|m.wifi_connected()) {disabled.push(QuickRow::AutomaticTime);}
         QuickMenu {
-            disabled, row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
+            disabled: &disabled, row, hidden: &hidden, bound: Some(&bound), description: self.description(row),
             values: QuickRow::ALL.map(|r| self.quick_value(r)),
             clock: self.quick_clock_faces, wallpaper: self.quick_wallpaper_faces,
             faces: self.quick_menu_faces.as_ref(), ground: self.menu_ground(),
@@ -6204,13 +6199,18 @@ impl App {
             }
         }
 
-        let count = self.core_legend_faces.len().min(if self.kids.active { 3 } else { 4 });
-        if count >= 3 {
-            let legends = &self.core_legend_faces[..count];
-            let width = legends.iter().map(|(_, w)| w.saturating_sub(HINT_EDGE) as f32).sum::<f32>()
-                + CORE_LEGEND_GAP * (count - 1) as f32;
-            let mut x = self.canvas().centred(width);
-            for &(tex, w) in legends {
+        if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
+            let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
+            let swap_x = self.canvas().centred(seen(swap.1));
+            for (tex, w, x) in [
+                (
+                    cancel.0,
+                    cancel.1,
+                    swap_x - CORE_LEGEND_GAP - seen(cancel.1),
+                ),
+                (swap.0, swap.1, swap_x),
+                (choose.0, choose.1, swap_x + seen(swap.1) + CORE_LEGEND_GAP),
+            ] {
                 out.push(Draw::Tex {
                     x: x.round(),
                     y: CORE_LEGEND_Y,
@@ -6219,7 +6219,6 @@ impl App {
                     tex,
                     alpha: lift,
                 });
-                x += w.saturating_sub(HINT_EDGE) as f32 + CORE_LEGEND_GAP;
             }
         }
     }
@@ -6362,9 +6361,10 @@ impl App {
         if !self.kid_can_launch() {
             return;
         }
-        if !self.on_shelf() || self.sharing_blocks_library_access() {
+        if !self.on_shelf() {
             return;
         }
+        if self.network.as_mut().is_some_and(|m|!m.local_files_ready()) {self.play_held=None;return;}
         let at = self.shelf().index;
         let Some(cart) = self.shelf_mut().carts.get_mut(at).map(|c| {
             c.read_header();
@@ -6654,13 +6654,6 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
-        if action == Action::GbaDown(Btn::X) && !self.kids.active && !self.link_active()
-            && self.core_picker.is_some_and(|picker| !picker.closing())
-        {
-            self.core_picker = None;
-            self.open_studio();
-            return;
-        }
         let press = match action {
             Action::GbaDown(Btn::Left) | Action::ShelfLeft => Press::Left,
             Action::GbaDown(Btn::Right) | Action::ShelfRight => Press::Right,

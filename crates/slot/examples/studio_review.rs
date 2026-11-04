@@ -7,6 +7,7 @@ fn main() {
     use slot::{app::Phase, frontend::Frontend};
     use slot_gfx::Compositor;
     use slot_input::{Btn, InputSource, Millis, RawEvent};
+    use slot_ui::QuickRow;
     struct Input(Vec<RawEvent>);
     impl InputSource for Input {
         fn poll(&mut self, _: Millis) -> Vec<RawEvent> {
@@ -61,6 +62,30 @@ fn main() {
                 .write_image_data(&self.g.read_frame())
                 .unwrap();
         }
+        fn nav(&mut self, to: QuickRow) {
+            for _ in 0..32 {
+                let at = self.f.app().quick_menu().unwrap();
+                if at == to {
+                    return;
+                }
+                assert_eq!(at.page(), to.page());
+                let b = if at.page() == QuickRow::MAIN {
+                    let a = at.position(&[]);
+                    let b = to.position(&[]);
+                    if a % 4 < b % 4 {
+                        Btn::Right
+                    } else if a % 4 > b % 4 {
+                        Btn::Left
+                    } else {
+                        Btn::Down
+                    }
+                } else {
+                    Btn::Down
+                };
+                self.tap(b);
+            }
+            panic!("unreachable row");
+        }
     }
     let dir = std::path::PathBuf::from(std::env::args().nth(1).unwrap());
     std::fs::create_dir_all(&dir).unwrap();
@@ -106,8 +131,10 @@ fn main() {
     a.settle();
     assert!(matches!(a.f.app().phase(), Phase::Shelf));
     a.tap(Btn::Start);
-    a.save("carousel-studio-hint");
-    a.tap(Btn::X);
+    a.settle();
+    assert_eq!(a.f.app().quick_menu(),Some(QuickRow::CartEdit));
+    a.save("start-cartridge-menu");
+    a.tap(Btn::A);
     assert!(a.f.app().studio.is_some());
     a.save("studio-offline");
     a.tap(Btn::A);

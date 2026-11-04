@@ -1,4 +1,4 @@
-//! Password-only, encrypted SMB sharing. The SD root is never exported.
+//! Password-only, encrypted SMB sharing of the content SD card.
 use std::{
     net::Ipv4Addr,
     path::{Path, PathBuf},
@@ -83,7 +83,7 @@ impl Sharing {
                         (gen, result)
                     }
                     Command::Stop(gen) => {
-                        let was_running = running.is_some();
+                        let was_running=running.is_some();
                         stop(&mut running);
                         let catalog = if was_running { scan_library(&root) } else { None };
                         (gen, Event::Stopped(catalog))
@@ -158,14 +158,6 @@ impl Sharing {
         self.wanted.as_ref()
     }
 }
-fn scan_library(root: &Path) -> Option<Vec<slot_store::Cart>> {
-    let mut carts = slot_store::scan(root).ok()?;
-    for cart in &mut carts {
-        cart.read_header();
-    }
-    Some(carts)
-}
-
 pub fn password() -> Result<Zeroizing<String>, &'static str> {
     use ring::rand::SecureRandom;
     let mut bytes = [0u8; 16];
@@ -244,8 +236,14 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
         writeln!(input, "{}", start.password.as_str())
             .map_err(|_| "Could not set sharing password")?;
         drop(input);
-        if !setup.wait().map_err(|_| "Sharing unavailable")?.success() {
-            return Err("Sharing unavailable · update System");
+        let status=setup.wait().map_err(|_| "Sharing unavailable")?;
+        if !status.success() {
+            return Err(match status.code() {
+                Some(10)=>"File server missing · update System",
+                Some(12)=>"Sharing account setup failed",
+                Some(13)=>"Sharing configuration failed",
+                _=>"Sharing setup failed · save report",
+            });
         }
         let child = Command::new("sh")
             .arg(script)
@@ -263,7 +261,7 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
             mdns: None,
         });
         let mut ready = false;
-        for _ in 0..30 {
+        for _ in 0..100 {
             std::thread::sleep(Duration::from_millis(100));
             if run
                 .as_mut()

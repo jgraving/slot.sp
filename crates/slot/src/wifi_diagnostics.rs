@@ -10,12 +10,21 @@ use std::time::{Duration, Instant};
 pub type Export = Receiver<Result<String, &'static str>>;
 const LIMIT: u64 = 64 * 1024;
 
-pub fn start(root: PathBuf, view: WifiView) -> Export {
+pub fn start(root: PathBuf, view: WifiView, sharing:crate::sharing::View, ra:slot_achievements::SyncDetail) -> Export {
     let (tx, rx) = mpsc::channel();
     let _ = std::thread::Builder::new()
         .name("wifi-report".into())
         .spawn(move || {
-            let report = collect(&root, &view);
+            let mut report = collect(&root, &view);
+            report.push_str(&format!("sharing_active={}\nsharing_busy={}\nsharing_error={}\nra_authenticated={}\nra_status={:?}\nra_retry_seconds={}\n",
+                sharing.active,sharing.busy,sharing.error.is_some(),ra.authenticated,ra.status,ra.retry_seconds));
+            // Only fixed categories leave the process, never server responses or account data.
+            let reason=match ra.problem {
+                "DNS lookup failed"=>"dns", "Server request timed out"=>"timeout",
+                "TLS failed · check date/time"=>"tls", "Server rate limit · retrying"=>"rate-limit",
+                "Check username or password"=>"authentication", ""=>"none", _=>"other",
+            };
+            report.push_str(&format!("ra_problem={reason}\n"));
             let _ =
                 tx.send(save(&root, &report).map_err(|_| "Could not save report · check SD card"));
         });
@@ -205,6 +214,18 @@ fn collect(root: &Path, view: &WifiView) -> String {
         "build_commit={}\nbuild_date={}\n",
         build.hash, build.date
     ));
+    for key in ["BASEOS_TARGET","BASEOS_VERSION"] {
+        let value=crate::baseos::var(key).filter(|v|v.len()<=40 && v.bytes().all(|b|b.is_ascii_alphanumeric()||b"._-".contains(&b))).unwrap_or_else(||"unknown".into());
+        report.push_str(&format!("{key}={value}\n"));
+    }
+    report.push_str(&format!("clock_plausible={}\n",!crate::update::clock_is_wrong(crate::update::now_unix())));
+    for file in ["smbd","smbpasswd","testparm","samba-dcerpcd","rpcd_classic","rpcd_winreg"] {
+        report.push_str(&format!("samba_{file}_present={}\n",root.join("System/samba/bin").join(file).is_file()));
+    }
+    let listening=view.ip.as_deref().and_then(|s|s.parse::<std::net::Ipv4Addr>().ok())
+        .filter(|ip|crate::wifi::usable_ipv4(&ip.to_string()))
+        .is_some_and(|ip|std::net::TcpStream::connect_timeout(&(ip,445).into(),Duration::from_millis(200)).is_ok());
+    report.push_str(&format!("samba_local_listener={listening}\n"));
     report
 }
 fn save(root: &Path, report: &str) -> std::io::Result<String> {

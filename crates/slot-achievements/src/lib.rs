@@ -79,7 +79,6 @@ struct Status {
     network: AtomicU8,
     unsaved: AtomicBool,
     reconnect: AtomicBool,
-    wifi_missing: AtomicBool,
     detail: Mutex<SyncDetail>,
     pending: AtomicBool,
     // Shared only by the evaluator and HTTP workers, never gameplay/UI.
@@ -175,11 +174,7 @@ impl Drop for Service {
 impl Service {
     /// Credentials are supplied in memory. No production API reads credential files.
     pub fn configured(root: PathBuf, config: Config) -> Self {
-        Self::configured_with_wifi(root, config, true)
-    }
-
-    pub fn configured_with_wifi(root: PathBuf, config: Config, connected: bool) -> Self {
-        Self::spawn(root, network::Http::new(), Some(config), connected)
+        Self::spawn(root, network::Http::new(), Some(config))
     }
     pub fn take_token(&self) -> Option<(String, String)> {
         self.status.auth.lock().unwrap().take()
@@ -192,13 +187,12 @@ impl Service {
 
     #[cfg(test)]
     fn start_with(root: PathBuf, transport: impl network::Transport + Send + 'static) -> Self {
-        Self::spawn(root, transport, None, true)
+        Self::spawn(root, transport, None)
     }
     fn spawn(
         root: PathBuf,
         transport: impl network::Transport + Send + 'static,
         config: Option<Config>,
-        connected: bool,
     ) -> Self {
         let (controls, control_rx) = mpsc::channel();
         let (frames, frame_rx) = mpsc::sync_channel(QUEUE_SIZE);
@@ -209,7 +203,6 @@ impl Service {
         let worker_flushed = flushed.clone();
         let worker_enabled = enabled.clone();
         let status = Arc::new(Status::default());
-        status.wifi_missing.store(!connected, Ordering::Release);
         let worker_status = status.clone();
         let spawned = std::thread::Builder::new()
             .name("slot-ra".into())
@@ -263,13 +256,6 @@ impl Service {
     /// The Wi-Fi worker observed a new connection. Wake retries without blocking the UI.
     pub fn network_available(&self) {
         self.status.reconnect.store(true, Ordering::Release);
-    }
-
-    /// Pause HTTP while Wi-Fi has no address; local evaluation and saves continue.
-    pub fn set_wifi_connected(&self, connected: bool) {
-        if self.status.wifi_missing.swap(!connected, Ordering::AcqRel) && connected {
-            self.network_available();
-        }
     }
 
     /// Poll during power-off. The UI keeps rendering while the evaluator drains final

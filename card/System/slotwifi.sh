@@ -24,8 +24,6 @@ LINK_WAIT_S="${AGS_WIFI_LINK_WAIT_S:-10}"
 WATCH_PID="$RUN/slotwifi-watch.pid"
 LEASE_PID="$RUN/slotwifi-udhcpc.pid"
 OWNER="$RUN/slotwifi.owner"
-ACTION="$RUN/slotwifi-action"
-SYSTEM_DIR="${SLOT_WIFI_SYSTEM_DIR:-$(dirname "$0")}"
 
 stop_pid() {
 	[ -f "$1" ] || return 0
@@ -73,16 +71,12 @@ wifi_up() {
 	done
 	[ -e "$CTRL_DIR/wlan0" ] || return 1
 	stop_pid "$WATCH_PID"
-	# wpa_cli executes the callback directly. SD mounts can be noexec or
-	# omit executable bits, even though the launcher can run this file via sh.
-	SYSTEM_DIR="$(cd "$SYSTEM_DIR" && pwd -P)" || return 1
-	/bin/rm -f "$ACTION" || return 1
-	/bin/cp "$0" "$ACTION" && /bin/chmod 700 "$ACTION" && [ -x "$ACTION" ] || return 1
-	SLOT_WIFI_SYSTEM_DIR="$SYSTEM_DIR" "$WPA_CLI" -p "$CTRL_DIR" -i wlan0 -B -P "$WATCH_PID" -a "$ACTION" >/dev/null 2>&1
+	$WPA_CLI -p "$CTRL_DIR" -i wlan0 -B -P "$WATCH_PID" -a "$0" >/dev/null 2>&1 || { wifi_down; return 1; }
+	return 0
 }
 
 stop_sharing() {
-    helper="$SYSTEM_DIR/slotsmb.sh"
+    helper="$(dirname "$0")/slotsmb.sh"
     [ ! -f "$helper" ] || sh "$helper" stop >/dev/null 2>&1 || true
 }
 
@@ -96,12 +90,11 @@ wifi_down() {
 	$IP addr flush dev wlan0 2>/dev/null || true
 	$IP link set wlan0 down 2>/dev/null || true
 	$RFKILL block wifi 2>/dev/null || true
-	/bin/rm -f "$RUN/slotwifi.conf" "$ACTION"
+	/bin/rm -f "$RUN/slotwifi.conf"
 	return 0
 }
 
 lease() {
-	[ -f "$OWNER" ] && [ ! -f "$LINK_MARK" ] || return 0
 	stop_pid "$LEASE_PID"
 	$UDHCPC -i wlan0 -b -p "$LEASE_PID" >/dev/null 2>&1 || true
 }
@@ -124,7 +117,7 @@ diagnostics() {
     available wpa_cli_available "$WPA_CLI"
     available udhcpc_available "$UDHCPC"
     available ip_available "$IP"
-    if [ -x "$ACTION" ]; then echo callback_executable=yes; else echo callback_executable=no; fi
+    if [ -x "$0" ]; then echo callback_executable=yes; else echo callback_executable=no; fi
     if grep -q '^[[:space:]]*nameserver[[:space:]]' "${AGS_RESOLV_CONF:-/etc/resolv.conf}" 2>/dev/null; then
         echo resolver_configured=yes
     else echo resolver_configured=no; fi
