@@ -44,4 +44,8 @@ The retained zip 0.6.6 dependency matches [RUSTSEC-2026-0367](https://github.com
 - A saved SSID is not cryptographic router identity. Use a trusted network; discovery and router behavior still require Windows/macOS and physical-handheld testing.
 - Physical transfers, suspend/power behavior and thermal performance remain unverified on the handheld. No real RA credentials or live awards were used for this review.
 
-Current test revisions and CI/artifact links are recorded in [WORKLOG.md](WORKLOG.md). Completion is determined by those results, not this document alone.
+## Verified completion
+
+PR #194 merged into main as `286077e1854cd0c305afcbedfb18533fa73bc7d2`. All six workflows passed on exact source `7d0334ca5f88714e07e6e7ba774f7ad6d6c58e20`, including real ARM64 SMB authentication/encrypted-transfer/isolation tests, device/package tests and native light/dark review. The locally blocked Unix-socket test passed in CI. Hostile ZIP metadata, vault compatibility/tampering, migration cleanup failures, RA cancellation and sharing-session regressions pass. No test assertion was disabled to obtain this result.
+
+Detailed revisions, results, exceptions and artifact links are recorded in [WORKLOG.md](WORKLOG.md). The hardware and threat-model limits above remain unchanged.
