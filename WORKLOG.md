@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Network and settings usability follow-up — 2026-11-04
+
+Active branch: `fix/network-settings-usability`, starting from main `1d457937`. User requests clear network file sharing/disclosure and working Mac Finder access, update spinner/version identification and BaseOS offer investigation, disabled manual date/time under automatic time, reliable background RA and Cart Studio on the highlighted game. Investigate shared connectivity and preserve existing security/update checks. No physical device reproduction available; user connects from Mac/Finder. Next: inspect server/network/background/update behavior, implement focused corrections and regression checks, publish reviewable changes and verify CI before merge. Inbox uploads currently avoid concurrent writes to installed games/saves; do not expose the whole SD card implicitly.
+
 ## Merged Wi-Fi diagnostics — 2026-11-04
 
 Completion: [build-2026.11.04-b4bf214](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-b4bf214) is published with its System ZIP, SD2 ZIP, matching sources, checksums and build metadata. Verified release assets are uploaded, the tag points to merge `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`, and [post-merge Build and release](https://github.com/jgraving/slot.sp/actions/runs/41848567747) succeeds. [Reply posted and read back](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6633575440): maintainer has no RG34xxSP; asks demifiend9 to install this version, retry, save the offline report, shut down normally and attach the text file. Nothing is automatically uploaded. Await the reporter's device evidence; no confirmed RG34xxSP fix is claimed.

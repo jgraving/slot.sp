@@ -1,3 +1,7 @@
+# Active network/settings follow-up
+
+Continue on `fix/network-settings-usability`. See newest WORKLOG.md entry for requested fixes and current findings. Previous completed work below remains historical.
+
 # Wi-Fi diagnostics complete
 
 Continue from `main`. PR #200 merged as `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`; its tree equals source `6053032e41426b4d83e1c3bb788151f866327728`, which passed all six workflows. The post-merge ARM64 release build also passed. [Published build](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-b4bf214) includes Settings → Network → Save Wi-Fi report, progress through IP assignment, address-timeout/disconnection warnings and late recovery.
