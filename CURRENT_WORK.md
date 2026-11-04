@@ -1,6 +1,6 @@
 # Active photo-slot handoff
 
-2026-11-04: `fix/photo-slot-proportions`, [draft PR #195](https://github.com/jgraving/slot.sp/pull/195). Runtime `07227db624154adb27863808d156ec6ba4e64ad6` is pushed and verified; later checkpoints are previews/recovery notes only. Photo-matched shell proportions, sharp reversible About reveal, live General card motion and seated-cartridge preservation are complete. Fresh 326-test validation and device compilation pass. The ARM64 test build succeeds; launcher/native final status is tracked in WORKLOG.md.
+2026-11-04: `fix/photo-slot-proportions`, [draft PR #195](https://github.com/jgraving/slot.sp/pull/195). Runtime `07227db624154adb27863808d156ec6ba4e64ad6` is pushed and verified; later checkpoints are previews/recovery notes only. Photo-matched shell proportions, sharp reversible About reveal, live General card motion and seated-cartridge preservation are complete. Fresh 326-test validation and device compilation pass. All five GitHub workflows pass on that runtime, including ARM64 packaging/both cores and native visual/motion review. Build and capture links are recorded in WORKLOG.md.
 
 Read the active section of [WORKLOG.md](https://github.com/jgraving/slot.sp/blob/fix/photo-slot-proportions/WORKLOG.md) before continuing. All requested source and native review videos are on this branch. Keep #194 separate; no merge/release requested. Remaining user step is physical handheld review. Do not repeat reconstruction.
 
