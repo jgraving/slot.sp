@@ -76,6 +76,7 @@ chmod +x "$out/libexec/$worker"
 done
 triplet="$(gcc -print-multiarch)"
 cp -aL "/usr/lib/$triplet/gconv" "$out/gconv"
+test -f "$out/gconv/IBM850.so"
 
 # Preserve Samba's private libraries if a binary is not eligible for nonshared linkage.
 find "$work/install/lib" -type f -name '*.so*' -exec cp -L '{}' "$out/lib/" \;

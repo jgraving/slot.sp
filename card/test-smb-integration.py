@@ -4,7 +4,8 @@ import os, pathlib, signal, socket, subprocess, sys, tempfile, time, shutil
 runtime=pathlib.Path(sys.argv[1]).resolve()
 script=pathlib.Path(__file__).resolve().parent/'System/slotsmb.sh'
 with tempfile.TemporaryDirectory() as tmp:
-    root=pathlib.Path(tmp); (root/'System').mkdir();shutil.copytree(runtime,root/'System/samba')
+    root=pathlib.Path(tmp);root.chmod(0o755) # Match the traversable SD root for unprivileged runtime conversion modules.
+    (root/'System').mkdir();shutil.copytree(runtime,root/'System/samba')
     (root/'Config').mkdir();(root/'Config/secret').write_text('PRIVATE CARD CONTENT')
     run=root/'run';run.mkdir()
     loader=next((root/'System/samba/lib').glob('ld-linux-*.so.*'))
