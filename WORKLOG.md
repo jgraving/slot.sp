@@ -1,5 +1,13 @@
 # Development recovery log
 
+## Active recovery: photo-matched slot and About reveal — 2026-11-04
+
+- User explicitly authorized implementation and regular pushes to GitHub. Publish checkpoints on `fix/photo-slot-proportions`; no merge or release requested.
+- Live main is `ab180bfb474a723ac3d44d387273e7ece9ab9028`. The prior log's `93797c63` checkpoint and photo-slot branch are absent remotely; reconstructing from source and the attached photos/screenshots/worklog. Historical validation claims are not current results.
+- Photos are the visual authority. Use independent judgment for opening/body ratio, narrow cheeks, shallow curved lip, screw wells and rear wall. Preserve the already-good cartridge dimensions, seating and insertion/ejection behavior.
+- Recreate General → About shell/sticker reveal, sharp enlarged textures and coordinated live General-card shrink/downward motion, reversing smoothly on Back and rapid input. Preserve seated cartridges, transparent interiors, all finishes/themes, header and actions.
+- Work split: shell geometry/material, About/menu/compositor, native motion exporters/CI. Next: inspect photo comparisons, implement coherent checkpoints, run relevant Rust/device/native checks and publish review videos plus draft PR. Physical handheld verification remains separate.
+
 Last updated: 2026-11-04 (Europe/Zurich).
 Repository: jgraving/slot.sp
 Active branch: `main`

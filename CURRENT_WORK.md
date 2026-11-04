@@ -1,3 +1,9 @@
+# Active photo-slot recovery
+
+2026-11-04: active branch `fix/photo-slot-proportions`, based on main `ab180bfb`. User authorized regular GitHub pushes. Recreating corrected SP shell proportions and coordinated About sticker reveal from reference photos and the supplied recovery log. Photos take precedence over logged geometry guesses. Read the active section of WORKLOG.md for exact progress and verified results. Keep separate draft #194 unchanged; no merge/release requested.
+
+---
+
 # Current development handoff
 
 Updated 2026-11-04. Continue from **main**. Read AGENTS.md and WORKLOG.md before new work.
