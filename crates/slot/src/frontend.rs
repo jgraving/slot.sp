@@ -166,6 +166,7 @@ struct Clocks {
 }
 
 struct ShelfLook {
+    about_body: [TexId; 4],
     slot: [[TexId; 2]; 4],
     bolt: [TexId; 2],
     port: [Option<TexId>; 4],
@@ -389,7 +390,7 @@ impl Frontend {
             .set_gb_cart_backings(notched, rounded);
         let slot = {
             let mut upload =
-                |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_W, slot_ui::SLOT_H, bytes);
+                |bytes: &[u8]| compositor.create_texture(slot_ui::SLOT_TEXTURE_W, slot_ui::SLOT_TEXTURE_H, bytes);
             ShellColour::FINISHES.map(|colour| slot_ui::shell_slot_faces(colour).map(&mut upload))
         };
         let dark_bolt = slot_ui::status_icon_face(Icon::Charging, HUD_INK);
@@ -398,7 +399,10 @@ impl Frontend {
             compositor.create_ui_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
             compositor.create_ui_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
+        let about_body = ShellColour::FINISHES.map(|colour| compositor.create_texture(
+            slot_ui::ABOUT_BODY_TEXTURE_W, slot_ui::ABOUT_BODY_TEXTURE_H, slot_ui::shell_about_body(colour)));
         self.look = Some(ShelfLook {
+            about_body,
             slot,
             bolt,
             port: [None; 4],
@@ -432,6 +436,7 @@ impl Frontend {
             (
                 look.applied == Some((light, colour, legend_ready, port_ready)),
                 look.slot[colour.finish_index()],
+                look.about_body[colour.finish_index()],
                 look.bolt[i],
                 look.bolt[0],
                 look.port[colour.finish_index()],
@@ -440,7 +445,7 @@ impl Frontend {
                 port_ready,
             )
         });
-        let Some((done, slot, bolt, hud_bolt, port, legend, legend_ready, port_ready)) = ready
+        let Some((done, slot, about_body, bolt, hud_bolt, port, legend, legend_ready, port_ready)) = ready
         else {
             return;
         };
@@ -448,6 +453,7 @@ impl Frontend {
             return;
         }
         self.session.app_mut().set_slot_faces(slot[0], slot[1]);
+        self.session.app_mut().set_about_body_face(about_body);
         self.session.app_mut().set_bolt_face(bolt);
         self.session.app_mut().set_hud_bolt_face(hud_bolt);
         if let Some(tex) = port {

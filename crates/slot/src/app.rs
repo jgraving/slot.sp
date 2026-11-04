@@ -22,7 +22,7 @@ use slot_ui::{
     QuickMenu, QuickMenuFaces, QuickRow, QuickValue, REPEAT_DELAY_MS, Refusal, SHADOW_H, SHADOW_W,
     SOCKET_H, SOCKET_U, SOCKET_V, SOCKET_W, Shelf, ShotMode, ShotViewer, SlotChrome, TURN_PAD,
     TexId, Toast, board_from, board_zoom, draw_empty_slot, draw_ground, 
-    draw_sticker, ease, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
+    ease, grown, lid_at, lid_from, lift_of, on_board, repeat_gap,
     shelf_cart_at,
 };
 
@@ -460,6 +460,8 @@ pub struct App {
     clock_back: Option<(TexId, u32)>,
     quick_menu_faces: Option<QuickMenuFaces>,
     menu_motion: slot_ui::MenuMotion,
+    about_motion: slot_ui::AboutMotion,
+    about_body_face: Option<TexId>,
     menu_title_motion: std::cell::RefCell<slot_ui::expressive::ChromeMotion>,
     menu_hint_motion: std::cell::RefCell<slot_ui::expressive::ChromeMotion>,
     settings_return_game: Option<String>,
@@ -746,6 +748,8 @@ impl App {
             clock_back: None,
             quick_menu_faces: None,
             menu_motion: slot_ui::MenuMotion::default(),
+            about_motion: slot_ui::AboutMotion::default(),
+            about_body_face: None,
             menu_title_motion: Default::default(),menu_hint_motion:Default::default(),
             settings_return_game:None,about_heading:None,custom_chrome:Default::default(),
             special_menu_cache: Default::default(),
@@ -1862,6 +1866,8 @@ impl App {
     pub fn kid_meter_presence(&self)->f32 {self.kid_meter_motion.value()}
     pub fn kid_meter_visible(&self)->bool {self.kid_meter_presence()>0.001}
     pub fn set_custom_chrome(&mut self,tex:TexId,title:Vec<Draw>,hints:Vec<Draw>){if let Some(p)=self.custom_chrome.iter_mut().find(|p|p.0==tex){*p=(tex,title,hints);}else{self.custom_chrome.push((tex,title,hints));}}
+    pub fn about_reveal(&self) -> f32 { self.about_motion.value() }
+    pub fn set_about_body_face(&mut self, face: TexId) { self.about_body_face = Some(face); }
     pub fn about_heading_needed(&self)->bool {self.about_heading.is_none()}
     pub fn set_about_heading(&mut self,face:(TexId,u32,u32)){self.about_heading=Some(face);}
     pub fn set_sticker_face(&mut self, face: TexId) {
@@ -4232,9 +4238,15 @@ impl App {
         }
         self.step_screen(dt);
         self.step_footer(dt);
-        let custom = self.custom_menu_key();
-        let menu = self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids));
-        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
+        let about = matches!(self.phase, Phase::About);
+        self.about_motion.update(about, dt);
+        // Keep General's live selection and scroll while About uses its own
+        // spring. A quick Back/reopen never creates a frozen outgoing page.
+        let custom = self.custom_menu_key().filter(|key| *key != 5000);
+        let menu = if about { Some(QuickRow::About) } else {
+            self.quick_menu().or_else(|| self.in_game_menu_shown()).or_else(|| custom.map(|_| QuickRow::Kids))
+        };
+        let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() || (about && self.settings_return_game.is_none()) { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
         let selection=self.network.as_ref().filter(|m|m.visible).map(|m|m.focus_info()).or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info())).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
@@ -4943,7 +4955,7 @@ impl App {
         let begin=out.len();self.draw_scene(out);
         let row=self.quick_menu().or_else(||self.in_game_menu_shown());
         let custom=self.custom_menu_key();
-        let active=!self.shutting_down()&&!matches!(self.phase,Phase::Doze{..})&&(row.is_some()||custom.is_some()||self.menu_motion.closing_row().is_some());
+        let active=!self.shutting_down()&&!matches!(self.phase,Phase::Doze{..})&&(row.is_some()||custom.is_some()||self.menu_motion.closing_row().is_some()||self.about_motion.active());
         if active {
             if matches!(self.phase,Phase::Playing{..}|Phase::Ejecting{..}) || self.settings_return_game.is_some() {
                 if let Some(game)=out[begin..].iter().rposition(|d|matches!(d,Draw::Game)) {
@@ -4967,6 +4979,10 @@ impl App {
             let kind=if let Some(m)=self.network.as_ref().filter(|m|m.visible) {m.pin_hint_key()}else {
                 row.map_or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info()).map_or(0,|p|p.0 as u64),|r|if r.binds(){3+u64::from(!self.page_is_default(r))}else{u64::from(r.opens() || (r==QuickRow::AutomaticTime && !self.network.as_ref().is_some_and(|m|m.wifi_connected())))})
             };
+            if let Some((back,front))=self.slot_faces {
+                out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
+            }
+            self.draw_menu_hardware(out);
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();
@@ -4980,13 +4996,7 @@ impl App {
             self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,out);
             let reveal=self.menu_motion.reveal();
             for d in &mut out[chrome..] {if let Draw::Tex{alpha,..}|Draw::Part{alpha,..}=d {*alpha*=reveal;}}
-            if let Some((back,front))=self.slot_faces {
-                out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
-            }
-            let cart=match &self.phase {Phase::Playing{cart}|Phase::Ejecting{cart,..}=>Some(cart.as_str()),_=>self.settings_return_game.as_deref()};
-            let mouth=out.len();
-            if let Some(cart)=cart {self.draw_seated_mouth(cart,out);}else{draw_empty_slot(self.canvas(),self.slot_faces,out);}
-            if cart.is_some() {shift_down(&mut out[mouth..],self.menu_footer_offset());}
+
         }else {self.menu_title_motion.borrow_mut().reset();self.menu_hint_motion.borrow_mut().reset();}
         if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) {
             if let Some((tex,w,h))=self.kid_meter_face.filter(|_|self.kid_meter_visible()) {
@@ -5182,15 +5192,16 @@ impl App {
                 self.draw_kid_removal(out);
             }
             Phase::About => {
-                let mut body=Vec::new();draw_sticker(self.canvas(),self.sticker_face,&mut body);
-                if let Some(Draw::Tex{x,y,w,h,..})=body.first_mut(){
-                    let rect=slot_ui::expressive::card_rect(self.canvas());let scale=((rect[2]-32.0)/ *w).min(1.0);
-                    *w*=scale;*h*=scale;*x=self.canvas().centred(*w);*y=rect[1]+(rect[3]-*h)/2.0;
-                }
-                if let Some((tex,w,h))=self.about_heading {body.push(Draw::Tex{x:self.canvas().centred(w as f32),y:0.0,w:w as f32,h:h as f32,tex,alpha:1.0});}
-                self.draw_about_legend(&mut body);
-                self.draw_special_sheet(5000,body,out);
-                draw_empty_slot(self.canvas(),self.slot_faces,out);
+                let over_game = self.settings_return_game.is_some();
+                if over_game { self.push_game(out); }
+                let parent = out.len();
+                self.draw_quick_overlay(QuickRow::About, over_game, out);
+                // The live parent remains underneath; only its title/actions
+                // are replaced by About's fixed chrome.
+                let mut i = parent;
+                while i < out.len() { if slot_ui::expressive::is_chrome(&out[i]) { out.remove(i); } else { i += 1; } }
+                if let Some((tex,w,h))=self.about_heading {out.push(Draw::Tex{x:self.canvas().centred(w as f32),y:0.0,w:w as f32,h:h as f32,tex,alpha:1.0});}
+                self.draw_about_legend(out);
                 self.draw_status_bar(out);
                 return;
             }
@@ -5373,12 +5384,17 @@ impl App {
             self.menu_footer_offset()
         };
         let start = out.len();
+        let common_hardware = self.quick_menu().is_some() || self.in_game_menu_shown().is_some()
+            || self.custom_menu_key().is_some() || self.menu_motion.closing_row().is_some()
+            || self.about_motion.active();
         let row = match &self.phase {
             Phase::Playing { cart } if self.footer > 0.0 => {
                 let row = self.in_game_menu_shown().or(self.footer_row);
-                match row.is_some_and(QuickRow::binds) {
-                    true => draw_empty_slot(self.canvas(), self.slot_faces, out),
-                    false => self.draw_seated_mouth(cart, out),
+                if !common_hardware {
+                    match row.is_some_and(QuickRow::binds) {
+                        true => draw_empty_slot(self.canvas(), self.slot_faces, out),
+                        false => self.draw_seated_mouth(cart, out),
+                    }
                 }
                 row
             }
@@ -5553,6 +5569,9 @@ impl App {
         if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
         if !root {self.draw_quick_page(row,over_game,false,out);}
         self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        if self.about_motion.active() && row.page() == QuickRow::About.page() {
+            self.about_motion.transform_parent(self.canvas(), &mut out[begin..]);
+        }
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
 
@@ -5624,6 +5643,24 @@ impl App {
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
+    }
+
+    fn draw_menu_hardware(&self, out: &mut Vec<Draw>) {
+        let cart = match &self.phase {
+            Phase::Playing { cart } | Phase::Ejecting { cart, .. } => Some(cart.as_str()),
+            _ => self.settings_return_game.as_deref(),
+        };
+        let begin = out.len();
+        if let Some(cart) = cart { self.draw_seated_mouth(cart, out); }
+        else { draw_empty_slot(self.canvas(), self.slot_faces, out); }
+        if self.about_motion.active() {
+            // Continue the front shell over the cartridge below the mouth.
+            slot_ui::draw_about_body(self.canvas(), self.about_body_face, out);
+            slot_ui::draw_about_sticker(self.canvas(), self.sticker_face, out);
+            self.about_motion.transform(self.canvas(), &mut out[begin..]);
+            if cart.is_some() { shift_down(&mut out[begin..], self.menu_footer_offset() * (1.0 - self.about_motion.value())); }
+            self.about_motion.clip_hardware(self.canvas(), out, begin);
+        } else if cart.is_some() { shift_down(&mut out[begin..], self.menu_footer_offset()); }
     }
 
     fn draw_seated_mouth(&self, stem: &str, out: &mut Vec<Draw>) {

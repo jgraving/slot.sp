@@ -2,6 +2,14 @@
 
 ## Active recovery: photo-matched slot and About reveal — 2026-11-04
 
+### Runtime reconstruction checkpoint
+
+- Photo review supports a narrower 400px shell around the existing 308px opening, smaller corner wells and a broad continuous lip; the existing cartridge stop and travel remain unchanged. New native vectors and 2× texture caches include the lower About shell with continuous paint/grain.
+- About now uses a reversible spring to move shell/sticker/cartridge together and recede the live General card. This is a first runtime checkpoint; motion/visual regressions are being exercised before completion.
+- Fresh device-feature compilation passes. Shell material tests: 15 pass, including high-density geometry, neutral hardware, seam/grain and the aperture ratio. Runtime setup smoke checks also passed (77 input, 6 layout); these do not replace the pending full task checks.
+- Native review exporters and MP4 encoders are being added; final captures and remote CI are still pending. Regular publication is via the connected GitHub API because this workspace's CLI has no GitHub push credential.
+
+
 - User explicitly authorized implementation and regular pushes to GitHub. Publish checkpoints on `fix/photo-slot-proportions`; no merge or release requested.
 - Live main is `ab180bfb474a723ac3d44d387273e7ece9ab9028`. The prior log's `93797c63` checkpoint and photo-slot branch are absent remotely; reconstructing from source and the attached photos/screenshots/worklog. Historical validation claims are not current results.
 - Photos are the visual authority. Use independent judgment for opening/body ratio, narrow cheeks, shallow curved lip, screw wells and rear wall. Preserve the already-good cartridge dimensions, seating and insertion/ejection behavior.

@@ -15,7 +15,7 @@ use slot_store::{Cart, Platform as CartPlatform};
 use slot_ui::{
     cart_box, cart_face, clean_label, default_background, edge, housing, label_colour, label_text,
     opening, recess, rest_y, slot_back, slot_front, slot_name_y, Draw, SlotChrome, CART_W,
-    GB_CART_H, GB_LABEL_H, GB_LABEL_Y, HINT_H, PLATE_H, SLOT_H, SLOT_W,
+    GB_CART_H, GB_LABEL_H, GB_LABEL_Y, HINT_H, PLATE_H, SLOT_TEXTURE_H, SLOT_TEXTURE_W,
 };
 
 struct Script(VecDeque<Vec<RawEvent>>);
@@ -682,8 +682,8 @@ fn both_cartridges_go_into_the_slot_at_their_own_size() {
         return;
     };
     let slot = Some((
-        c.create_texture(SLOT_W, SLOT_H, slot_back()),
-        c.create_texture(SLOT_W, SLOT_H, slot_front()),
+        c.create_texture(SLOT_TEXTURE_W, SLOT_TEXTURE_H, slot_back()),
+        c.create_texture(SLOT_TEXTURE_W, SLOT_TEXTURE_H, slot_front()),
     ));
     let beats = [
         ("0-standing", 0.0),

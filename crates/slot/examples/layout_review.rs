@@ -49,7 +49,7 @@ fn main(){
   };
   let bg=s.add(default_background().unwrap(),720,480);
   let [back,front]=shell_slot_faces(ShellColour::PearlBlue);
-  let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));
+  let slot=Some((s.add(back,SLOT_TEXTURE_W,SLOT_TEXTURE_H),s.add(front,SLOT_TEXTURE_W,SLOT_TEXTURE_H)));
   let mut out=vec![];
   let app=slot::app::App::new(vec![]);
   let mut values=QuickRow::ALL.map(|r|app.quick_value(r));values[QuickRow::ShellColour.index()]=Some(QuickValue::PearlBlue);
@@ -75,7 +75,7 @@ fn main(){
   let lines=["","","COMPACT","ROW BLUETOOTH On","ROW SPEAKER_DEVICE Internal speaker","SELECTED ACTIVE DEVICE Headphones",
    "ROW USB_DEVICE USB headphones","ROW Pair audio device","ROW DISCONNECT 0%","B Back · A Connect · Y Forget"].map(str::to_owned);
   let f=slot::bluetooth::screen_face_on(&lines,footer_ink(false),canvas);let tex=s.add(&f.rgba,f.w,f.h);
-  let [back,front]=shell_slot_faces(ShellColour::Platinum);let slot=Some((s.add(back,720,SLOT_H),s.add(front,720,SLOT_H)));
+  let [back,front]=shell_slot_faces(ShellColour::Platinum);let slot=Some((s.add(back,SLOT_TEXTURE_W,SLOT_TEXTURE_H),s.add(front,SLOT_TEXTURE_W,SLOT_TEXTURE_H)));
   let mut out=vec![Draw::Rect{x:0.,y:0.,w:w as f32,h:480.,colour:[0.08,0.10,0.11,1.]}];
   draw_empty_slot(canvas,slot,&mut out);out.push(Draw::Tex{x:0.,y:0.,w:w as f32,h:480.,tex,alpha:1.});s.save(out);
  }

@@ -21,7 +21,7 @@ fn main() {
     gpu.fit((width, 480));
     let ground = gpu.create_texture(720, 480, default_background().unwrap());
     let slot = shell_slot_faces(slot_store::ShellColour::FINISHES[0])
-        .map(|f| gpu.create_texture(SLOT_W, SLOT_H, &f));
+        .map(|f| gpu.create_texture(SLOT_TEXTURE_W, SLOT_TEXTURE_H, &f));
     let mut save =
         |name: &str, face: UndoFace, mut overlays: Vec<Draw>, focus: Option<[f32; 4]>| {
             let tex = gpu.create_texture(face.w, face.h, &face.rgba);
