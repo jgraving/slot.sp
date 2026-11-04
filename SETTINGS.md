@@ -54,39 +54,25 @@ The clock, status icons and button hints change between light and dark colors to
 
 ## Network game uploads
 
-On a trusted Wi-Fi network, open **Settings → Network → Network file sharing** and turn **Sharing** on. Select **Password** to show the generated sharing password. Sign in with username **slot** and that password.
+On a trusted Wi-Fi network, open **Settings → Network → File sharing** and turn **Sharing** on. Choose **Set password** to enter 8–32 printable characters, or use the generated password. Select **Password** to show or hide it. Sign in with username **slot** and the sharing password.
 
 - **macOS:** in Finder, choose **Go → Connect to Server** (⌘K), enter the `smb://` address shown on the handheld and select **Registered User**. Choose **Games**, **Labels**, or **Wallpapers**. To open Games directly, append `/Games` to the address.
 - **Windows:** open **SLOTSP** in File Explorer's Network view, or enter `\\DEVICE-IP\Games`.
 - **Linux:** open the discovered SMB server or enter `smb://DEVICE-IP/Games` in your file manager.
 
-These shares write directly to the corresponding folders on the content card. Use **GB**, **GBC**, or **GBA** under **Games** and **Labels**. Finish copying and turn sharing off before launching a game or opening Cart Studio. The carousel refreshes when sharing stops. Changes and deletions through SMB apply to the card immediately. If you have files left in the old Inbox, choose **Import old Inbox** once to move them into the library.
+These shares write directly to the corresponding folders on the content card. Use **GB**, **GBC**, or **GBA** under **Games** and **Labels**. Finish copying and turn sharing off before launching a game or opening Cart Studio. The carousel refreshes when sharing stops. Changes and deletions through SMB apply to the card immediately.
 
-Sharing requires authenticated, encrypted SMB3. Saves, Config, System and the rest of the card stay outside the shares. **New password** disconnects existing sessions. Devices must be able to reach each other on the local network.
+Sharing requires authenticated, encrypted SMB3. Saves, Config, System and the rest of the card stay outside the shares. Saving a new password disconnects existing sessions. Devices must be able to reach each other on the local network.
 
 Sharing turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks your vault and the same saved Wi-Fi network reconnects. A short warning pill appears when enabling this option. Network changes revoke sharing; it is also paused during gameplay, Cart Studio, link play, kid mode, sleep and shutdown. A dropped connection requires enabling it again. Use a trusted home network; the saved network name does not identify a router cryptographically.
 
 The build includes Samba and its private runtime; it does not require installing a different BaseOS. The matching **slot.sp-network-sources.zip** download contains corresponding source and dependency provenance.
 
 
-### Wi-Fi connection progress and diagnostic reports
+### Wi-Fi connection progress
 
 After Wi-Fi joins the router, **Getting an IP address…** keeps the progress
 indicator active while DHCP finishes. This can take ten seconds or more. A
 usable IPv4 address completes the connection; after 30 seconds without one,
 slot shows **No IP address · retry**. A late address
 still recovers automatically. Updates stay unavailable until the address arrives.
-
-If connecting fails, leave the device on the affected network and choose
-**Settings → Network → Save Wi-Fi report**. This is the final row; from the
-Wi-Fi toggle you can press Up to reach it. Wait for **Saved Diagnostics/wifi-NNNN.txt**,
-then shut down normally and read that file from the **Diagnostics** folder on
-the slot SD card using your computer. Attach the newest file to the issue along
-with your handheld model and what happened. Collection takes at most about
-12 seconds for command probes, plus the SD write; it works without Internet.
-
-Reports contain build identity and fixed status fields for association, IP
-presence, routing, resolver configuration and DHCP/watcher processes. They
-exclude network names, IP/MAC addresses, passwords, account tokens and raw logs.
-Nothing is uploaded automatically, no connection settings are changed, and each
-export creates a new file. Delete reports from the card when no longer needed.

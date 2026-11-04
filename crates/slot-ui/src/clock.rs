@@ -81,6 +81,7 @@ pub struct ClockPicker {
     cursor: usize,
     editing: bool,
     twelve: bool,
+    offset_only: bool,
 }
 
 impl ClockPicker {
@@ -97,6 +98,7 @@ impl ClockPicker {
             cursor: 0,
             editing: false,
             twelve: false,
+            offset_only: false,
         }
     }
 
@@ -119,6 +121,7 @@ impl ClockPicker {
             cursor: 0,
             editing: false,
             twelve: false,
+            offset_only: false,
         }
     }
 
@@ -151,6 +154,13 @@ impl ClockPicker {
         self.cursor = Field::ALL.iter().position(|f| *f == field).unwrap_or(0);
     }
 
+    pub fn edit_offset_only(&mut self) {
+        self.offset_only = true;
+        self.field(Field::Offset);
+        self.editing = true;
+    }
+
+    pub fn offset_only(&self) -> bool { self.offset_only }
     pub fn editing(&self) -> bool { self.editing }
 
     pub fn toggle_editing(&mut self) { self.editing = !self.editing; }
@@ -225,7 +235,7 @@ impl ClockPicker {
         let (w, h) = (canvas.w as u32, OUT_H);
         let mut rgba = vec![0; (w * h * 4) as usize];
         let mut put = |f: UndoFace, x: u32, y: u32| blit(&mut rgba, w, &f.rgba, f.w, f.h, x, y);
-        let heading = crate::quick_heading_face("Date & time");
+        let heading = crate::quick_heading_face(if self.offset_only { "Time zone" } else { "Date & time" });
         let x=canvas.centred(heading.w as f32)as u32;
         put(heading,x,0);
         let cell_w = (canvas.w - 216.0) / 3.0;
@@ -267,6 +277,7 @@ impl ClockPicker {
                         px,
                         18.0_f32.min(px),
                     );
+                    let ink = if self.offset_only && i != Field::ALL.len() - 1 { [112, 116, 128] } else { ink };
                     text::draw_centred(&mut f.rgba, f.w, f.h, &layout, ink);
                 }
                 put(f, x as u32, y as u32 + dy);

@@ -2,6 +2,9 @@
 
 ## Device services and settings follow-up — 2026-11-04
 
+- UX follow-up implements File sharing with a masked Password row and A-button Show/Hide, a custom password keyboard, vault-confirmed rotation and direct library refresh. Removed the Inbox import code and its menu row. Diagnostics use L1 + R1 while Network is open, with a result pill and no permanent row. Gameplay no longer lists Cart Studio. The GBA hint shares the emulator picker footer. Time zone dims the five read-only fields and updates the displayed local time from UTC offset. RetroAchievements has independent current-game and library retries, with a persistent Current game status and quiet unsupported-game handling.
+- Local shell cannot start because the sandbox mount filesystem is full. Source checks completed through GitHub. CI will exercise the hidden shortcut, keyboard save, native walkthrough, encrypted custom-password SMB transfer, and active-game failure while library sync continues. Physical testing remains pending.
+
 - Follow-up requested: shorten the device menu to File sharing, show hidden password dots with an A-button Show/Hide hint, support custom passwords through the on-device keyboard, and remove Inbox imports. Verify keyboard input, password persistence and rotation, server provisioning, direct library refresh, and device CI. Hardware SMB verification is pending.
 
 - Follow-up review: use “Server address” and “Open this address in your file manager” on the device so the SMB instructions apply across platforms. The user cannot retest SMB on hardware right now. The existing System artifact predates this copy-only adjustment. New branch CI will package the revised build.

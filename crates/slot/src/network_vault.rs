@@ -138,9 +138,10 @@ pub enum Job {
     Create(Zeroizing<String>, Secrets, Method),
     Unlock(Zeroizing<String>),
     Save(Secrets),
+    SaveSharingPassword(Secrets),
     Forget,
 }
-pub enum Response { Unlocked(Secrets), Created(Method), Saved, Forgotten }
+pub enum Response { Unlocked(Secrets), Created(Method), Saved, SharingPasswordSaved(Zeroizing<String>), Forgotten }
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Operation { Unlock, Create, Save, Forget }
 pub struct Reply { pub operation: Operation, pub result: Result<Response, &'static str> }
@@ -158,7 +159,7 @@ impl Worker {
             for job in requests {
                 let operation = match &job {
                     Job::Unlock(_) => Operation::Unlock, Job::Create(..) => Operation::Create,
-                    Job::Save(_) => Operation::Save, Job::Forget => Operation::Forget,
+                    Job::Save(_) | Job::SaveSharingPassword(_) => Operation::Save, Job::Forget => Operation::Forget,
                 };
                 let result = match job {
                     Job::Unlock(pass) => decrypt(&path, &pass).map(|(next, secrets)| {
@@ -178,6 +179,12 @@ impl Worker {
                     })(),
                     Job::Save(secrets) => match &key {
                         Some(key) => encrypt(&path, key, &secrets).map(|_| Response::Saved),
+                        None => Err("Unlock credentials first"),
+                    },
+                    Job::SaveSharingPassword(mut secrets) => match &key {
+                        Some(key) => encrypt(&path, key, &secrets).map(|_| {
+                            Response::SharingPasswordSaved(Zeroizing::new(std::mem::take(&mut secrets.sharing_password)))
+                        }),
                         None => Err("Unlock credentials first"),
                     },
                     Job::Forget => match std::fs::remove_file(&path) {

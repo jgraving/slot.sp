@@ -275,6 +275,9 @@ struct Active {
     ready: bool,
     online: bool,
     last_ping: Instant,
+    retry_at: Instant,
+    retry_delay: u64,
+    status: &'static str,
 }
 
 fn prefetch(
@@ -362,6 +365,9 @@ pub(crate) fn run(
                         ready: false,
                         online: false,
                         last_ping: Instant::now(),
+                        retry_at: Instant::now(),
+                        retry_delay: 30,
+                        status: "Checking…",
                     };
                     if auth.is_some() {
                         let cache = dir.join(format!("{}.json", game.hash));
@@ -376,13 +382,12 @@ pub(crate) fn run(
                                     cached: true,
                                 });
                                 game.ready = true;
+                                game.status = "Cached";
                             }
                         }
                     }
                     Some(game)
                 });
-                next_attempt = Instant::now();
-                warned = false;
             }
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
             Err(mpsc::RecvTimeoutError::Timeout) => {}
@@ -393,18 +398,17 @@ pub(crate) fn run(
             !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
-                || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.online),
+                || store.lock().unwrap().unlocks.values().any(|u| !u.synced),
             std::sync::atomic::Ordering::Release,
         );
         if status.wifi_missing.load(std::sync::atomic::Ordering::Acquire) {
             status.set(SyncStatus::Offline);
             publish_detail(&status, verified, library_total, library.len(), library_failed,
-                &badges, &store, Instant::now(), "Waiting for Wi-Fi");
+                &badges, &store, Instant::now(), "Waiting for Wi-Fi", active.as_ref());
             continue;
         }
         publish_detail(&status, verified, library_total, library.len(), library_failed,
-            &badges, &store, next_attempt, problem);
+            &badges, &store, next_attempt, problem, active.as_ref());
         if status
             .reconnect
             .swap(false, std::sync::atomic::Ordering::AcqRel)
@@ -413,6 +417,10 @@ pub(crate) fn run(
             delay = 30;
             warned = false;
             badges.reconnect();
+            if let Some(game) = active.as_mut() {
+                game.retry_at = Instant::now();
+                game.retry_delay = 30;
+            }
         }
         if Instant::now() < next_attempt {
             continue;
@@ -429,14 +437,11 @@ pub(crate) fn run(
             || !library.is_empty()
             || (badges.pending() && !badges.waiting)
             || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-            || active.as_ref().is_some_and(|game| {
-                !game.online || (game.ready && game.last_ping.elapsed() >= Duration::from_secs(120))
-            })
         {
             status.set(SyncStatus::Syncing);
         }
         publish_detail(&status, verified, library_total, library.len(), library_failed,
-            &badges, &store, next_attempt, problem);
+            &badges, &store, next_attempt, problem, active.as_ref());
         let result = (|| -> Result<(), Failure> {
             if !verified {
                 let logged_in = login(&mut http, &config, auth.as_ref()).map_err(|e| {
@@ -491,57 +496,74 @@ pub(crate) fn run(
                     Err(error) => deferred_error = Some(error),
                 }
             }
-            if let Some(game) = active.as_mut() {
-                if !game.online {
-                    let resolved = call(&mut http, auth, "gameid", &[("m", game.hash.clone())])?;
-                    let id = resolved["GameID"].as_u64().ok_or(Failure::Invalid)?;
-                    if id == 0 {
-                        let _ = notices.send(Notice::status(
-                            game.generation,
-                            "No achievements for this ROM",
-                        ));
-                        game.online = true;
-                        game.ready = false;
-                    } else {
-                        let patch = call(&mut http, auth, "patch", &[("g", id.to_string())])?;
-                        let data: Game = serde_json::from_value(patch["PatchData"].clone())
-                            .map_err(|_| Failure::Invalid)?;
-                        if !crate::tracked_console(data.console) || u64::from(data.id) != id {
-                            return Err(Failure::Invalid);
+            if let Some(game) = active.as_mut().filter(|game| Instant::now() >= game.retry_at) {
+                let game_result = (|| -> Result<(), Failure> {
+                    if !game.online {
+                        let resolved = call(&mut http, auth, "gameid", &[("m", game.hash.clone())])?;
+                        let id = resolved["GameID"].as_u64().ok_or(Failure::Invalid)?;
+                        if id == 0 {
+                            game.online = true;
+                            game.ready = false;
+                            game.status = "No achievements";
+                        } else {
+                            let patch = call(&mut http, auth, "patch", &[("g", id.to_string())])?;
+                            let data: Game = serde_json::from_value(patch["PatchData"].clone())
+                                .map_err(|_| Failure::Invalid)?;
+                            if !crate::tracked_console(data.console) || u64::from(data.id) != id {
+                                return Err(Failure::Invalid);
+                            }
+                            if data.title.starts_with("Unsupported Game Version") {
+                                game.online = true;
+                                game.ready = false;
+                                game.status = "Version unsupported";
+                                return Ok(());
+                            }
+                            let session = call(
+                                &mut http,
+                                auth,
+                                "startsession",
+                                &[
+                                    ("g", id.to_string()),
+                                    ("h", "0".into()),
+                                    ("m", game.hash.clone()),
+                                    ("l", VERSION.into()),
+                                ],
+                            )?;
+                            let ids = unlocked(&session)?;
+                            storage::write(&dir.join(format!("{}.json", game.hash)), &(&data, &ids))
+                                .map_err(|_| Failure::Invalid)?;
+                            badges.enqueue(&data);
+                            ping(&mut http, auth, &status, game, &data)?;
+                            let _ = prepared.send(Prepared {
+                                generation: game.generation,
+                                hash: game.hash.clone(),
+                                game: data,
+                                unlocked: ids,
+                                cached: false,
+                            });
+                            game.ready = true;
+                            game.online = true;
+                            game.status = "Ready";
+                            game.last_ping = Instant::now();
                         }
-                        let session = call(
-                            &mut http,
-                            auth,
-                            "startsession",
-                            &[
-                                ("g", id.to_string()),
-                                ("h", "0".into()),
-                                ("m", game.hash.clone()),
-                                ("l", VERSION.into()),
-                            ],
-                        )?;
-                        let ids = unlocked(&session)?;
-                        storage::write(&dir.join(format!("{}.json", game.hash)), &(&data, &ids))
-                            .map_err(|_| Failure::Invalid)?;
-                        badges.enqueue(&data);
-                        ping(&mut http, auth, &status, game, &data)?;
-                        let _ = prepared.send(Prepared {
-                            generation: game.generation,
-                            hash: game.hash.clone(),
-                            game: data,
-                            unlocked: ids,
-                            cached: false,
-                        });
-                        game.ready = true;
-                        game.online = true;
+                    } else if game.ready && game.last_ping.elapsed() >= Duration::from_secs(120) {
+                        let cached: (Game, BTreeSet<u32>) =
+                            storage::read(&dir.join(format!("{}.json", game.hash)))
+                                .map_err(|_| Failure::Invalid)?;
+                        ping(&mut http, auth, &status, game, &cached.0)?;
+                        game.status = "Ready";
                         game.last_ping = Instant::now();
                     }
-                } else if game.ready && game.last_ping.elapsed() >= Duration::from_secs(120) {
-                    let cached: (Game, BTreeSet<u32>) =
-                        storage::read(&dir.join(format!("{}.json", game.hash)))
-                            .map_err(|_| Failure::Invalid)?;
-                    ping(&mut http, auth, &status, game, &cached.0)?;
-                    game.last_ping = Instant::now();
+                    Ok(())
+                })();
+                match game_result {
+                    Ok(()) => game.retry_delay = 30,
+                    Err(Failure::Authentication) => return Err(Failure::Authentication),
+                    Err(_) => {
+                        game.status = if game.ready { "Cached · retrying" } else { "Retrying" };
+                        game.retry_at = Instant::now() + Duration::from_secs(game.retry_delay);
+                        game.retry_delay = (game.retry_delay * 2).min(300);
+                    }
                 }
             }
             // One ROM per pass, with a one-second gap. Prefetch uses `unlocks`, not
@@ -576,12 +598,11 @@ pub(crate) fn run(
             !verified || !library.is_empty()
                 || library_failed > 0
                 || badges.pending()
-                || store.lock().unwrap().unlocks.values().any(|u| !u.synced)
-                || active.as_ref().is_some_and(|game| !game.online),
+                || store.lock().unwrap().unlocks.values().any(|u| !u.synced),
             std::sync::atomic::Ordering::Release,
         );
         publish_detail(&status, verified, library_total, library.len(), library_failed,
-            &badges, &store, next_attempt, problem);
+            &badges, &store, next_attempt, problem, active.as_ref());
         match result {
             Ok(()) => {
                 problem = if library_failed > 0 { "Some games could not be prepared" }
@@ -634,7 +655,7 @@ pub(crate) fn run(
             }
         }
         publish_detail(&status, verified, library_total, library.len(), library_failed,
-            &badges, &store, next_attempt, problem);
+            &badges, &store, next_attempt, problem, active.as_ref());
     }
 }
 
@@ -793,6 +814,9 @@ mod presence_tests {
             ready: true,
             online: true,
             last_ping: Instant::now(),
+            retry_at: Instant::now(),
+            retry_delay: 30,
+            status: "Ready",
         };
         let game = Game {
             id: 1,
@@ -822,7 +846,7 @@ fn should_rescan(elapsed: Duration, remaining: usize) -> bool {
 #[allow(clippy::too_many_arguments)]
 fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining: usize,
     failed: usize, badges: &crate::badges::Queue, store: &Arc<Mutex<Store>>,
-    next_attempt: Instant, problem: &'static str) {
+    next_attempt: Instant, problem: &'static str, active: Option<&Active>) {
     let (badges_done, badges_total) = badges.counts();
     let detail = crate::SyncDetail {
         status: status.get(), authenticated,catalog_ready:true,artwork_ready:!badges.discovery_pending(), games_done: total.saturating_sub(remaining),
@@ -831,6 +855,10 @@ fn publish_detail(status: &Status, authenticated: bool, total: usize, remaining:
         retry_seconds: if matches!(status.get(), SyncStatus::Offline | SyncStatus::Attention) {
             if badges.waiting && problem==badges.problem {badges.retry_seconds()}else{next_attempt.saturating_duration_since(Instant::now()).as_secs()}
         } else { 0 }, problem,
+        game_status: active.map_or("", |game| game.status),
+        game_retry_seconds: active.map_or(0, |game| {
+            game.retry_at.saturating_duration_since(Instant::now()).as_secs()
+        }),
     };
     *status.detail.lock().unwrap() = detail;
 }

@@ -1845,7 +1845,6 @@ impl App {
             WallpaperPick::File(_) | WallpaperPick::Random
         );
         let mut hidden = vec![];
-        if self.kids.active || self.shelf().carts.is_empty() {hidden.push(QuickRow::CartStudio);}
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -3445,7 +3444,7 @@ impl App {
                 if row == QuickRow::DateTime && self.manual_clock_locked() { return; }
                 self.clock_return_row=row;
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
-                if row==QuickRow::TimeZone {if let Phase::SetClock{picker,..}=&mut self.phase {picker.field(slot_ui::Field::Offset);picker.toggle_editing();}}
+                if row==QuickRow::TimeZone {if let Phase::SetClock{picker,..}=&mut self.phase {picker.edit_offset_only();}}
             }
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
@@ -4514,12 +4513,6 @@ impl App {
         self.panel_lit() && self.screen > 0.0
     }
 
-    /// Startup credential prompts wait for the boot intro and other modal pages.
-    pub fn add_shared_games(&mut self,carts:Vec<Cart>) {
-        for mut cart in carts {if !self.catalog.iter().any(|c|c.platform==cart.platform && c.stem==cart.stem){cart.read_header();self.catalog.push(cart);}}
-        self.catalog.sort_by(|a,b|(a.platform as u8,slot_store::sort_key(&a.stem)).cmp(&(b.platform as u8,slot_store::sort_key(&b.stem))));
-        self.apply_kid_scope();
-    }
     fn sharing_blocks_library_access(&mut self) -> bool {
         let Some(menu) = self.network.as_mut().filter(|m| m.sharing_busy()) else { return false; };
         menu.background_notice("Turn off file sharing first");
@@ -4579,7 +4572,6 @@ impl App {
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
             if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
-        let added=self.network.as_mut().map(|m|m.take_shared_games()).unwrap_or_default();
         if let Some(catalog) = self.network.as_mut().and_then(|m| m.take_sharing_catalog()) {
             self.catalog = catalog;
             self.apply_kid_scope();
@@ -4590,8 +4582,6 @@ impl App {
                     self.orphaned.extend(shelf.take_interior(i));
                 }
             }
-        } else if !added.is_empty() {
-            self.add_shared_games(added);
         }
         self.step_net_time();
         self.tick_quick_controls();
@@ -6214,18 +6204,13 @@ impl App {
             }
         }
 
-        if let [cancel, swap, choose, ..] = self.core_legend_faces.as_slice() {
-            let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
-            let swap_x = self.canvas().centred(seen(swap.1));
-            for (tex, w, x) in [
-                (
-                    cancel.0,
-                    cancel.1,
-                    swap_x - CORE_LEGEND_GAP - seen(cancel.1),
-                ),
-                (swap.0, swap.1, swap_x),
-                (choose.0, choose.1, swap_x + seen(swap.1) + CORE_LEGEND_GAP),
-            ] {
+        let count = self.core_legend_faces.len().min(if self.kids.active { 3 } else { 4 });
+        if count >= 3 {
+            let legends = &self.core_legend_faces[..count];
+            let width = legends.iter().map(|(_, w)| w.saturating_sub(HINT_EDGE) as f32).sum::<f32>()
+                + CORE_LEGEND_GAP * (count - 1) as f32;
+            let mut x = self.canvas().centred(width);
+            for &(tex, w) in legends {
                 out.push(Draw::Tex {
                     x: x.round(),
                     y: CORE_LEGEND_Y,
@@ -6234,16 +6219,7 @@ impl App {
                     tex,
                     alpha: lift,
                 });
-            }
-            if let Some(studio) = self.core_legend_faces.get(3).filter(|_| !self.kids.active) {
-                out.push(Draw::Tex {
-                    x: self.canvas().centred(seen(studio.1)),
-                    y: CORE_LEGEND_Y - 36.0,
-                    w: studio.1 as f32,
-                    h: slot_ui::MENU_HINT_H as f32,
-                    tex: studio.0,
-                    alpha: lift,
-                });
+                x += w.saturating_sub(HINT_EDGE) as f32 + CORE_LEGEND_GAP;
             }
         }
     }

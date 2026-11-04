@@ -63,7 +63,7 @@ with tempfile.TemporaryDirectory() as tmp:
             binary.chmod(0o644)
     for wrapper in (root/'System/samba/libexec').iterdir():
         wrapper.chmod(0o644)
-    password='ABCDEFGH23456789'
+    password='Arcade shelf@2026!'
     subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
     config=(run/'slot-smb/smb.conf').read_text()
     assert 'SMB3_00' in config and 'server smb encrypt = required' in config

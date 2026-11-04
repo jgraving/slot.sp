@@ -365,9 +365,8 @@ impl QuickRow {
         QuickRow::GbBezel,
     ];
 
-    pub const GAME: [QuickRow; 10] = [
+    pub const GAME: [QuickRow; 9] = [
         QuickRow::Achievements,
-        QuickRow::CartStudio,
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
@@ -1256,6 +1255,10 @@ pub fn quick_warning_value_face(text: &str, lit: bool) -> UndoFace {
 }
 
 fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
+    quick_text_face_within(label, colour, role, f32::INFINITY)
+}
+
+fn quick_text_face_within(label: &str, colour: [u8; 3], role: text::Role, max_width: f32) -> UndoFace {
     let Some(font) = text::font(role) else {
         return UndoFace {
             rgba: Vec::new(),
@@ -1263,14 +1266,11 @@ fn quick_text_face(label: &str, colour: [u8; 3], role: text::Role) -> UndoFace {
             h: 0,
         };
     };
-    let layout = text::Layout { lines: vec![label.to_string()],
+    let mut layout = text::Layout { lines: vec![label.to_string()],
         px: if role == text::Role::Display { MENU_PX } else { 26.0 }, tracking: 0.0, role };
-    let set = layout
-        .lines
-        .iter()
-        .map(|l| text::line_width(font, l, layout.px, layout.tracking))
-        .fold(0.0, f32::max);
-    let w = set.ceil() as u32 + 2 * MENU_PAD;
+    let set = text::line_width(font, label, layout.px, 0.0);
+    if set > max_width { layout.px *= max_width / set; }
+    let w = set.min(max_width).ceil() as u32 + 2 * MENU_PAD;
     let mut rgba = vec![0u8; (w * MENU_H * 4) as usize];
     text::draw_centred(&mut rgba, w, MENU_H, &layout, colour);
     UndoFace { rgba, w, h: MENU_H }
@@ -1365,10 +1365,18 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
     ]
 }
 
-/// Parent controls share the production bitmap legends and footer typography.
+pub const SHOW_PASSWORD_FOOTER: u8 = 13;
+pub const HIDE_PASSWORD_FOOTER: u8 = 14;
+
+/// Settings share the production bitmap legends and footer typography.
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        SHOW_PASSWORD_FOOTER | HIDE_PASSWORD_FOOTER => vec![
+            with_hint(button_face(ButtonLegend::B), "Back", hint, true),
+            with_hint(button_face(ButtonLegend::A),
+                if page == SHOW_PASSWORD_FOOTER { "Show" } else { "Hide" }, hint, false),
+        ],
         10 => vec![with_hint(button_face(ButtonLegend::Select), "Delete", hint, true)],
         11 => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
@@ -1495,7 +1503,11 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
         let toggle = matches!(value.as_str(), "On" | "Off");
         if toggle && !switches {continue;}
         let value = if toggle { crate::toggle_face(value == "On", lit) }
-            else { quick_value_face(value, lit) };
+            else if label == "Password" {
+                let available = (right - QUICK_LABEL_X - label_face.w as f32 - 16.0).max(1.0);
+                let (ink, role) = if lit { (MENU_INK, text::Role::Focus) } else { (DIM_INK, text::Role::Menu) };
+                quick_text_face_within(value, ink, role, available)
+            } else { quick_value_face(value, lit) };
         if toggle {
             parent_blit(&mut face, &value, right + pad - value.w as f32, y);
             continue;

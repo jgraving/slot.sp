@@ -68,9 +68,13 @@ WRAPPER
         mkdir -p "$dir"
     done
     IFS= read -r password
-    # A generated 80-bit password uses an unambiguous controller-readable alphabet.
-    [ "${#password}" -eq 16 ] || exit 1
-    case "$password" in *[!ABCDEFGHJKLMNPQRSTUVWXYZ23456789]*) exit 1;; esac
+    # The controller keyboard and launcher accept 8–32 printable ASCII bytes.
+    LC_ALL=C
+    export LC_ALL
+    [ "${#password}" -ge 8 ] && [ "${#password}" -le 32 ] || exit 1
+    case "$password" in *[![:print:]]*) exit 1;; esac
+    extra=
+    if IFS= read -r extra || [ -n "$extra" ]; then exit 1; fi
     printf 'nobody = slot\n' > "$STATE/users"
     cat > "$STATE/smb.conf" <<CONF
 [global]

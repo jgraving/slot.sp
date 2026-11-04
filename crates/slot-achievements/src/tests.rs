@@ -400,6 +400,36 @@ fn offline_unlock_is_durable_then_syncs_without_reopening_the_game() {
 }
 
 #[test]
+fn a_failed_game_session_does_not_block_library_sync() {
+    struct SessionOffline(Server);
+    impl network::Transport for SessionOffline {
+        fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, network::Failure> {
+            if fields.iter().any(|(key, value)| *key == "r" && value == "startsession") {
+                return Err(network::Failure::Network);
+            }
+            self.0.call(fields)
+        }
+        fn badge(&mut self, name: &str) -> Result<Vec<u8>, network::Failure> {
+            self.0.badge(name)
+        }
+    }
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Playing.gba");
+    std::fs::write(&rom, b"playing ROM").unwrap();
+    std::fs::write(root.path().join("Games/GBA/Unopened.gba"), b"unopened ROM").unwrap();
+    let (calls, _requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), SessionOffline(Server { calls }));
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| service.sync_detail().is_some_and(|d| {
+        d.game_retry_seconds > 0 && d.games_total == 2 && d.games_done == 2
+    }));
+    let detail = service.sync_detail().unwrap();
+    assert_ne!(detail.status, SyncStatus::Offline);
+    assert_eq!(detail.game_status, "Retrying");
+}
+
+#[test]
 fn an_unopened_library_is_prepared_automatically_without_starting_sessions() {
     let root = configured();
     let rom = root.path().join("Games/GBA/Unopened.gba");
