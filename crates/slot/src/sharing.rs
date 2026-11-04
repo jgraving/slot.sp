@@ -217,7 +217,7 @@ fn stop(running: &mut Option<Running>) {
     }
 }
 fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
-    #[cfg(not(all(feature = "device", target_arch = "aarch64", target_os = "linux")))]
+    #[cfg(not(all(feature = "device", target_os = "linux")))]
     {
         let _ = (root, start);
         return Ok(Running {
@@ -225,7 +225,7 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
             mdns: None,
         });
     }
-    #[cfg(all(feature = "device", target_arch = "aarch64", target_os = "linux"))]
+    #[cfg(all(feature = "device", target_os = "linux"))]
     {
         use std::{
             io::Write,

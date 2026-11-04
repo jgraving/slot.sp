@@ -16,7 +16,17 @@ sha=7f367545bca69aa96897628f82f0f04d4b66b3bcb36cb978b9bb952c4b4c428d
 wsdd_sha=2b1e7720435a1e067388660ec3edb321a4c91b4f9d0928ba27d0a8d89b7ef3b9
 fetch() {
     local url="$1" file="$2" digest="$3"
-    [ -f "$file" ] || curl --fail --location --retry 3 "$url" -o "$file"
+    if [ ! -f "$file" ]; then
+        if ! curl --ipv4 --fail --location --retry 4 --retry-all-errors --connect-timeout 20 --max-time 180 "$url" -o "$file"; then
+            rm -f "$file"
+            case "$url" in
+                https://download.samba.org/pub/samba/stable/*)
+                    curl --ipv4 --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 180 \
+                        "https://www.samba.org/samba/ftp/stable/${url##*/}" -o "$file" ;;
+                *) return 1 ;;
+            esac
+        fi
+    fi
     echo "$digest  $file" | sha256sum -c -
 }
 fetch "https://download.samba.org/pub/samba/stable/samba-$version.tar.gz" "$work/samba.tar.gz" "$sha"

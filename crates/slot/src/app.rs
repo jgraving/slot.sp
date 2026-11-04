@@ -4244,7 +4244,7 @@ impl App {
         let hidden = if menu.is_none() { Vec::new() } else if self.quick_menu().is_some() { self.hidden_rows() } else { self.in_game_hidden() };
         let on = menu.filter(|r| r.toggle()).and_then(|r| self.quick_value(r))
             .map(|v| matches!(v, QuickValue::On | QuickValue::Show));
-        let selection=self.network.as_ref().filter(|m|m.visible).map(|m|m.focus_info()).or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info())).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
+        let selection=self.studio.as_ref().and_then(|m|m.focus_info()).or_else(||self.network.as_ref().filter(|m|m.visible).map(|m|m.focus_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.focus_info())).or_else(||self.display_schedule.as_ref().map(|m|m.focus_info())).or_else(||self.bluetooth.as_ref().map(|m|{let(s,_,first,_)=m.scroll_info();(s,first)}));
         self.menu_motion.update_page_at(menu, &hidden, on, custom, selection, dt);
         self.menu_title_motion.borrow_mut().advance(dt);self.menu_hint_motion.borrow_mut().advance(dt);
         if let Some(menu)=&self.kid_menu {self.kid_surface.update(menu.in_game_card(),dt);}else{self.kid_surface.advance(dt);}
@@ -5521,6 +5521,14 @@ impl App {
         let begin=out.len();
         if frame.suppress_focus {return;}
         match key {
+            4100|4101|4103=>{
+                let edge=self.canvas().w*0.47;let x=edge+4.0;let w=self.canvas().w-76.0-edge+4.0;
+                let pitch=if key==4100 {self.studio.as_ref().map_or(64.0,|m|(262.0/m.model.rows().len().max(1)as f32).min(64.0))}else if key==4101 {60.0}else{52.0};
+                let top=if key==4100 {80.0}else if key==4101 {92.0}else{128.0};
+                let offset=(frame.focus_y-slot_ui::expressive::ROW_TOP)/slot_ui::QUICK_PITCH;
+                let dx=if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
+                slot_ui::expressive::rounded(out,x+dx,top+offset*pitch,w,pitch-4.0,12.0,slot_ui::expressive::SELECTED);
+            },
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
             1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4004=>{

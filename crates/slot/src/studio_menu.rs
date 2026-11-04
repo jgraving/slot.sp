@@ -113,6 +113,9 @@ impl Menu {
     pub fn preview_ready(&self) -> bool {
         self.preview_generation == self.generation
     }
+    pub fn focus_info(&self)->Option<(usize,usize)> {
+        match self.model.screen {Screen::List{row}=>Some((row,0)),Screen::Sheet{at}=>Some((at,0)),Screen::Custom{channel,..}=>Some((channel,0)),_=>None}
+    }
     pub fn page_key(&self) -> u64 {
         4100 + match self.model.screen {
             Screen::List { .. } => 0,
@@ -393,7 +396,6 @@ impl Menu {
                         _ => "Choose…".into(),
                     };
                     let y = 82.0 + i as f32 * pitch;
-                    highlight(&mut face, x - 8.0, y - 2.0, w + 16.0, pitch - 4.0, i == row);
                     text(&mut face, name, x, y, w, 24.0, i == row);
                     text(&mut face, &value, x, y + 27.0, w, 20.0, false);
                 }
@@ -407,7 +409,6 @@ impl Menu {
                         LabelKind::Title => "Title only",
                     };
                     let y = 96.0 + i as f32 * 60.0;
-                    highlight(&mut face, x - 8.0, y - 4.0, w + 16.0, 52.0, i == at);
                     text(&mut face, name, x, y, w, 24.0, i == at);
                 }
             }
@@ -471,7 +472,6 @@ impl Menu {
                 text(&mut face, "Custom color", x, 80.0, w, 24.0, true);
                 for i in 0..3 {
                     let y = 132.0 + i as f32 * 52.0;
-                    highlight(&mut face, x - 8.0, y - 4.0, w + 16.0, 46.0, i == channel);
                     text(
                         &mut face,
                         &format!("{}  ‹ {} ›", ["R", "G", "B"][i], rgb[i]),

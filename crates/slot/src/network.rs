@@ -560,7 +560,7 @@ impl Menu {
             },
             Page::Sharing=> match self.selected {
                 0=>self.toggle_sharing(),
-                1=>{self.prefs.sharing_keep=!self.prefs.sharing_keep;self.store_preferences();self.changed();if self.prefs.sharing_keep {self.warn("Not recommended on public Wi-Fi",slot_ui::NoticeTone::Warning);}},
+                1=>{self.prefs.sharing_keep=!self.prefs.sharing_keep;self.store_preferences();self.changed();if self.prefs.sharing_keep {self.warn("Keep off on public Wi-Fi",slot_ui::NoticeTone::Warning);}},
                 4=>{if self.unlocked(){self.sharing_reveal=!self.sharing_reveal;self.changed();}},
                 5=>{if self.unlocked(){match crate::sharing::password(){Ok(password)=>{self.sharing.request(None);self.secrets.sharing_password=password.to_string();self.save_secrets();self.sharing_reveal=true;self.say("Sharing password changed");},Err(error)=>self.say(error)}}},
                 6=>{self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.import_uploads();self.say("Importing uploads…");},
