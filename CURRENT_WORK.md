@@ -1,6 +1,8 @@
-# Wi-Fi diagnostics and address-wait feedback
+# Wi-Fi diagnostics merged; release and issue reply pending
 
-Active branch: `fix/wifi-diagnostics`, based on main `75f54551`. See the newest WORKLOG.md entry. Implementing offline diagnostic export and accurate DHCP progress/errors for issue #182; user authorized a reply after reviewable implementation. No merge or release requested.
+Continue from `main`. PR #200 merged as `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`; its tree equals tested source `6053032e41426b4d83e1c3bb788151f866327728`, which passed all six workflows. Settings → Network → Save Wi-Fi report exports offline sanitized status facts. Connection progress now covers IP assignment, with timeout/disconnection warnings and late recovery.
+
+Main release run 41848567747 is in progress. Verify its published System ZIP, then reply to demifiend9 on issue #182: the maintainer has no RG34xxSP and requests a report from this merged version. The underlying RG34xxSP cause remains unconfirmed. See newest WORKLOG.md entry. This supersedes earlier active branch instructions.
 
 ---
 

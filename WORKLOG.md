@@ -1,5 +1,18 @@
 # Development recovery log
 
+## Merged Wi-Fi diagnostics — 2026-11-04
+
+PR [#200](https://github.com/jgraving/slot.sp/pull/200) merged to main as `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`, after all six workflows passed on exact source `6053032e41426b4d83e1c3bb788151f866327728`. Verified live base, final PR head, successful merge and identical tested/merged Git trees. No failed assertion was disabled. Continue from main.
+
+- Final CI: [device/package](https://github.com/jgraving/slot.sp/actions/runs/41846384859), [launcher/native](https://github.com/jgraving/slot.sp/actions/runs/41846384898), [website](https://github.com/jgraving/slot.sp/actions/runs/41846384865), [scaling](https://github.com/jgraving/slot.sp/actions/runs/41846384864), [blending](https://github.com/jgraving/slot.sp/actions/runs/41846384836), [shortcuts](https://github.com/jgraving/slot.sp/actions/runs/41846384857): all success. The workspace-blocked Unix socket test passes in CI. Existing native-only fixtures run separately in the launcher workflow.
+- Local verification: 40 Network-menu tests, five diagnostic tests, device-feature compilation, credential-boundary/helper/slotlink checks, production Network export walkthrough and light/dark progress/error captures pass. A deterministic large-output/nonzero-exit test reproduced the CI probe race and passed after the fix. Visual review shortened the report-row hint and error text to avoid overlap at 640 pixels.
+- On-device action: Settings → Network → Save Wi-Fi report (last row, Up from Wi-Fi toggle). Wait for the saved filename, shut down normally, copy Diagnostics/wifi-NNNN.txt from the content SD card. Reports omit SSIDs, IP/MAC addresses, credentials, tokens and raw output; collection is read-only/offline and uploads nothing. A report can distinguish association, DHCP/interface address, supplicant detection, route, resolver and watcher/client availability. No manual-IP configuration was added.
+- Wi-Fi progress remains active while getting an address, with a 30-second address timeout, a specific disconnect warning and late-lease recovery. Updates show the address-wait reason. The RG34xxSP root cause still requires physical-device evidence; the maintainer has no RG34xxSP. No physical handheld reproduction is claimed.
+- Test artifact: https://github.com/jgraving/slot.sp/actions/runs/41846384859/artifacts/13330804470 (verified present; expires 2026-11-05 14:26 UTC). The System ZIP is the update, not the corresponding-source ZIP.
+- Main [build/release](https://github.com/jgraving/slot.sp/actions/runs/41848567747), [launcher](https://github.com/jgraving/slot.sp/actions/runs/41848567658) and [website](https://github.com/jgraving/slot.sp/actions/runs/41848567612) started after merge. Release completion and reporter reply are pending. User authorized merging and replying once the new download is available.
+- OTA safety #198 and handoff #199 were already merged before this work; their post-merge release and launcher runs succeeded. Their changes are retained in this merged version.
+
+
 ## Wi-Fi diagnostics and address-wait feedback — 2026-11-04
 
 CI correction: source `2906fc93` exposed a scheduling-dependent probe classification failure in the shortcut workflow (job 126628180116). The capped reader closes stdout, so a large-output child can exit with SIGPIPE before the parent checks its status. The probe now classifies captured output size before the exit code. Added a deterministic large-output/nonzero-exit case: it failed before the fix and passes afterward, alongside all five diagnostics tests. No assertion was weakened. Remote final-source CI is being rerun; the existing Unix-socket test passed in CI.
