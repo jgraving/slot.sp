@@ -37,6 +37,8 @@ def package(root: Path, output: Path, source: str) -> None:
         raise ValueError('missing private Samba loader')
     if not (system / 'slot').stat().st_mode & 0o111:
         raise ValueError('System/slot must be executable')
+    if not (system / 'slotwifi.sh').stat().st_mode & 0o111:
+        raise ValueError('Wi-Fi DHCP callback must be executable')
     licenses = system / 'licenses'
     if not any(licenses.glob('gpsp-*.tar.gz')) or not any(licenses.glob('gpsp-*.meta')) or not any(licenses.glob('mgba-*.meta')):
         raise ValueError('missing emulator source archive or provenance')

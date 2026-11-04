@@ -1,5 +1,5 @@
 #!/bin/sh
-# Private SMB3 upload inbox. Password arrives on stdin; runtime secrets stay in RAM.
+# Authenticated SMB3 access to the content SD card. Password arrives on stdin; runtime secrets stay in RAM.
 set -eu
 # Never write SMB session material to a card crash dump.
 ulimit -c 0
@@ -30,7 +30,7 @@ case "$SD" in *'%'*|*'['*|*']'*|*'
 '*) exit 1;; esac
 TOOLS="$SD/System/samba"
 for name in smbd smbpasswd testparm wsdd2 samba-dcerpcd rpcd_classic rpcd_winreg; do
-    [ -x "$TOOLS/bin/$name" ] || exit 1
+    [ -x "$TOOLS/bin/$name" ] || exit 10
 done
 # No loader or library-path changes escape into the launcher/emulators.
 samba() {
@@ -43,10 +43,6 @@ if [ "$1" = prepare ]; then
     [ ! -L "$STATE" ] || exit 1
     umask 077
     mkdir -p "$STATE" "$STATE/private" "$STATE/lock" "$STATE/cache" "$STATE/state"
-    for dir in "$SD/Inbox" "$SD/Inbox/GB" "$SD/Inbox/GBC" "$SD/Inbox/GBA" "$SD/Inbox/Wallpapers"; do
-        [ ! -L "$dir" ] || exit 1
-        mkdir -p "$dir"
-    done
     IFS= read -r password
     # A generated 80-bit password uses an unambiguous controller-readable alphabet.
     [ "${#password}" -eq 16 ] || exit 1
@@ -89,9 +85,9 @@ if [ "$1" = prepare ]; then
     allow insecure wide links = no
     max smbd processes = 8
     deadtime = 5
-[Games]
-    path = $SD/Inbox
-    comment = Upload games and PNG wallpapers, then turn sharing off to import
+[SDCard]
+    path = $SD
+    comment = Content SD card — games, saves, artwork, settings and System
     browseable = yes
     read only = no
     guest ok = no
@@ -99,14 +95,12 @@ if [ "$1" = prepare ]; then
     force user = root
     follow symlinks = no
     wide links = no
-    hide dot files = yes
-    veto files = /.*/
-    delete veto files = no
+    hide dot files = no
     max connections = 4
 CONF
-    printf '%s\n%s\n' "$password" "$password" | samba smbpasswd -s -a -c "$STATE/smb.conf" nobody >/dev/null 2>&1
+    printf '%s\n%s\n' "$password" "$password" | samba smbpasswd -s -a -c "$STATE/smb.conf" nobody >/dev/null 2>&1 || exit 12
     unset password
-    samba testparm -s "$STATE/smb.conf" >/dev/null 2>&1
+    samba testparm -s "$STATE/smb.conf" >/dev/null 2>&1 || exit 13
     exit 0
 fi
 # setsid/process_group(0) is supplied by the launcher before this supervisor starts.

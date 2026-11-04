@@ -150,6 +150,7 @@ impl Queue {
     pub fn counts(&self) -> (usize, usize) {
         (self.known.len().saturating_sub(self.pending.len()+self.checking.len()), self.known.len())
     }
+    pub fn network_available(&mut self) {self.retry=Instant::now();self.waiting=false;self.retry_delay=30;}
     pub fn retry_seconds(&self)->u64 {if self.waiting {self.retry.saturating_duration_since(Instant::now()).as_secs()}else{0}}
     pub fn percent(&self) -> u8 {
         if self.known.is_empty() {
@@ -175,7 +176,7 @@ impl Queue {
         };
         let target = path(&self.dir, &name).unwrap();
         let result = if load_badge(&target).is_some() {Ok(())}else {
-            http.badge(&name).map_err(|e|if e==Failure::Network {"Artwork server unavailable"}else{"Artwork response invalid"}).and_then(|bytes| {
+            http.badge(&name).map_err(|e|if e==Failure::Network {http.network_problem()}else{"Artwork response invalid"}).and_then(|bytes| {
                 decode(&bytes).ok_or("Artwork response invalid")?;
                 std::fs::create_dir_all(target.parent().unwrap()).map_err(|_|"Cannot save artwork")?;
                 slot_store::atomic_write(&target,&bytes).map_err(|_|"Cannot save artwork")
@@ -221,6 +222,8 @@ mod tests {
         let mut http=Failing(0);q.step(&mut http);assert_eq!(http.0,1);assert!(q.waiting);assert!(q.retry_seconds()>=29);
         for _ in 0..100 {q.step(&mut http);}assert_eq!(http.0,1);
         q.retry=Instant::now();q.step(&mut http);assert_eq!(http.0,2);assert!(q.retry_seconds()>=59);
+        // A restored connection must wake artwork as well as the main RA queue.
+        q.network_available();assert!(!q.waiting);q.step(&mut http);assert_eq!(http.0,3);assert!(q.retry_seconds()<=30);
     }
     #[test]
     #[ignore = "fetches one public RA badge; no account or award request"]

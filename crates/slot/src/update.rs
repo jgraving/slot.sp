@@ -232,6 +232,7 @@ pub enum UpdateJob {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateEvent {
     Available(Vec<Release>),
+    BaseOsStatus(String),
     UpToDate,
     Progress(u64),
     Staged,
@@ -304,6 +305,11 @@ pub fn check_with(
     fetch: &mut dyn FnMut(&str) -> Result<Vec<u8>, UpdateFail>,
     running: Running,
 ) -> UpdateEvent {
+    check_report_with(now_unix,fetch,running,&mut |_|{})
+}
+
+fn check_report_with(now_unix:u64, fetch:&mut dyn FnMut(&str)->Result<Vec<u8>,UpdateFail>,
+    running:Running, report:&mut dyn FnMut(String))->UpdateEvent {
     if clock_is_wrong(now_unix) {
         return UpdateEvent::Failed(UpdateFail::Clock);
     }
@@ -319,9 +325,18 @@ pub fn check_with(
         Err(e) => return UpdateEvent::Failed(e),
     };
     let baseos = if let Some((target,version))=running.baseos {
-        let json=match fetch(BASEOS_LATEST).and_then(|b|String::from_utf8(b).map_err(|_|UpdateFail::Bad)) {Ok(j)=>j,Err(e)=>return UpdateEvent::Failed(e)};
-        parse_baseos(&json,target,version)
-    } else {None};
+        match fetch(BASEOS_LATEST).and_then(|b|String::from_utf8(b).map_err(|_|UpdateFail::Bad)) {
+            Ok(json)=>match parse_baseos(&json,target,version) {
+                Some(release) if plain(version)=>{
+                    report(if newer(&release.version,version) {format!("{} available",release.version)}else{"Up to date".into()});
+                    Some(release)
+                },
+                Some(_)=>{report("Installed version unknown".into());None},
+                None=>{report("No compatible release".into());None},
+            },
+            Err(_)=>{report("Check failed · retry".into());None},
+        }
+    } else {report("Device/version unavailable".into());None};
     let mut offers=Vec::new();
     if !slot.source.starts_with(slot.running.as_str()) {
         if slot.running.is_empty()||!slot.running.bytes().all(|c|c.is_ascii_hexdigit()) {return UpdateEvent::Failed(UpdateFail::Bad);}
@@ -635,13 +650,14 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
         UpdateJob::Check => {
             let target = crate::baseos::var("BASEOS_TARGET");
             let version = crate::baseos::var("BASEOS_VERSION");
-            check_with(
+            check_report_with(
                 now_unix(),
                 &mut |url| fetch(url, API_TIMEOUT, &mut |_| {}),
                 Running {
                     slot: crate::build_info::Build::current().hash,
-                    baseos: if baseos_status().is_some() {target.as_deref().zip(version.as_deref())}else{None},
+                    baseos: target.as_deref().zip(version.as_deref()),
                 },
+                &mut |message| {let _=tx.send(UpdateEvent::BaseOsStatus(message));},
             )
         }
         UpdateJob::Install(release) => {
@@ -685,11 +701,11 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
 
 #[cfg(feature = "device")]
 fn baseos_status() -> Option<String> {
-    let out = std::process::Command::new("baseos-update")
+    let out = std::process::Command::new("/usr/sbin/baseos-update")
         .arg("status")
         .output()
         .ok()?;
-    Some(String::from_utf8_lossy(&out.stdout).into_owned())
+    out.status.success().then(||String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 #[cfg(not(feature = "device"))]

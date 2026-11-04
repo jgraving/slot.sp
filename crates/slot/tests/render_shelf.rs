@@ -130,7 +130,7 @@ fn let_it_hop(app: &mut App) {
 }
 
 #[test]
-fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
+fn start_opens_cartridge_actions_and_emulator_still_renders() {
     let Some((_g, _s, mut c)) = compositor() else {
         eprintln!("no GL on this host, skipping");
         return;
@@ -151,8 +151,8 @@ fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
         "a Game Boy cart opened the GBA picker"
     );
     assert!(
-        after == plain,
-        "START put something on screen over a Game Boy cart"
+        after != plain,
+        "START did not open cartridge actions on a Game Boy cart"
     );
 
     let d = common::tmp_root_with_carts(&["Emerald", "Zzz"]);
@@ -160,6 +160,7 @@ fn start_draws_the_plain_shelf_on_a_game_boy_cart() {
     let mut pressed = shelf(&d, &mut c);
     let mut untouched = shelf(&twin, &mut c);
     pressed.apply(Action::GbaDown(Btn::Start));
+    pressed.apply(Action::GbaDown(Btn::Down));pressed.apply(Action::GbaDown(Btn::A));
     let_it_hop(&mut pressed);
     let_it_hop(&mut untouched);
     let plain = shot(&untouched, &mut c, "gba-plain");

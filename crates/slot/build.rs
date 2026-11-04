@@ -30,9 +30,6 @@ fn main() {
             git(&["rev-parse", "--short=8", "HEAD"])
         })
         .unwrap_or_else(|| "unknown".into());
-    let version = git(&["describe", "--tags", "--abbrev=0"])
-        .map(|t| t.trim_start_matches('v').to_string())
-        .unwrap_or_else(|| env!("CARGO_PKG_VERSION").into());
     let date = Command::new("date")
         .args(["-u", "+%Y-%m-%d"])
         .output()
@@ -41,6 +38,7 @@ fn main() {
         .map(|s| s.trim().to_string())
         .unwrap_or_else(|| "unknown".into());
 
+    let version=format!("{}-{}",date.replace('-',"."),&hash[..hash.len().min(7)]);
     println!("cargo:rustc-env=SLOT_GIT_HASH={hash}");
     println!("cargo:rustc-env=SLOT_VERSION={version}");
     println!("cargo:rustc-env=SLOT_BUILD_DATE={date}");

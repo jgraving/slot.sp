@@ -71,7 +71,7 @@ wifi_up() {
 	done
 	[ -e "$CTRL_DIR/wlan0" ] || return 1
 	stop_pid "$WATCH_PID"
-	$WPA_CLI -p "$CTRL_DIR" -i wlan0 -B -P "$WATCH_PID" -a "$0" >/dev/null 2>&1 || true
+	$WPA_CLI -p "$CTRL_DIR" -i wlan0 -B -P "$WATCH_PID" -a "$0" >/dev/null 2>&1 || { wifi_down; return 1; }
 	return 0
 }
 
