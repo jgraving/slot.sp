@@ -1,5 +1,19 @@
 # Development recovery log
 
+## Wi-Fi diagnostics and address-wait feedback — 2026-11-04
+
+CI correction: source `2906fc93` exposed a scheduling-dependent probe classification failure in the shortcut workflow (job 126628180116). The capped reader closes stdout, so a large-output child can exit with SIGPIPE before the parent checks its status. The probe now classifies captured output size before the exit code. Added a deterministic large-output/nonzero-exit case: it failed before the fix and passes afterward, alongside all five diagnostics tests. No assertion was weakened. Remote final-source CI is being rerun; the existing Unix-socket test passed in CI.
+
+Validation update: 40 Network-menu tests pass locally (one existing native-only fixture stays explicitly ignored in that run); device-feature compilation and slotlink regression checks pass. The production Network walkthrough and the added light/dark Wi-Fi progress captures pass. Visual review caught a crowded report-row value and an overlong timeout banner; shortened them to “To SD card” and “No IP address · retry”. New native status captures are included in launcher CI. Final-source checks, merge and published build are pending.
+
+Implementation checkpoint: added Settings → Network → Save Wi-Fi report, an asynchronous offline export to Diagnostics/wifi-NNNN.txt. Exported facts are allowlisted; SSIDs, IP/MAC addresses, credentials, tokens and raw output never enter the report. Local command probes have deadlines/output caps; unique report creation refuses a symlink destination and reports write failures. Helper diagnostics are read-only and report watcher/DHCP process presence, required commands and resolver configuration. Connection progress now remains active through a 30-second address wait, polls at one second while waiting, reports address timeout/disconnect, and recovers if a lease arrives later. Menus show the address-wait reason when opening Updates. No static IP/manual configuration added.
+
+Initial local validation: 23 Wi-Fi-related tests pass, including delayed lease/timeout/recovery, offline export and privacy/path/probe failures; the existing Unix datagram control-socket test is blocked by workspace PermissionDenied and stays enabled for CI. Real shell-helper fixture and credential-boundary checks pass; full menu/device/native validation is next. No physical handheld tested or RG34xxSP root cause claimed.
+
+User subsequently authorized merging this new version after successful checks, then replying to demifiend9 that the maintainer does not have an RG34xxSP and asking for its report. Also verified OTA #198 and handoff #199 are already merged; post-merge Build and release 41840412698 and launcher 41840413022 both succeeded. Do not re-merge historical OTA PRs.
+
+Starting from main `75f54551f0bbadfd13f638b19bc2b97e25b69c4d` on `fix/wifi-diagnostics`. User requests on-device diagnostics and a reply to demifiend9 in issue #182, plus accurate progress/errors: their newer RG SP takes about ten seconds to get an IP after association. Add an offline, explicitly exported, sanitized report and keep connection progress active through DHCP with bounded timeout and late recovery. Preserve credentials and existing network controls; advanced manual network configuration is outside this change. Next: implement, exercise delayed/missing IP and privacy/export failure cases, publish a PR/test build, then reply with truthful availability and collection instructions. No hardware reproduction or root cause confirmed.
+
 ## Merged OTA safety handoff — 2026-11-04
 
 PR [#198](https://github.com/jgraving/slot.sp/pull/198) merged to main as `b8b359fd1be4507888b6d5f114309384e2791ca9`. Exact tested source: `0cb14a5f941fa6c5ca2d93c6639bd6e85493c793` on `fix/ota-install-recovery`. Verified unchanged main base before merge, successful PR merge, main ref, and identical tested/merged Git trees. Continue from main; earlier in-progress instructions below are historical.

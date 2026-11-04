@@ -99,7 +99,32 @@ lease() {
 	$UDHCPC -i wlan0 -b -p "$LEASE_PID" >/dev/null 2>&1 || true
 }
 
+# Read-only, allowlisted facts. Never read configuration, scan results or logs.
+diagnostics() {
+    present() { if [ -e "$2" ]; then echo "$1=yes"; else echo "$1=no"; fi; }
+    process() {
+        if [ ! -f "$2" ]; then echo "$1=missing"; return; fi
+        pid="$(cat "$2" 2>/dev/null)"
+        case "$pid" in ''|*[!0-9]*|0|1) echo "$1=stale"; return ;; esac
+        if kill -0 "$pid" 2>/dev/null; then echo "$1=alive"; else echo "$1=stale"; fi
+    }
+    available() { if command -v "$2" >/dev/null 2>&1; then echo "$1=yes"; else echo "$1=no"; fi; }
+    present interface_present "$NET/wlan0"
+    present owner_present "$OWNER"
+    present link_session "$LINK_MARK"
+    process watcher "$WATCH_PID"
+    process dhcp_client "$LEASE_PID"
+    available wpa_cli_available "$WPA_CLI"
+    available udhcpc_available "$UDHCPC"
+    available ip_available "$IP"
+    if [ -x "$0" ]; then echo callback_executable=yes; else echo callback_executable=no; fi
+    if grep -q '^[[:space:]]*nameserver[[:space:]]' "${AGS_RESOLV_CONF:-/etc/resolv.conf}" 2>/dev/null; then
+        echo resolver_configured=yes
+    else echo resolver_configured=no; fi
+}
+
 case "${1:-} ${2:-}" in
+"diagnostics ") diagnostics ;;
 "up "*) wifi_up "${2:-}" ;;
 "down "*) wifi_down ;;
 "wlan0 CONNECTED") lease ;;

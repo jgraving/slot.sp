@@ -34,6 +34,13 @@ fn main(){
     for b in [Btn::A,Btn::X]{a.tap(b);}a.save("pin-masked");
     for b in [Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}a.save("pin-ready");a.tap(Btn::Start);a.save("pin-confirm");a.code();a.wait_io();a.save("pin-set");
     a.home();a.nav(QuickRow::Wifi);a.save("wifi-tile");a.tap(Btn::A);a.save("wifi-off");
+    a.tap(Btn::Up);a.save("wifi-report-action");a.tap(Btn::A);
+    let report_deadline=std::time::Instant::now()+std::time::Duration::from_secs(15);
+    while a.f.app().network.as_ref().unwrap().show_progress() {
+        assert!(std::time::Instant::now()<report_deadline,"diagnostic export did not finish");
+        std::thread::sleep(std::time::Duration::from_millis(10));a.frame(vec![]);
+    }
+    assert!(root.join("Diagnostics/wifi-0001.txt").exists());a.save("wifi-report-saved");a.tap(Btn::Down);
     a.tap(Btn::A);a.settle();a.save("wifi-on");
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.save("general-updates-disconnected");
     a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-disabled");

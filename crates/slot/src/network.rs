@@ -60,6 +60,7 @@ pub struct Menu {
     method: Option<Method>,
     prefs: Preferences,
     wifi: Wifi,
+    diagnostics: Option<crate::wifi_diagnostics::Export>,
     worker: Worker,
     encrypted: bool,
     locked: bool,
@@ -99,6 +100,7 @@ impl Menu {
             sharing:crate::sharing::Sharing::new(root.clone()),sharing_allowed:true,sharing_reveal:false,sharing_library:Vec::new(),
             updates:update::update_jobs(root.clone()),releases:Vec::new(),update_busy:false,update_installing:None,
             update_bytes:0,update_message:String::new(),update_staged:false,restart_requested:false,battery:None,
+            diagnostics: None,
             wifi: Wifi::for_card(&root), worker: Worker::new(&root), root,
             visible: false, face: None, progress_face: None, page: Page::Wifi,
             selected: 0, revision: 0, keyboard: None, code: None,
@@ -163,7 +165,28 @@ impl Menu {
         if !self.wifi_connected() {self.require_wifi("automatic time");return;}
         self.prefs.automatic_time=!self.prefs.automatic_time;self.store_preferences();self.changed();
     }
-    pub fn require_wifi(&mut self,feature:&str) {self.open_wifi();self.say(format!("Wi-Fi needed for {feature}"));}
+    pub fn require_wifi(&mut self,feature:&str) {
+        self.open_wifi();
+        if self.last_wifi.busy == wifi::Busy::Addressing {self.say("Getting an IP address…");}
+        else if let Some(error)=self.last_wifi.error.clone() {self.warn(&error,slot_ui::NoticeTone::Warning);}
+        else {self.say(format!("Wi-Fi needed for {feature}"));}
+    }
+    fn save_diagnostics(&mut self) {
+        if self.diagnostics.is_some() {self.say("Saving Wi-Fi report…");return;}
+        self.diagnostics=Some(crate::wifi_diagnostics::start(self.root.clone(),self.last_wifi.clone()));
+        self.say("Saving Wi-Fi report…");
+    }
+    fn take_diagnostics(&mut self) {
+        use std::sync::mpsc::TryRecvError;
+        let result=match self.diagnostics.as_ref().map(|rx|rx.try_recv()) {
+            Some(Ok(result))=>result,
+            Some(Err(TryRecvError::Disconnected))=>Err("Could not save Wi-Fi report"),
+            _=>return,
+        };
+        self.diagnostics=None;
+        match result {Ok(path)=>self.say(format!("Saved {path}")),Err(message)=>self.warn(message,slot_ui::NoticeTone::Warning)}
+        self.changed();
+    }
     pub fn set_battery(&mut self,battery:Option<slot_power::Battery>) {self.battery=battery;}
     pub fn take_update_restart(&mut self)->bool {std::mem::take(&mut self.restart_requested)}
     pub fn open_updates(&mut self) {if !self.wifi_connected() {self.require_wifi("updates");return;}self.visible=true;self.page=Page::Updates;self.selected=0;self.notice.clear();self.changed();}
@@ -200,7 +223,7 @@ impl Menu {
         }
     }
     pub fn show_progress(&self) -> bool {
-        self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle)
+        self.visible && ((self.pending_jobs > 0 && self.button_attempt.is_none()) || self.last_wifi.busy != wifi::Busy::Idle || self.diagnostics.is_some())
     }
     pub fn repeats(&self, btn: Btn) -> bool {
         self.code.is_none() && (matches!(btn, Btn::Up | Btn::Down | Btn::Left | Btn::Right) || self.keyboard.is_some())
@@ -343,6 +366,7 @@ impl Menu {
             self.save_secrets(); self.say("Signed in to RetroAchievements");
         }}
         self.apply_wifi_view(self.wifi.view());
+        self.take_diagnostics();
         self.step_sharing();
         if let Some(service) = &self.service {
             if let Some(notice) = service.take_notice() {
@@ -365,7 +389,11 @@ impl Menu {
             if view.connected.is_some() && view.ip.is_some() && self.last_wifi.ip.is_none() {
                 if let Some(service) = &self.service { service.network_available(); }
                 self.say("Wi-Fi connected");
-            } else if let Some(error) = &view.error { self.say(error.clone()); }
+            } else if view.busy == wifi::Busy::Addressing && self.last_wifi.busy != wifi::Busy::Addressing {
+                self.say("Getting an IP address…");
+            } else if view.error != self.last_wifi.error {
+                if let Some(error) = &view.error { self.warn(error,slot_ui::NoticeTone::Warning); }
+            }
             if self.wifi_on && !view.on && view.error.is_some() { self.wifi_on = false; }
             self.last_wifi = view;
             self.selected = self.selected.min(self.rows().len().saturating_sub(1));
@@ -541,7 +569,7 @@ impl Menu {
             let count = self.rows().len(); self.selected = (self.selected + if btn==Btn::Down {1} else {count-1}) % count;
             self.notice.clear(); self.changed(); return;
         }
-        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Wifi && self.selected==5) || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
+        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
         match self.page {
             Page::Security => match self.selected {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
@@ -563,6 +591,7 @@ impl Menu {
                 2 => { if self.wifi_on { self.wifi.scan(); self.say("Scanning for networks"); } else { self.say("Turn Wi-Fi on first"); } }
                 3 => { if self.wifi_on && self.unlocked() { self.edit(Field::Ssid, "Network name", "", false, 1, 32); } else if !self.wifi_on { self.say("Turn Wi-Fi on first"); } }
                 4 => {self.page=Page::Sharing;self.selected=0;self.sharing_reveal=false;self.notice.clear();self.changed();}
+                i if i == 5 + self.last_wifi.networks.len() => self.save_diagnostics(),
                 _ => {
                     if !self.wifi_on { self.say("Turn Wi-Fi on first"); return; }
                     if let Some(network) = self.last_wifi.networks.get(self.selected.saturating_sub(5)).cloned() { self.choose_network(network); }
@@ -643,7 +672,7 @@ impl Menu {
             Page::Wifi => vec![
                 ("Wi-Fi".into(), if self.wifi_on {"On"} else {"Off"}.into(), true),
                 ("Reconnect".into(), if self.locked {"Unlock saved network".into()} else {self.secrets.ssid.chars().take(18).collect()}, false),
-                ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
+                ("Scan networks".into(), if self.last_wifi.busy == wifi::Busy::Scanning {"Scanning…".into()} else if self.last_wifi.busy == wifi::Busy::Addressing {"Getting IP…".into()} else if self.last_wifi.connected.is_some() && self.last_wifi.ip.is_none() {"No IP address".into()} else {self.last_wifi.ip.clone().unwrap_or_default()}, false),
                 ("Other network".into(), String::new(), false),
                 ("Network sharing".into(),if self.sharing.view.active {"Active"}else{""}.into(),false),
             ],
@@ -686,7 +715,9 @@ impl Menu {
         }
         if self.page == Page::Wifi { for n in &self.last_wifi.networks {
             rows.push((n.ssid.chars().take(22).collect(), n.encryption.clone(), false));
-        }}
+        }
+            rows.push(("Save Wi-Fi report".into(),if self.diagnostics.is_some() {"Saving…"}else{"To SD card"}.into(),false));
+        }
         rows
     }
     pub fn screen_face_on(&self, canvas: slot_ui::Canvas, _light: bool) -> UndoFace {
@@ -866,6 +897,61 @@ fn blit(dst: &mut UndoFace, src: &UndoFace, x: u32, y: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os="linux")]
+    #[test]
+    #[ignore = "requires Mesa EGL; produces production-compositor Wi-Fi review captures"]
+    fn native_wifi_progress_review() {
+        use slot_gfx::Compositor;
+        struct Empty;impl slot_input::InputSource for Empty {fn poll(&mut self,_:u64)->Vec<slot_input::RawEvent>{vec![]}}
+        let output=std::path::PathBuf::from(std::env::var("SLOT_WIFI_PREVIEW").unwrap());
+        for (light,width) in [(true,640),(false,720)] {
+            let dir=output.join(if light {"light"}else{"dark"});std::fs::create_dir_all(&dir).unwrap();
+            let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
+            let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+            let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+            let mut tick=0;
+            for (name,busy,ip,error) in [
+                ("getting-address",wifi::Busy::Addressing,None,None),
+                ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · retry")),
+                ("late-success",wifi::Busy::Idle,Some("192.0.2.3"),None),
+                ("disconnected",wifi::Busy::Idle,None,Some("Wi-Fi disconnected · retry"))] {
+                f.app_mut_for_review().network.as_mut().unwrap().open_wifi();
+                for _ in 0..90 {
+                    tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);
+                    let m=f.app_mut_for_review().network.as_mut().unwrap();m.wifi_on=true;
+                    m.apply_wifi_view(wifi::WifiView{on:true,connected:Some("Home".into()),busy:busy.clone(),ip:ip.map(str::to_string),error:error.map(str::to_string),..Default::default()});
+                    f.compose(&mut g);
+                }
+                let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);
+                encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn address_progress_timeout_and_late_success_have_distinct_notices() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();menu.wifi_on=true;
+        let mut view=wifi::WifiView{on:true,connected:Some("Home".into()),busy:wifi::Busy::Addressing,..Default::default()};
+        menu.apply_wifi_view(view.clone());assert!(menu.show_progress());assert_eq!(menu.notice_text(),Some("Getting an IP address…"));
+        menu.open_updates();assert_eq!(menu.notice_text(),Some("Getting an IP address…"));assert_eq!(menu.page,Page::Wifi);
+        view.busy=wifi::Busy::Idle;view.error=Some("No IP address · retry".into());menu.apply_wifi_view(view.clone());
+        assert!(!menu.show_progress());assert!(menu.notice_text().unwrap().contains("No IP address"));assert!(!menu.wifi_connected());
+        view.ip=Some("192.0.2.3".into());view.error=None;menu.apply_wifi_view(view);assert_eq!(menu.notice_text(),Some("Wi-Fi connected"));assert!(menu.wifi_connected());
+    }
+    #[test]
+    fn report_action_works_offline_and_reports_save_result_without_enabling_wifi() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();
+        menu.input(Action::GbaDown(Btn::Up));assert_eq!(menu.rows()[menu.selected].0,"Save Wi-Fi report");
+        // Controller selection starts one asynchronous export, including with Wi-Fi off.
+        menu.input(Action::GbaDown(Btn::A));assert!(menu.diagnostics.is_some());assert!(menu.show_progress());assert!(!menu.wifi_on);
+        let deadline=Instant::now()+Duration::from_secs(15);
+        while menu.diagnostics.is_some(){menu.take_diagnostics();assert!(Instant::now()<deadline);std::thread::sleep(Duration::from_millis(10));}
+        assert!(menu.notice_text().unwrap().starts_with("Saved Diagnostics/wifi-"));assert!(root.path().join("Diagnostics/wifi-0001.txt").exists());assert!(!menu.show_progress());
+        let (tx,rx)=std::sync::mpsc::channel();tx.send(Err("Could not save report · check SD card")).unwrap();menu.diagnostics=Some(rx);menu.take_diagnostics();
+        assert_eq!(menu.notice_text(),Some("Could not save report · check SD card"));assert!(!menu.show_progress());
+    }
+
     #[test]
     fn default_has_no_credentials_or_radio_and_one_wifi_page() {
         let root = tempfile::tempdir().unwrap();
@@ -873,7 +959,7 @@ mod tests {
         assert!(!menu.prefs.achievements);
         assert!(!menu.wifi_on);
         assert!(menu.service.is_none());
-        assert_eq!(menu.rows().len(), 5);
+        assert_eq!(menu.rows().len(), 6);
         assert!(!root.path().join("Config/retroachievements.toml").exists());
         assert!(!network_vault::vault_path(root.path()).exists());
     }
