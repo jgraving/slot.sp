@@ -26,7 +26,8 @@ pub struct View {
 }
 pub enum Event {
     Running,
-    Stopped(Import),
+    // Only an explicit stop/import carries a result; automatic teardown is quiet.
+    Stopped(Option<Import>),
     Failed(&'static str),
 }
 #[derive(Default)]
@@ -88,12 +89,12 @@ impl Sharing {
                         (
                             gen,
                             Event::Stopped(if import_uploads {
-                                import(&root).unwrap_or_else(|_| Import {
+                                Some(import(&root).unwrap_or_else(|_| Import {
                                     skipped: 1,
                                     ..Import::default()
-                                })
+                                }))
                             } else {
-                                Import::default()
+                                None
                             }),
                         )
                     }

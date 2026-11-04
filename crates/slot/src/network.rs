@@ -763,8 +763,10 @@ impl Menu {
     }
     fn step_sharing(&mut self) {
         for event in self.sharing.poll() {match event {
-            crate::sharing::Event::Stopped(import)=>{self.changed();if !import.added.is_empty()||import.wallpapers>0||import.skipped>0 {
-                let text=format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped);self.sharing_library.extend(import.added);self.say(text);
+            crate::sharing::Event::Stopped(import)=>{self.changed();if let Some(import)=import {
+                let text=if import.added.is_empty()&&import.wallpapers==0&&import.skipped==0 {"No new uploads".into()}
+                    else {format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped)};
+                self.sharing_library.extend(import.added);self.say(text);
             }},
             crate::sharing::Event::Failed(error)=>{self.prefs.sharing_enabled=false;self.store_preferences();self.warn(error,slot_ui::NoticeTone::Danger);},
             _=>self.changed(),
@@ -1039,10 +1041,26 @@ mod tests {
         assert_eq!(menu.notice,"1 added · 0 left in Inbox");assert!(menu.take_shared_games().is_empty());
         assert_eq!(crate::wallpaper::list(root.path()),["New.png"]);
         let revision=menu.revision;
-        menu.sharing.import_uploads();
+        menu.selected=6;menu.input(Action::GbaDown(Btn::A));
+        assert_eq!(menu.notice,"Importing uploads…");
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
         assert!(menu.revision>revision,"even an empty stop must invalidate the Working… row");
         assert_eq!(menu.rows()[0].1,"Off");
+        assert_eq!(menu.notice,"No new uploads","an empty import must replace its progress notice");
+    }
+    #[test]
+    fn automatic_sharing_stop_does_not_report_an_empty_import() {
+        let root=tempfile::tempdir().unwrap();let mut menu=sharing_fixture(root.path());
+        menu.apply_wifi_view(home_wifi());wait_for_sharing(&mut menu);
+        menu.set_sharing_allowed(false);menu.say("Sharing stopped · disconnected");
+        let until=Instant::now()+Duration::from_secs(10);
+        while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
+        assert_eq!(menu.notice,"Sharing stopped · disconnected","automatic teardown must not replace other feedback");
+        // Explicitly switching off still imports and reports completion, even with an empty inbox.
+        menu.set_sharing_allowed(true);wait_for_sharing(&mut menu);menu.toggle_sharing();
+        assert_eq!(menu.notice,"Importing uploads…");
+        while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
+        assert_eq!(menu.notice,"No new uploads");
     }
     const CODE: [Btn;6] = [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }

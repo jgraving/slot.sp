@@ -2,6 +2,14 @@
 
 ## Active #194 completion and credential security review — 2026-11-04
 
+### Final combined-source verification in progress
+
+- Runtime security/editor checkpoint published as `b0afb826d716e04a9118166c36288caafdca9d5d`. Its CI-skip marker preserved the in-progress refreshed Samba cache build; the next final-source checkpoint intentionally triggers normal CI.
+- Fresh packaged ARM64 Samba build on `b24df42` now passes real encrypted wire transfers, authentication, isolation and teardown, and saved the updated runtime cache. No server settings changed in the later Rust fixes.
+- Combined local integration run: **332 tests pass across 13 suites**, no failures or ignored tests. Dedicated credential/RA and Studio suites passed as recorded above. Three crafted ZIP-metadata regressions are included; all nine updater tests pass, proving symlink/oversize rejection and special-permission stripping in the custom unpacker.
+- Native Studio and Network walkthroughs pass in light GLES640/dark GL720: all 124 PNGs decode correctly. Reviewed actual label/artwork, palettes, cards, RGB/hex hints and save return. Replaced an unsupported palette glyph with the supported Original chip. Final review caught empty explicit import retaining its busy notice; event results now distinguish explicit import from automatic teardown, showing No new uploads only for an empty requested import. Two focused regressions pass; final network recapture is running.
+- Current source still needs its full exact-head GitHub workflows and final device/UI checks. The one locally blocked Unix socket fixture remains enabled in CI. No physical PC/Mac discovery or handheld transfer is claimed. Security review documents limitations and retained ZIP/font dependency advisory context without claiming a complete audit or every dependency patched.
+
 ### Credential/session and editor corrections
 
 - Packaging fix published as `b24df42353f2daf27f72e417dba55ea6f96352a5`; its ARM64 Samba rebuild is running. Preserve that build until its refreshed cache is saved; a runtime checkpoint may skip duplicate CI temporarily, followed by a normal final-source commit/check run. No merge until current combined source passes.
