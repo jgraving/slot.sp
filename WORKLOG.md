@@ -2,6 +2,17 @@
 
 ## Active recovery: photo-matched slot and About reveal — 2026-11-04
 
+### Final source, previews and validation
+
+- Runtime is published and verified on GitHub as `07227db624154adb27863808d156ec6ba4e64ad6`, PR https://github.com/jgraving/slot.sp/pull/195. Later checkpoint changes only preview artifacts and recovery documentation. No merge or release performed.
+- Fresh isolated build confirms **326 targeted tests pass**, zero failures/ignored, and device-feature compilation succeeds. Source and workflow checks are clean. The earlier shared-target stale example issue was eliminated with separate final-review and validation targets; no assertion was disabled.
+- Definitive native review: five 360-frame About sequences (light/GLES640, dark/GL720, and seated GBA/GB/GBC using the real frontend) pass exact General-card return checks. Three 300-frame cartridge sequences use actual App timing and production geometry/audio, each reaching the stop and returning with exactly one insert/eject sound. All 2,821 PNGs validate; all five MP4s decode and match 60fps, dimensions and expected durations.
+- Committed previews: `previews/about-shell-{light,dark}.mp4`, corresponding settled PNGs, `previews/about-shell-seated-{gba,gb,gbc}.png`, `previews/slot-{gba,gb,gbc}-insert-remove.mp4`, and `previews/slot-photo-comparison.png`. Videos are full-color H.264; cartridge videos include AAC contact audio. The local capture commit `cbbc01e` has the same runtime source as GitHub `07227db`; sticker serial reflects the capture commit.
+- Native review includes sharpness, continuous lip/material, complete GBA cap, tall GB/GBC header clipping, entry/exit/reversal and rapid Back → Up → A. Local hint backings appear only while the moving sticker overlaps footer captions. General remains live and reverses smoothly.
+- GitHub runtime checks: scaling, blending and shortcuts pass. Device workflow https://github.com/jgraving/slot.sp/actions/runs/41800925975 succeeds, including both bundled cores and System packaging. Test build: https://github.com/jgraving/slot.sp/actions/runs/41800925975/artifacts/13307753004 (verified available at handoff). Launcher/native workflow https://github.com/jgraving/slot.sp/actions/runs/41800925968 is still rendering at this checkpoint; its regression tests passed. Do not claim its final result until checked.
+- Physical handheld appearance/performance remains for user testing. No hardware deployment, live account action, merge, or release was performed. Resume by checking PR #195 and this section; do not reconstruct the completed work again.
+
+
 ### Final runtime polish
 
 - Published and verified test/export checkpoint `cfee4ba29f1d5037233b8015179b4168f101380b` on PR #195. Scaling, blending and shortcuts succeed on that revision; launcher/native and device build are still running.

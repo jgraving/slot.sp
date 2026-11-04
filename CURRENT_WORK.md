@@ -1,6 +1,8 @@
-# Active photo-slot recovery
+# Active photo-slot handoff
 
-2026-11-04: active branch `fix/photo-slot-proportions`, based on main `ab180bfb`. User authorized regular GitHub pushes. Recreating corrected SP shell proportions and coordinated About sticker reveal from reference photos and the supplied recovery log. Photos take precedence over logged geometry guesses. Read the active section of WORKLOG.md for exact progress and verified results. Keep separate draft #194 unchanged; no merge/release requested.
+2026-11-04: `fix/photo-slot-proportions`, [draft PR #195](https://github.com/jgraving/slot.sp/pull/195). Runtime `07227db624154adb27863808d156ec6ba4e64ad6` is pushed and verified; later checkpoints are previews/recovery notes only. Photo-matched shell proportions, sharp reversible About reveal, live General card motion and seated-cartridge preservation are complete. Fresh 326-test validation and device compilation pass. The ARM64 test build succeeds; launcher/native final status is tracked in WORKLOG.md.
+
+Read the active section of [WORKLOG.md](https://github.com/jgraving/slot.sp/blob/fix/photo-slot-proportions/WORKLOG.md) before continuing. All requested source and native review videos are on this branch. Keep #194 separate; no merge/release requested. Remaining user step is physical handheld review. Do not repeat reconstruction.
 
 ---
 
