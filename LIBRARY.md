@@ -6,7 +6,7 @@
 
 Browse your collection by system, Favorites or Recents. Add label artwork and change cartridge colors to identify games on the carousel.
 
-To add games or PNG wallpapers from a computer on the same Wi-Fi network, see [Network uploads](SETTINGS.md#network-game-uploads).
+To add games or PNG wallpapers from a computer on the same Wi-Fi network, see [File sharing](SETTINGS.md#file-sharing).
 
 ## Browse your games
 
