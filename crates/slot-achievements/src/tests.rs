@@ -426,7 +426,8 @@ fn a_failed_game_session_does_not_block_library_sync() {
     }));
     let detail = service.sync_detail().unwrap();
     assert_ne!(detail.status, SyncStatus::Offline);
-    assert_eq!(detail.game_status, "Retrying");
+    // Background prefetch may cache the ROM before the active session starts.
+    assert!(matches!(detail.game_status, "Retrying" | "Cached · retrying"));
 }
 
 #[test]
