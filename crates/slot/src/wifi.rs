@@ -293,7 +293,7 @@ pub(crate) fn usable_ipv4(value: &str) -> bool {
 }
 
 const ADDRESS_TIMEOUT: Duration = Duration::from_secs(30);
-const ADDRESS_ERROR: &str = "No IP address · reconnect or save diagnostics";
+const ADDRESS_ERROR: &str = "No IP address · try Reconnect";
 #[derive(Default)]
 struct AddressWait {
     since: Option<std::time::Instant>,
@@ -326,7 +326,7 @@ impl AddressWait {
         } else {
             if self.since.take().is_some() {
                 view.busy = Busy::Idle;
-                view.error = Some("Wi-Fi disconnected before getting an IP address".into());
+                view.error = Some("Wi-Fi disconnected · retry".into());
             } else if was_connected {
                 view.error = Some("Wi-Fi disconnected · reconnect".into());
             }

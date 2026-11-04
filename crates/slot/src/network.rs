@@ -716,7 +716,7 @@ impl Menu {
         if self.page == Page::Wifi { for n in &self.last_wifi.networks {
             rows.push((n.ssid.chars().take(22).collect(), n.encryption.clone(), false));
         }
-            rows.push(("Save Wi-Fi report".into(),if self.diagnostics.is_some() {"Saving…"}else{"Diagnostics folder"}.into(),false));
+            rows.push(("Save Wi-Fi report".into(),if self.diagnostics.is_some() {"Saving…"}else{"To SD card"}.into(),false));
         }
         rows
     }
@@ -897,13 +897,45 @@ fn blit(dst: &mut UndoFace, src: &UndoFace, x: u32, y: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os="linux")]
+    #[test]
+    #[ignore = "requires Mesa EGL; produces production-compositor Wi-Fi review captures"]
+    fn native_wifi_progress_review() {
+        use slot_gfx::Compositor;
+        struct Empty;impl slot_input::InputSource for Empty {fn poll(&mut self,_:u64)->Vec<slot_input::RawEvent>{vec![]}}
+        let output=std::path::PathBuf::from(std::env::var("SLOT_WIFI_PREVIEW").unwrap());
+        for (light,width) in [(true,640),(false,720)] {
+            let dir=output.join(if light {"light"}else{"dark"});std::fs::create_dir_all(&dir).unwrap();
+            let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
+            let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+            let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+            let mut tick=0;
+            for (name,busy,ip,error) in [
+                ("getting-address",wifi::Busy::Addressing,None,None),
+                ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · try Reconnect")),
+                ("late-success",wifi::Busy::Idle,Some("192.0.2.3"),None),
+                ("disconnected",wifi::Busy::Idle,None,Some("Wi-Fi disconnected · retry"))] {
+                f.app_mut_for_review().network.as_mut().unwrap().open_wifi();
+                for _ in 0..90 {
+                    tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);
+                    let m=f.app_mut_for_review().network.as_mut().unwrap();m.wifi_on=true;
+                    m.apply_wifi_view(wifi::WifiView{on:true,connected:Some("Home".into()),busy:busy.clone(),ip:ip.map(str::to_string),error:error.map(str::to_string),..Default::default()});
+                    f.compose(&mut g);
+                }
+                let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);
+                encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
+        }
+    }
+
     #[test]
     fn address_progress_timeout_and_late_success_have_distinct_notices() {
         let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());menu.open_wifi();menu.wifi_on=true;
         let mut view=wifi::WifiView{on:true,connected:Some("Home".into()),busy:wifi::Busy::Addressing,..Default::default()};
         menu.apply_wifi_view(view.clone());assert!(menu.show_progress());assert_eq!(menu.notice_text(),Some("Getting an IP address…"));
         menu.open_updates();assert_eq!(menu.notice_text(),Some("Getting an IP address…"));assert_eq!(menu.page,Page::Wifi);
-        view.busy=wifi::Busy::Idle;view.error=Some("No IP address · reconnect or save diagnostics".into());menu.apply_wifi_view(view.clone());
+        view.busy=wifi::Busy::Idle;view.error=Some("No IP address · try Reconnect".into());menu.apply_wifi_view(view.clone());
         assert!(!menu.show_progress());assert!(menu.notice_text().unwrap().contains("No IP address"));assert!(!menu.wifi_connected());
         view.ip=Some("192.0.2.3".into());view.error=None;menu.apply_wifi_view(view);assert_eq!(menu.notice_text(),Some("Wi-Fi connected"));assert!(menu.wifi_connected());
     }
