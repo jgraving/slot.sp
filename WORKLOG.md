@@ -2,7 +2,9 @@
 
 ## Website navigation and launcher previews — 2026-11-05
 
-Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. Next: validate responsive navigation and publish a website-only PR.
+Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. The header uses one shared layout and a more damped selection spring. Guide selection stays on its active row, with independent hover feedback. Page slides travel a short distance and the desktop guide sidebar stays anchored. Added native launcher captures and updated home and guide copy for Cart Studio, RetroAchievements, file sharing, on-device updates, and Wi-Fi reports.
+
+Strict Zensical build, JavaScript syntax checks, and all six website CI-routing tests pass locally. Browser checks are part of the website workflow.
 
 ## Cart Studio shortcut and footer — 2026-11-04
 

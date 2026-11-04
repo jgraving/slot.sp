@@ -64,12 +64,30 @@
       </div>
     </figure>
   </section>
+  <section class="launcher-feature" aria-labelledby="launcher-title">
+    <h2 id="launcher-title">Make each cartridge yours</h2>
+    <p>Choose a label, a shell color, or a little glitter right on the handheld. Press Start on a Game Boy or Game Boy Color cartridge to open Cart Studio. For Game Boy Advance, press Start, then X.</p>
+    <div class="launcher-views">
+      <figure>
+        <img src="{{ 'assets/launcher/cart-picker-light.webp' | url }}" width="640" height="480" loading="lazy" decoding="async" alt="The GBA emulator picker with the Cart Studio shortcut below the cartridge">
+        <figcaption>The GBA emulator picker in Light mode.</figcaption>
+      </figure>
+      <figure>
+        <img src="{{ 'assets/launcher/cart-studio-dark.webp' | url }}" width="720" height="480" loading="lazy" decoding="async" alt="Cart Studio showing a cartridge and its label choices">
+        <figcaption>Choosing a cartridge label in Dark mode.</figcaption>
+      </figure>
+    </div>
+    <a class="feature-guide" href="{{ 'features/cart-studio/' | url }}">Customize a cartridge</a>
+  </section>
   <section class="features" aria-labelledby="features-title">
     <div class="features-heading">
       <h2 id="features-title">Features</h2>
       <a class="feature-guide" href="{{ 'features/guide/' | url }}">All guides</a>
     </div>
     <ul class="feature-list">
+      <li><a href="{{ 'features/retroachievements/' | url }}">{{ icon('playing') }}<span><strong>RetroAchievements</strong><span>Earn casual GBA achievements. Prepared games can track progress offline and sync unlocks when you reconnect.</span></span></a></li>
+      <li><a href="{{ 'features/settings/' | url }}#file-sharing">{{ icon('storage') }}<span><strong>File sharing over Wi-Fi</strong><span>Copy games, saves, and artwork directly to the SD card with password-protected SMB3.</span></span></a></li>
+      <li><a href="{{ 'updating/' | url }}">{{ icon('power-options') }}<span><strong>Updates on the handheld</strong><span>Check for slot.sp and compatible BaseOS updates from Settings.</span></span></a></li>
       <li><a href="{{ 'features/kid-mode/' | url }}">{{ icon('kid-mode') }}<span><strong>Kid mode</strong><span>Approved games, playtime limits, bedtime and a volume cap, protected by a parent code.</span></span></a></li>
       <li><a href="{{ 'features/playing/' | url }}">{{ icon('playing') }}<span><strong>Save &amp; resume</strong><span>Resume games, undo saves and loads, rewind, fast-forward and use turbo buttons.</span></span></a></li>
       <li><a href="{{ 'features/bluetooth/' | url }}">{{ icon('bluetooth') }}<span><strong>Audio &amp; headphones</strong><span>Bluetooth, USB audio, wired headphones and speakers, each with its own volume.</span></span></a></li>

@@ -30,7 +30,7 @@ If you are moving from a version of slot older than 1.4.0, copy over the existin
 
 ## On-device updates
 
-After installing a version that includes the updater, open **Settings → Network → Updates** while connected to Wi-Fi. Choose **Check for updates**, select **slot.sp** or **BaseOS**, then press **A** to download. **B** cancels a download. Wait for **Restart to install**, then restart from the normal power menu.
+After installing a version that includes the updater, open **Settings → General → Updates** while connected to Wi-Fi. Choose **Check for updates**, select **slot.sp** or **BaseOS**, then press **A** to download. **B** cancels a download. Wait for **Restart to install** and select it when you’re ready.
 
 Launcher updates come from **jgraving/slot.sp** releases and use `slot.sp-System.zip`. The updater verifies the download and its product, repository, processor architecture and source revision before staging it. Installation replaces files inside `System`; your `Config`, games, saves, labels and wallpapers stay in their existing folders. If an installation is interrupted, keep the card in place and restart so the staged files can finish installing.
 
