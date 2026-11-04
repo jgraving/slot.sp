@@ -4520,6 +4520,7 @@ impl App {
         if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
         let Some(root)=self.root.clone() else {return;};
         let Some(cart)=self.shelf().carts.get(self.shelf().index).cloned() else {return;};
+        if self.network.as_mut().is_some_and(|m|!m.local_files_ready()) {return;}
         let wifi=self.network.as_ref().is_some_and(|m|m.wifi_connected());
         self.play_held=None;self.shelf_mut().release_hold();
         self.studio=Some(crate::studio_menu::Menu::new(root,cart,wifi));
@@ -6352,6 +6353,7 @@ impl App {
         if !self.on_shelf() {
             return;
         }
+        if self.network.as_mut().is_some_and(|m|!m.local_files_ready()) {self.play_held=None;return;}
         let at = self.shelf().index;
         let Some(cart) = self.shelf_mut().carts.get_mut(at).map(|c| {
             c.read_header();

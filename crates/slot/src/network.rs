@@ -197,10 +197,17 @@ impl Menu {
         if self.update_busy {return;}
         self.update_busy=true;self.update_message="Checking…".into();self.updates.ask(UpdateJob::Check);self.changed();
     }
+    pub(crate) fn local_files_ready(&mut self)->bool {
+        if !self.prefs.sharing_enabled && self.sharing.ready() {return true;}
+        let message="Turn file sharing off first";
+        if self.visible {self.say(message);}else{self.toast=Some((message.into(),Instant::now()));self.toast_tone=slot_ui::NoticeTone::Neutral;}
+        false
+    }
     fn install_update(&mut self,index:usize) {
         if self.update_busy || self.update_staged {return;}
         if !self.wifi_connected() {self.say("Connect to Wi-Fi first");return;}
         let Some(release)=self.releases.get(index).cloned() else {return;};
+        if !self.local_files_ready() {return;}
         if release.kind==Kind::BaseOs && !self.battery.is_some_and(|b|b.percent>=20||matches!(b.charge,slot_power::Charge::Charging|slot_power::Charge::Full)) {
             self.say("Plug in before updating BaseOS");return;
         }
@@ -1513,6 +1520,23 @@ mod tests {
         assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::DateTime));
         app.apply(Action::GbaDown(Btn::A));assert!(app.picker().is_none());
         assert_eq!(app.settings_notice().unwrap().1,"Automatic time is on");
+    }
+    #[test]
+    fn direct_file_writers_must_stop_before_games_studio_or_updates() {
+        let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+        for name in ["One","Two"] {std::fs::write(root.path().join(format!("Games/GBA/{name}.gba")),[0;192]).unwrap();}
+        let mut state=slot_store::SlotState::default();state.clock_set=true;slot_store::write_slot_state(root.path(),&state).unwrap();
+        let mut app=crate::app::App::boot(root.path());app.update(10.0);
+        app.network.as_mut().unwrap().prefs.sharing_enabled=true;
+        app.apply(Action::Insert);assert!(matches!(app.phase(),crate::app::Phase::Shelf));
+        app.open_studio();assert!(app.studio.is_none());
+        assert_eq!(app.settings_notice().unwrap().1,"Turn file sharing off first");
+        let m=app.network.as_mut().unwrap();m.wifi_on=true;m.last_wifi=home_wifi();m.updates=Box::new(UpdateFake::default());
+        m.releases.push(update::Release{kind:Kind::Slot,running:"old".into(),version:"new".into(),url:"fixture".into(),sha256:[0;32],size:1,source:String::new()});
+        m.install_update(0);assert!(!m.update_busy);
+        m.prefs.sharing_enabled=false;m.sharing.view.busy=true;assert!(!m.local_files_ready(),"stopping is not stopped");
+        m.sharing.view.busy=false;assert!(m.local_files_ready());
+        app.open_studio();assert!(app.studio.is_some());
     }
     #[test]
     fn updater_is_explicit_connected_and_battery_gated() {
