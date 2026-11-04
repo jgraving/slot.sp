@@ -6,6 +6,8 @@
 
 Browse your collection by system, Favorites or Recents. Add label artwork and change cartridge colors to identify games on the carousel.
 
+To add games or PNG wallpapers from a computer on the same Wi-Fi network, see [Network uploads](SETTINGS.md#network-game-uploads).
+
 ## Browse your games
 
 Use <kbd>Left</kbd> and <kbd>Right</kbd> to move through cartridges. Tap <kbd>A</kbd> to launch one. Hold <kbd>A</kbd> to start from the title screen instead of a resume state.

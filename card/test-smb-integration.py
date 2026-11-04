@@ -36,13 +36,17 @@ with tempfile.TemporaryDirectory() as tmp:
         enumerate_args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'-L','127.0.0.1','-p','1445','-m','SMB3','--client-protection=encrypt','-A',str(auth)]
         enumeration=subprocess.run(enumerate_args,text=True,capture_output=True,timeout=15,env=env)
         assert enumeration.returncode==0 and 'Games' in enumeration.stdout,(enumeration.stdout,enumeration.stderr)
-        listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA'));assert 'Config' not in listing and 'secret' not in listing
+        listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA','Wallpapers'));assert 'Config' not in listing and 'secret' not in listing
         bad=root/'bad-auth';bad.write_text('username = slot\npassword = WRONG\n');bad.chmod(0o600)
         client('ls',False,authfile=bad)
         client('ls',False,protection='off')
         source=root/'upload.gba';source.write_bytes(bytes(1024))
         client(f'put {source} GBA/Uploaded.gba')
         assert (root/'Inbox/GBA/Uploaded.gba').read_bytes()==source.read_bytes()
+        wallpaper=root/'wallpaper.png'
+        wallpaper.write_bytes((script.parents[2]/'assets/background_default.png').read_bytes())
+        client(f'put {wallpaper} Wallpapers/Uploaded.png')
+        assert (root/'Inbox/Wallpapers/Uploaded.png').read_bytes()==wallpaper.read_bytes()
         (root/'Inbox/private-link').symlink_to(root/'Config/secret')
         client(f'get private-link {root}/leaked',False)
         client(f'get ../Config/secret {root}/leaked',False)

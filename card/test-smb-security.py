@@ -19,6 +19,10 @@ with tempfile.TemporaryDirectory() as d:
     assert (run/'slot-smb/smb.conf').stat().st_mode&0o077==0
     assert prepare('weak').returncode!=0
     assert prepare(ip='192.168.1.2\n[evil]').returncode!=0
-    (root/'Inbox/GBA').rmdir();(root/'Inbox/GBA').symlink_to(root/'System',target_is_directory=True)
-    assert prepare().returncode!=0,'followed an Inbox directory link'
+    for name in ('GB','GBC','GBA','Wallpapers'):
+        folder=root/'Inbox'/name
+        assert folder.is_dir(),name
+        folder.rmdir();folder.symlink_to(root/'System',target_is_directory=True)
+        assert prepare().returncode!=0,f'followed an Inbox/{name} directory link'
+        folder.unlink();folder.mkdir()
 print('SMB configuration/password/path restrictions passed')

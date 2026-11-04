@@ -65,9 +65,20 @@ On a computer on the same network:
 
 Use the IP address shown on the handheld. Sign in as **slot** with the displayed sharing password. The server requires SMB3 encryption; anonymous access and SMB1 are disabled. A router's client isolation or a computer firewall may prevent discovery or access even when both devices have Wi-Fi.
 
-Copy unzipped `.gb`, `.gbc` and `.gba` files into the matching **GB**, **GBC** or **GBA** folder. Finish the copy, then turn sharing off or choose **Import uploads**. New games appear on the carousel. Existing games are never overwritten. Duplicates, hidden files, unsupported formats, links and files that are too small or large stay in **Inbox** on the card. Disconnecting stops sharing without importing unfinished transfers; finish or remove those files before importing later.
+The **Games** share contains these upload folders:
 
-Only the upload inbox is shared. Games, saves, settings, credentials and System are not exposed. **New password** disconnects existing sessions and replaces the sharing password. Discovery runs only with sharing; BaseOS hostname lookup may remain available independently.
+| Folder | Files to copy | After importing |
+| :--- | :--- | :--- |
+| **GB** | Unzipped `.gb` games | Added to the Game Boy carousel. |
+| **GBC** | Unzipped `.gbc` games | Added to the Game Boy Color carousel. |
+| **GBA** | Unzipped `.gba` games | Added to the Game Boy Advance carousel. |
+| **Wallpapers** | Static `.png` backgrounds | Available in **Display → Wallpaper** immediately. |
+
+Finish copying, then turn sharing off or choose **Import uploads**. Existing games and wallpapers are never overwritten; choose a new filename to add a different version. Wallpapers must be valid PNGs, at most 16 MiB, 4096 pixels on either side and 8,388,608 pixels in total. Native screen sizes are listed in [Appearance & screen](DISPLAY.md#your-own-backgrounds--borders).
+
+Duplicates, hidden files, unsupported formats, links, corrupt wallpapers and files outside the size limits stay in **Inbox** on the card. Disconnecting stops sharing without importing unfinished transfers; finish or remove those files before importing later. Select **Import uploads** while sharing is off to retry importing completed files.
+
+Only the upload inbox is shared. The installed game library, wallpapers, saves, settings, credentials and System are not exposed. **New password** disconnects existing sessions and replaces the sharing password. Discovery runs only with sharing; BaseOS hostname lookup may remain available independently.
 
 Sharing turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks your vault and the same saved Wi-Fi network reconnects. A short warning pill appears when enabling this option. Network changes revoke sharing; it is also paused during gameplay, Cart Studio, link play, kid mode, sleep and shutdown. A dropped connection requires enabling it again. Use a trusted home network; the saved network name does not identify a router cryptographically.
 

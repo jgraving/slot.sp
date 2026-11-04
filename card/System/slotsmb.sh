@@ -43,7 +43,7 @@ if [ "$1" = prepare ]; then
     [ ! -L "$STATE" ] || exit 1
     umask 077
     mkdir -p "$STATE" "$STATE/private" "$STATE/lock" "$STATE/cache" "$STATE/state"
-    for dir in "$SD/Inbox" "$SD/Inbox/GB" "$SD/Inbox/GBC" "$SD/Inbox/GBA"; do
+    for dir in "$SD/Inbox" "$SD/Inbox/GB" "$SD/Inbox/GBC" "$SD/Inbox/GBA" "$SD/Inbox/Wallpapers"; do
         [ ! -L "$dir" ] || exit 1
         mkdir -p "$dir"
     done
@@ -91,7 +91,7 @@ if [ "$1" = prepare ]; then
     deadtime = 5
 [Games]
     path = $SD/Inbox
-    comment = Upload GB, GBC and GBA games, then turn sharing off to import
+    comment = Upload games and PNG wallpapers, then turn sharing off to import
     browseable = yes
     read only = no
     guest ok = no

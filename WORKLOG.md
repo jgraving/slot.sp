@@ -2,10 +2,12 @@
 
 Last updated: 2026-11-04 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `main`
-Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
+Active branch: `feat/device-studio-network-sharing`
+Draft PR: https://github.com/jgraving/slot.sp/pull/194
+Current work: on-device Cart Studio and encrypted game/wallpaper uploads; see the latest entries below.
+Previous merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
 Verified OS implementation/release: `356c30749a98d103c249af1f95355047b25c5818`
-Status: merged into main; automatic main build release published.
+Status: active feature development; keep #194 draft. Prior merged baseline follows.
 
 ## Merged handoff — 2026-11-03
 
@@ -520,3 +522,20 @@ Samba configure now succeeds with minimal modules. The next build exposed Samba'
 105e946 built and installed Samba/wsdd2 and collected dependency sources successfully, then failed copying the build recipe because configure had changed the working directory. Resolve the recipe path at startup for both its stamp and source-bundle copy. The live upload/shutdown test remains pending; this is no longer a compiler failure.
 
 Native artwork review found previews needed the fork's alpha-aware label cleanup and board layers for clear/glitter shells. Reused the existing conversion for previews/downloads, adjusted title-label dimensions to edited GB shapes, and added shape/transparency regressions. All 7 editor/import tests, 59 UI library and 36 cartridge-render regressions pass locally. Password reveal now resets when closing/reopening Sharing; both sharing UI/default tests pass. Native network walkthrough exposed an asynchronous parent-method file write observed before completion; wait for the actual write with a bounded deadline, consistent with its later existing persistence check. Re-run final light/dark walkthroughs and real server/device CI before handoff.
+
+### Resumed upload completion — 2026-11-04
+
+User asks to continue the on-device Cart Studio/network upload work, explicitly including wallpaper uploads from PC/Mac. Verified live draft PR #194 at 105e946; latest ARM64 Samba and launcher workflows are still running, scaling has passed. Recovered a clean checkout of the existing branch. Existing sharing exports only a game Inbox; wallpaper support is missing.
+
+Next: add a confined Inbox/Wallpapers staging folder, bounded full PNG validation and non-overwriting import into Wallpapers, update import feedback and PC/Mac instructions, and add integration/security regressions. Preserve default reboot-off, encrypted password/vault, network binding and lifecycle stops, Select quick controls and existing editor behavior. Inspect live real-server/build failures and repair them. Keep the PR draft; no merge/release requested. Physical desktop discovery and handheld transfers remain unverified.
+
+### Wallpaper and packaging checkpoint
+
+- Added Inbox/Wallpapers to the existing encrypted Games share; installed Wallpapers remains private. Explicit stop/import stages a bounded copy, fully decodes static PNG data and IEND, then publishes without replacing existing files or dangling links. Limits: 16 MiB encoded, 4096 per side and 8,388,608 pixels. Invalid/partial/unsupported/duplicate files remain in Inbox. Imported backgrounds are immediately available in the existing Display picker without changing the current selection.
+- Fixed sharing-page invalidation on an empty stop/import and included wallpapers in the completion count. Added actual packaged-SMB wallpaper transfer coverage and source-directory link checks for all four inbox folders. Guides describe PC/Mac discovery, direct address fallback, folder mapping, import and size limits.
+- 105e946 server job 126300943095 built Samba and downloaded dependency sources, then failed at final cp of tools/build-samba.sh after cd into the source tree. Fixed by resolving the script's absolute path at entry and using it for stamping/source packaging. Actual real-server integration and device package were skipped on that failed run; do not claim they passed.
+- Local Rust 1.96 compile succeeds. All 8 editor/upload integration tests and 56 Studio state tests pass. New UI wallpaper-import/empty-stop regression passes. Python SMB config/password/path checks, shell syntax and git diff whitespace checks pass. Other warnings are existing dead-code warnings.
+- Next: push checkpoint, inspect fresh exact-head CI (especially real ARM64 SMB and packaging), repair any failures, review native captures and update draft #194. No device discovery/transfer result claimed.
+
+Concurrent branch update 45ef8ae arrived before the wallpaper push. Reapplied the wallpaper changes with a three-way merge onto it, retaining all label cleanup/transparent-shell/shape/password-hide/native-harness fixes and both worklog entries. The same Samba source-path correction is already included there; no duplicate build-script change is needed. Revalidate the combined source before publishing.
+Combined source on 45ef8ae passes all 10 editor/upload integration tests and 56 Studio state tests locally; configuration restrictions still pass. The original 8-test result above predates the two retained rendering regressions. New wallpaper UI test was also compiled/passed before combination; full network suite follows in CI.

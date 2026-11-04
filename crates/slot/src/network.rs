@@ -753,8 +753,8 @@ impl Menu {
     }
     fn step_sharing(&mut self) {
         for event in self.sharing.poll() {match event {
-            crate::sharing::Event::Stopped(import)=>{if !import.added.is_empty()||import.skipped>0 {
-                let text=format!("{} added · {} left in Inbox",import.added.len(),import.skipped);self.sharing_library.extend(import.added);self.say(text);
+            crate::sharing::Event::Stopped(import)=>{self.changed();if !import.added.is_empty()||import.wallpapers>0||import.skipped>0 {
+                let text=format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped);self.sharing_library.extend(import.added);self.say(text);
             }},
             crate::sharing::Event::Failed(error)=>{self.prefs.sharing_enabled=false;self.store_preferences();self.warn(error,slot_ui::NoticeTone::Danger);},
             _=>self.changed(),
@@ -921,6 +921,22 @@ mod tests {
         menu.selected=1;menu.input(Action::GbaDown(Btn::A));assert!(menu.prefs.sharing_keep);assert_eq!(menu.notice_tone(),slot_ui::NoticeTone::Warning);
         menu.input(Action::GbaDown(Btn::B));assert_eq!(menu.page,Page::Wifi);assert!(!menu.sharing_reveal);
         menu.sharing_reveal=true;menu.input(Action::QuickMenu);menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::A));assert!(!menu.sharing_reveal,"reopening must hide the password after Menu closes the page");
+    }
+    #[test]
+    fn wallpaper_import_reports_added_files_and_refreshes_stopped_sharing() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        let inbox=root.path().join("Inbox/Wallpapers");std::fs::create_dir_all(&inbox).unwrap();
+        std::fs::write(inbox.join("New.png"),include_bytes!("../../../assets/background_default.png")).unwrap();
+        menu.page=Page::Sharing;menu.sharing.import_uploads();
+        let until=Instant::now()+Duration::from_secs(10);
+        while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
+        assert_eq!(menu.notice,"1 added · 0 left in Inbox");assert!(menu.take_shared_games().is_empty());
+        assert_eq!(crate::wallpaper::list(root.path()),["New.png"]);
+        let revision=menu.revision;
+        menu.sharing.import_uploads();
+        while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
+        assert!(menu.revision>revision,"even an empty stop must invalidate the Working… row");
+        assert_eq!(menu.rows()[0].1,"Off");
     }
     const CODE: [Btn;6] = [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1];
     fn buttons(menu: &mut Menu, code: &[Btn]) { for &b in code {menu.input(Action::GbaDown(b));} }

@@ -32,6 +32,7 @@ pub enum Event {
 #[derive(Default)]
 pub struct Import {
     pub added: Vec<slot_store::Cart>,
+    pub wallpapers: usize,
     pub skipped: usize,
 }
 enum Command {
@@ -320,7 +321,7 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
 }
 
 /// Imports are performed only after all SMB writers have stopped. Existing games are never overwritten.
-/// Only flat GB/GBC/GBA game files are accepted; links, hidden files, scripts and folders stay in Inbox.
+/// Only flat GB/GBC/GBA games and valid PNG wallpapers are accepted. Other files stay in Inbox.
 pub fn import(root: &Path) -> io::Result<Import> {
     let mut result = Import::default();
     for platform in slot_store::Platform::ALL {
@@ -376,7 +377,7 @@ pub fn import(root: &Path) -> io::Result<Import> {
             }
             // Read the full file to a private staging file before publishing; FAT hard links are unavailable.
             let dest = target.join(name.as_ref());
-            if dest.exists() {
+            if fs::symlink_metadata(&dest).is_ok() {
                 result.skipped += 1;
                 continue;
             }
@@ -415,7 +416,7 @@ pub fn import(root: &Path) -> io::Result<Import> {
                 result.skipped += 1;
                 continue;
             }
-            if dest.exists() {
+            if fs::symlink_metadata(&dest).is_ok() {
                 let _ = fs::remove_file(&temp);
                 result.skipped += 1;
                 continue;
@@ -444,8 +445,120 @@ pub fn import(root: &Path) -> io::Result<Import> {
             });
         }
     }
+    import_wallpapers(root, &mut result);
     Ok(result)
 }
+
+const MAX_WALLPAPER_FILE: u64 = 16 * 1024 * 1024;
+const MAX_WALLPAPER_PIXELS: u64 = 8 * 1024 * 1024;
+
+fn import_wallpapers(root: &Path, result: &mut Import) {
+    let inbox = root.join(INBOX);
+    let src = inbox.join("Wallpapers");
+    let target = root.join("Wallpapers");
+    if !real_dir(&inbox) || !real_dir(&src) {
+        return;
+    }
+    // create_dir, rather than create_dir_all, must never follow an existing target link.
+    if !real_dir(&target) && (target.symlink_metadata().is_ok() || fs::create_dir(&target).is_err())
+    {
+        result.skipped += 1;
+        return;
+    }
+    let entries = match fs::read_dir(&src) {
+        Ok(entries) => entries,
+        Err(_) => {
+            result.skipped += 1;
+            return;
+        }
+    };
+    for entry in entries {
+        let Some(entry) = entry.ok() else {
+            result.skipped += 1;
+            continue;
+        };
+        let path = entry.path();
+        let name = entry.file_name();
+        // Wallpaper choices persist as UTF-8 names; refuse names that cannot round-trip.
+        let valid_name = name
+            .to_str()
+            .is_some_and(|name| !name.starts_with('.') && !name.contains(['\\', '\n', '\r']))
+            && path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"));
+        let valid_file = path
+            .symlink_metadata()
+            .is_ok_and(|m| m.is_file() && m.len() > 0 && m.len() <= MAX_WALLPAPER_FILE);
+        let dest = target.join(&name);
+        if !valid_name || !valid_file || dest.symlink_metadata().is_ok() {
+            result.skipped += 1;
+            continue;
+        }
+        // Validate the private copy, so no unvalidated or partial image reaches the selector.
+        // SMB has already stopped; the source remains intact until publishing succeeds.
+        let temp = target.join(format!(".slot-upload-{}", std::process::id()));
+        let staged = (|| -> io::Result<()> {
+            let mut reader = fs::File::open(&path)?;
+            let expected = reader.metadata()?.len();
+            let mut writer = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temp)?;
+            let copy = (|| -> io::Result<()> {
+                let copied = io::copy(
+                    &mut reader.by_ref().take(MAX_WALLPAPER_FILE + 1),
+                    &mut writer,
+                )?;
+                if copied != expected || copied > MAX_WALLPAPER_FILE {
+                    return Err(io::Error::other("upload changed"));
+                }
+                writer.sync_all()?;
+                drop(writer);
+                validate_wallpaper(&temp).ok_or_else(|| io::Error::other("invalid wallpaper"))?;
+                // symlink_metadata also sees dangling links; never replace those either.
+                if dest.symlink_metadata().is_ok() {
+                    return Err(io::ErrorKind::AlreadyExists.into());
+                }
+                fs::rename(&temp, &dest)
+            })();
+            if copy.is_err() {
+                let _ = fs::remove_file(&temp);
+            }
+            copy
+        })();
+        if staged.is_err() {
+            result.skipped += 1;
+            continue;
+        }
+        result.wallpapers += 1;
+        if fs::remove_file(&path).is_err() {
+            result.skipped += 1;
+        }
+    }
+}
+
+fn validate_wallpaper(path: &Path) -> Option<()> {
+    let mut decoder = png::Decoder::new(fs::File::open(path).ok()?);
+    decoder.set_transformations(png::Transformations::normalize_to_color8());
+    decoder.set_limits(png::Limits {
+        bytes: 32 * 1024 * 1024,
+    });
+    let mut reader = decoder.read_info().ok()?;
+    let info = reader.info();
+    if info.width > 4096
+        || info.height > 4096
+        || u64::from(info.width) * u64::from(info.height) > MAX_WALLPAPER_PIXELS
+        || info.animation_control.is_some()
+        || reader.output_buffer_size() > 32 * 1024 * 1024
+    {
+        return None;
+    }
+    let mut pixels = vec![0; reader.output_buffer_size()];
+    reader.next_frame(&mut pixels).ok()?;
+    reader.finish().ok()?;
+    Some(())
+}
+
 fn real_dir(path: &Path) -> bool {
     fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_dir())
 }

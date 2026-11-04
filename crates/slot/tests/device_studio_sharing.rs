@@ -142,6 +142,140 @@ fn imports_are_isolated_atomic_and_never_overwrite_existing_games() {
     assert!(!root.path().join("Games/GBA/evil.sh").exists());
     assert!(!root.path().join("Games/GBA/link.gba").exists());
 }
+
+fn wallpaper_png(width: u32, height: u32) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut bytes, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder
+            .write_header()
+            .unwrap()
+            .write_image_data(&vec![120; width as usize * height as usize * 4])
+            .unwrap();
+    }
+    bytes
+}
+
+#[test]
+fn wallpaper_imports_are_visible_without_restart_and_never_overwrite() {
+    let root = common::tmp_root_with_carts(&["Fusion"]);
+    let (app, _clock) = common::app_booting_at(root.path(), common::CLOCK_IS_SET);
+    let inbox = root.path().join("Inbox/Wallpapers");
+    fs::create_dir_all(&inbox).unwrap();
+    fs::create_dir_all(root.path().join("Wallpapers")).unwrap();
+    let png = wallpaper_png(8, 6);
+    fs::write(root.path().join("Wallpapers/Keep.png"), b"original").unwrap();
+    for name in [
+        "New.PNG",
+        "Keep.png",
+        ".partial.png",
+        "wrong.jpg",
+        "bad\\name.png",
+        "bad\nname.png",
+    ] {
+        fs::write(inbox.join(name), &png).unwrap();
+    }
+    fs::create_dir(inbox.join("folder.png")).unwrap();
+    let result = sharing::import(root.path()).unwrap();
+    assert!(result.added.is_empty());
+    assert_eq!(result.wallpapers, 1);
+    assert_eq!(result.skipped, 6);
+    assert_eq!(
+        fs::read(root.path().join("Wallpapers/New.PNG")).unwrap(),
+        png
+    );
+    assert!(!inbox.join("New.PNG").exists());
+    assert_eq!(
+        fs::read(root.path().join("Wallpapers/Keep.png")).unwrap(),
+        b"original"
+    );
+    assert!(inbox.join("Keep.png").exists());
+    assert_eq!(app.wallpaper_files(), ["Keep.png", "New.PNG"]);
+    assert!(!root
+        .path()
+        .join("Wallpapers")
+        .join(format!(".slot-upload-{}", std::process::id()))
+        .exists());
+}
+
+#[test]
+fn wallpapers_require_full_bounded_png_decode() {
+    let root = tempfile::tempdir().unwrap();
+    let inbox = root.path().join("Inbox/Wallpapers");
+    fs::create_dir_all(&inbox).unwrap();
+    let valid = wallpaper_png(8, 6);
+    fs::write(inbox.join("Good.png"), &valid).unwrap();
+    fs::write(inbox.join("Signature.png"), b"\x89PNG\r\n\x1a\nnot a PNG").unwrap();
+    fs::write(inbox.join("Truncated.png"), &valid[..valid.len() - 12]).unwrap();
+    let mut corrupt = valid.clone();
+    let idat = corrupt.windows(4).position(|s| s == b"IDAT").unwrap();
+    corrupt[idat + 5] ^= 0xff;
+    fs::write(inbox.join("Corrupt.png"), corrupt).unwrap();
+    fs::write(inbox.join("TooWide.png"), wallpaper_png(4097, 1)).unwrap();
+    // Reject decompression bombs by dimensions even when their encoded bytes are tiny.
+    fs::write(inbox.join("TooManyPixels.png"), wallpaper_png(4096, 2049)).unwrap();
+    let large = fs::File::create(inbox.join("TooLarge.png")).unwrap();
+    large.set_len(16 * 1024 * 1024 + 1).unwrap();
+    let result = sharing::import(root.path()).unwrap();
+    assert_eq!(result.wallpapers, 1);
+    assert_eq!(result.skipped, 6);
+    assert_eq!(slot::wallpaper::list(root.path()), ["Good.png"]);
+    for name in [
+        "Signature.png",
+        "Truncated.png",
+        "Corrupt.png",
+        "TooWide.png",
+        "TooManyPixels.png",
+        "TooLarge.png",
+    ] {
+        assert!(inbox.join(name).exists(), "{name} must remain in Inbox");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn wallpaper_imports_reject_source_target_and_directory_links() {
+    use std::os::unix::fs::symlink;
+    let root = tempfile::tempdir().unwrap();
+    let inbox = root.path().join("Inbox/Wallpapers");
+    let target = root.path().join("Wallpapers");
+    fs::create_dir_all(&inbox).unwrap();
+    fs::create_dir(&target).unwrap();
+    fs::write(root.path().join("private.png"), wallpaper_png(4, 4)).unwrap();
+    symlink(root.path().join("private.png"), inbox.join("source.png")).unwrap();
+    fs::write(inbox.join("existing.png"), wallpaper_png(4, 4)).unwrap();
+    symlink(root.path().join("missing.png"), target.join("existing.png")).unwrap();
+    let result = sharing::import(root.path()).unwrap();
+    assert_eq!(result.wallpapers, 0);
+    assert_eq!(result.skipped, 2);
+    assert!(target
+        .join("existing.png")
+        .symlink_metadata()
+        .unwrap()
+        .is_symlink());
+    assert!(!target.join("source.png").exists());
+    assert!(!root.path().join("missing.png").exists());
+    fs::remove_file(target.join("existing.png")).unwrap();
+    fs::remove_dir(&target).unwrap();
+    fs::create_dir(root.path().join("private")).unwrap();
+    symlink(root.path().join("private"), &target).unwrap();
+    assert_eq!(sharing::import(root.path()).unwrap().wallpapers, 0);
+    assert_eq!(
+        fs::read_dir(root.path().join("private")).unwrap().count(),
+        0
+    );
+    fs::remove_file(&target).unwrap();
+    fs::remove_file(inbox.join("source.png")).unwrap();
+    fs::remove_file(inbox.join("existing.png")).unwrap();
+    fs::remove_dir(&inbox).unwrap();
+    symlink(root.path().join("private"), &inbox).unwrap();
+    fs::write(root.path().join("private/escape.png"), wallpaper_png(4, 4)).unwrap();
+    assert_eq!(sharing::import(root.path()).unwrap().wallpapers, 0);
+    assert!(!target.exists());
+}
+
 #[test]
 fn artwork_catalog_cannot_inject_paths_or_hosts() {
     for path in [
