@@ -1529,7 +1529,7 @@ fn sync_clock(app: &mut App, compositor: &mut Compositor, clocks: &mut Clocks,he
         clocks.shown.clear();
         clocks.battery.clear();
     }
-    let picked = app.picker().map(|p| format!("{}:{}",app.canvas().w,p.text()));
+    let picked = app.picker().map(|p| format!("{}:{}:{}",app.canvas().w,p.offset_only(),p.text()));
     if picked != clocks.picked {
         clocks.picked = picked;
         if let (Some(face), Some(hint)) = (app.picker().map(|p| p.face_on(app.canvas())), clocks.hint) {

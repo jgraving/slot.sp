@@ -98,7 +98,7 @@ Set start times in **Display → Night mode** to change brightness and warmth au
 
 Place PNG backgrounds in `Wallpapers/`, then choose them in **Display → Wallpaper**.
 
-You can also [upload over Wi-Fi](SETTINGS.md#network-game-uploads): open the handheld's **Games** network share, copy PNGs into **Wallpapers**, then finish the copy and choose **Import uploads** on the handheld. New images appear in **Display → Wallpaper** without restarting. Existing backgrounds keep their files and selection.
+You can also [copy wallpapers over Wi-Fi](SETTINGS.md#file-sharing). Open the handheld’s **SDCard** share, copy PNGs into **Wallpapers**, then eject the share and turn **Sharing** off on the handheld.
 
 | Display | Background size |
 | :--- | :--- |

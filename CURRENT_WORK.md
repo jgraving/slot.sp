@@ -1,14 +1,6 @@
-# Network/settings usability merged
+# Device and settings follow-up merged
 
-Continue from main. [PR #203](https://github.com/jgraving/slot.sp/pull/203) merged as `ef57a6c91a87eca52d939dd5c5ea3e73c3d58477` after all six workflows passed on `96ef3abdbe29c826d095a47ace6cef3731d2b290`; merged and tested trees are identical. See the newest WORKLOG.md entry for behavior and evidence. Default brightness remains Select + Up/Down. Full content-card sharing, Start cartridge menu and network/update/clock fixes are merged.
-
-The [Build and release workflow](https://github.com/jgraving/slot.sp/actions/runs/41872586861) published [build-2026.11.04-ef57a6c](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-ef57a6c). Physical Mac/handheld networking remains unverified. Earlier active-branch instructions below are historical.
-
----
-
-# Active network/settings follow-up
-
-Continue on `fix/network-settings-usability`, [PR #203](https://github.com/jgraving/slot.sp/pull/203). Local build disk is full; finish validation through GitHub CI (see newest WORKLOG.md checkpoint). See newest WORKLOG.md entry for requested fixes and current findings. Previous completed work below remains historical.
+Continue from `main`. [PR #202](https://github.com/jgraving/slot.sp/pull/202) merged as `b38b33b437b687b6f0f5762bb48d12a77da7d0dc`. All six workflows passed on `5073bf02d10bebfab03bbd2a7530a5990c196ab7` and the merge introduced no file changes relative to that source. The earlier [#203 release](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-ef57a6c) was published. Physical SMB and live RetroAchievements retests remain pending. See WORKLOG.md for CI evidence and release history.
 
 # Wi-Fi diagnostics complete
 

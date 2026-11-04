@@ -1,14 +1,18 @@
 //! Password-only, encrypted SMB sharing of the content SD card.
 use std::{
-    fs,
-    io::{self, Read},
     net::Ipv4Addr,
     path::{Path, PathBuf},
     sync::mpsc::{channel, Receiver, Sender},
 };
 use zeroize::Zeroizing;
 
-pub const INBOX: &str = "Inbox";
+pub const PASSWORD_MIN: usize = 8;
+pub const PASSWORD_MAX: usize = 32;
+
+pub fn valid_password(password: &str) -> bool {
+    (PASSWORD_MIN..=PASSWORD_MAX).contains(&password.len())
+        && password.bytes().all(|byte| (b' '..=b'~').contains(&byte))
+}
 #[derive(Clone, PartialEq, Eq)]
 pub struct Connection {
     pub ssid: String,
@@ -26,20 +30,12 @@ pub struct View {
 }
 pub enum Event {
     Running,
-    Library(Vec<slot_store::Cart>),
-    // Only an explicit stop/import carries a result; automatic teardown is quiet.
-    Stopped(Option<Import>),
+    Stopped(Option<Vec<slot_store::Cart>>),
     Failed(&'static str),
-}
-#[derive(Default)]
-pub struct Import {
-    pub added: Vec<slot_store::Cart>,
-    pub wallpapers: usize,
-    pub skipped: usize,
 }
 enum Command {
     Start(u64, Start),
-    Stop(u64, bool),
+    Stop(u64),
 }
 pub struct Sharing {
     jobs: Sender<Command>,
@@ -66,6 +62,7 @@ impl Sharing {
                             .is_some_and(|c| c.try_wait().ok().flatten().is_some());
                         if died {
                             stop(&mut running);
+                            let _ = tx.send((current_gen, Event::Stopped(scan_library(&root))));
                             let _ = tx.send((
                                 current_gen,
                                 Event::Failed("Sharing stopped · connection closed"),
@@ -85,27 +82,11 @@ impl Sharing {
                             .unwrap_or_else(Event::Failed);
                         (gen, result)
                     }
-                    Command::Stop(gen, import_uploads) => {
+                    Command::Stop(gen) => {
                         let was_running=running.is_some();
                         stop(&mut running);
-                        // Rescan only after writers are gone, including removals and artwork edits.
-                        if was_running && !import_uploads {
-                            if let Ok(mut carts)=slot_store::scan(&root) {
-                                for cart in &mut carts {cart.read_header();}
-                                let _=tx.send((gen,Event::Library(carts)));
-                            }
-                        }
-                        (
-                            gen,
-                            Event::Stopped(if import_uploads {
-                                Some(import(&root).unwrap_or_else(|_| Import {
-                                    skipped: 1,
-                                    ..Import::default()
-                                }))
-                            } else {
-                                None
-                            }),
-                        )
+                        let catalog = if was_running { scan_library(&root) } else { None };
+                        (gen, Event::Stopped(catalog))
                     }
                 };
                 current_gen = gen;
@@ -135,30 +116,22 @@ impl Sharing {
         self.view.error = None;
         let command = match start {
             Some(start) => Command::Start(self.generation, start),
-            None => Command::Stop(self.generation, false),
+            None => Command::Stop(self.generation),
         };
         if self.jobs.send(command).is_err() {
             self.view.busy = false;
             self.view.error = Some("Sharing unavailable");
         }
     }
-    pub fn import_uploads(&mut self) {
-        self.wanted = None;
-        self.generation = self.generation.wrapping_add(1);
-        self.view.active = false;
-        self.view.busy = true;
-        let _ = self.jobs.send(Command::Stop(self.generation, true));
-    }
     pub fn poll(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
         while let Ok((gen, event)) = self.events.try_recv() {
-            // An import must never be lost when a network transition overtakes its UI result.
-            if let Event::Library(carts) = event {events.push(Event::Library(carts));continue;}
-            if let Event::Stopped(import) = event {
+            // A catalog refresh still matters if the share has already restarted.
+            if matches!(&event, Event::Stopped(_)) {
                 if gen == self.generation {
                     self.view = View::default();
                 }
-                events.push(Event::Stopped(import));
+                events.push(event);
                 continue;
             }
             if gen != self.generation {
@@ -185,6 +158,16 @@ impl Sharing {
         self.wanted.as_ref()
     }
 }
+
+// Read the current card only after the server has released its writers.
+fn scan_library(root: &Path) -> Option<Vec<slot_store::Cart>> {
+    let mut carts = slot_store::scan(root).ok()?;
+    for cart in &mut carts {
+        cart.read_header();
+    }
+    Some(carts)
+}
+
 pub fn password() -> Result<Zeroizing<String>, &'static str> {
     use ring::rand::SecureRandom;
     let mut bytes = [0u8; 16];
@@ -338,258 +321,4 @@ fn launch(root: &Path, start: Start) -> Result<Running, &'static str> {
         }
         Ok(run.take().unwrap())
     }
-}
-
-/// Imports are performed only after all SMB writers have stopped. Existing games are never overwritten.
-/// Only flat GB/GBC/GBA games and valid PNG wallpapers are accepted. Other files stay in Inbox.
-pub fn import(root: &Path) -> io::Result<Import> {
-    let mut result = Import::default();
-    for platform in slot_store::Platform::ALL {
-        let src = root.join(INBOX).join(platform.dir_name());
-        let target = root.join("Games").join(platform.dir_name());
-        if !real_dir(&root.join(INBOX)) || !real_dir(&src) || !real_dir(&root.join("Games")) {
-            continue;
-        }
-        if fs::create_dir_all(&target).is_err() || !real_dir(&target) {
-            result.skipped += 1;
-            continue;
-        }
-        let entries = match fs::read_dir(&src) {
-            Ok(entries) => entries,
-            Err(_) => {
-                result.skipped += 1;
-                continue;
-            }
-        };
-        for entry in entries {
-            let entry = match entry {
-                Ok(entry) => entry,
-                Err(_) => {
-                    result.skipped += 1;
-                    continue;
-                }
-            };
-            let path = entry.path();
-            let name = entry.file_name();
-            let name = name.to_string_lossy();
-            let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
-            let expected = match platform {
-                slot_store::Platform::Gb => "gb",
-                slot_store::Platform::Gbc => "gbc",
-                slot_store::Platform::Gba => "gba",
-            };
-            let meta = match fs::symlink_metadata(&path) {
-                Ok(meta) => meta,
-                Err(_) => {
-                    result.skipped += 1;
-                    continue;
-                }
-            };
-            if !meta.file_type().is_file()
-                || meta.len() < 192
-                || meta.len() > 64 * 1024 * 1024
-                || name.starts_with('.')
-                || name.contains(['\\', '\n', '\r'])
-                || !ext.eq_ignore_ascii_case(expected)
-            {
-                result.skipped += 1;
-                continue;
-            }
-            // Read the full file to a private staging file before publishing; FAT hard links are unavailable.
-            let dest = target.join(name.as_ref());
-            if fs::symlink_metadata(&dest).is_ok() {
-                result.skipped += 1;
-                continue;
-            }
-            let mut reader = match fs::File::open(&path) {
-                Ok(reader) => reader,
-                Err(_) => {
-                    result.skipped += 1;
-                    continue;
-                }
-            };
-            let (temp, mut writer) = match staging_file(&target) {
-                Ok(staged) => staged,
-                Err(_) => {
-                    result.skipped += 1;
-                    continue;
-                }
-            };
-            let copied = io::copy(
-                &mut std::io::Read::by_ref(&mut reader).take(64 * 1024 * 1024 + 1),
-                &mut writer,
-            )
-            .and_then(|n| {
-                if n != meta.len() {
-                    return Err(io::Error::other("upload changed"));
-                }
-                writer.sync_all()
-            });
-            drop(writer);
-            if copied.is_err() {
-                let _ = fs::remove_file(&temp);
-                result.skipped += 1;
-                continue;
-            }
-            if fs::symlink_metadata(&dest).is_ok() {
-                let _ = fs::remove_file(&temp);
-                result.skipped += 1;
-                continue;
-            }
-            if fs::rename(&temp, &dest).is_err() {
-                let _ = fs::remove_file(&temp);
-                result.skipped += 1;
-                continue;
-            }
-            if fs::remove_file(&path).is_err() {
-                result.skipped += 1;
-            }
-            let stem = dest
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .to_string();
-            result.added.push(slot_store::Cart {
-                platform,
-                stem,
-                rom: dest,
-                label: None,
-                title: String::new(),
-                code: String::new(),
-                shell: None,
-            });
-        }
-    }
-    import_wallpapers(root, &mut result);
-    Ok(result)
-}
-
-const MAX_WALLPAPER_FILE: u64 = 16 * 1024 * 1024;
-const MAX_WALLPAPER_PIXELS: u64 = 8 * 1024 * 1024;
-
-fn import_wallpapers(root: &Path, result: &mut Import) {
-    let inbox = root.join(INBOX);
-    let src = inbox.join("Wallpapers");
-    let target = root.join("Wallpapers");
-    if !real_dir(&inbox) || !real_dir(&src) {
-        return;
-    }
-    // create_dir, rather than create_dir_all, must never follow an existing target link.
-    if !real_dir(&target) && (target.symlink_metadata().is_ok() || fs::create_dir(&target).is_err())
-    {
-        result.skipped += 1;
-        return;
-    }
-    let entries = match fs::read_dir(&src) {
-        Ok(entries) => entries,
-        Err(_) => {
-            result.skipped += 1;
-            return;
-        }
-    };
-    for entry in entries {
-        let Some(entry) = entry.ok() else {
-            result.skipped += 1;
-            continue;
-        };
-        let path = entry.path();
-        let name = entry.file_name();
-        // Wallpaper choices persist as UTF-8 names; refuse names that cannot round-trip.
-        let valid_name = name
-            .to_str()
-            .is_some_and(|name| !name.starts_with('.') && !name.contains(['\\', '\n', '\r']))
-            && path
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("png"));
-        let valid_file = path
-            .symlink_metadata()
-            .is_ok_and(|m| m.is_file() && m.len() > 0 && m.len() <= MAX_WALLPAPER_FILE);
-        let dest = target.join(&name);
-        if !valid_name || !valid_file || dest.symlink_metadata().is_ok() {
-            result.skipped += 1;
-            continue;
-        }
-        // Validate the private copy, so no unvalidated or partial image reaches the selector.
-        // SMB has already stopped; the source remains intact until publishing succeeds.
-        let staged = (|| -> io::Result<()> {
-            let mut reader = fs::File::open(&path)?;
-            let expected = reader.metadata()?.len();
-            let (temp, mut writer) = staging_file(&target)?;
-            let copy = (|| -> io::Result<()> {
-                let copied = io::copy(
-                    &mut reader.by_ref().take(MAX_WALLPAPER_FILE + 1),
-                    &mut writer,
-                )?;
-                if copied != expected || copied > MAX_WALLPAPER_FILE {
-                    return Err(io::Error::other("upload changed"));
-                }
-                writer.sync_all()?;
-                drop(writer);
-                validate_wallpaper(&temp).ok_or_else(|| io::Error::other("invalid wallpaper"))?;
-                // symlink_metadata also sees dangling links; never replace those either.
-                if dest.symlink_metadata().is_ok() {
-                    return Err(io::ErrorKind::AlreadyExists.into());
-                }
-                fs::rename(&temp, &dest)
-            })();
-            if copy.is_err() {
-                let _ = fs::remove_file(&temp);
-            }
-            copy
-        })();
-        if staged.is_err() {
-            result.skipped += 1;
-            continue;
-        }
-        result.wallpapers += 1;
-        if fs::remove_file(&path).is_err() {
-            result.skipped += 1;
-        }
-    }
-}
-
-fn validate_wallpaper(path: &Path) -> Option<()> {
-    let mut decoder = png::Decoder::new(fs::File::open(path).ok()?);
-    decoder.set_transformations(png::Transformations::normalize_to_color8());
-    decoder.set_limits(png::Limits {
-        bytes: 32 * 1024 * 1024,
-    });
-    let mut reader = decoder.read_info().ok()?;
-    let info = reader.info();
-    if info.width > 4096
-        || info.height > 4096
-        || u64::from(info.width) * u64::from(info.height) > MAX_WALLPAPER_PIXELS
-        || info.animation_control.is_some()
-        || reader.output_buffer_size() > 32 * 1024 * 1024
-    {
-        return None;
-    }
-    let mut pixels = vec![0; reader.output_buffer_size()];
-    reader.next_frame(&mut pixels).ok()?;
-    reader.finish().ok()?;
-    Some(())
-}
-
-// A crash can leave its private staging file behind. Never reuse a PID-only name:
-// handheld startup often reuses PIDs, and a previous partial write must not block new imports.
-fn staging_file(target: &Path) -> io::Result<(PathBuf, fs::File)> {
-    use ring::rand::SecureRandom;
-    let mut random = [0; 8];
-    ring::rand::SystemRandom::new()
-        .fill(&mut random)
-        .map_err(|_| io::Error::other("could not create upload staging name"))?;
-    let path = target.join(format!(
-        ".slot-upload-{}-{:016x}",
-        std::process::id(),
-        u64::from_ne_bytes(random)
-    ));
-    let file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&path)?;
-    Ok((path, file))
-}
-
-fn real_dir(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_dir())
 }

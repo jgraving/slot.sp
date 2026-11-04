@@ -3117,6 +3117,20 @@ impl App {
                 if let Some(menu)=&mut self.network {menu.automatic_time_notice();}
                 return;
             }
+            if *from_menu && self.clock_return_row == QuickRow::TimeZone {
+                match action {
+                    Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
+                    Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.navigate(1, 0),
+                    Action::GbaDown(Btn::Up) => picker.navigate(0, -1),
+                    Action::GbaDown(Btn::Down) => picker.navigate(0, 1),
+                    Action::GbaDown(Btn::B | Btn::Start) | Action::QuickMenu => {
+                        self.return_from_settings_page(self.clock_return_row);
+                    }
+                    _ => {}
+                }
+                self.apply_clock_edit();
+                return;
+            }
             match action {
                 Action::GbaDown(Btn::Left) | Action::ShelfLeft => picker.navigate(-1, 0),
                 Action::GbaDown(Btn::Right) | Action::ShelfRight => picker.navigate(1, 0),
@@ -3359,8 +3373,12 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::TimeZone|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
-            QuickRow::DateTime|QuickRow::About => {
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::DateTime|QuickRow::TimeZone|QuickRow::About => {
+                if row == QuickRow::DateTime && self.network.as_ref().is_some_and(|m| m.automatic_time_enabled()) {
+                    self.open_quick_row(row);
+                    return;
+                }
                 if let Phase::Playing{cart}=&self.phase {self.settings_return_game=Some(cart.clone());}
                 self.open_quick_row(row);
             },
@@ -3440,7 +3458,7 @@ impl App {
                 self.phase = clock_screen(self.utc_secs(), self.state.utc_offset_min, true);
                 if let Phase::SetClock{picker,..}=&mut self.phase {
                     picker.set_automatic(automatic);
-                    if row==QuickRow::TimeZone {picker.field(slot_ui::Field::Offset);picker.toggle_editing();}
+                    if row==QuickRow::TimeZone {picker.edit_offset_only();}
                 }
             }
             QuickRow::DisplaySchedule => {
@@ -4511,11 +4529,6 @@ impl App {
     }
 
     /// Startup credential prompts wait for the boot intro and other modal pages.
-    pub fn add_shared_games(&mut self,carts:Vec<Cart>) {
-        for mut cart in carts {if !self.catalog.iter().any(|c|c.platform==cart.platform && c.stem==cart.stem){cart.read_header();self.catalog.push(cart);}}
-        self.catalog.sort_by(|a,b|(a.platform as u8,slot_store::sort_key(&a.stem)).cmp(&(b.platform as u8,slot_store::sort_key(&b.stem))));
-        self.apply_kid_scope();
-    }
     pub fn open_studio(&mut self) {
         if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
         let Some(root)=self.root.clone() else {return;};
@@ -4569,8 +4582,6 @@ impl App {
             if network.take_parent_authenticated() {if let Some(menu)=&mut self.kid_menu {menu.authorize_device_pin();}}
             if network.take_parent_cancelled() {if let Some(menu)=&mut self.kid_menu {menu.cancel_device_pin();}if self.kid_menu.as_ref().is_some_and(|m|!m.visible) {self.kid_menu=None;}}}
         if self.network.as_mut().is_some_and(|m|m.take_update_restart()) {self.begin_restart();}
-        let added=self.network.as_mut().map(|m|m.take_shared_games()).unwrap_or_default();
-        if !added.is_empty() {self.add_shared_games(added);}
         if matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}) && self.studio.is_none() {
             if let Some(carts)=self.network.as_mut().and_then(|m|m.take_shared_snapshot()) {
                 self.catalog=carts;self.apply_kid_scope();

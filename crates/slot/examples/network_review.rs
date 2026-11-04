@@ -34,23 +34,33 @@ fn main(){
     for b in [Btn::A,Btn::X]{a.tap(b);}a.save("pin-masked");
     for b in [Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}a.save("pin-ready");a.tap(Btn::Start);a.save("pin-confirm");a.code();a.wait_io();a.save("pin-set");
     a.home();a.nav(QuickRow::Wifi);a.save("wifi-tile");a.tap(Btn::A);a.save("wifi-off");
-    a.tap(Btn::Up);a.save("wifi-report-action");a.tap(Btn::A);
+    a.frame(vec![RawEvent::Down(Btn::L1), RawEvent::Down(Btn::R1)]);
+    a.frame(vec![RawEvent::Up(Btn::L1), RawEvent::Up(Btn::R1)]);
     let report_deadline=std::time::Instant::now()+std::time::Duration::from_secs(15);
     while a.f.app().network.as_ref().unwrap().show_progress() {
         assert!(std::time::Instant::now()<report_deadline,"diagnostic export did not finish");
         std::thread::sleep(std::time::Duration::from_millis(10));a.frame(vec![]);
     }
-    assert!(root.join("Diagnostics/wifi-0001.txt").exists());a.save("wifi-report-saved");a.tap(Btn::Down);
+    assert!(root.join("Diagnostics/wifi-0001.txt").exists());a.save("wifi-report-saved");
     a.tap(Btn::A);a.settle();a.save("wifi-on");
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.save("general-updates-disconnected");
     a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-disabled");
-    a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);a.tap(Btn::B);a.tap(Btn::B);
+    a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::TimeZone));a.tap(Btn::B);
     a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
-    a.tap(Btn::B);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-default-off");a.tap(Btn::Down);a.tap(Btn::Right);a.save("sharing-reboot-warning");a.tap(Btn::Left);a.tap(Btn::Up);a.tap(Btn::A);
-    for _ in 0..30{std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);}a.save("sharing-on-password-hidden");for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-test-password-shown");for _ in 0..4{a.tap(Btn::Up);}a.tap(Btn::A);a.wait_io();a.save("sharing-stopped-direct-card");a.tap(Btn::B);
+    a.tap(Btn::B);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-default-off");a.tap(Btn::Down);a.tap(Btn::Right);a.save("sharing-reboot-warning");a.tap(Btn::Left);a.tap(Btn::Up);
+    for _ in 0..5 { a.tap(Btn::Down); }
+    a.tap(Btn::A);a.save("sharing-password-keyboard");a.password();a.wait_io();
+    for _ in 0..5 { a.tap(Btn::Up); }
+    a.tap(Btn::A);
+    for _ in 0..30{std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);}a.save("sharing-on-password-hidden");for _ in 0..4{a.tap(Btn::Down);}a.save("sharing-password-show-hint");a.tap(Btn::A);a.save("sharing-test-password-shown");a.tap(Btn::A);a.save("sharing-password-hidden");
+    std::fs::write(root.join("Games/GBA/Delta.gba"), [3; 256]).unwrap();
+    for _ in 0..4{a.tap(Btn::Up);}
+    a.tap(Btn::A);a.wait_io();
+    assert!(a.f.app().carts().any(|cart| cart.stem == "Delta"));
+    a.save("sharing-stopped-library-refreshed");a.tap(Btn::B);
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.tap(Btn::A);a.save("updates-settings");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-off");a.tap(Btn::Right);a.save("automatic-time-on");
     a.nav(QuickRow::DateTime);a.save("manual-time-disabled");a.tap(Btn::A);a.save("manual-time-disabled-notice");
-    a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("automatic-time-zone-manual-fields-dimmed");a.tap(Btn::B);a.tap(Btn::B);
+    a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("automatic-time-zone-manual-fields-dimmed");a.tap(Btn::B);assert_eq!(a.f.app().quick_menu(),Some(QuickRow::TimeZone));
     a.nav(QuickRow::AutomaticTime);a.tap(Btn::Left);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
