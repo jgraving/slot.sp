@@ -745,8 +745,7 @@ fn the_carousel_menu_keeps_the_empty_footer_where_the_shelf_left_it() {
     press(&mut a, Btn::A);
     assert_eq!(a.quick_menu(), Some(QuickRow::Achievements));
     press(&mut a, Btn::Down);
-    press(&mut a, Btn::Down);
-    assert_eq!(a.quick_menu(),Some(QuickRow::FastForward));
+    assert_eq!(a.quick_menu(), Some(QuickRow::FastForward));
     for _ in 0..30 {
         a.update(1.0 / 60.0);
     }

@@ -1,6 +1,6 @@
-# Active network/settings follow-up
+# Active device follow-up
 
-Continue on `fix/network-settings-usability`, [PR #203](https://github.com/jgraving/slot.sp/pull/203). Local build disk is full; finish validation through GitHub CI (see newest WORKLOG.md checkpoint). See newest WORKLOG.md entry for requested fixes and current findings. Previous completed work below remains historical.
+Continue on `fix/device-services-ux`, [PR #202](https://github.com/jgraving/slot.sp/pull/202), reconciled with merged PR #203. See WORKLOG.md for verification and hardware follow-up.
 
 # Wi-Fi diagnostics complete
 

@@ -19,7 +19,7 @@ Use the D-pad to move between tiles in the main settings grid. Press **A** to ex
 | Hold <kbd>A</kbd> | Launch from the game's title screen, without loading a resume state. |
 | <kbd>Y</kbd> | Add to Favorites; press again to begin removing a favorite. |
 | <kbd>X</kbd> | Approve for kid mode; press again to begin removing approval. |
-| <kbd>START</kbd> | Choose the emulator for a GBA game. |
+| <kbd>START</kbd> | Open the selected cartridge’s menu for Cart Studio or the GBA emulator picker. |
 | <kbd>MENU</kbd> | Open settings. |
 
 To confirm removal of a favorite or kid approval, release the button and press it again within three seconds. Moving away cancels it.

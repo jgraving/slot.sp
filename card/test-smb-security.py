@@ -18,6 +18,8 @@ with tempfile.TemporaryDirectory() as d:
     assert not (root/'Inbox').exists(), 'direct card access must not create an import inbox'
     assert 'ABCDEFGH23456789' not in cfg
     assert (run/'slot-smb/smb.conf').stat().st_mode&0o077==0
-    assert prepare('weak').returncode!=0
+    assert prepare('Arcade shelf@2026!').returncode==0
+    for invalid in ('weak', 'x'*33, 'arcade\tpass', 'arcade\npassword', 'arcade-étoile'):
+        assert prepare(invalid).returncode!=0, 'invalid sharing password was accepted'
     assert prepare(ip='192.168.1.2\n[evil]').returncode!=0
 print('SMB configuration/password/path restrictions passed')

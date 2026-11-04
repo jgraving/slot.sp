@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory() as tmp:
     run=root/'run';run.mkdir()
     loader=next((root/'System/samba/lib').glob('ld-linux-*.so.*'))
     env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader),SLOT_SMB_TEST_PORT='1445',SLOT_SMB_TEST_INTERFACE='lo',GCONV_PATH=str(root/'System/samba/gconv'))
-    password='ABCDEFGH23456789'
+    password='Arcade shelf@2026!'
     subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
     config=(run/'slot-smb/smb.conf').read_text()
     assert 'SMB3_00' in config and 'server smb encrypt = required' in config

@@ -100,9 +100,9 @@ Open **General → Updates** while Wi-Fi is connected. Launcher updates target t
 
 **General → Automatic time** enables background UTC correction over a connected network. **Time zone** chooses the local UTC offset and applies immediately. The offset is manual, including daylight-saving changes. Selecting Updates or Automatic time while disconnected opens Network with a Wi-Fi-needed pill.
 
-## Network file sharing
+## File sharing
 
-Open Settings → Network → Network file sharing and turn Sharing on. On a Mac, use Finder → Go → Connect to Server and enter the displayed `smb://<device IP>/SDCard` address. Choose Registered User, username `slot`, and the password shown by the device. Both computers must be able to reach each other on the same network.
+Open Settings → Network → File sharing and turn Sharing on. On a Mac, use Finder → Go → Connect to Server and enter the displayed `smb://<device IP>/SDCard` address. Choose Registered User, username `slot`, and the password shown by the device. Use **Set password** to choose your own. Both computers must be able to reach each other on the same network.
 
 The share provides read/write access to the whole content card: Games, Saves, Labels, Wallpapers, Config, System and any other folders. Copy files directly to their intended folders; no import step is needed. Eject the share in Finder before turning Sharing off. The launcher rescans games and artwork when sharing stops; restart after changing launcher configuration or System files. Password-authenticated SMB3 encryption remains required. Turn sharing off before launching games, opening Cart Studio or installing updates, so the computer cannot modify those files while they are in use. Link play also stops sharing.
 

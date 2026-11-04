@@ -82,6 +82,7 @@ pub struct ClockPicker {
     editing: bool,
     twelve: bool,
     automatic: bool,
+    offset_only: bool,
 }
 
 impl ClockPicker {
@@ -99,6 +100,7 @@ impl ClockPicker {
             editing: false,
             twelve: false,
             automatic: false,
+            offset_only: false,
         }
     }
 
@@ -122,6 +124,7 @@ impl ClockPicker {
             editing: false,
             twelve: false,
             automatic: false,
+            offset_only: false,
         }
     }
 
@@ -154,6 +157,13 @@ impl ClockPicker {
         self.cursor = Field::ALL.iter().position(|f| *f == field).unwrap_or(0);
     }
 
+    pub fn edit_offset_only(&mut self) {
+        self.offset_only = true;
+        self.field(Field::Offset);
+        self.editing = true;
+    }
+
+    pub fn offset_only(&self) -> bool { self.offset_only }
     pub fn editing(&self) -> bool { self.editing }
 
     pub fn set_automatic(&mut self, automatic:bool) {self.automatic=automatic;if automatic && self.cursor()!=Field::Offset {self.editing=false;}}
@@ -229,7 +239,7 @@ impl ClockPicker {
         let (w, h) = (canvas.w as u32, OUT_H);
         let mut rgba = vec![0; (w * h * 4) as usize];
         let mut put = |f: UndoFace, x: u32, y: u32| blit(&mut rgba, w, &f.rgba, f.w, f.h, x, y);
-        let heading = crate::quick_heading_face("Date & time");
+        let heading = crate::quick_heading_face(if self.offset_only { "Time zone" } else { "Date & time" });
         let x=canvas.centred(heading.w as f32)as u32;
         put(heading,x,0);
         let cell_w = (canvas.w - 216.0) / 3.0;
@@ -273,7 +283,7 @@ impl ClockPicker {
                     );
                     text::draw_centred(&mut f.rgba, f.w, f.h, &layout, ink);
                 }
-                if self.automatic && i!=5 {for px in f.rgba.chunks_exact_mut(4) {px[3]=(px[3] as f32*0.45) as u8;}}
+                if (self.automatic || self.offset_only) && i!=5 {for px in f.rgba.chunks_exact_mut(4) {px[3]=(px[3] as f32*0.45) as u8;}}
                 put(f, x as u32, y as u32 + dy);
             }
         }

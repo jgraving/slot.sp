@@ -55,11 +55,13 @@ pub struct SyncDetail {
     pub pending_awards: usize,
     pub retry_seconds: u64,
     pub problem: &'static str,
+    pub game_status: &'static str,
+    pub game_retry_seconds: u64,
 }
 impl Default for SyncDetail {
     fn default() -> Self { Self { status: SyncStatus::Disabled, authenticated: false,catalog_ready:false,artwork_ready:false,
         games_done: 0, games_total: 0, games_failed: 0, badges_done: 0, badges_total: 0,
-        pending_awards: 0, retry_seconds: 0, problem: "" } }
+        pending_awards: 0, retry_seconds: 0, problem: "", game_status: "", game_retry_seconds: 0 } }
 }
 impl SyncDetail {
     /// Each phase has its own honest denominator; artwork is discovered during game lookup.
