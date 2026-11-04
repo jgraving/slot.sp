@@ -65,16 +65,18 @@ fn probe(program: &str, args: &[&str], timeout: Duration) -> Probe {
     loop {
         match child.try_wait() {
             Ok(Some(status)) => {
-                if !status.success() {
-                    return empty("failed");
-                }
-                let Ok((true, bytes)) =
+                let Ok((read_ok, bytes)) =
                     rx.recv_timeout(deadline.saturating_duration_since(Instant::now()))
                 else {
                     return empty("timeout");
                 };
+                // Reaching the cap closes stdout and can make the producer exit
+                // with SIGPIPE. Classify the cap before its resulting exit code.
                 if bytes.len() as u64 > LIMIT {
                     return empty("too-large");
+                }
+                if !read_ok || !status.success() {
+                    return empty("failed");
                 }
                 return Probe {
                     result: "ok",
@@ -349,5 +351,12 @@ mod tests {
             Duration::from_secs(1),
         );
         assert_eq!(result.result, "too-large");
+        let failed_after_output = probe(
+            "/bin/sh",
+            &["-c", "head -c 70000 /dev/zero; exit 7"],
+            Duration::from_secs(1),
+        );
+        assert_eq!(failed_after_output.result, "too-large");
+        assert!(failed_after_output.text.is_empty());
     }
 }
