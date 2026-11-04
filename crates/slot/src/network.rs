@@ -93,7 +93,7 @@ impl Menu {
         let encrypted = network_vault::vault_path(&root).exists();
         let method = network_vault::method(&root);
         // Old plaintext is read only after a PIN is created or authenticated.
-        let migrating_plain = plain_path(&root).exists();
+        let migrating_plain = has_plain_residue(&root);
         let secrets = Secrets::default();
         Self {
             sharing:crate::sharing::Sharing::new(root.clone()),sharing_allowed:true,sharing_reveal:false,sharing_library:Vec::new(),
@@ -134,7 +134,7 @@ impl Menu {
     fn credentials_ready(&self) -> bool {self.encrypted && !self.locked && !self.upgrade_pin && !self.migrating_plain}
     fn migrate_plain(&mut self) {
         if !self.migrating_plain || self.migration_saving || self.locked || self.upgrade_pin {return;}
-        let Some(secrets)=read_plain(&self.root) else {self.warn("Could not read old credentials",slot_ui::NoticeTone::Danger);return;};
+        let Some(secrets)=migration_secrets(&self.root,&self.secrets) else {self.warn("Could not read old credentials",slot_ui::NoticeTone::Danger);return;};
         self.secrets=secrets;self.migration_saving=true;
         self.submit(Job::Save(self.secrets.clone()));self.say("Encrypting saved credentials");
     }
@@ -277,7 +277,6 @@ impl Menu {
     }
     pub fn update(&mut self) {
         self.take_update_events();
-        self.step_sharing();
         if let Some(since)=self.pin_rejected {self.face=None;if since.elapsed().as_secs_f32()>=0.36 {self.pin_rejected=None;}}
 
         while let Ok(reply) = self.worker.results.try_recv() {
@@ -343,8 +342,26 @@ impl Menu {
             self.secrets.username = username; self.secrets.token = token; self.secrets.password.zeroize();
             self.save_secrets(); self.say("Signed in to RetroAchievements");
         }}
-        let view = self.wifi.view();
+        self.apply_wifi_view(self.wifi.view());
+        self.step_sharing();
+        if let Some(service) = &self.service {
+            if let Some(notice) = service.take_notice() {
+                if notice.kind == slot_achievements::NoticeKind::Earned {
+                    self.toast = Some((format!("{} · {}", notice.title, notice.detail), Instant::now()));
+                } else if self.visible && !self.is_keyboard() { self.say(notice.title); }
+            }
+        }
+    }
+    fn apply_wifi_view(&mut self, view: wifi::WifiView) {
         if view != self.last_wifi {
+            // Revocation follows the Wi-Fi session, even while the SMB process is paused.
+            // An initial disconnected boot view must still allow the explicit reboot opt-in.
+            let disconnected = self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
+                && (!view.on || view.connected.is_none() || view.ip.is_none());
+            if self.prefs.sharing_enabled && disconnected {
+                self.prefs.sharing_enabled=false;self.store_preferences();self.sharing.request(None);
+                self.say("Sharing stopped · disconnected");
+            }
             if view.connected.is_some() && view.ip.is_some() && self.last_wifi.ip.is_none() {
                 if let Some(service) = &self.service { service.network_available(); }
                 self.say("Wi-Fi connected");
@@ -353,13 +370,6 @@ impl Menu {
             self.last_wifi = view;
             self.selected = self.selected.min(self.rows().len().saturating_sub(1));
             self.changed();
-        }
-        if let Some(service) = &self.service {
-            if let Some(notice) = service.take_notice() {
-                if notice.kind == slot_achievements::NoticeKind::Earned {
-                    self.toast = Some((format!("{} · {}", notice.title, notice.detail), Instant::now()));
-                } else if self.visible && !self.is_keyboard() { self.say(notice.title); }
-            }
         }
     }
     fn edit(&mut self, field: Field, title: &str, text: &str, secret: bool, min: usize, max: usize) {
@@ -603,7 +613,7 @@ impl Menu {
             Field::ConfirmVault => {
                 if self.first_pass.as_str() != text.as_str() { self.first_pass.zeroize(); self.prompt(Field::CreateVault); self.say("Codes did not match"); return; }
                 self.first_pass.zeroize(); let saved=if self.migrating_plain {
-                    let Some(saved)=read_plain(&self.root) else {self.warn("Could not read old credentials",slot_ui::NoticeTone::Danger);return;};
+                    let Some(saved)=migration_secrets(&self.root,&self.secrets) else {self.warn("Could not read old credentials",slot_ui::NoticeTone::Danger);return;};
                     self.secrets=saved.clone();saved
                 } else {self.secrets.clone()};
                 self.short_pin=self.creating_method==Method::Buttons && text.len()<8;self.submit(Job::Create(text, saved, self.creating_method)); self.say("Encrypting credentials");
@@ -764,11 +774,14 @@ impl Menu {
             self.prefs.sharing_enabled=false;self.store_preferences();self.warn("Sharing stopped · network changed",slot_ui::NoticeTone::Warning);
         }
         if self.sharing.view.active && !self.wifi_connected() {self.prefs.sharing_enabled=false;self.store_preferences();self.say("Sharing stopped · disconnected");}
-        let start=if self.prefs.sharing_enabled && self.sharing_allowed && self.credentials_ready() && self.pending_jobs==0 && self.wifi_connected()
+        let start=if self.prefs.sharing_enabled && self.sharing_allowed && self.credentials_ready() && self.wifi_connected()
             && self.last_wifi.connected.as_deref()==Some(self.secrets.sharing_network.as_str()) {
             self.last_wifi.ip.as_ref().and_then(|ip|ip.parse::<std::net::Ipv4Addr>().ok()).filter(|ip|!ip.is_unspecified()&&!ip.is_multicast()&&!ip.is_loopback())
                 .map(|ip|crate::sharing::Start{connection:crate::sharing::Connection{ssid:self.secrets.sharing_network.clone(),ip},password:Zeroizing::new(self.secrets.sharing_password.clone())})
         }else{None};
+        // Initial enablement and password rotation wait for encrypted storage. Unrelated
+        // credential work (such as an RA token refresh) must not interrupt an existing upload.
+        let start=start.filter(|s|self.pending_jobs==0 || self.sharing.requested_connection()==Some(&s.connection));
         let old=self.sharing.view.clone();self.sharing.request(start);if old!=self.sharing.view{self.changed();}
     }
     pub fn flush_ready(&self) -> bool { if self.update_busy {self.updates.cancel();} !self.update_busy && self.sharing.ready() && self.pending_jobs == 0 && self.service.as_ref().is_none_or(|s| s.flush_ready()) }
@@ -784,9 +797,42 @@ fn sync_label(d: slot_achievements::SyncDetail) -> String {
     }
 }
 fn plain_path(root:&std::path::Path)->PathBuf {root.join("Config/network-credentials.json")}
-fn read_plain(root:&std::path::Path)->Option<Secrets> {
-    let bytes=Zeroizing::new(std::fs::read(plain_path(root)).ok()?);
+fn plain_temp(name:&str)->bool {
+    let suffix=name.strip_prefix(".network-credentials.json.").and_then(|n|n.strip_suffix(".tmp"));
+    suffix.is_some_and(|s|{let parts:Vec<_>=s.split('.').collect();parts.len()==2&&parts.iter().all(|p|!p.is_empty()&&p.bytes().all(|b|b.is_ascii_digit()))})
+}
+fn has_plain_residue(root:&std::path::Path)->bool {
+    // The generic boot sweep skips the current PID and ignores removal failures.
+    // Credential cleanup must also cover PID reuse and a missing primary file.
+    match std::fs::symlink_metadata(plain_path(root)) {
+        Ok(_)=>return true,
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>{},
+        Err(_)=>return true,
+    }
+    match std::fs::read_dir(root.join("Config")) {
+        Ok(mut entries)=>entries.any(|entry|match entry {
+            Ok(entry)=>plain_temp(&entry.file_name().to_string_lossy()),Err(_)=>true,
+        }),
+        Err(e)=>e.kind()!=std::io::ErrorKind::NotFound,
+    }
+}
+fn migration_secrets(root:&std::path::Path,current:&Secrets)->Option<Secrets> {
+    use std::io::Read;
+    let file=match std::fs::File::open(plain_path(root)) {
+        Ok(file)=>file,
+        // Orphan writes may be incomplete or stale; never import them over the
+        // authenticated vault. Save its contents first, then remove the residue.
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Some(current.clone()),
+        Err(_)=>return None,
+    };
+    let mut bytes=Zeroizing::new(Vec::new());
+    file.take(32*1024+1).read_to_end(&mut bytes).ok()?;
+    if bytes.len()>32*1024 {return None;}
     serde_json::from_slice(&bytes).ok()
+}
+#[cfg(test)]
+fn read_plain(root:&std::path::Path)->Option<Secrets> {
+    migration_secrets(root,&Secrets::default())
 }
 #[cfg(test)]
 fn write_plain(root:&std::path::Path,secrets:&Secrets)->std::io::Result<()> {
@@ -801,8 +847,7 @@ fn remove_plain(root:&std::path::Path)->std::io::Result<()> {
     {
         for entry in entries {
             let entry=entry?;let name=entry.file_name();let name=name.to_string_lossy();
-            let suffix=name.strip_prefix(".network-credentials.json.").and_then(|n|n.strip_suffix(".tmp"));
-            if suffix.is_some_and(|s|{let parts:Vec<_>=s.split('.').collect();parts.len()==2&&parts.iter().all(|p|!p.is_empty()&&p.bytes().all(|b|b.is_ascii_digit()))}) {std::fs::remove_file(entry.path())?;}
+            if plain_temp(&name) {std::fs::remove_file(entry.path())?;}
         }
     }
     match std::fs::remove_file(plain_path(root)) {Err(e) if e.kind()==std::io::ErrorKind::NotFound=>Ok(()),result=>result}
@@ -912,6 +957,67 @@ mod tests {
         let mut reboot=Menu::new(root.path().into());assert!(reboot.prefs.sharing_enabled&&reboot.prefs.sharing_keep);reboot.step_sharing();assert!(!reboot.sharing.view.active,"vault must be unlocked before persistent sharing starts");
         menu.wifi_on=true;menu.last_wifi=wifi::WifiView{on:true,connected:Some("Public".into()),ip:Some("10.0.0.2".into()),..Default::default()};
         menu.step_sharing();assert!(!menu.prefs.sharing_enabled,"another SSID must revoke enablement");
+    }
+    fn sharing_fixture(root: &std::path::Path) -> Menu {
+        let mut menu=Menu::new(root.into());
+        menu.encrypted=true;menu.locked=false;menu.wifi_on=true;
+        menu.secrets.sharing_password="ABCDEFGH23456789".into();
+        menu.secrets.sharing_network="Home".into();menu.prefs.sharing_enabled=true;
+        menu
+    }
+    fn home_wifi() -> wifi::WifiView {
+        wifi::WifiView{on:true,connected:Some("Home".into()),ip:Some("192.168.1.10".into()),..Default::default()}
+    }
+    fn wait_for_sharing(menu: &mut Menu) {
+        let until=Instant::now()+Duration::from_secs(10);
+        while !menu.sharing.view.active {
+            menu.step_sharing();assert!(Instant::now()<until,"sharing did not start");
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+    #[test]
+    fn credential_jobs_preserve_requested_sharing_but_new_sessions_wait_for_storage() {
+        let root=tempfile::tempdir().unwrap();let mut menu=sharing_fixture(root.path());
+        menu.apply_wifi_view(home_wifi());menu.pending_jobs=1;menu.step_sharing();
+        assert!(menu.sharing.requested_connection().is_none(),"first start must await encrypted storage");
+        menu.pending_jobs=0;menu.step_sharing();
+        assert!(menu.sharing.requested_connection().is_some());
+        // An unrelated credential save can arrive while the server is starting or already active.
+        menu.pending_jobs=1;menu.step_sharing();
+        assert!(menu.sharing.requested_connection().is_some(),"credential work cancelled server startup");
+        wait_for_sharing(&mut menu);menu.step_sharing();
+        assert!(menu.sharing.view.active,"credential work interrupted an active upload");
+        // Password rotation explicitly closes the old session and must await its new saved password.
+        menu.sharing.request(None);menu.secrets.sharing_password="23456789ABCDEFGH".into();
+        menu.step_sharing();assert!(menu.sharing.requested_connection().is_none());
+        menu.pending_jobs=0;wait_for_sharing(&mut menu);
+    }
+    #[test]
+    fn disconnect_revokes_sharing_during_startup_and_while_paused() {
+        for paused in [false,true] {
+            let root=tempfile::tempdir().unwrap();let mut menu=sharing_fixture(root.path());
+            menu.prefs.sharing_keep=true;menu.apply_wifi_view(home_wifi());menu.step_sharing();
+            if paused {wait_for_sharing(&mut menu);menu.set_sharing_allowed(false);}
+            menu.apply_wifi_view(wifi::WifiView::default());
+            assert!(!menu.prefs.sharing_enabled,"a dropped connection must revoke even a paused session");
+            assert!(menu.sharing.requested_connection().is_none());
+            let reboot=Menu::new(root.path().into());assert!(!reboot.prefs.sharing_enabled);
+            menu.apply_wifi_view(home_wifi());menu.set_sharing_allowed(true);menu.step_sharing();
+            assert!(menu.sharing.requested_connection().is_none(),"reconnect must not silently restore sharing");
+        }
+    }
+    #[test]
+    fn reboot_opt_in_waits_for_first_connection_but_lost_lease_revokes_it() {
+        let root=tempfile::tempdir().unwrap();let mut menu=sharing_fixture(root.path());
+        menu.prefs.sharing_keep=true;menu.locked=true;
+        menu.apply_wifi_view(wifi::WifiView::default());menu.step_sharing();
+        assert!(menu.prefs.sharing_enabled);assert!(menu.sharing.requested_connection().is_none());
+        menu.locked=false;menu.apply_wifi_view(home_wifi());wait_for_sharing(&mut menu);
+        menu.set_sharing_allowed(false);
+        let mut lost_lease=home_wifi();lost_lease.ip=None;menu.apply_wifi_view(lost_lease);
+        assert!(!menu.prefs.sharing_enabled,"losing the address revokes a paused session too");
+        menu.apply_wifi_view(home_wifi());menu.set_sharing_allowed(true);menu.step_sharing();
+        assert!(menu.sharing.requested_connection().is_none());
     }
     #[test]
     fn sharing_page_keeps_password_hidden_until_requested_and_warns_on_persistence() {
@@ -1126,6 +1232,47 @@ mod tests {
         assert!(!m.wifi_on && m.service.is_none());assert!(m.secrets.wifi_password.is_empty());
         pin(&mut m);assert!(!plain_path(root.path()).exists());assert!(m.encrypted);
         let (_,saved)=network_vault::test_decrypt(root.path(),"acgjdi");assert_eq!(saved.wifi_password,"migration-secret");
+    }
+    #[test]
+    fn orphan_plaintext_cleanup_preserves_authenticated_vault_and_unrelated_files() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.secrets.token="current-encrypted-token".into();pin(&mut menu);drop(menu);
+        let orphan=root.path().join(format!("Config/.network-credentials.json.{}.0.tmp",std::process::id()));
+        std::fs::write(&orphan,b"{\"token\":\"stale-or-incomplete-plaintext").unwrap();
+        let unrelated=root.path().join("Config/.network-credentials.json.backup.tmp");
+        std::fs::write(&unrelated,b"unrelated file").unwrap();
+        crate::root::sweep_temps(root.path());assert!(orphan.exists(),"fixture must exercise PID reuse");
+        let mut menu=Menu::new(root.path().into());assert!(menu.migrating_plain&&!menu.credentials_ready());
+        menu.open_security();menu.unlock(None);buttons(&mut menu,&CODE);wait(&mut menu);
+        assert!(menu.credentials_ready());assert!(!orphan.exists());assert!(unrelated.exists());
+        let (_,saved)=network_vault::test_decrypt(root.path(),"acgjdi");
+        assert_eq!(saved.token,"current-encrypted-token","orphan content must not replace the authenticated vault");
+    }
+    #[test]
+    fn new_vault_cleans_orphan_plaintext_without_importing_uncommitted_secrets() {
+        let root=tempfile::tempdir().unwrap();std::fs::create_dir(root.path().join("Config")).unwrap();
+        let orphan=root.path().join("Config/.network-credentials.json.123.0.tmp");
+        std::fs::write(&orphan,b"unfinished secret").unwrap();
+        let mut menu=Menu::new(root.path().into());assert!(menu.migrating_plain);pin(&mut menu);
+        assert!(menu.credentials_ready());assert!(!orphan.exists());
+        assert!(network_vault::test_decrypt(root.path(),"acgjdi").1.token.is_empty());
+    }
+    #[test]
+    fn failed_orphan_plaintext_cleanup_keeps_network_gated() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());pin(&mut menu);drop(menu);
+        let blocked=root.path().join("Config/.network-credentials.json.123.0.tmp");
+        std::fs::create_dir(&blocked).unwrap();
+        let mut menu=Menu::new(root.path().into());menu.open_security();menu.unlock(None);buttons(&mut menu,&CODE);wait(&mut menu);
+        assert!(menu.migrating_plain&&!menu.credentials_ready());assert!(!menu.wifi_on&&menu.service.is_none());
+        assert!(menu.notice_text().unwrap().contains("Could not delete"));assert!(blocked.is_dir());
+    }
+    #[test]
+    fn inaccessible_plaintext_directory_is_not_reported_clean() {
+        let root=tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join("Config"),b"not a directory").unwrap();
+        assert!(has_plain_residue(root.path()),"scan errors must preserve the network gate");
+        assert!(remove_plain(root.path()).is_err(),"directory errors must not masquerade as completed cleanup");
+        assert!(!Menu::new(root.path().into()).credentials_ready());
     }
     #[test]
     fn old_four_button_pin_unlocks_for_upgrade_but_not_for_network() {

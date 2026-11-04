@@ -170,6 +170,9 @@ impl Sharing {
     pub fn ready(&self) -> bool {
         !self.view.active && !self.view.busy
     }
+    pub(crate) fn requested_connection(&self) -> Option<&Connection> {
+        self.wanted.as_ref()
+    }
 }
 pub fn password() -> Result<Zeroizing<String>, &'static str> {
     use ring::rand::SecureRandom;

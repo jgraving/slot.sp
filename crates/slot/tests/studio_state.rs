@@ -85,6 +85,30 @@ fn apply_swaps_the_label_back() {
 }
 
 #[test]
+fn restoring_original_label_restores_its_color_after_a_fresh_label() {
+    for logo in [false, true] {
+        let mut s = gba();
+        if logo {
+            s.adopt_logo([7, 8, 9]);
+            s.wheel_arrived();
+        } else {
+            s.adopt_text([7, 8, 9]);
+        }
+        s.applied(LabelKind::Logo);
+        assert_eq!(s.ground, None);
+        s.ground = Some([100, 110, 120]);
+        s.applied(LabelKind::Existing);
+        assert_eq!(s.ground, Some([7, 8, 9]));
+        assert_eq!(s.opened_ground, Some([7, 8, 9]));
+        assert!(!s.recolored());
+        assert_eq!(s.shown_label(), LabelKind::Existing);
+        s.screen = Screen::Chips { target: Target::Label, at: 2 };
+        s.press(Btn::A);
+        assert!(matches!(s.screen, Screen::Custom { rgb: [7, 8, 9], .. }));
+    }
+}
+
+#[test]
 fn label_color_only_on_logo() {
     let mut s = gba();
     assert!(!s.rows().contains(&Row::LabelColor));

@@ -71,4 +71,36 @@ launch
 launch
 [ "$(cat "$TMP/link.log" 2>/dev/null)" = "link down" ] || fail "a link left up by a crashed run was not torn down"
 
+# Exercise the production Wi-Fi helper: a crashed launcher session must be
+# retired before updates or the locked launcher run. An external session is not
+# owned by slot and must remain untouched.
+setup
+cp "$HERE/System/slotwifi.sh" "$TMP/card/System/slotwifi.sh"
+mkdir -p "$TMP/mock-bin"
+for command in wpa-cli ip rfkill; do
+    cat > "$TMP/mock-bin/$command" <<'MOCK'
+#!/bin/sh
+printf '%s %s\n' "${0##*/}" "$*" >> "$AGS_RUN/wifi-commands"
+MOCK
+    chmod +x "$TMP/mock-bin/$command"
+done
+export AGS_WPA_CLI="$TMP/mock-bin/wpa-cli" AGS_IP="$TMP/mock-bin/ip" AGS_RFKILL="$TMP/mock-bin/rfkill"
+export AGS_CTRL_DIR="$TMP/run/wpa-supplicant"
+echo 'external session settings' > "$TMP/run/slotwifi.conf"
+launch
+[ ! -e "$TMP/run/wifi-commands" ] || fail "stopped Wi-Fi without slot ownership"
+[ -e "$TMP/run/slotwifi.conf" ] || fail "deleted unowned Wi-Fi configuration"
+echo 'previous launcher' > "$TMP/run/slotwifi.owner"
+cat > "$TMP/card/System/slotupdate.sh" <<'CHECK'
+#!/bin/sh
+[ ! -e "$AGS_RUN/slotwifi.owner" ] && [ ! -e "$AGS_RUN/slotwifi.conf" ] || exit 1
+: > "$AGS_RUN/network-retired-before-update"
+CHECK
+launch
+[ -e "$TMP/run/network-retired-before-update" ] || fail "started before retiring the previous Wi-Fi credentials"
+grep -Fx "wpa-cli -p $AGS_CTRL_DIR -i wlan0 terminate" "$TMP/run/wifi-commands" >/dev/null || fail "did not terminate the owned supplicant"
+grep -Fx 'ip addr flush dev wlan0' "$TMP/run/wifi-commands" >/dev/null || fail "did not remove the previous network address"
+grep -Fx 'rfkill block wifi' "$TMP/run/wifi-commands" >/dev/null || fail "did not turn off the owned radio"
+unset AGS_WPA_CLI AGS_IP AGS_RFKILL AGS_CTRL_DIR
+
 echo "launch: all passed"

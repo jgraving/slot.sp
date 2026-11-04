@@ -2,6 +2,16 @@
 
 ## Active #194 completion and credential security review — 2026-11-04
 
+### Credential/session and editor corrections
+
+- Packaging fix published as `b24df42353f2daf27f72e417dba55ea6f96352a5`; its ARM64 Samba rebuild is running. Preserve that build until its refreshed cache is saved; a runtime checkpoint may skip duplicate CI temporarily, followed by a normal final-source commit/check run. No merge until current combined source passes.
+- Fixed upload interruption on unrelated credential saves and disconnect revocation while sharing is starting/paused. Initial enablement/rotation still wait for storage; explicit boot opt-in remains. Three lifecycle regressions pass.
+- Vault now explicitly clears Argon2 working memory without changing its format/KDF, detects orphan plaintext credential writes (including PID reuse), bounds legacy reads, and gates service availability until encrypted save plus cleanup succeeds. Four vault tests and the combined network suite pass; failed cleanup is fail-closed. PIN/key still never persist. No cryptographic bypass was found in reviewed paths.
+- RA cancellation now gates nested/follow-up requests, rejects late login tokens, preserves pending awards and clears retired auth/form copies. Launcher startup closes only its own previous Wi-Fi session before the locked UI. Achievement suite: 32 pass, two pre-existing live tests ignored; launch/Wi-Fi security shell checks pass.
+- Studio preserves exact scanned label filenames, retries missing original snapshots before any mutation, restores original color metadata, and reflows generated title labels for changed GB shapes. 15 editor/upload plus 57 Studio state tests pass. Both current native Studio walkthroughs complete; palette glyph review is being finalized.
+- Fresh device-feature compilation passes. Broader local library run: 152 pass, one existing Mesa capture ignored, one Unix-domain socket test cannot bind under the execution sandbox (EPERM). This is recorded as blocked, not passing; it remains enabled in GitHub CI. Remaining combined integration tests are being run separately.
+- Security assessment and limitations are in SECURITY-REVIEW.md. Six-button codes permit offline guessing from a copied SD card; no claim of complete vulnerability absence or physical-device protection. Dependency review identified old ZIP extraction advisories in APIs this updater does not use; hostile-metadata regressions are being added to verify custom-unpacker protections.
+
 ### Review fixes: reproducible Samba runtime packaging
 
 - Combined main checkpoint is published as `914382328b5703a7aec8b6cd28579e717da1bfd8`; normal six PR workflows started. Review found no runtime merge conflict; CURRENT_WORK routing is reconciled.

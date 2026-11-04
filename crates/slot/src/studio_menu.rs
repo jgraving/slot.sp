@@ -443,7 +443,7 @@ impl Menu {
                         text(
                             &mut face,
                             match p.chip {
-                                Chip::Current => "↶",
+                                Chip::Current => "O",
                                 Chip::Auto => "A",
                                 _ => "+",
                             },
@@ -567,7 +567,20 @@ fn place(dst: &mut UndoFace, src: &UndoFace, x: f32, y: f32, scale: f32) {
 }
 fn label(model: &Studio, art: &Artwork, original: Option<&[u8]>) -> Option<Vec<u8>> {
     match model.shown_label() {
-        LabelKind::Existing => original.map(<[u8]>::to_vec),
+        LabelKind::Existing => {
+            let mut edited = model.cart.clone();
+            edited.shell = model.shell;
+            if model.wearing_text()
+                && slot_ui::label_size(&edited) != slot_ui::label_size(&model.cart)
+                && original.is_some()
+            {
+                // A saved title is generated artwork: lay its text out again for
+                // the new Game Boy shape instead of cropping the old rectangle.
+                model.preview_ground().map(|c| art::make::text_label(&edited, c))
+            } else {
+                original.map(<[u8]>::to_vec)
+            }
+        }
         LabelKind::Real => art.real.clone(),
         LabelKind::Logo => {
             let look = model
@@ -617,8 +630,23 @@ pub fn save(
     art: &Artwork,
     original: Option<&[u8]>,
 ) -> std::io::Result<Cart> {
+    // scan() resolves label filenames case-insensitively. Replace/remove that
+    // exact file instead of creating a competing canonical name on Linux cards.
+    let path = model
+        .cart
+        .label
+        .clone()
+        .unwrap_or_else(|| art::make::label_path(root, &model.cart));
+    // Opening the editor may have hit a temporary read error. Retry on this
+    // worker before writing anything; an absent snapshot must not erase a label
+    // or make rollback impossible if the shell write fails.
+    let recovered = if original.is_none() && model.cart.label.is_some() {
+        Some(std::fs::read(&path)?)
+    } else {
+        None
+    };
+    let original = original.or(recovered.as_deref());
     let png = label(model, art, original);
-    let path = art::make::label_path(root, &model.cart);
     if let Some(png) = &png {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;

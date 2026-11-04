@@ -86,6 +86,7 @@ pub struct Studio {
     pub duplicates: bool,
     auto: ShellChoice,
     pub opened_ground: Option<[u8; 3]>,
+    original_ground: Option<[u8; 3]>,
     before_custom: (Option<ShellChoice>, Option<[u8; 3]>),
     logo_worn: bool,
     text_worn: bool,
@@ -141,6 +142,7 @@ impl Studio {
                 finish: finish_of(auto),
             },
             opened_ground: None,
+            original_ground: None,
             before_custom: (cart_shell, None),
             logo_worn: false,
             text_worn: false,
@@ -180,12 +182,14 @@ impl Studio {
         self.text_worn = true;
         self.ground = Some(ground);
         self.opened_ground = Some(ground);
+        self.original_ground = Some(ground);
     }
 
     pub fn adopt_logo(&mut self, ground: [u8; 3]) {
         self.logo_worn = true;
         self.ground = Some(ground);
         self.opened_ground = Some(ground);
+        self.original_ground = Some(ground);
     }
 
     pub fn wheel_arrived(&mut self) {
@@ -204,11 +208,14 @@ impl Studio {
             self.screen = Screen::Sheet { at: 0 };
         }
         self.wearing = kind;
-        let fresh = matches!(kind, LabelKind::Logo | LabelKind::Title);
-        self.ground = if fresh { None } else { self.opened_ground };
-        if fresh {
-            self.opened_ground = None;
-        }
+        // A fresh label has its own automatic color. Keep the original label's
+        // metadata independently so choosing it again restores its actual color.
+        self.opened_ground = if kind == LabelKind::Existing {
+            self.original_ground
+        } else {
+            None
+        };
+        self.ground = self.opened_ground;
     }
 
     fn tinted(&self) -> bool {

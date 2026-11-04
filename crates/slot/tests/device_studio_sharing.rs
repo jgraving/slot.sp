@@ -65,6 +65,90 @@ fn failed_shell_save_restores_the_original_label() {
     assert_eq!(fs::read(path).unwrap(), b"original");
 }
 #[test]
+fn missing_original_snapshot_is_recovered_before_save_or_rollback() {
+    let root = common::tmp_root_with_carts(&["Fusion"]);
+    let path = root.path().join("Labels/GBA/Fusion.png");
+    fs::write(&path, b"original label").unwrap();
+    let cart = slot_store::scan(root.path()).unwrap().remove(0);
+    let mut model = Studio::new(cart, false);
+    let saved = slot::studio_menu::save(root.path(), &model, &Artwork::default(), None).unwrap();
+    assert_eq!(saved.label.as_ref(), Some(&path));
+    assert_eq!(fs::read(&path).unwrap(), b"original label");
+
+    fs::remove_file(root.path().join("Labels/cart_shell.txt")).unwrap();
+    fs::create_dir(root.path().join("Labels/cart_shell.txt")).unwrap();
+    model.applied(LabelKind::Title);
+    model.ground = Some([20, 30, 40]);
+    assert!(slot::studio_menu::save(root.path(), &model, &Artwork::default(), None).is_err());
+    assert_eq!(fs::read(path).unwrap(), b"original label");
+}
+
+#[test]
+fn unreadable_original_aborts_before_changing_label_or_shell() {
+    let root = common::tmp_root_with_carts(&["Fusion"]);
+    let path = root.path().join("Labels/GBA/Fusion.png");
+    let mut cart = slot_store::scan(root.path()).unwrap().remove(0);
+    cart.label = Some(path.clone());
+    let mut model = Studio::new(cart, false);
+    model.applied(LabelKind::Title);
+    model.ground = Some([20, 30, 40]);
+    // No snapshot and a missing source simulate a failed original-label read.
+    assert_eq!(
+        slot::studio_menu::save(root.path(), &model, &Artwork::default(), None)
+            .unwrap_err().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    assert!(!path.exists());
+    assert!(!root.path().join("Labels/cart_shell.txt").exists());
+}
+
+#[test]
+fn studio_replaces_and_removes_the_scanned_label_filename() {
+    let root = common::tmp_root_with_carts(&["Fusion"]);
+    let path = root.path().join("Labels/GBA/FUSION.PNG");
+    fs::write(&path, b"original label").unwrap();
+    let cart = slot_store::scan(root.path()).unwrap().remove(0);
+    assert_eq!(cart.label.as_ref(), Some(&path));
+    let mut model = Studio::new(cart, false);
+    model.applied(LabelKind::Title);
+    model.ground = Some([20, 30, 40]);
+    let saved = slot::studio_menu::save(root.path(), &model, &Artwork::default(), Some(b"original label")).unwrap();
+    assert_eq!(saved.label.as_ref(), Some(&path));
+    let png = fs::read(&path).unwrap();
+    assert_eq!(slot_ui::house_label::label_tag(&png), Some(slot_ui::house_label::LabelTag::Text([20, 30, 40])));
+    assert_eq!(fs::read_dir(path.parent().unwrap()).unwrap().count(), 1);
+    let mut reset = Studio::new(saved, false);
+    reset.adopt_text([20, 30, 40]);
+    reset.applied(LabelKind::Title);
+    let saved = slot::studio_menu::save(root.path(), &reset, &Artwork::default(), None).unwrap();
+    assert!(saved.label.is_none());
+    assert!(!path.exists());
+    assert!(slot_store::scan(root.path()).unwrap()[0].label.is_none());
+}
+
+#[test]
+fn changing_shape_reflows_a_saved_title_with_its_original_color() {
+    let root = common::tmp_root_with_gb_carts(&["Pocket"]);
+    let cart = slot_store::scan(root.path()).unwrap().remove(0);
+    let original = slot::art::make::text_label(&cart, [30, 80, 120]);
+    let path = root.path().join("Labels/GB/Pocket.png");
+    fs::write(&path, &original).unwrap();
+    let cart = slot_store::scan(root.path()).unwrap().remove(0);
+    let old_size = slot_ui::label_size(&cart);
+    let mut menu = slot::studio_menu::Menu::new(root.path().to_path_buf(), cart, false);
+    menu.model.shell = Some(ShellChoice {
+        outline: Outline::Rounded,
+        colour: [70, 80, 90],
+        finish: ShellFinish::Clear,
+    });
+    let saved = slot::studio_menu::save(root.path(), &menu.model, &Artwork::default(), Some(&original)).unwrap();
+    let (_, w, h) = slot_ui::decode_png(&path).unwrap();
+    assert_ne!(old_size, (w, h));
+    assert_eq!((w, h), slot_ui::label_size(&saved));
+    assert_eq!(slot_ui::house_label::label_tag(&fs::read(path).unwrap()), Some(slot_ui::house_label::LabelTag::Text([30, 80, 120])));
+}
+
+#[test]
 fn studio_is_modal_saves_on_exit_and_is_not_opened_in_kid_mode() {
     let root = common::tmp_root_with_carts(&["Fusion", "Emerald"]);
     slot_store::write_slot_state(

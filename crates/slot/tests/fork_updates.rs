@@ -4,6 +4,9 @@ use std::io::{Cursor,Write};
 const SHA:&str="1111111111111111111111111111111111111111";
 fn release()->Value {json!({"draft":false,"prerelease":false,"tag_name":"build-2026.11.03-1111111","target_commitish":SHA,"assets":[{"name":"slot.sp-System.zip","state":"uploaded","size":123,"digest":format!("sha256:{}","ab".repeat(32)),"browser_download_url":"https://github.com/jgraving/slot.sp/releases/download/build-2026.11.03-1111111/slot.sp-System.zip"}]})}
 fn package(source:&str,extra:Option<&str>)->Vec<u8> {
+    package_with_entry(source,extra.map(|path|(path,b"bad".as_slice())))
+}
+fn package_with_entry(source:&str,extra:Option<(&str,&[u8])>)->Vec<u8> {
     let mut zip=zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options=zip::write::FileOptions::default().unix_permissions(0o755);
     for name in ["slot","launch_frontend.sh","mgba_libretro.so","gpsp_libretro.so"] {
@@ -11,8 +14,25 @@ fn package(source:&str,extra:Option<&str>)->Vec<u8> {
     }
     zip.start_file("System/build-info.json",options).unwrap();
     zip.write_all(json!({"product":"slot.sp","repository":"jgraving/slot.sp","architecture":"aarch64","source_commit":source}).to_string().as_bytes()).unwrap();
-    if let Some(path)=extra {zip.start_file(path,options).unwrap();zip.write_all(b"bad").unwrap();}
+    if let Some((path,bytes))=extra {zip.start_file(path,options).unwrap();zip.write_all(bytes).unwrap();}
     zip.finish().unwrap().into_inner()
+}
+// Craft external metadata directly: ZipWriter strips special Unix mode bits.
+// The central directory is the input the updater's ZipFile actually observes.
+fn entry_metadata(bytes:&mut [u8],name:&str,mode:u32,size:Option<u32>) {
+    let mut at=0;
+    while at+46<=bytes.len() {
+        if &bytes[at..at+4]!=b"PK\x01\x02" {at+=1;continue;}
+        let len=u16::from_le_bytes(bytes[at+28..at+30].try_into().unwrap()) as usize;
+        if &bytes[at+46..at+46+len]==name.as_bytes() {
+            bytes[at+5]=3; // Unix creator, so the high attribute word is the file mode.
+            bytes[at+38..at+42].copy_from_slice(&(mode<<16).to_le_bytes());
+            if let Some(size)=size {bytes[at+24..at+28].copy_from_slice(&size.to_le_bytes());}
+            return;
+        }
+        at+=46+len;
+    }
+    panic!("missing fixture entry {name}");
 }
 #[test]
 fn only_a_published_fork_asset_with_a_digest_is_accepted() {
@@ -33,6 +53,48 @@ fn staging_checks_source_and_cannot_write_config_or_escape_system() {
     }
     stage(d.path(),&package(SHA,None),&r).unwrap();assert!(d.path().join(STAGING).join(MANIFEST).is_file());
     assert!(stage(d.path(),&package(SHA,None),&r).is_err(),"a ready update is never overwritten");
+}
+#[test]
+fn staging_rejects_symlink_metadata_including_an_enormous_declared_target() {
+    let d=tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(d.path().join("Config")).unwrap();
+    let private=d.path().join("Config/settings");
+    std::fs::write(&private,b"keep").unwrap();
+    let r=parse_release(&release().to_string()).unwrap();
+    for size in [None,Some(0xffff_fffe)] {
+        let mut bytes=package_with_entry(SHA,Some(("System/escape",b"../../Config/settings")));
+        entry_metadata(&mut bytes,"System/escape",0o120777,size);
+        let mut archive=zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        let entry=archive.by_name("System/escape").unwrap();
+        assert_eq!(entry.unix_mode().unwrap()&0o170000,0o120000);
+        if let Some(size)=size {assert_eq!(entry.size(),u64::from(size));}
+        drop(entry);
+        assert!(stage(d.path(),&bytes,&r).is_err());
+        assert!(!d.path().join(STAGING).exists());
+        assert_eq!(std::fs::read(&private).unwrap(),b"keep");
+    }
+}
+#[test]
+fn staging_strips_privileged_mode_bits_but_preserves_executable_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+    let d=tempfile::tempdir().unwrap();
+    let r=parse_release(&release().to_string()).unwrap();
+    let mut bytes=package(SHA,None);
+    entry_metadata(&mut bytes,"System/slot",0o107755,None);
+    let mut archive=zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+    assert_eq!(archive.by_name("System/slot").unwrap().unix_mode().unwrap()&0o7777,0o7755);
+    stage(d.path(),&bytes,&r).unwrap();
+    let installed=d.path().join(STAGING).join("slot");
+    assert_eq!(std::fs::metadata(installed).unwrap().permissions().mode()&0o7777,0o755);
+}
+#[test]
+fn staging_rejects_enormous_regular_entries_before_reading_them() {
+    let d=tempfile::tempdir().unwrap();
+    let r=parse_release(&release().to_string()).unwrap();
+    let mut bytes=package(SHA,Some("System/huge"));
+    entry_metadata(&mut bytes,"System/huge",0o100644,Some(0xffff_fffe));
+    assert!(stage(d.path(),&bytes,&r).is_err());
+    assert!(!d.path().join(STAGING).exists());
 }
 #[test]
 fn baseos_is_exact_model_stable_version_and_requires_a_verdict() {
