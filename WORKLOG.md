@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Website navigation and launcher previews — 2026-11-05
+
+Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. Next: validate responsive navigation and publish a website-only PR.
+
 ## Cart Studio shortcut and footer — 2026-11-04
 
 Active branch `fix/cart-studio-hint`, based on main `dd5a6b1`. Remove the Start cartridge settings card and restore direct cartridge controls. Keep the GBA Cart Studio hint in the picker footer, clear of the cartridge. Start now opens Cart Studio directly on GB/GBC and the existing emulator picker on GBA. X opens Cart Studio from that picker, with the hint in the same footer row as Cancel, Swap, and Choose.
