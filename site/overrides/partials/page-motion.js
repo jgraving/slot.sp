@@ -135,7 +135,7 @@
     cancelExits();
     root.dataset.pageFallback = 'leaving';
     document.dispatchEvent(new Event('slot:page-leaving'));
-    const distance = Math.min(112, Math.max(36, innerWidth * .08)) * (root.dataset.pageDirection === 'back' ? 1 : -1);
+    const distance = Math.min(112, Math.max(48, innerWidth * .08)) * (root.dataset.pageDirection === 'back' ? 1 : -1);
     exits = elements.map((element, i) => element.animate([
       {transform:start[i]}, {transform:`translate3d(${distance}px,0,0)`}
     ], {duration:reduced.matches ? 0 : 180, easing:'cubic-bezier(.4,0,1,1)', fill:'forwards'}));
