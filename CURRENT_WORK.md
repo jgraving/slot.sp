@@ -1,3 +1,11 @@
+# Network/settings usability merged
+
+Continue from main. [PR #203](https://github.com/jgraving/slot.sp/pull/203) merged as `ef57a6c91a87eca52d939dd5c5ea3e73c3d58477` after all six workflows passed on `96ef3abdbe29c826d095a47ace6cef3731d2b290`; merged and tested trees are identical. See the newest WORKLOG.md entry for behavior and evidence. Default brightness remains Select + Up/Down. Full content-card sharing, Start cartridge menu and network/update/clock fixes are merged.
+
+[Build and release](https://github.com/jgraving/slot.sp/actions/runs/41872586861) is running; publication is not yet claimed. Documentation completion is on `docs/network-settings-handoff`. Physical Mac/handheld networking remains unverified. Earlier active-branch instructions below are historical.
+
+---
+
 # Active network/settings follow-up
 
 Continue on `fix/network-settings-usability`, [PR #203](https://github.com/jgraving/slot.sp/pull/203). Local build disk is full; finish validation through GitHub CI (see newest WORKLOG.md checkpoint). See newest WORKLOG.md entry for requested fixes and current findings. Previous completed work below remains historical.
