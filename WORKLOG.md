@@ -2,6 +2,14 @@
 
 ## Active recovery: photo-matched slot and About reveal — 2026-11-04
 
+### Native review and rapid-navigation correction
+
+- Draft PR: https://github.com/jgraving/slot.sp/pull/195. Runtime checkpoint `30de7b95486128c7f7cd19a6a02cf47c2c313cbc` was published and its branch ref verified.
+- Native GLES640/GL720 geometry review produced 96 captures (4 finishes × 3 platforms × empty/entering/seated/About). Light/dark About sequences each render 360 frames with rapid reversal and compare the restored General card pixels. GBA/GB/GBC motion reviews each validate 300 frames, exactly one insert/eject contact sound, connector stop and shelf return; full-color MP4s are being finalized.
+- Independent inspection caught a surface-size jump on Back → Up → A opening Date & Time before the shell settled. Parent motion now applies to other settings sheets during the remaining shell motion; a regression assertion covers this case. Final captures are being regenerated after that fix.
+- Current relevant local tests: 325 pass (slot app/menu/boot/eject/notices/accessibility 227; UI quick-menu/notices/sticker 51; chrome/material 43; About motion 4). Device-feature compilation previously passed and is being rechecked on final source. GitHub workflows run on the pushed revisions; no remote completion claimed yet.
+- Texture memory: cached GPU slot/body textures total approximately 15.1 MiB across four finishes, about 13.5 MiB more than main's slot-only textures. This is an estimate from dimensions; handheld memory/performance and physical sharpness remain unmeasured.
+
 ### Runtime reconstruction checkpoint
 
 - Photo review supports a narrower 400px shell around the existing 308px opening, smaller corner wells and a broad continuous lip; the existing cartridge stop and travel remain unchanged. New native vectors and 2× texture caches include the lower About shell with continuous paint/grain.

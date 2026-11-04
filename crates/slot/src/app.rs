@@ -5297,7 +5297,7 @@ impl App {
                     if key>=5000 {
                         let begin=out.len();slot_ui::expressive::draw_card(self.canvas(),out);
                         self.draw_special_body(key,self.menu_motion.frame_page(row,&[],Some(key)),out);
-                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     } else if let Some((_,tex))=self.previous_custom_face {
                         let begin=out.len();
@@ -5314,7 +5314,7 @@ impl App {
                         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
                         slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
-                        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
                     }
                 } else {self.draw_quick_overlay(row, matches!(self.phase, Phase::Playing { .. }|Phase::Ejecting{..}), out);}
@@ -5372,7 +5372,7 @@ impl App {
             if let Some(row)=self.menu_motion.closing_row() {
                 let begin=out.len();
                 self.draw_menu_legends(row,LINK_LEGEND_Y,out);
-                self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+                self.transform_settings_panel(&mut out[begin..]);
                 slot_ui::expressive::clip_panel(out,begin,self.canvas());
             }
             return;
@@ -5495,7 +5495,7 @@ impl App {
         self.draw_outgoing_menu(false,out);
         let frame=self.menu_motion.frame_page(QuickRow::Kids,&[],Some(key));
         self.draw_special_body(key,frame,out);
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
     fn draw_custom_focus(&self,key:u64,frame:slot_ui::MenuFrame,out:&mut Vec<Draw>){
@@ -5547,9 +5547,16 @@ impl App {
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
         if let Some((_,total,_,visible))=scroll {slot_ui::expressive::draw_scrollbar(self.canvas(),slot_ui::expressive::ROW_TOP,visible,total,frame.window_start,out);}
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
+    fn transform_settings_panel(&self, draws: &mut [Draw]) {
+        self.menu_motion.transform(self.canvas(), draws);
+        // Keep the returning sheet attached to the same motion even when a
+        // fast Back → Up → A opens a different settings page before settling.
+        if self.about_motion.active() { self.about_motion.transform_parent(self.canvas(), draws); }
+    }
+
     fn draw_quick_overlay(&self, row: QuickRow, over_game: bool, out: &mut Vec<Draw>) {
         if !over_game && self.menu_motion.closing_row().is_none() {
             self.draw_background(out);
@@ -5568,10 +5575,7 @@ impl App {
         if root {self.draw_quick_page(row,over_game,false,out);}
         if self.menu_motion.outgoing_row().is_some() {self.draw_outgoing_menu(over_game,out);}
         if !root {self.draw_quick_page(row,over_game,false,out);}
-        self.menu_motion.transform(self.canvas(),&mut out[begin..]);
-        if self.about_motion.active() && row.page() == QuickRow::About.page() {
-            self.about_motion.transform_parent(self.canvas(), &mut out[begin..]);
-        }
+        self.transform_settings_panel(&mut out[begin..]);
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
     }
 

@@ -24,8 +24,45 @@ fn main(){
     let mut state=slot_store::SlotState::default();state.clock_set=true;state.clock_12h=true;state.appearance=if std::env::args().nth(4).as_deref()==Some("light"){slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(&root,&state).unwrap();
     for (i,name) in ["Aurora","Borealis","Celeste"].into_iter().enumerate(){let mut rom=vec![0;256];rom[0xa0..0xa6].copy_from_slice(b"REVIEW");rom[0]=i as u8;std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")),rom).unwrap();}
     let surface=support::Egl::new(std::env::args().nth(2).as_deref()!=Some("gl"));let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
-    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root)));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+    let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root).stopped_at(1_793_774_400)));f.upload_faces(&mut g);f.render(&mut g,(width,480));
     let mut a=Review{f,g,now:0,dir,width};a.save("carousel");a.home();a.save("settings");
+    if std::env::args().nth(5).as_deref()==Some("about") {
+        a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::About);a.save("general-before");
+        let initial=a.g.read_frame();
+        // Capture every simulated display frame, including button down/up. The
+        // production App owns the spring and parent card; this script supplies
+        // input only. Short reversals and navigation exercise a live parent.
+        for frame in 0..360 {
+            let event=match frame {
+                24|138|160=>Some(RawEvent::Down(Btn::A)),
+                25|139|161=>Some(RawEvent::Up(Btn::A)),
+                114|150|240|249=>Some(RawEvent::Down(Btn::B)),
+                115|151|241|250=>Some(RawEvent::Up(Btn::B)),
+                243=>Some(RawEvent::Down(Btn::Up)),
+                244=>Some(RawEvent::Up(Btn::Up)),
+                246=>Some(RawEvent::Down(Btn::A)),
+                247=>Some(RawEvent::Up(Btn::A)),
+                255=>Some(RawEvent::Down(Btn::Down)),
+                256=>Some(RawEvent::Up(Btn::Down)),
+                _=>None,
+            };
+            a.frame(event.into_iter().collect());
+            a.capture(&format!("motion-{frame:04}"));
+            if frame==100 {assert!(matches!(a.f.app().phase(),Phase::About));a.capture("about-settled");}
+            if frame==230 {assert!(matches!(a.f.app().phase(),Phase::About));}
+        }
+        assert_eq!(a.f.app().quick_menu(),Some(QuickRow::About));
+        a.capture("general-after");
+        let final_pixels=a.g.read_frame();
+        // Wallpaper continues to move; compare the opaque General card's centre
+        // and rows, excluding its translucent rounded border and status clock.
+        for y in 100..345usize {
+            let start=(y*width as usize+80)*4;
+            let end=(y*width as usize+width as usize-80)*4;
+            assert_eq!(&initial[start..end],&final_pixels[start..end],"General card failed to return at y={y}");
+        }
+        return;
+    }
     for root in QuickRow::MAIN {
         a.nav(root);a.save(&format!("root-{root:?}"));a.tap(Btn::A);a.save(&format!("page-{root:?}"));
         if let Some(row)=a.f.app().quick_menu().filter(|r|r.page()!=QuickRow::MAIN) {
