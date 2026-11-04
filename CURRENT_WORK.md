@@ -1,17 +1,32 @@
-# Active development — device Studio and encrypted uploads
+# Device Studio and network uploads — ready for device testing
 
-Updated 2026-11-04 (Europe/Zurich). Read AGENTS.md and WORKLOG.md first.
+Updated 2026-11-04 (Europe/Berlin). Read AGENTS.md and WORKLOG.md first.
 
 - Branch: `feat/device-studio-network-sharing`
-- Draft PR: https://github.com/jgraving/slot.sp/pull/194
-- Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
-- User requested upstream on-device Cart Studio plus Samba/discovery for uploading games and PNG wallpapers. Final preference: **sharing turns off on reboot by default**, with an option to keep it on for the chosen network. Password required in either case; credentials are stored in the existing encrypted vault.
-- Preserve Select quick controls. Open the editor from Settings > Gameplay > Cart Studio. Retain fork renderer/cards/icons, offline custom colors/finish/shape/title labels, Wi-Fi/RA/audio/code and kid restrictions.
-- Sharing exports only Inbox/GB, GBC, GBA and Wallpapers via encrypted SMB3, then imports on explicit stop/import without overwriting installed games or wallpapers. Network loss stops without importing unfinished transfers. Samba/wsdd2 have a separate private runtime; sources are a matching ZIP. Discovery is tied to sharing. Persistent enablement waits for vault unlock and matching Wi-Fi.
-- Earlier validated source: `c6516fe6cc77879f348178b8e1c50bd3d188f96c`, retaining the concurrent artwork/password/native-harness fixes in 45ef8ae. Wallpaper imports validate full static PNG data and remain private until explicit stop/import. All 10 editor/upload tests, 56 Studio state tests, 30 network tests and Linux device-feature checking pass locally. Native editor (10 PNGs/theme) and network (52 PNGs/theme) walkthroughs pass in light GLES/640 and dark GL/720; selected captures reviewed. Scaling, blending and shortcut CI pass on c6516fe; launcher/native, website and ARM64 real-server/package CI are still running.
-- ARM64 run: https://github.com/jgraving/slot.sp/actions/runs/41748165729. Launcher/native: https://github.com/jgraving/slot.sp/actions/runs/41748165656. No real-server success or available device build is claimed yet.
-- Upload recovery follow-up: `checkpoint/wallpaper-import-recovery` at 7cd771f adds unique exclusive staging files so an interrupted write cannot block a later import. All 11 editor/upload, 21 power and 10 sleep regressions pass locally. This is being integrated with ca899861's RPC registry/helper and character-conversion fixes; fresh real-server/package CI is required.
-- Keep draft. No merge/release requested. Do not treat a settings screen or host simulator as evidence of real Samba service availability; inspect the native ARM64 server integration and device-package jobs.
+- Draft PR: https://github.com/jgraving/slot.sp/pull/194 — keep draft; no merge/release requested.
+- Verified source: `b21dd2f9baf1830fadf28509a56aacebe66d48aa`. All six workflows pass on this source; later recovery Markdown does not change runtime.
+- Test System + corresponding sources: https://github.com/jgraving/slot.sp/actions/runs/41750769740/artifacts/13286121041
+- Native captures: https://github.com/jgraving/slot.sp/actions/runs/41750769859/artifacts/13286511236
+- Both artifacts were present/unexpired at handoff; retention is one day, so recheck before sharing later.
+
+## Implemented behavior
+
+- Open Settings > Gameplay > Cart Studio from the selected cartridge. Preserve Select quick controls and fork cards/rendering/button hints. Colors, finish, shape and title labels work offline; Wi-Fi enables catalog artwork matching. Kid mode/gameplay/link restrictions remain.
+- Settings > Network > Network sharing advertises encrypted SMB3 to PC/Mac. Sign in as `slot` using the generated sharing password protected by the existing Device code vault. Sharing turns off on reboot by default; explicit persistence waits for vault unlock and the same chosen network.
+- The Games share exposes only Inbox/GB, GBC, GBA and Wallpapers. Finish copying, then turn sharing off or select Import uploads. Installed files are never overwritten. Games refresh the carousel; PNGs appear immediately in Display > Wallpaper without changing the selected background.
+- Wallpapers require full static PNG validation: at most 16 MiB encoded, 4096 pixels per side and 8,388,608 pixels total. Unsupported, corrupt, partial, hidden, linked or duplicate files remain in Inbox.
+- Random exclusive staging paths allow subsequent imports after interrupted writes. Disconnects stop without importing unfinished transfers. Sharing stops for gameplay, Cart Studio, link play, kid mode, sleep/shutdown and launcher crashes. Suspend/restart waits for editor commits and sharing teardown.
+- Samba, discovery and both required RPC workers use a private ARM64 loader/runtime. Corresponding sources include both build recipes. Packaging validates binaries, executable modes, source provenance, archive layout/integrity and the OTA size limit.
+
+## Verified and remaining
+
+All six exact-source workflows: ARM64/server/package 41750769740; launcher/native 41750769859; website 41750769786; scaling 41750769831; blending 41750769836; shortcuts 41750769789.
+
+Actual ARM64 server integration passes authentication/password rejection, share enumeration, observed encrypted wire frames during file transfer, SMB2 rejection, game/PNG wallpaper uploads, accented names, path/link isolation and production stop/crash-watchdog cleanup. Device CI passes 144 core tests, 11 editor/upload tests, 56 Studio tests, power/sleep/menu/kid suites, achievement/retro tests and both real bundled cores. Native light/GLES and dark/GL walkthroughs pass; selected local production renders reviewed. A final-source local network walkthrough also passes.
+
+Remaining physical checks: discovery in Windows File Explorer and macOS Finder on the user's router, authenticated handheld transfers, game/wallpaper import on the SD filesystem, Wi-Fi disconnect/reboot persistence, and physical lid/power behavior. These are hardware checks; do not repeat or misdescribe the passing packaged-server test as pending. No physical device, live Wi-Fi credentials, merge or release was used/performed here.
+
+Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
 
 ## Previous merged baseline
 
