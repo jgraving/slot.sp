@@ -123,6 +123,7 @@ pub enum QuickRow {
     Updates,
     AutomaticTime,
     TimeZone,
+    CartStudio,
 }
 
 impl QuickRow {
@@ -132,7 +133,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::AutomaticTime)
     }
-    pub const ALL: [QuickRow; 112] = [
+    pub const ALL: [QuickRow; 113] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -245,6 +246,7 @@ impl QuickRow {
         QuickRow::Updates,
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
+        QuickRow::CartStudio,
     ];
 
     pub const MAIN: [QuickRow; 8] = [
@@ -363,8 +365,9 @@ impl QuickRow {
         QuickRow::GbBezel,
     ];
 
-    pub const GAME: [QuickRow; 9] = [
+    pub const GAME: [QuickRow; 10] = [
         QuickRow::Achievements,
+        QuickRow::CartStudio,
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Rewind,
@@ -404,7 +407,7 @@ impl QuickRow {
         match self {
             QuickRow::SecurityPin | QuickRow::Updates | QuickRow::AutomaticTime | QuickRow::TimeZone => &QuickRow::GENERAL,
             QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
-            QuickRow::Achievements => &QuickRow::GAME,
+            QuickRow::Achievements | QuickRow::CartStudio => &QuickRow::GAME,
             QuickRow::LidClose
             | QuickRow::SleepTimeout
             | QuickRow::SleepNow
@@ -573,6 +576,7 @@ impl QuickRow {
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
+            QuickRow::CartStudio => "Cart Studio",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::SecurityPin => "Device code",
             QuickRow::Updates => "Updates",
@@ -677,7 +681,7 @@ impl QuickRow {
                 | QuickRow::PlaySound
                 | QuickRow::About
                 | QuickRow::Wifi
-                | QuickRow::Achievements
+                | QuickRow::Achievements | QuickRow::CartStudio
                 | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
                 | QuickRow::Reference
                 | QuickRow::PlayReference
@@ -2143,4 +2147,20 @@ mod keycap_tests {
             assert!(!ys.is_empty());assert!(ys.iter().max().unwrap()-ys.iter().min().unwrap()>=if height==28 {8}else{11});
         }}
     }
+}
+
+/// The cartridge editor uses the same bitmap button capsules as all other menus.
+pub fn cart_studio_legends(save:bool,mode:u8,adjustable:bool)->Vec<UndoFace> {
+    let hint=Some(MENU_INK);let one=|button,caption,left|with_hint(button_face(button),caption,hint,left);
+    let pair=|a,b,caption|with_hint(button_pair(a,b),caption,hint,false);
+    let mut out=vec![one(ButtonLegend::B,if save {"Save & close"}else{"Back"},true)];
+    match mode {
+        0 if adjustable=>out.push(pair(ButtonLegend::Left,ButtonLegend::Right,"Change")),
+        0|2=>out.push(one(ButtonLegend::A,"Open",false)),
+        1=>out.push(one(ButtonLegend::A,"Apply",false)),
+        3=>out.extend([pair(ButtonLegend::Left,ButtonLegend::Right,"Change"),one(ButtonLegend::X,"Reset",false),one(ButtonLegend::Y,"Hex",false)]),
+        4=>out.extend([pair(ButtonLegend::Left,ButtonLegend::Right,"Move"),pair(ButtonLegend::Up,ButtonLegend::Down,"Change"),one(ButtonLegend::X,"Reset",false)]),
+        _=>{},
+    }
+    out
 }

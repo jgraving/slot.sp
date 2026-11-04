@@ -22,6 +22,19 @@ def package(root: Path, output: Path, source: str) -> None:
         header = binary.read_bytes()[:20]
         if len(header) < 20 or header[:6] != b'\x7fELF\x02\x01' or int.from_bytes(header[18:20], 'little') != 183:
             raise ValueError(f'{name} must be a little-endian ELF64 AArch64 binary')
+    for name in ('smbd', 'smbpasswd', 'testparm', 'wsdd2', 'samba-dcerpcd', 'rpcd_classic', 'rpcd_winreg'):
+        binary = system / 'samba/bin' / name
+        header = binary.read_bytes()[:20]
+        if header[:6] != b'\x7fELF\x02\x01' or int.from_bytes(header[18:20], 'little') != 183:
+            raise ValueError(f'Samba {name} must be an AArch64 binary')
+        if not binary.stat().st_mode & 0o111:
+            raise ValueError(f'Samba {name} must be executable')
+    if not (system / 'samba/libexec/rpcd_classic').stat().st_mode & 0o111:
+        raise ValueError('missing executable private RPC worker wrapper')
+    if not (system / 'samba/libexec/rpcd_winreg').stat().st_mode & 0o111:
+        raise ValueError('missing executable private registry RPC worker wrapper')
+    if not (system / 'samba/lib/ld-linux-aarch64.so.1').is_file():
+        raise ValueError('missing private Samba loader')
     if not (system / 'slot').stat().st_mode & 0o111:
         raise ValueError('System/slot must be executable')
     licenses = system / 'licenses'
@@ -55,7 +68,15 @@ def package(root: Path, output: Path, source: str) -> None:
     # Remove aliases left by an earlier build when reusing an output directory.
     for name in ('slot-System.zip', 'slot-SD2.zip'):
         (output / name).unlink(missing_ok=True)
-    files = ['slot.sp-System.zip', 'slot.sp-SD2.zip', 'build-info.json']
+    sources = Path('vendor/samba-sources')
+    if not (sources / 'dependency-sources.tsv').is_file():
+        raise ValueError('missing network-sharing corresponding source')
+    with zipfile.ZipFile(output / 'slot.sp-network-sources.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(sources.rglob('*')):
+            if path.is_file(): archive.write(path, path.relative_to(sources))
+    if (output / 'slot.sp-System.zip').stat().st_size > 64 * 1024 * 1024:
+        raise ValueError('System archive exceeds the OTA download limit')
+    files = ['slot.sp-network-sources.zip', 'slot.sp-System.zip', 'slot.sp-SD2.zip', 'build-info.json']
     (output / 'SHA256SUMS').write_text(''.join(
         f'{hashlib.sha256((output / name).read_bytes()).hexdigest()}  {name}\n' for name in files
     ))

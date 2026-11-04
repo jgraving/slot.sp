@@ -38,7 +38,9 @@ fn main(){
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.save("general-updates-disconnected");
     a.tap(Btn::A);a.save("updates-require-connection");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-disabled");
     a.tap(Btn::A);a.save("automatic-time-require-connection");a.tap(Btn::B);a.nav(QuickRow::TimeZone);a.tap(Btn::A);a.save("time-zone");a.tap(Btn::Right);a.save("time-zone-applied");a.tap(Btn::B);a.tap(Btn::B);a.tap(Btn::B);
-    a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
+    a.nav(QuickRow::Wifi);a.tap(Btn::A);for _ in 0..5{a.tap(Btn::Down);}a.save("network-icons-security");a.tap(Btn::A);a.save("network-keyboard");a.password();a.wait_io();a.save("connected");
+    a.tap(Btn::B);a.tap(Btn::A);for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-default-off");a.tap(Btn::Down);a.tap(Btn::Right);a.save("sharing-reboot-warning");a.tap(Btn::Left);a.tap(Btn::Up);a.tap(Btn::A);
+    for _ in 0..30{std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);}a.save("sharing-on-password-hidden");for _ in 0..4{a.tap(Btn::Down);}a.tap(Btn::A);a.save("sharing-test-password-shown");for _ in 0..4{a.tap(Btn::Up);}a.tap(Btn::A);a.wait_io();a.save("sharing-stopped-imported");a.tap(Btn::B);
     a.tap(Btn::B);a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::Updates);a.tap(Btn::A);a.save("updates-settings");a.tap(Btn::B);a.nav(QuickRow::AutomaticTime);a.save("automatic-time-off");a.tap(Btn::Right);a.save("automatic-time-on");a.tap(Btn::Left);
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root.clone())));f.upload_faces(&mut a.g);f.render(&mut a.g,(width,480));a.f=f;
     a.frame(vec![]);a.capture("unlock-entering");for _ in 0..6{a.frame(vec![]);}a.capture("unlock-mid-motion");a.save("startup-unlock");
@@ -55,7 +57,12 @@ fn main(){
     a.home();a.nav(QuickRow::General);a.tap(Btn::A);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::A);
     for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}}a.save("long-pin-entry");a.tap(Btn::Start);for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("long-pin-set");
     a.home();a.nav(QuickRow::Kids);a.tap(Btn::A);a.tap(Btn::Down);a.tap(Btn::Right);a.save("parent-device-pin-choice");
-    assert!(root.join("Config/kids/use-device-pin").exists());a.tap(Btn::B);a.tap(Btn::A);a.save("parent-device-pin-prompt");a.tap(Btn::Menu);a.save("parent-device-code-cancelled");assert!(a.f.app().kid_menu.is_none());assert!(!a.f.app().network.as_ref().unwrap().visible);a.tap(Btn::A);a.save("parent-device-code-reopened");
+    let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
+    while !root.join("Config/kids/use-device-pin").exists() {
+        assert!(std::time::Instant::now()<deadline,"parent-method write did not finish");
+        std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);
+    }
+    a.tap(Btn::B);a.tap(Btn::A);a.save("parent-device-pin-prompt");a.tap(Btn::Menu);a.save("parent-device-code-cancelled");assert!(a.f.app().kid_menu.is_none());assert!(!a.f.app().network.as_ref().unwrap().visible);a.tap(Btn::A);a.save("parent-device-code-reopened");
     for _ in 0..3{for b in [Btn::A,Btn::X,Btn::Left,Btn::R1,Btn::Y,Btn::L1]{a.tap(b);}}a.tap(Btn::Start);a.wait_io();a.save("parent-device-pin-verified");
     assert!(a.f.app().kid_menu.as_ref().unwrap().focus_info().is_some());a.tap(Btn::Down);a.tap(Btn::Left);a.save("parent-separate-code-setup");
     for _ in 0..2 {for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2]{a.tap(b);}}a.save("parent-separate-code-set");

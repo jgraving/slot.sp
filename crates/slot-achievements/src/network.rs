@@ -4,6 +4,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
+use zeroize::Zeroize;
 
 use crate::storage::{self, Auth, Config, Game, Store, Unlock};
 use crate::{Notice, Status, SyncStatus};
@@ -37,6 +38,52 @@ pub(crate) trait Transport {
     fn badge(&mut self, _name: &str) -> Result<Vec<u8>, Failure> {
         Err(Failure::Invalid)
     }
+}
+
+/// Dropping the account cannot retract an in-flight HTTPS request. Reject its
+/// result and gate every subsequent request, including nested prefetch/artwork
+/// calls, so signing out never starts more work with the retired credentials.
+struct WhileActive<T> {
+    inner: T,
+    status: Arc<Status>,
+}
+impl<T: Transport> Transport for WhileActive<T> {
+    fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(Failure::Network);
+        }
+        let mut response = self.inner.call(fields);
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+            if let Ok(value) = &mut response { wipe_strings(value); }
+            return Err(Failure::Network);
+        }
+        response
+    }
+    fn badge(&mut self, name: &str) -> Result<Vec<u8>, Failure> {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(Failure::Network);
+        }
+        let response = self.inner.badge(name);
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+            return Err(Failure::Network);
+        }
+        response
+    }
+}
+fn wipe_strings(value: &mut Value) {
+    match value {
+        Value::String(text) => text.zeroize(),
+        Value::Array(values) => values.iter_mut().for_each(wipe_strings),
+        Value::Object(values) => values.values_mut().for_each(wipe_strings),
+        _ => {},
+    }
+}
+/// Clear our password/token copies after transport has consumed the form, also
+/// on errors. TLS/HTTP implementations may own other transient copies.
+fn send_sensitive(http: &mut impl Transport, mut fields: Vec<(&str, String)>) -> Result<Value, Failure> {
+    let result = http.call(&fields);
+    for (_, value) in &mut fields { value.zeroize(); }
+    result
 }
 
 pub(crate) struct Http(ureq::Agent);
@@ -111,7 +158,7 @@ fn call(
         ("t", auth.token.clone()),
     ];
     fields.extend_from_slice(extra);
-    success(http.call(&fields)?)
+    success(send_sensitive(http, fields)?)
 }
 
 fn login(
@@ -127,10 +174,10 @@ fn login(
     } else {
         fields.push(("p", config.password.clone()));
     }
-    let response = match http.call(&fields).and_then(success) {
+    let mut response = match send_sensitive(http, fields).and_then(success) {
         Err(Failure::Rejected|Failure::Authentication) if config.token.is_empty() && !config.password.is_empty() => {
             // A remembered token can expire. An explicitly supplied password can renew it.
-            success(http.call(&[
+            success(send_sensitive(http, vec![
                 ("r", "login2".into()),
                 ("u", config.username.clone()),
                 ("p", config.password.clone()),
@@ -142,14 +189,10 @@ fn login(
         .as_str()
         .filter(|s| !s.is_empty())
         .ok_or(Failure::Invalid)?;
-    let token = response["Token"]
-        .as_str()
-        .filter(|s| !s.is_empty())
-        .ok_or(Failure::Invalid)?;
-    Ok(Auth {
-        username: username.into(),
-        token: token.into(),
-    })
+    let username = username.to_owned();
+    let Value::String(token) = response["Token"].take() else { return Err(Failure::Invalid); };
+    if token.is_empty() { return Err(Failure::Invalid); }
+    Ok(Auth { username, token })
 }
 
 pub(crate) fn now() -> u64 {
@@ -188,7 +231,7 @@ pub(crate) fn award(
         ("t", auth.token.clone()),
     ];
     fields.extend(extra);
-    let response = http.call(&fields)?;
+    let response = send_sensitive(http, fields)?;
     // A retry after a lost response may say the server already has this unlock.
     if response["Success"] == true
         || response["Error"]
@@ -276,8 +319,9 @@ pub(crate) fn run(
     prepared: mpsc::Sender<Prepared>,
     notices: mpsc::Sender<Notice>,
     status: Arc<Status>,
-    mut http: impl Transport,
+    http: impl Transport,
 ) {
+    let mut http = WhileActive { inner: http, status: status.clone() };
     let dir = store.lock().unwrap().dir.clone();
     let mut auth: Option<Auth> = None;
     let mut verified = false;
@@ -384,8 +428,13 @@ pub(crate) fn run(
                         e
                     }
                 })?;
-                *status.auth.lock().unwrap() =
-                    Some((logged_in.username.clone(), logged_in.token.clone()));
+                {
+                    let mut pending = status.auth.lock().unwrap();
+                    if status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+                        return Err(Failure::Network);
+                    }
+                    *pending = Some(logged_in.clone());
+                }
                 {
                     use zeroize::Zeroize;
                     config.password.zeroize();
@@ -504,6 +553,7 @@ pub(crate) fn run(
             badges.step(&mut http);
             deferred_error.map_or(Ok(()), Err)
         })();
+        if status.stopped.load(std::sync::atomic::Ordering::Acquire) { return; }
         status.pending.store(
             !verified || !library.is_empty()
                 || library_failed > 0

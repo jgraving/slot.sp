@@ -42,6 +42,8 @@ pub fn method(root: &Path) -> Option<Method> {
 }
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Secrets {
+    #[serde(default)] pub sharing_password: String,
+    #[serde(default)] pub sharing_network: String,
     pub ssid: String,
     pub wifi_password: String,
     pub username: String,
@@ -55,6 +57,7 @@ impl Drop for Secrets {
         self.username.zeroize();
         self.password.zeroize();
         self.token.zeroize();
+        self.sharing_password.zeroize();self.sharing_network.zeroize();
     }
 }
 struct Key {
@@ -67,8 +70,11 @@ fn derive_for(pass: &str, salt: [u8; 16], method: Method) -> Result<Key, &'stati
     // 19 MiB, two passes; executed on a worker, never the render thread.
     let params =
         argon2::Params::new(19 * 1024, 2, 1, Some(32)).map_err(|_| "Cannot unlock credentials")?;
+    // Argon2's allocating API does not clear its working blocks on release,
+    // even with its zeroize feature. Own and wipe that key-derived memory too.
+    let mut memory = Zeroizing::new(vec![argon2::Block::default(); params.block_count()]);
     argon2::Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params)
-        .hash_password_into(pass.as_bytes(), &salt, bytes.as_mut())
+        .hash_password_into_with_memory(pass.as_bytes(), &salt, bytes.as_mut(), memory.as_mut_slice())
         .map_err(|_| "Cannot unlock credentials")?;
     Ok(Key { bytes, salt, method })
 }
@@ -200,6 +206,29 @@ pub fn vault_path(root: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cleared_working_memory_preserves_the_existing_key_derivation() {
+        let salt=[7;16];let pass="existing vault passphrase";
+        let mut legacy=Zeroizing::new([0;32]);
+        argon2::Argon2::new(argon2::Algorithm::Argon2id,argon2::Version::V0x13,
+            argon2::Params::new(19*1024,2,1,Some(32)).unwrap())
+            .hash_password_into(pass.as_bytes(),&salt,legacy.as_mut()).unwrap();
+        assert_eq!(derive_for(pass,salt,Method::Passphrase).unwrap().bytes.as_ref(),legacy.as_ref());
+    }
+    #[test]
+    fn saves_use_fresh_nonces_and_authenticate_salt_and_nonce() {
+        let dir=tempfile::tempdir().unwrap();let path=dir.path().join("vault");
+        let pass="an independent passphrase";let key=derive_for(pass,[8;16],Method::Passphrase).unwrap();
+        let mut secrets=Secrets::default();secrets.token="fixture-token".into();
+        encrypt(&path,&key,&secrets).unwrap();let first=std::fs::read(&path).unwrap();
+        encrypt(&path,&key,&secrets).unwrap();let second=std::fs::read(&path).unwrap();
+        assert_ne!(&first[24..36],&second[24..36]);
+        assert_eq!(decrypt(&path,pass).unwrap().1.token,"fixture-token");
+        for index in [8,24] {
+            let mut changed=second.clone();changed[index]^=1;std::fs::write(&path,changed).unwrap();
+            assert!(decrypt(&path,pass).is_err());
+        }
+    }
     #[test]
     fn encrypted_credentials_require_the_passphrase_and_detect_tampering() {
         let dir = tempfile::tempdir().unwrap();

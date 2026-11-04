@@ -340,9 +340,19 @@ tasks:
       - file target-device/device/examples/core_bench | grep -q aarch64
       - 'echo "built target-device/device/examples/core_bench, adb push it to /tmp/core_bench"'
 
+  samba:device:
+    desc: Build the private ARM64 Samba/discovery runtime in Debian trixie
+    status:
+      - test -x vendor/samba/bin/smbd
+      - test -f vendor/samba-sources/dependency-sources.tsv
+    cmds:
+      - >-
+        docker run --rm --platform linux/arm64 -v "$PWD":/src -w /src debian:trixie
+        bash tools/samba-build-env.sh
+
   dist:device:
     desc: Build the SD2 tree for an H700 device, OUT defaults to ./dist-device
-    deps: [core:device, core:gpsp, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, fsck:exfat, build:device, samba:device]
     vars:
       OUT: '{{.OUT | default "dist-device"}}'
     cmds:
@@ -352,6 +362,7 @@ tasks:
           CMD: ./target-device/device/slot --init-root {{.OUT}}
       - cp target-device/device/slot {{.OUT}}/System/slot
       - cp -R card/System/* {{.OUT}}/System/
+      - cp -R vendor/samba {{.OUT}}/System/samba
       - for d in Bezels Labels Wallpapers; do cp card/$d/README.txt {{.OUT}}/$d/; done
       - file vendor/mgba_libretro.so | grep -q aarch64
       - file vendor/gpsp_libretro.so | grep -q aarch64
@@ -379,14 +390,14 @@ tasks:
 
   deploy:device:
     desc: Build and push onto a device over adb, then restart it. SD defaults to /mnt/sdcard
-    deps: [core:device, core:gpsp, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, fsck:exfat, build:device, samba:device]
     cmds:
       - task: deploy:push
         vars: {SD: '{{.SD}}'}
 
   deploy:all:
     desc: Build and push onto every attached adb device, then restart each. SD defaults to /mnt/sdcard
-    deps: [core:device, core:gpsp, fsck:exfat, build:device]
+    deps: [core:device, core:gpsp, fsck:exfat, build:device, samba:device]
     vars:
       SERIALS:
         sh: adb devices | awk 'NR > 1 && $2 == "device" {print $1}'
@@ -409,6 +420,7 @@ tasks:
       - file vendor/gpsp_libretro.so | grep -q aarch64
       - "{{.ADB}} push target-device/device/slot '{{.SD}}/System/slot'"
       - for f in card/System/*; do {{.ADB}} push "$f" '{{.SD}}/System/'; done
+      - "{{.ADB}} push vendor/samba '{{.SD}}/System/'"
       - "{{.ADB}} push vendor/mgba_libretro.so '{{.SD}}/System/mgba_libretro.so'"
       - "{{.ADB}} push vendor/gpsp_libretro.so '{{.SD}}/System/gpsp_libretro.so'"
       - "{{.ADB}} push vendor/fsck.exfat '{{.SD}}/System/fsck.exfat'"

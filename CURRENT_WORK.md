@@ -1,3 +1,47 @@
+# Active review — Cart Studio, Samba and credential security
+
+2026-11-04 (Europe/Berlin): user clarified PR #194 is the requested remaining work, and additionally requested a security audit of device-code/PIN encryption for Wi-Fi and RetroAchievements. Continue on `feat/device-studio-network-sharing`, https://github.com/jgraving/slot.sp/pull/194. Evaluate and finish fixes, push checkpoints, run fresh combined CI and merge when verified. This supersedes earlier draft-only instructions below.
+
+Latest main `18a4e7a8abc880e4aaf3c6007d990f5cecbdace4` is integrated in published checkpoint `9143823`, preserving the merged slot/About work. Packaging rebuild fix is published as `b24df42`; its fresh ARM64 Samba/server checks pass and cache is saved. Runtime/security checkpoint `b0afb82` is published. Runtime fixes cover editor label persistence/shape, uninterrupted uploads/disconnect revocation, orphan plaintext cleanup, key-memory clearing, RA cancellation and old Wi-Fi session teardown. See SECURITY-REVIEW.md for scope and limits. Focused tests and device-feature compile pass; full combined/native/CI verification is ongoing. The known sandbox Unix-socket bind test remains enabled in CI. The final source is now being published without a CI-skip marker. Verify all exact-head workflows before merging #194. Combined local integrations: 332 pass; 124 native PNGs validate, final empty-import feedback recapture in progress. Historical green checks below do not validate this newly combined source. No physical handheld testing or real credentials are being used.
+
+Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
+
+---
+
+# Device Studio and network uploads — ready for device testing
+
+Updated 2026-11-04 (Europe/Berlin). Read AGENTS.md and WORKLOG.md first.
+
+- Branch: `feat/device-studio-network-sharing`
+- Draft PR: https://github.com/jgraving/slot.sp/pull/194 — keep draft; no merge/release requested.
+- Verified source: `b21dd2f9baf1830fadf28509a56aacebe66d48aa`. All six workflows pass on this source; later recovery Markdown does not change runtime.
+- Test System + corresponding sources: https://github.com/jgraving/slot.sp/actions/runs/41750769740/artifacts/13286121041
+- Native captures: https://github.com/jgraving/slot.sp/actions/runs/41750769859/artifacts/13286511236
+- Both artifacts were present/unexpired at handoff; retention is one day, so recheck before sharing later.
+
+## Implemented behavior
+
+- Open Settings > Gameplay > Cart Studio from the selected cartridge. Preserve Select quick controls and fork cards/rendering/button hints. Colors, finish, shape and title labels work offline; Wi-Fi enables catalog artwork matching. Kid mode/gameplay/link restrictions remain.
+- Settings > Network > Network sharing advertises encrypted SMB3 to PC/Mac. Sign in as `slot` using the generated sharing password protected by the existing Device code vault. Sharing turns off on reboot by default; explicit persistence waits for vault unlock and the same chosen network.
+- The Games share exposes only Inbox/GB, GBC, GBA and Wallpapers. Finish copying, then turn sharing off or select Import uploads. Installed files are never overwritten. Games refresh the carousel; PNGs appear immediately in Display > Wallpaper without changing the selected background.
+- Wallpapers require full static PNG validation: at most 16 MiB encoded, 4096 pixels per side and 8,388,608 pixels total. Unsupported, corrupt, partial, hidden, linked or duplicate files remain in Inbox.
+- Random exclusive staging paths allow subsequent imports after interrupted writes. Disconnects stop without importing unfinished transfers. Sharing stops for gameplay, Cart Studio, link play, kid mode, sleep/shutdown and launcher crashes. Suspend/restart waits for editor commits and sharing teardown.
+- Samba, discovery and both required RPC workers use a private ARM64 loader/runtime. Corresponding sources include both build recipes. Packaging validates binaries, executable modes, source provenance, archive layout/integrity and the OTA size limit.
+
+## Verified and remaining
+
+All six exact-source workflows: ARM64/server/package 41750769740; launcher/native 41750769859; website 41750769786; scaling 41750769831; blending 41750769836; shortcuts 41750769789.
+
+Actual ARM64 server integration passes authentication/password rejection, share enumeration, observed encrypted wire frames during file transfer, SMB2 rejection, game/PNG wallpaper uploads, accented names, path/link isolation and production stop/crash-watchdog cleanup. Device CI passes 144 core tests, 11 editor/upload tests, 56 Studio tests, power/sleep/menu/kid suites, achievement/retro tests and both real bundled cores. Native light/GLES and dark/GL walkthroughs pass; selected local production renders reviewed. A final-source local network walkthrough also passes.
+
+Remaining physical checks: discovery in Windows File Explorer and macOS Finder on the user's router, authenticated handheld transfers, game/wallpaper import on the SD filesystem, Wi-Fi disconnect/reboot persistence, and physical lid/power behavior. These are hardware checks; do not repeat or misdescribe the passing packaged-server test as pending. No physical device, live Wi-Fi credentials, merge or release was used/performed here.
+
+Worklog: https://github.com/jgraving/slot.sp/blob/feat/device-studio-network-sharing/WORKLOG.md
+
+## Previous merged baseline
+
+## Merged slot/About baseline
+
 # Current handoff — slot/About merged
 
 2026-11-04: continue from **main**. [PR #195](https://github.com/jgraving/slot.sp/pull/195) merged as `218bfe06215255001321ef43744e3153b2ab110f` after the user's approval and verification of all five passing PR workflows. The source is the validated runtime `07227db` plus previews and recovery notes; 326 targeted tests pass.

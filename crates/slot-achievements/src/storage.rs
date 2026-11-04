@@ -40,6 +40,13 @@ pub(crate) struct Auth {
     pub token: String,
 }
 
+impl Drop for Auth {
+    fn drop(&mut self) {
+        use zeroize::Zeroize;
+        self.token.zeroize();
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Achievement {
     #[serde(rename = "BadgeName", default)]

@@ -73,7 +73,7 @@ impl SyncDetail {
 #[derive(Default)]
 struct Status {
     stopped: AtomicBool,
-    auth: Mutex<Option<(String, String)>>,
+    auth: Mutex<Option<storage::Auth>>,
     network: AtomicU8,
     unsaved: AtomicBool,
     reconnect: AtomicBool,
@@ -165,6 +165,7 @@ impl Drop for Service {
     fn drop(&mut self) {
         self.enabled.store(false, Ordering::Release);
         self.status.stopped.store(true, Ordering::Release);
+        self.status.auth.lock().unwrap().take();
     }
 }
 
@@ -175,6 +176,7 @@ impl Service {
     }
     pub fn take_token(&self) -> Option<(String, String)> {
         self.status.auth.lock().unwrap().take()
+            .map(|auth| (auth.username.clone(), auth.token.clone()))
     }
 
     pub fn start(root: PathBuf) -> Self {

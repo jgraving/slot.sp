@@ -75,7 +75,13 @@ wifi_up() {
 	return 0
 }
 
+stop_sharing() {
+    helper="$(dirname "$0")/slotsmb.sh"
+    [ ! -f "$helper" ] || sh "$helper" stop >/dev/null 2>&1 || true
+}
+
 wifi_down() {
+    stop_sharing
     [ -f "$OWNER" ] || return 0
     /bin/rm -f "$OWNER"
 	stop_pid "$WATCH_PID"
@@ -98,6 +104,7 @@ case "${1:-} ${2:-}" in
 "down "*) wifi_down ;;
 "wlan0 CONNECTED") lease ;;
 "wlan0 DISCONNECTED")
+    stop_sharing
 	stop_pid "$LEASE_PID"
 	$IP addr flush dev wlan0 2>/dev/null || true
 	;;

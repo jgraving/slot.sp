@@ -1,5 +1,5 @@
 mod art;
-pub use art::{cover, cover_label};
+pub use art::{cover, cover_label,cover_label_bytes};
 mod bitmaps;
 mod label_mask;
 mod label_fit;
@@ -75,7 +75,7 @@ pub use board::{
 pub use cart::{
     cart_backing, cart_box, cart_face, cart_face_with, cart_interior, cart_shadow, clean_label,
     gb_cart_shadow, gb_label_panel, gb_shell_of, is_clear, label_colour, label_panel, label_size,
-    label_tags, label_text, neutral_shell, seated_box, shows_interior, CartFace, CART_H, CART_W,
+    label_tags, label_text, text_label, neutral_shell, seated_box, shows_interior, CartFace, CART_H, CART_W,
     GBC_LABEL_H, GBC_LABEL_W, GBC_LABEL_X, GBC_LABEL_Y, GB_CART_H, GB_CART_W, GB_LABEL_H,
     GB_LABEL_W, GB_LABEL_X, GB_LABEL_Y, LABEL_H, LABEL_W, LABEL_WELL, LABEL_X, LABEL_Y,
 };
@@ -113,7 +113,7 @@ pub use power_menu::{
     PowerChoice, MENU_PAD, POWER_SWITCH_MS, POWER_SWITCH_SLIDE_MS,
 };
 pub use quick_menu::{
-    core_button_legends, gallery_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
+    cart_studio_legends, core_button_legends, gallery_button_legends, delete_legends, draw_menu_ground, link_button_legends, prompt_legends,
     quick_caret_face, quick_description_face, quick_label_face, quick_legend_faces,
     quick_pointer_face, quick_row_top, quick_row_top_at, quick_scroll, quick_text_centre,
     reference_face, reference_binding_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, quick_controls_legends, carousel_name_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
@@ -155,3 +155,7 @@ pub use loading::{loading_face, loading_face_at,LOADING_FRAMES,LOADING_FRAME_MS}
 
 /// Shared clipping boundary for moving settings content, excluding anchored chrome.
 pub fn clip_menu_body(out:&mut Vec<Draw>,begin:usize,canvas:Canvas){quick_menu::clip_quads(out,begin,[expressive::MENU_INSET,expressive::CARD_TOP,canvas.w-expressive::MENU_INSET,expressive::CARD_BOTTOM]);}
+
+pub mod palette;
+pub mod hue;
+pub mod house_label;

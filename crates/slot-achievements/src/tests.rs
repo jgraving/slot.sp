@@ -164,6 +164,62 @@ fn badge_png() -> Vec<u8> {
 }
 
 #[test]
+fn signing_out_during_https_stops_followup_requests_and_discards_late_tokens() {
+    struct StalledSuccess {
+        server: Server,
+        stop_at: &'static str,
+        entered: mpsc::Sender<()>,
+        release: mpsc::Receiver<()>,
+        finished: mpsc::Sender<()>,
+    }
+    impl network::Transport for StalledSuccess {
+        fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, network::Failure> {
+            let request = fields.iter().find(|(key, _)| *key == "r").unwrap().1.as_str();
+            if request == self.stop_at {
+                self.entered.send(()).unwrap();
+                self.release.recv_timeout(Duration::from_secs(5)).unwrap();
+            }
+            self.server.call(fields)
+        }
+        fn badge(&mut self, name: &str) -> Result<Vec<u8>, network::Failure> {
+            self.server.badge(name)
+        }
+    }
+    impl Drop for StalledSuccess {
+        fn drop(&mut self) { let _ = self.finished.send(()); }
+    }
+    for stop_at in ["login2", "gameid"] {
+        let root = configured();
+        std::fs::write(root.path().join("Games/GBA/Test.gba"), b"fixture").unwrap();
+        let mut store = Store::open(root.path(), "Player").unwrap();
+        if stop_at == "login2" {
+            store.record(Unlock { id: 7, hash: "abcdef".into(), earned_at: network::now(), synced: false }).unwrap();
+        }
+        let (calls, requests) = mpsc::channel();
+        let (entered, blocked) = mpsc::channel();
+        let (release, wait) = mpsc::channel();
+        let (finished, stopped) = mpsc::channel();
+        let service = Service::start_with(root.path().into(), StalledSuccess {
+            server: Server { calls }, stop_at, entered, release: wait, finished,
+        });
+        blocked.recv_timeout(Duration::from_secs(5)).unwrap();
+        let status = service.status.clone();
+        drop(service); // Same path as signing out or disabling the account.
+        release.send(()).unwrap();
+        stopped.recv_timeout(Duration::from_secs(5)).unwrap();
+        let expected = if stop_at == "login2" { vec!["login2"] } else { vec!["login2", "gameid"] };
+        assert_eq!(requests.try_iter().collect::<Vec<_>>(), expected,
+            "signing out must not start awards, lookups, sessions or artwork after the in-flight request");
+        assert!(status.auth.lock().unwrap().is_none(), "a late login must not republish credentials");
+        if stop_at == "login2" {
+            assert!(!Store::open(root.path(), "Player").unwrap().unlocks[&7].synced);
+        }
+        assert!(!store.dir.join(format!("{:x}.json", md5::compute(b"fixture"))).exists(),
+            "a cancelled lookup must not write a partial game cache");
+    }
+}
+
+#[test]
 fn badge_cache_survives_restart_and_repairs_corrupt_images() {
     let root = configured();
     let store = Store::open(root.path(), "Player").unwrap();

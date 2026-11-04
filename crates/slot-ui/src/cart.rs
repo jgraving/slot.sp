@@ -583,8 +583,15 @@ fn lerp(a: [u8; 3], b: [u8; 3], num: u32, den: u32) -> [u8; 3] {
 }
 
 fn generated_label(s: &Spec, title: &str) -> Vec<u8> {
+    generated_label_on(s, title, label_colour(title))
+}
+
+pub fn text_label(cart: &Cart, colour: [u8; 3]) -> Vec<u8> {
+    generated_label_on(&spec(shape_of(cart)), &label_text(cart), colour)
+}
+
+fn generated_label_on(s: &Spec, title: &str, bg: [u8;3]) -> Vec<u8> {
     let (_, _, lw, lh) = s.label;
-    let bg = label_colour(title);
     let mut rgba = Vec::with_capacity((lw * lh * 4) as usize);
     for _ in 0..lw * lh {
         rgba.extend_from_slice(&[bg[0], bg[1], bg[2], 255]);

@@ -1,5 +1,36 @@
 # Development recovery log
 
+## Active #194 completion and credential security review — 2026-11-04
+
+### Final combined-source verification in progress
+
+- Runtime security/editor checkpoint published as `b0afb826d716e04a9118166c36288caafdca9d5d`. Its CI-skip marker preserved the in-progress refreshed Samba cache build; the next final-source checkpoint intentionally triggers normal CI.
+- Fresh packaged ARM64 Samba build on `b24df42` now passes real encrypted wire transfers, authentication, isolation and teardown, and saved the updated runtime cache. No server settings changed in the later Rust fixes.
+- Combined local integration run: **332 tests pass across 13 suites**, no failures or ignored tests. Dedicated credential/RA and Studio suites passed as recorded above. Three crafted ZIP-metadata regressions are included; all nine updater tests pass, proving symlink/oversize rejection and special-permission stripping in the custom unpacker.
+- Native Studio and Network walkthroughs pass in light GLES640/dark GL720: all 124 PNGs decode correctly. Reviewed actual label/artwork, palettes, cards, RGB/hex hints and save return. Replaced an unsupported palette glyph with the supported Original chip. Final review caught empty explicit import retaining its busy notice; event results now distinguish explicit import from automatic teardown, showing No new uploads only for an empty requested import. Two focused regressions pass; final network recapture is running.
+- Current source still needs its full exact-head GitHub workflows and final device/UI checks. The one locally blocked Unix socket fixture remains enabled in CI. No physical PC/Mac discovery or handheld transfer is claimed. Security review documents limitations and retained ZIP/font dependency advisory context without claiming a complete audit or every dependency patched.
+
+### Credential/session and editor corrections
+
+- Packaging fix published as `b24df42353f2daf27f72e417dba55ea6f96352a5`; its ARM64 Samba rebuild is running. Preserve that build until its refreshed cache is saved; a runtime checkpoint may skip duplicate CI temporarily, followed by a normal final-source commit/check run. No merge until current combined source passes.
+- Fixed upload interruption on unrelated credential saves and disconnect revocation while sharing is starting/paused. Initial enablement/rotation still wait for storage; explicit boot opt-in remains. Three lifecycle regressions pass.
+- Vault now explicitly clears Argon2 working memory without changing its format/KDF, detects orphan plaintext credential writes (including PID reuse), bounds legacy reads, and gates service availability until encrypted save plus cleanup succeeds. Four vault tests and the combined network suite pass; failed cleanup is fail-closed. PIN/key still never persist. No cryptographic bypass was found in reviewed paths.
+- RA cancellation now gates nested/follow-up requests, rejects late login tokens, preserves pending awards and clears retired auth/form copies. Launcher startup closes only its own previous Wi-Fi session before the locked UI. Achievement suite: 32 pass, two pre-existing live tests ignored; launch/Wi-Fi security shell checks pass.
+- Studio preserves exact scanned label filenames, retries missing original snapshots before any mutation, restores original color metadata, and reflows generated title labels for changed GB shapes. 15 editor/upload plus 57 Studio state tests pass. Both current native Studio walkthroughs complete; palette glyph review is being finalized.
+- Fresh device-feature compilation passes. Broader local library run: 152 pass, one existing Mesa capture ignored, one Unix-domain socket test cannot bind under the execution sandbox (EPERM). This is recorded as blocked, not passing; it remains enabled in GitHub CI. Remaining combined integration tests are being run separately.
+- Security assessment and limitations are in SECURITY-REVIEW.md. Six-button codes permit offline guessing from a copied SD card; no claim of complete vulnerability absence or physical-device protection. Dependency review identified old ZIP extraction advisories in APIs this updater does not use; hostile-metadata regressions are being added to verify custom-unpacker protections.
+
+### Review fixes: reproducible Samba runtime packaging
+
+- Combined main checkpoint is published as `914382328b5703a7aec8b6cd28579e717da1bfd8`; normal six PR workflows started. Review found no runtime merge conflict; CURRENT_WORK routing is reconciled.
+- Repeated Samba packaging reused stale private libraries/conversion data and could overwrite source provenance with an incomplete manifest. Rebuilds now recreate only a recognized generated runtime output, preserve source/build caches, regenerate dependency provenance and include the preparation helper in corresponding sources. Both ARM64 workflows include the new helper in their cache key and exercise it on cached and fresh builds.
+- Six fixture regressions pass, including repeat/interrupted preparation, preserving cached sources, and refusing unrelated, symlinked or overlapping output paths. SMB config security, shell syntax and simulated updater checks pass. Full current ARM64 server/package checks remain CI work.
+- Review also identified upload/session, editor-label persistence, plaintext-residue cleanup and RA cancellation issues; separate fixes and regressions are in progress. No existing passing results are being attributed to those unfinished changes.
+
+User clarified the remaining PR is Cart Studio/Samba #194 (OTA #191 is already merged), requests evaluation/completion, and adds review of device-code/PIN encryption protecting Wi-Fi and RetroAchievements credentials. Finish concrete bugs, publish regular checkpoints, validate combined source and merge after passing checks. Earlier draft-only restrictions are superseded.
+
+Before further runtime edits: integrate latest main `18a4e7a8abc880e4aaf3c6007d990f5cecbdace4` into feature head `5425afe078d14a7b2fdcaf059778fc3791e1ec4b`. Only CURRENT_WORK.md conflicts; preserve both histories and add this active routing. Independent reviews cover editor, SMB lifecycle/isolation, private-runtime packaging/OTA, vault cryptography and asynchronous auth/secret exposure. Fresh device/native/security checks will follow fixes. Previous b21dd2f test evidence remains historical until current source is checked. Hardware discovery/transfers and physical SD threat limits remain explicit; no live secrets or device update will be used.
+
 ## Merged slot/About handoff — 2026-11-04
 
 - User approved merging to main after tests passed. PR #195 merged as `218bfe06215255001321ef43744e3153b2ab110f`; GitHub PR state and main ref were verified. Continue from main. This supersedes the earlier draft-only/no-merge instructions below.
@@ -53,10 +84,12 @@
 
 Last updated: 2026-11-04 (Europe/Zurich).
 Repository: jgraving/slot.sp
-Active branch: `main`
-Merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
+Active branch: `feat/device-studio-network-sharing`
+Draft PR: https://github.com/jgraving/slot.sp/pull/194
+Current work: on-device Cart Studio and encrypted game/wallpaper uploads; see the latest entries below.
+Previous merged PRs: https://github.com/jgraving/slot.sp/pull/190 and https://github.com/jgraving/slot.sp/pull/191
 Verified OS implementation/release: `356c30749a98d103c249af1f95355047b25c5818`
-Status: merged into main; automatic main build release published.
+Status: active feature development; keep #194 draft. Prior merged baseline follows.
 
 ## Merged handoff — 2026-11-03
 
@@ -519,3 +552,119 @@ Website triggers now exclude OS and recovery-only edits. Published guide changes
 Actual OS main 356c307 passed its fresh launcher/native, device/build/release and website workflows. Automatic release https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.03-356c307 remains the current OS build; later changes are website CI/recovery only. The authorized @demifiend9 reply is posted and verified: https://github.com/jgraving/slot.sp/issues/182#issuecomment-6617858916. #190 and #191 were merged earlier; no feature work remains unmerged. Hardware/live-account follow-ups remain testing notes.
 
 This final journal update changes only recovery Markdown. Under the requested CI scoping it should not launch website/device jobs, and uses no CI-skip marker. Compare against the tested CI head before resuming and continue from main.
+
+### On-device Cart Studio and network sharing — 2026-11-04
+
+Before implementation: user requests selective upstream on-device Cart Studio integration plus Samba/network discovery for game uploads. Start from main cff3899 (including merged website CI scope #192). Branch: feat/device-studio-network-sharing. Preserve encrypted Wi-Fi/device code, RA, fork renderer/style/audio/kid policy and OTA source. No merge authorized for these new features.
+
+Plan: adapt upstream controller editor and artwork pipeline to fork cards, preserve offline appearance editing, then add independently controlled SMB sharing/discovery. Sharing defaults off and does not survive reboot unless explicitly opted in; show short warning notification pills. Stop sharing on disconnect/network changes and restrict persistent enablement to the explicitly chosen network. Share only game-upload content, never the SD root, credentials, settings, logs or system files. Verify daemon availability/package integration against BaseOS; do not claim support from a settings switch alone. Add lifecycle/path/security and editor persistence regressions, validate device build and native light/dark UI, publish a test PR/build and durable recovery checkpoints. Physical Windows/macOS discovery and handheld transfer remain device checks until actually exercised.
+
+Implementation checkpoint: upstream Studio state machine, palette navigation, artwork matching/PNG generation and shell-choice persistence are selectively adapted; our existing renderer/default labels remain unchanged. New slot.sp editor uses fork cards, fonts and button hints; Select from carousel or Gameplay > Cart Studio opens it, and child/in-game access is blocked. Label fetching, previews and saves run on workers. First no-default-features host compile passes. Local Rust 1.96 installed under scratch; linker uses system bfd because this execution sandbox lacks /proc/self/exe. No CI/device success claimed yet.
+
+Latest user clarification supersedes the temporary default discussion: sharing must turn OFF on reboot by default, while keeping an opt-in to stay on across reboot on the chosen network. Password protection is required in either case. BaseOS source confirms Avahi hostname resolution but no Samba server; package current signed-source Samba plus discovery rather than exposing a nonfunctional toggle. Shared inbox staging will protect existing games and prevent partial uploads from appearing in the library. Git pushes are unavailable through shell auth in this environment; durable checkpoints use the connected GitHub Git-data API instead.
+
+Network implementation checkpoint: password-only SMB3 with mandatory encryption/signing, a generated independent password encrypted in the existing vault, explicit show/rotate controls, opt-in persistence bound to the selected SSID, default reboot-off, and short warning pills. Sharing/discovery are supervised as one process group, stopped on Wi-Fi disconnect, launcher startup/crash, gameplay/link/kid-mode/sleep/shutdown. SMB exports only Inbox/GB, GBC and GBA with symlink following disabled; user-requested stop/import atomically publishes allowed files without overwriting games. Disconnects stop without importing incomplete transfers. New files refresh the existing racks without resetting preferences/favorites/recents.
+
+Samba is absent from BaseOS. Added a separate ARM64 Debian trixie build job for pinned maintained Samba 4.25.1 and wsdd2, including private loader/libraries so the launcher retains its older glibc baseline. mDNS service advert is restricted to the chosen IP; wsdd2 is restricted to wlan0. Corresponding sources are a separate build/release ZIP to avoid inflating OTA installation; runtime notices/manifest remain in System. Packaging refuses an over-limit OTA ZIP. Native real-SMB integration test covers password rejection, mandatory encryption, upload isolation, symlink/traversal denial and teardown. Local config-generator security checks pass; full live-SMB result is pending CI.
+
+Host compile and device-feature compile on x86 pass. First broader local library run: 137 passed, one intentionally ignored native fixture, three existing Wi-Fi tests need updated indices for the new sharing row, one Unix socket bind test is blocked by this sandbox and remains enabled in CI. No success claimed for ARM64-only code until its actual job runs. Next: fix menu regression expectations, test editor persistence/lifecycle and sharing defaults, native theme review, publish checkpoint and draft PR, inspect CI results and repair all failures.
+
+### Review and CI corrections
+
+Draft PR: https://github.com/jgraving/slot.sp/pull/194. Preserved newly advanced main's documentation through ab180bf before the first published checkpoint; no fork runtime changes were lost.
+
+Initial published checkpoint 80b639f CI exposed a missing Samba build prerequisite (embedded Kerberos expected flex); switched to the installed system MIT Kerberos and added parser build prerequisites. Several existing menu tests assumed the immediate row after Achievements was Fast forward; update those tests to navigate explicitly past the new Cart Studio row. The expected in-game hidden rows now include Cart Studio. These failures are recorded rather than described as passing.
+
+Native light editor walkthrough completes and captures all eight screens. Review caught that combining cartridge pixels with a UI texture recolors some art in light mode: separated raw artwork/swatches from semantic UI textures, retaining the fork's actual cartridge colors. Also replaced generic text keycaps with the existing production bitmap button legends. Preserve the user's Select quick controls: editor access is Settings > Gameplay > Cart Studio only; the earlier Select-route checkpoint note is superseded. Custom-color help uses real footer button icons. Saving on sleep/shutdown is asynchronous and power readiness waits for it.
+
+Security review changed the SMB login mapping to unprivileged nobody (client name slot) and only uses root for the isolated FAT inbox file operations; it does not authenticate a root administrative SMB session. Mandatory SMB3 encryption/signing, no guest, no followed links, explicit network address and /run-only passdb remain. Runtime dependency packages are built in their own supported distro container, with a weekly refreshed cache. No TLS/SMB libraries are injected into the launcher or emulators. Actual live-SMB and ARM64 results remain pending the corrected CI run.
+
+Local follow-up validation: 29 network tests pass (one explicit Mesa-only fixture remains ignored); 56 upstream Studio state/animation tests pass, plus 5 new editor-save/import/security integration tests. Existing quick-menu, in-game and kid suites pass after explicit row navigation corrections. Production dark GL/720 and light GLES/640 Studio walkthroughs complete through save, with eight PNGs each; captures were visually reviewed and button/art-layer corrections are included. Repeat native light review after those final visual corrections, then inspect corrected CI and real server tests. Do not infer physical network-discovery or handheld transfer success from the simulator.
+
+### Corrected host/native review; server download retry
+
+The complete local network walkthrough now passes, including sharing off by default, opt-in reboot warning, on/hidden password, explicit reveal, stop/import and the existing vault/RA/parent flows. Native editor light and dark captures were reviewed with production bitmap hints and untouched artwork colors. Editor lists now use the shared spring selector rather than jumping between raster highlights.
+
+CI on 05e0305: Samba job failed before configuration because download.samba.org refused its TCP connection (curl 7), not a server/test result. Added bounded IPv4 retries for connection errors and an official samba.org mirror; both retain the exact pinned SHA-256. The three small regression workflows reached the slot-ui menu assertion, which still expected nine Gameplay rows and omitted Cart Studio from its openable rows; corrected both explicit expectations. Actual launcher/core menu tests preceding that assertion passed. Source-package and real SMB results remain pending; do not report an available device build yet.
+
+Production Linux sharing code now also type-checks in the local device-feature build instead of being hidden behind an ARM-only cfg. Local launcher script, Wi-Fi credential boundary and SMB config isolation checks pass. New editor/import tests are required in the main/native and ARM64 workflow test lists, not just an optional check. The warning is shortened to “Keep off on public Wi-Fi.” Keep PR #194 draft until exact-head checks and native server/package tests are complete.
+
+### Shutdown-helper portability correction
+
+A direct shell check found Debian/BusyBox-style sh rejects the double-dash argument in `kill -TERM -- -PGID`. Removed that nonportable argument from the production stop, trap and crash watchdog calls. The native SMB test now invokes the real stop helper and separately simulates a dead launcher parent, requiring the listener/process group to close in both cases; it no longer relies solely on Python killing the test process group. Rust-owned stop already uses killpg via libc. Local SMB config/script syntax checks pass. This is a development finding, not a previously released bug. Test-build retention is one day, matching the existing PR artifact preference.
+
+### Minimal Samba runtime and share discovery
+
+Source fetch retries succeeded on 2287a9c, then configure revealed that enabling every optional VFS also selected a snapshot/D-Bus dependency. Restricted the build to the default file VFS and standalone authentication modules instead of adding unrelated filesystem services. Source review also confirmed modern Samba share enumeration needs its named-pipe RPC worker: package/supervise only samba-dcerpcd + rpcd_classic in named-pipe-only mode, through the private loader, and test authenticated share enumeration as well as direct uploads. Include matching private gconv data so Unicode/codepage conversion does not depend on the older BaseOS glibc installation. Restore RPC wrapper executable mode after Actions downloads. Main release packaging validates all server/helper ARM64 binaries and loader; builds are stamped to avoid silently reusing an older configuration. Native server result remains pending corrected CI.
+
+Samba configure now succeeds with minimal modules. The next build exposed Samba's documented limitation on nonshared helper linkage (duplicate RPC objects when forcing rpcd_classic nonshared). Retain the tested nonshared mode for smbd only; other helpers use the already bundled private shared libraries/loader. Added the optional ASN.1 generator prerequisite. This does not change authentication/encryption restrictions. Native sharing-page review also caught the new page key omitted from the shared focus range; included it so Sharing has the same moving selector as the other Network pages. Both sharing UI/default tests pass locally after that correction.
+
+### Built runtime; packaging path and final editor review
+
+105e946 built and installed Samba/wsdd2 and collected dependency sources successfully, then failed copying the build recipe because configure had changed the working directory. Resolve the recipe path at startup for both its stamp and source-bundle copy. The live upload/shutdown test remains pending; this is no longer a compiler failure.
+
+Native artwork review found previews needed the fork's alpha-aware label cleanup and board layers for clear/glitter shells. Reused the existing conversion for previews/downloads, adjusted title-label dimensions to edited GB shapes, and added shape/transparency regressions. All 7 editor/import tests, 59 UI library and 36 cartridge-render regressions pass locally. Password reveal now resets when closing/reopening Sharing; both sharing UI/default tests pass. Native network walkthrough exposed an asynchronous parent-method file write observed before completion; wait for the actual write with a bounded deadline, consistent with its later existing persistence check. Re-run final light/dark walkthroughs and real server/device CI before handoff.
+
+### Resumed upload completion — 2026-11-04
+
+User asks to continue the on-device Cart Studio/network upload work, explicitly including wallpaper uploads from PC/Mac. Verified live draft PR #194 at 105e946; latest ARM64 Samba and launcher workflows are still running, scaling has passed. Recovered a clean checkout of the existing branch. Existing sharing exports only a game Inbox; wallpaper support is missing.
+
+Next: add a confined Inbox/Wallpapers staging folder, bounded full PNG validation and non-overwriting import into Wallpapers, update import feedback and PC/Mac instructions, and add integration/security regressions. Preserve default reboot-off, encrypted password/vault, network binding and lifecycle stops, Select quick controls and existing editor behavior. Inspect live real-server/build failures and repair them. Keep the PR draft; no merge/release requested. Physical desktop discovery and handheld transfers remain unverified.
+
+### Wallpaper and packaging checkpoint
+
+- Added Inbox/Wallpapers to the existing encrypted Games share; installed Wallpapers remains private. Explicit stop/import stages a bounded copy, fully decodes static PNG data and IEND, then publishes without replacing existing files or dangling links. Limits: 16 MiB encoded, 4096 per side and 8,388,608 pixels. Invalid/partial/unsupported/duplicate files remain in Inbox. Imported backgrounds are immediately available in the existing Display picker without changing the current selection.
+- Fixed sharing-page invalidation on an empty stop/import and included wallpapers in the completion count. Added actual packaged-SMB wallpaper transfer coverage and source-directory link checks for all four inbox folders. Guides describe PC/Mac discovery, direct address fallback, folder mapping, import and size limits.
+- 105e946 server job 126300943095 built Samba and downloaded dependency sources, then failed at final cp of tools/build-samba.sh after cd into the source tree. Fixed by resolving the script's absolute path at entry and using it for stamping/source packaging. Actual real-server integration and device package were skipped on that failed run; do not claim they passed.
+- Local Rust 1.96 compile succeeds. All 8 editor/upload integration tests and 56 Studio state tests pass. New UI wallpaper-import/empty-stop regression passes. Python SMB config/password/path checks, shell syntax and git diff whitespace checks pass. Other warnings are existing dead-code warnings.
+- Next: push checkpoint, inspect fresh exact-head CI (especially real ARM64 SMB and packaging), repair any failures, review native captures and update draft #194. No device discovery/transfer result claimed.
+
+Concurrent branch update 45ef8ae arrived before the wallpaper push. Reapplied the wallpaper changes with a three-way merge onto it, retaining all label cleanup/transparent-shell/shape/password-hide/native-harness fixes and both worklog entries. The same Samba source-path correction is already included there; no duplicate build-script change is needed. Revalidate the combined source before publishing.
+Combined source on 45ef8ae passes all 10 editor/upload integration tests and 56 Studio state tests locally; configuration restrictions still pass. The original 8-test result above predates the two retained rendering regressions. New wallpaper UI test was also compiled/passed before combination; full network suite follows in CI.
+
+### Durable combined-source validation
+
+Published c6516fe6cc77879f348178b8e1c50bd3d188f96c on the existing draft PR #194, based on 45ef8ae. Working tree matches that committed source. Local combined validation: 10 editor/upload integration tests, 56 Studio state tests and 30 network tests pass; one explicitly ignored Mesa fixture remains for CI. Linux device-feature compilation passes. Both editor walkthroughs finish with 10 valid PNGs each and both full network walkthroughs finish with 52 valid PNGs each (light GLES/640, dark GL/720). Selected editor, transparent/glitter, hex, sharing default/reboot warning/password-hidden/stopped captures were independently inspected. These are simulated-device renders, not physical discovery or handheld networking evidence.
+
+On c6516fe, scaling 41748165618, blending 41748165628 and shortcuts 41748165639 have succeeded. Launcher/native 41748165656, website 41748165659 and ARM64 real-server/package 41748165729 are still running. The ARM64 job is building the private runtime; its actual SMB test and device package remain pending. This recovery checkpoint changes Markdown only and must not replace the tested-source SHA with an unverified runtime claim.
+
+Final light/GLES640 and dark/GL720 network walkthroughs pass after the bounded persistence wait; sharing selector, hidden password and warning pills were visually reviewed. Source audit found deep suspend/restart readiness also needs to wait for editor commits and complete sharing teardown (poweroff already did). Added that readiness gate and a regression requiring a saved shell before the suspend callback. All 7 editor/import, 21 power and 10 sleep tests pass locally. Added network runtime copying to the existing developer adb-deploy path, and made PR test packages use release binary/source/OTA-size validation. Publish this lifecycle/package checkpoint on checkpoint/studio-sharing-lifecycle while the feature build runs, then apply it to the feature branch once the compiled runtime is cached.
+
+Concurrent wallpaper-upload checkpoint c6516fe arrived during validation and cancelled 45ef8ae while saving its freshly compiled Samba cache. Retained that checkpoint in full and reapplied the lifecycle/package/developer-deploy fixes on top. Wait for the new running build cache before publishing to avoid cancelling compilation again.
+
+Combined lifecycle validation on c6516fe passes 10 editor/upload, 21 power, 10 sleep and 30 network tests, and device-feature compilation. Existing 56 Studio, 58 quick-menu, 49 in-game and 43 kid tests pass. Live public art index (7,356 entries) and WebP examples were retrieved over HTTPS and parsed/converted by production Rust functions with a synthetic CRC fixture; no ROM was uploaded. Direct Rust HTTP is refused in this execution sandbox, so this does not claim actual on-device TLS testing.
+
+Native server run 41748165729 successfully compiled AND cached Samba, then share enumeration timed out after 15s in smbclient; upload/security steps after enumeration were not reached. Inspect RPC/service diagnostics next, keeping encryption/password restrictions intact. Lifecycle/package checkpoint was published independently as 161f532 on checkpoint/studio-sharing-lifecycle while compilation ran; now apply the same changes atop d202bf6, preserving its recovery notes and wallpaper work. No device package or real-server success claimed.
+
+### Real-server diagnosis: required registry helper and character conversion
+
+The fixture-only debug logs in f6c930a's ARM64 run 41749065109 show password/NTLMv2 authentication succeeds. rpcd_classic then fails initialization because its service-control endpoint calls the absent winreg named pipe. Add the maintained rpcd_winreg binary and private-loader wrapper to the existing named-pipe-only supervisor; validate both worker binaries/wrappers in packages. No guest/root authentication or encryption restriction is relaxed. Logs also show CP850 unavailable: Debian trixie's optional libc-gconv-modules-extra package is needed before bundling matching private conversion data. Add an accented filename transfer assertion. Include the dependency-environment recipe alongside the source-build script in the corresponding-source ZIP. New build cache key is expected because runtime contents changed. Re-run native actual-SMB tests and device package before claiming support.
+
+The first helper correction a5ba53a stopped during apt prerequisites: libc-gconv-modules-extra belongs to newer Debian suites and is not in trixie. Verified Debian's trixie libc6 file manifest already includes IBM850.so. Removed the mistaken extra package and assert the bundled module exists. The fixture's tempfile root was 0700, so the authenticated unprivileged session could not traverse to its otherwise-correct runtime gconv modules; make only that disposable SD root traversable (0755), retaining private auth/passdb paths. Real SD roots are traversable. Keep the accented upload assertion to verify actual runtime conversion. Registry-helper addition remains the independently evidenced fix for the enumeration failure.
+
+
+### Upload interruption follow-up
+
+Latest f6c930a retains all wallpaper work and adds the concurrent editor suspend/restart gates, power/sleep coverage and release-package validation. Its diagnostic job 126309313521 confirms SMB3.11/NTLMv2 authentication succeeds, then rpcd_classic fails initializing svcctl because the winreg pipe/helper is unavailable. This is a dependency/startup failure, not an authentication failure. Keep existing restrictions and require actual encrypted enumeration/upload success.
+
+While that server issue is being diagnosed, improve upload interruption recovery: a fixed .slot-upload-PID staging filename can survive a crash and block later imports if the PID is reused. Use independently created random staging paths for games and wallpapers; keep pre-existing staging files untouched. Add regression coverage for subsequent successful import in the presence of an old staging file. No relaxed PNG validation or overwrite behavior.
+
+Local interruption regression passes: 11 editor/upload tests, 21 power tests and 10 sleep tests all pass on the combined f6c930a lifecycle source. A concurrent a5ba53a server fix now bundles rpcd_winreg and complete conversion modules, with accented filename coverage. Preserve it and stage the upload-recovery change separately while that runtime compiles, then integrate after its cache is saved.
+
+This integration preserves the server fixes from ca899861 and the upload-recovery checkpoint 7cd771f. The old PID-only staging file remains untouched; subsequent imports create their own exclusive random staging files and remove them after success or validation failure. Fresh combined CI remains required.
+
+Registry-helper build ca89986 now passes real authenticated share enumeration/listing and rejects a wrong password. Its next assertion incorrectly assumed smbclient --client-protection=off refuses server-required encryption: Samba still encrypts when the server requires it. Replace that assumption with a transparent loopback relay that parses SMB framing and rejects any plaintext Create/Read/Write/QueryDirectory request while transferring a real fixture with the preference off. Require encrypted transform frames and matching uploaded bytes. Separately reject SMB2-only clients. Keep existing password, traversal/link, Unicode and shutdown/watchdog tests. This is a stronger observation of actual privacy behavior, not a relaxed server setting.
+
+Preserved concurrent upload-recovery commit 4864717 in full before publishing the wire-level SMB test correction. Its random exclusive staging files and interruption regression are retained.
+
+### Final verified upload/Studio handoff — 2026-11-04
+
+All six workflows pass on source b21dd2f9baf1830fadf28509a56aacebe66d48aa: ARM64 real-server/device/package 41750769740, launcher/native 41750769859, website 41750769786, scaling 41750769831, blending 41750769836 and shortcuts 41750769789. No runtime edits followed this verification.
+
+- Actual ARM64 server job 126315020329 passes share enumeration, wrong-password/SMB2 rejection, observed encrypted SMB3 transform frames with no plaintext file operations, game and wallpaper uploads, accented filenames, path/link isolation, production stop helper and dead-parent watchdog cleanup.
+- Device job 126315306921 passes the full device-feature check; 144 core tests (one explicitly ignored native fixture), 11 editor/upload integrations, 56 Studio state tests, 21 power, 10 sleep, menu/kid/time/update suites, 31 achievement tests (two explicitly ignored live tests), 55 retro library tests, and both bundled core checks. Packaging validates the private runtime/workers, corresponding sources, executable modes, archive layout/CRC and OTA size limit.
+- Launcher/native job 126315020572 passes full regressions and all production GLES/GL walkthroughs. Local source review covered editor cards, alpha-aware artwork, clear/glitter shells, RGB/hex, real footer legends, sharing defaults/password hiding/warnings, and both themes. The final-source light network walkthrough also finishes successfully after all lifecycle changes.
+- Test System + sources: https://github.com/jgraving/slot.sp/actions/runs/41750769740/artifacts/13286121041 (present/unexpired when rechecked; expires 2026-11-05 01:05 UTC, subject to cleanup).
+- Native review: https://github.com/jgraving/slot.sp/actions/runs/41750769859/artifacts/13286511236 (present/unexpired; one-day retention).
+- Existing draft PR #194 contains all wallpaper, interruption-recovery, editor artwork, lifecycle, Samba/RPC/conversion and wire-test fixes. Keep draft; no merge/release requested. Physical PC/Mac discovery and handheld transfer/reboot/lid behavior remain explicit device checks.
+- Final recovery update changes only CURRENT_WORK.md and WORKLOG.md. Use [skip ci] for this Markdown-only checkpoint because GitHub PR path filtering uses cumulative changed paths and would rerun/cancel the same already-passing feature suites. Compare current HEAD to the verified source before resuming; do not claim an unverified runtime change.

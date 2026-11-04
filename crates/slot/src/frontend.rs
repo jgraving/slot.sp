@@ -39,6 +39,10 @@ pub struct Frontend {
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
     hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
     network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
+    studio_art_tex:Option<TexId>,
+    studio_tex: Option<TexId>,
+    studio_old_tex: Option<TexId>,
+    studio_page: Option<u64>,
     network_tex: Option<TexId>,
     network_old_tex: Option<TexId>,
     network_page: Option<u64>,
@@ -213,7 +217,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_meter_tex:None,network_meter_key:None,network_tex: None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_old_tex:None,studio_page:None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -812,6 +816,13 @@ impl Frontend {
         }
         self.cart_faces.sync(self.session.app_mut(), compositor);
         let network_light=self.session.app().light();
+        if let Some(menu)=self.session.app_mut().studio.as_mut() {
+            if self.studio_page!=Some(menu.page_key()) {
+                std::mem::swap(&mut self.studio_tex,&mut self.studio_old_tex);self.studio_page=Some(menu.page_key());menu.face=None;
+            }
+            if menu.face.is_none() {menu.face=Some(upload_menu_face(compositor,&mut self.studio_tex,&mut self.menu_chrome_cache,menu.screen_face(sound_canvas),&mut chrome_updates));
+                let face=menu.artwork_face(sound_canvas);menu.art_face=Some(upload_rgba(compositor,&mut self.studio_art_tex,face.w,face.h,&face.rgba));}
+        }
         if let Some(menu) = self.session.app_mut().network.as_mut().filter(|m|m.visible) {
             if self.network_page != Some(menu.page_key()) {
                 std::mem::swap(&mut self.network_tex,&mut self.network_old_tex);
@@ -1118,11 +1129,11 @@ impl Frontend {
     }
 
     pub fn powering_off(&self) -> bool {
-        self.session.app().ready_to_power_off() && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
+        self.session.app().ready_to_power_off() && self.session.app().studio.as_ref().is_none_or(|m|!m.busy()) && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restarting(&self) -> bool {
-        self.session.app().ready_to_restart()
+        self.session.app().ready_to_restart() && self.session.app().studio.as_ref().is_none_or(|m|!m.busy()) && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restart(&mut self) {
