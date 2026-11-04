@@ -8,7 +8,7 @@ with tempfile.TemporaryDirectory() as tmp:
     (root/'Config').mkdir();(root/'Config/secret').write_text('PRIVATE CARD CONTENT')
     run=root/'run';run.mkdir()
     loader=next((root/'System/samba/lib').glob('ld-linux-*.so.*'))
-    env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader),SLOT_SMB_TEST_PORT='1445',SLOT_SMB_TEST_INTERFACE='lo')
+    env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader),SLOT_SMB_TEST_PORT='1445',SLOT_SMB_TEST_INTERFACE='lo',GCONV_PATH=str(root/'System/samba/gconv'))
     password='ABCDEFGH23456789'
     subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
     config=(run/'slot-smb/smb.conf').read_text()
@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as tmp:
         except OSError:return False
     def client(command,ok=True,protection='encrypt',authfile=auth):
         args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'//127.0.0.1/Games','-p','1445','-m','SMB3',f'--client-protection={protection}','-A',str(authfile),'-c',command]
-        result=subprocess.run(args,text=True,capture_output=True,timeout=15)
+        result=subprocess.run(args,text=True,capture_output=True,timeout=15,env=env)
         if ok:assert result.returncode==0,(result.stdout,result.stderr)
         else:assert result.returncode!=0,(result.stdout,result.stderr)
         return result.stdout+result.stderr
@@ -32,6 +32,10 @@ with tempfile.TemporaryDirectory() as tmp:
             assert server.poll() is None,server.stderr.read().decode()
             assert time.monotonic()<deadline,'server did not listen'
             time.sleep(.1)
+        # Finder and Explorer enumerate shares through named-pipe SRVSVC, not just direct file access.
+        enumerate_args=[str(loader),'--library-path',str(root/'System/samba/lib'),str(root/'System/samba/bin/smbclient'),'-L','127.0.0.1','-p','1445','-m','SMB3','--client-protection=encrypt','-A',str(auth)]
+        enumeration=subprocess.run(enumerate_args,text=True,capture_output=True,timeout=15,env=env)
+        assert enumeration.returncode==0 and 'Games' in enumeration.stdout,(enumeration.stdout,enumeration.stderr)
         listing=client('ls');assert all(p in listing for p in ('GB','GBC','GBA'));assert 'Config' not in listing and 'secret' not in listing
         bad=root/'bad-auth';bad.write_text('username = slot\npassword = WRONG\n');bad.chmod(0o600)
         client('ls',False,authfile=bad)
@@ -44,9 +48,29 @@ with tempfile.TemporaryDirectory() as tmp:
         client(f'get ../Config/secret {root}/leaked',False)
         assert not (root/'leaked').exists() or not (root/'leaked').read_bytes()
     finally:
-        os.killpg(server.pid,signal.SIGTERM)
+        subprocess.run(['sh',str(script),'stop'],env=env,check=True)
         try:server.wait(timeout=5)
-        except subprocess.TimeoutExpired:os.killpg(server.pid,signal.SIGKILL);server.wait()
+        except subprocess.TimeoutExpired:
+            os.killpg(server.pid,signal.SIGKILL);server.wait()
+            raise AssertionError('production stop helper did not terminate the SMB process group')
     assert not opened(),'SMB listener survived shutdown'
     assert not (run/'slot-smb/smbpasswd').exists(),'runtime password database survived shutdown'
+    # A launcher crash must also close the server without needing the stop helper.
+    subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
+    parent=subprocess.Popen(['sleep','30'])
+    server=subprocess.Popen(['sh',str(script),'serve',str(root),str(parent.pid)],env=env,start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    try:
+        deadline=time.monotonic()+10
+        while not opened():
+            assert server.poll() is None,'watchdog test server failed'
+            assert time.monotonic()<deadline
+            time.sleep(.1)
+        parent.terminate();parent.wait(timeout=3)
+        try:server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            raise AssertionError('launcher-crash watchdog left the server running')
+        assert not opened(),'SMB listener survived launcher crash'
+    finally:
+        if parent.poll() is None:parent.terminate();parent.wait()
+        if server.poll() is None:os.killpg(server.pid,signal.SIGKILL);server.wait()
 print('Real SMB3: password, encryption, upload isolation and shutdown checks passed')

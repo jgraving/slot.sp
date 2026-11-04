@@ -31,7 +31,9 @@ fetch() {
 }
 fetch "https://download.samba.org/pub/samba/stable/samba-$version.tar.gz" "$work/samba.tar.gz" "$sha"
 fetch 'https://deb.debian.org/debian/pool/main/w/wsdd2/wsdd2_1.8.7+dfsg.orig.tar.xz' "$work/wsdd2.tar.xz" "$wsdd_sha"
-if [ ! -x "$work/install/sbin/smbd" ]; then
+build_id="$(sha256sum "$0" | cut -d" " -f1)"
+if [ ! -x "$work/install/sbin/smbd" ] || [ "$(cat "$work/install/.slot-build-id" 2>/dev/null || true)" != "$build_id" ]; then
+    rm -rf "$work/source" "$work/install"
     mkdir -p "$work/source"
     tar -xzf "$work/samba.tar.gz" -C "$work/source" --strip-components=1
     cd "$work/source"
@@ -42,22 +44,36 @@ if [ ! -x "$work/install/sbin/smbd" ]; then
         --without-cluster-support --without-ldb-lmdb --without-smb1-server --without-gettext \
         --without-prometheus-exporter --without-ratelimitd --disable-cephfs --disable-cephrgw \
         --disable-glusterfs --disable-spotlight --disable-wsp \
-        --with-static-modules=ALL --with-shared-modules='!ALL' \
-        --nonshared-binary=smbd/smbd,utils/smbpasswd,utils/testparm,client/smbclient \
+        --with-static-modules='!DEFAULT,pdb_smbpasswd,pdb_tdbsam,auth_unix,nss_info_template,idmap_tdb,idmap_passdb,idmap_nss' --with-shared-modules='!DEFAULT,!FORCED' \
+        --nonshared-binary=smbd/smbd,utils/smbpasswd,utils/testparm,client/smbclient,samba-dcerpcd,rpcd_classic \
         --disable-rpath-install --disable-rpath-private-install
     make -j "${SLOT_BUILD_JOBS:-4}"
     make install
+    printf "%s\n" "$build_id" > "$work/install/.slot-build-id"
 fi
 mkdir -p "$work/wsdd2"
 tar -xf "$work/wsdd2.tar.xz" -C "$work/wsdd2" --strip-components=1
 make -C "$work/wsdd2" CFLAGS='-O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong' LDFLAGS='-Wl,-z,relro,-z,now'
 mkdir -p "$out/bin" "$out/lib" "$out/licenses"
-for name in smbd smbpasswd testparm smbclient; do
+for name in smbd smbpasswd testparm smbclient samba-dcerpcd rpcd_classic; do
     src="$work/install/bin/$name"
     [ -f "$src" ] || src="$work/install/sbin/$name"
+    [ -f "$src" ] || src="$work/install/libexec/samba/$name"
     cp "$src" "$out/bin/$name"
 done
 cp "$work/wsdd2/wsdd2" "$out/bin/"
+# Samba invokes RPC workers itself; a small wrapper keeps those children on the private loader too.
+mkdir -p "$out/libexec"
+cat > "$out/libexec/rpcd_classic" <<'WRAPPER'
+#!/bin/sh
+set -eu
+TOOLS="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$TOOLS/lib/ld-linux-aarch64.so.1" --library-path "$TOOLS/lib" "$TOOLS/bin/rpcd_classic" "$@"
+WRAPPER
+chmod +x "$out/libexec/rpcd_classic"
+triplet="$(gcc -print-multiarch)"
+cp -aL "/usr/lib/$triplet/gconv" "$out/gconv"
+
 # Preserve Samba's private libraries if a binary is not eligible for nonshared linkage.
 find "$work/install/lib" -type f -name '*.so*' -exec cp -L '{}' "$out/lib/" \;
 # Copy every system runtime dependency, including the matching loader, into this private tree.

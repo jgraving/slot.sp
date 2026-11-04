@@ -1,6 +1,8 @@
 #!/bin/sh
 # Private SMB3 upload inbox. Password arrives on stdin; runtime secrets stay in RAM.
 set -eu
+# Never write SMB session material to a card crash dump.
+ulimit -c 0
 RUN="${AGS_RUN:-/run}"
 STATE="$RUN/slot-smb"
 SELF="$0"
@@ -11,10 +13,10 @@ stop_share() {
         case "$pid" in ''|*[!0-9]*) return 1;; esac
         # Only terminate our own supervisor group, never a recycled or unrelated PID.
         if [ -r "/proc/$pid/cmdline" ] && tr '\000' ' ' < "/proc/$pid/cmdline" | grep -F 'slotsmb.sh serve ' >/dev/null; then
-            kill -TERM -- "-$pid" 2>/dev/null || true
+            kill -TERM "-$pid" 2>/dev/null || true
         fi
     fi
-    rm -f "$STATE/owner" "$STATE/smbpasswd" "$STATE/smb.conf"
+    rm -f "$STATE/owner" "$STATE/smbpasswd" "$STATE/smbpasswd.old" "$STATE/smb.conf"
 }
 case "${1:-}" in
 stop) stop_share; exit 0;;
@@ -27,11 +29,13 @@ case "$SD" in *'%'*|*'['*|*']'*|*'
 '*|*'
 '*) exit 1;; esac
 TOOLS="$SD/System/samba"
-[ -x "$TOOLS/bin/smbd" ] && [ -x "$TOOLS/bin/smbpasswd" ] && [ -x "$TOOLS/bin/wsdd2" ] || exit 1
+for name in smbd smbpasswd testparm wsdd2 samba-dcerpcd rpcd_classic; do
+    [ -x "$TOOLS/bin/$name" ] || exit 1
+done
 # No loader or library-path changes escape into the launcher/emulators.
 samba() {
     name="$1"; shift
-    "${SLOT_SMB_LOADER:-$TOOLS/lib/ld-linux-aarch64.so.1}" --library-path "$TOOLS/lib" "$TOOLS/bin/$name" "$@"
+    GCONV_PATH="$TOOLS/gconv" "${SLOT_SMB_LOADER:-$TOOLS/lib/ld-linux-aarch64.so.1}" --library-path "$TOOLS/lib" "$TOOLS/bin/$name" "$@"
 }
 if [ "$1" = prepare ]; then
     address="$3"
@@ -74,6 +78,7 @@ if [ "$1" = prepare ]; then
     cache directory = $STATE/cache
     pid directory = $STATE
     ncalrpc dir = $STATE/ncalrpc
+    rpc start on demand helpers = no
     log file = /dev/null
     log level = 0
     load printers = no
@@ -109,17 +114,19 @@ fi
 parent="$3"
 cleanup() {
     trap - TERM INT EXIT
-    rm -f "$STATE/owner" "$STATE/smbpasswd" "$STATE/smb.conf"
-    kill -TERM -- "-$$" 2>/dev/null || true
+    rm -f "$STATE/owner" "$STATE/smbpasswd" "$STATE/smbpasswd.old" "$STATE/smb.conf"
+    kill -TERM "-$$" 2>/dev/null || true
 }
 trap cleanup TERM INT EXIT
 printf '%s\n' "$$" > "$STATE/owner"
+samba samba-dcerpcd --foreground --no-process-group --np-only --configfile="$STATE/smb.conf" "$TOOLS/libexec/rpcd_classic" &
+rpc=$!
 samba smbd --foreground --no-process-group --configfile="$STATE/smb.conf" &
 server=$!
 samba wsdd2 -4 -i "${SLOT_SMB_TEST_INTERFACE:-wlan0}" -H SLOTSP -N SLOTSP -G WORKGROUP &
 # Close the entire group if slot crashes, or if the Wi-Fi hook revokes this session.
 (
-    while kill -0 "$parent" 2>/dev/null && kill -0 "$server" 2>/dev/null && [ -f "$STATE/owner" ]; do sleep 1; done
-    kill -TERM -- "-$$" 2>/dev/null || true
+    while kill -0 "$parent" 2>/dev/null && kill -0 "$server" 2>/dev/null && kill -0 "$rpc" 2>/dev/null && [ -f "$STATE/owner" ]; do sleep 1; done
+    kill -TERM "-$$" 2>/dev/null || true
 ) &
 wait "$server"

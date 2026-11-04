@@ -85,7 +85,7 @@ jobs:
           name: samba-runtime
           path: vendor
       - name: Restore executable modes
-        run: chmod +x vendor/samba/bin/* vendor/samba/lib/*
+        run: chmod +x vendor/samba/bin/* vendor/samba/lib/* vendor/samba/libexec/*
 
       - name: Install build dependencies
         run: |

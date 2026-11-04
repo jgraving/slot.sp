@@ -5,7 +5,7 @@ script=pathlib.Path(__file__).resolve().parent/'System/slotsmb.sh'
 with tempfile.TemporaryDirectory() as d:
     root=pathlib.Path(d);bin=root/'System/samba/bin';bin.mkdir(parents=True);run=root/'run';run.mkdir()
     loader=root/'loader';loader.write_text('#!/bin/sh\nshift 2\nexec "$@"\n');loader.chmod(0o755)
-    for name in ('smbd','wsdd2','smbpasswd','testparm'):
+    for name in ('smbd','wsdd2','smbpasswd','testparm','samba-dcerpcd','rpcd_classic'):
         p=bin/name;p.write_text('#!/bin/sh\ncat >/dev/null\n');p.chmod(0o755)
     env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader))
     def prepare(password='ABCDEFGH23456789',ip='192.168.1.2'):

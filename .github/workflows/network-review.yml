@@ -64,7 +64,7 @@ jobs:
           name: samba-runtime
           path: vendor
       - name: Restore executable modes
-        run: chmod +x vendor/samba/bin/* vendor/samba/lib/*
+        run: chmod +x vendor/samba/bin/* vendor/samba/lib/* vendor/samba/libexec/*
       - name: Install build dependencies
         run: |
           sed -i '/bullseye-security/d' /etc/apt/sources.list
@@ -94,7 +94,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: slot.sp-network-System
-          retention-days: 7
+          retention-days: 1
           path: |
             slot.sp-network-System.zip
             slot.sp-network-sources.zip

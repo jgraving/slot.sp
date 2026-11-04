@@ -22,6 +22,17 @@ def package(root: Path, output: Path, source: str) -> None:
         header = binary.read_bytes()[:20]
         if len(header) < 20 or header[:6] != b'\x7fELF\x02\x01' or int.from_bytes(header[18:20], 'little') != 183:
             raise ValueError(f'{name} must be a little-endian ELF64 AArch64 binary')
+    for name in ('smbd', 'smbpasswd', 'testparm', 'wsdd2', 'samba-dcerpcd', 'rpcd_classic'):
+        binary = system / 'samba/bin' / name
+        header = binary.read_bytes()[:20]
+        if header[:6] != b'\x7fELF\x02\x01' or int.from_bytes(header[18:20], 'little') != 183:
+            raise ValueError(f'Samba {name} must be an AArch64 binary')
+        if not binary.stat().st_mode & 0o111:
+            raise ValueError(f'Samba {name} must be executable')
+    if not (system / 'samba/libexec/rpcd_classic').stat().st_mode & 0o111:
+        raise ValueError('missing executable private RPC worker wrapper')
+    if not (system / 'samba/lib/ld-linux-aarch64.so.1').is_file():
+        raise ValueError('missing private Samba loader')
     if not (system / 'slot').stat().st_mode & 0o111:
         raise ValueError('System/slot must be executable')
     licenses = system / 'licenses'
