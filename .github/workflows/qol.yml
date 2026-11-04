@@ -2,9 +2,9 @@ name: Launcher quality of life checks
 on:
   push:
     branches: [main]
-    paths: ['crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
   pull_request:
-    paths: ['crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
+    paths: ['card/System/slotupdate.sh', 'card/test-update.sh', 'card/test-launch.sh', 'card/test-ota-recovery.py', 'crates/**', 'tools/encode*review*.py', '.github/workflows/qol.yml']
 permissions:
   contents: read
 jobs:
@@ -22,6 +22,7 @@ jobs:
         run: |
           python3 card/test-bluetooth.py
           python3 card/test-smb-security.py
+          python3 card/test-ota-recovery.py
           sh card/test-update.sh
           sh card/test-launch.sh
           cargo check --locked -p slot --no-default-features --features device

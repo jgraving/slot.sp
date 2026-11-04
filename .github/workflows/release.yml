@@ -113,6 +113,9 @@ jobs:
           cargo test -p slot-power --lib --tests
           task test:card
           python3 card/test-bluetooth.py
+          python3 card/test-ota-recovery.py
+          sh card/test-update.sh
+          sh card/test-launch.sh
 
       - uses: actions/upload-artifact@v7
         with:
