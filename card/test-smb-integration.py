@@ -14,6 +14,8 @@ with tempfile.TemporaryDirectory() as tmp:
     config=(run/'slot-smb/smb.conf').read_text()
     assert 'SMB3_00' in config and 'server smb encrypt = required' in config
     assert password not in ''.join(p.read_text(errors='replace') for p in (run/'slot-smb').rglob('*') if p.is_file())
+    # Test-only diagnostics contain only this disposable fixture's account/session.
+    (run/'slot-smb/smb.conf').write_text(config.replace('log file = /dev/null',f'log file = {run}/slot-smb/test-log.%m').replace('log level = 0','log level = 3'))
     auth=root/'auth';auth.write_text(f'username = slot\npassword = {password}\n');auth.chmod(0o600)
     server=subprocess.Popen(['sh',str(script),'serve',str(root),str(os.getpid())],env=env,start_new_session=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
     def opened():
@@ -51,6 +53,10 @@ with tempfile.TemporaryDirectory() as tmp:
         client(f'get private-link {root}/leaked',False)
         client(f'get ../Config/secret {root}/leaked',False)
         assert not (root/'leaked').exists() or not (root/'leaked').read_bytes()
+    except BaseException:
+        for log in sorted((run/'slot-smb').glob('test-log.*')):
+            print(f'{log.name}:\n{log.read_text(errors="replace")[-12000:]}',file=sys.stderr)
+        raise
     finally:
         subprocess.run(['sh',str(script),'stop'],env=env,check=True)
         try:server.wait(timeout=5)

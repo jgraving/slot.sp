@@ -420,6 +420,7 @@ tasks:
       - file vendor/gpsp_libretro.so | grep -q aarch64
       - "{{.ADB}} push target-device/device/slot '{{.SD}}/System/slot'"
       - for f in card/System/*; do {{.ADB}} push "$f" '{{.SD}}/System/'; done
+      - "{{.ADB}} push vendor/samba '{{.SD}}/System/'"
       - "{{.ADB}} push vendor/mgba_libretro.so '{{.SD}}/System/mgba_libretro.so'"
       - "{{.ADB}} push vendor/gpsp_libretro.so '{{.SD}}/System/gpsp_libretro.so'"
       - "{{.ADB}} push vendor/fsck.exfat '{{.SD}}/System/fsck.exfat'"

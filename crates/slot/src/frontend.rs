@@ -1131,7 +1131,7 @@ impl Frontend {
     }
 
     pub fn restarting(&self) -> bool {
-        self.session.app().ready_to_restart()
+        self.session.app().ready_to_restart() && self.session.app().studio.as_ref().is_none_or(|m|!m.busy()) && self.session.app().network.as_ref().is_none_or(|m|m.flush_ready())
     }
 
     pub fn restart(&mut self) {

@@ -75,7 +75,7 @@ jobs:
         run: |
           cargo check --locked -p slot --no-default-features --features device
           cargo test --locked -p slot-achievements -p slot-retro --lib
-          cargo test --locked -p slot --no-default-features --lib --test studio_state --test device_studio_sharing --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code --test fork_updates --test net_time --test sntp -- --test-threads=1
+          cargo test --locked -p slot --no-default-features --lib --test studio_state --test device_studio_sharing --test sleep --test power --test quick_menu --test in_game_menu --test settings_notices --test emu --test kid_controls --test parent_code --test fork_updates --test net_time --test sntp -- --test-threads=1
           cargo test --locked -p slot-ui --lib --test quick_menu
           sh card/test-slotlink.sh
           sh card/test-update.sh
@@ -87,10 +87,9 @@ jobs:
         run: SLOT_REQUIRE_CORES=1 cargo test --locked -p slot-retro --test gba_achievements
       - name: Package test build
         run: |
-          cd dist-network
-          zip -qr ../slot.sp-network-System.zip System
-          cd ../vendor/samba-sources
-          zip -qr ../../slot.sp-network-sources.zip .
+          python3 tools/package-release.py dist-network network-assets "$GITHUB_SHA"
+          mv network-assets/slot.sp-System.zip slot.sp-network-System.zip
+          mv network-assets/slot.sp-network-sources.zip .
       - uses: actions/upload-artifact@v7
         with:
           name: slot.sp-network-System

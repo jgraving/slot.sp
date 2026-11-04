@@ -6379,6 +6379,10 @@ impl App {
         if !self.suspend_requested() {
             return;
         }
+        // Let the editor commit and the sharing worker close all writers before freezing them.
+        if self.studio.as_ref().is_some_and(|m|m.busy()) || self.network.as_ref().is_some_and(|m|!m.flush_ready()) {
+            return;
+        }
         self.suspend_pending = false;
         self.settle_saves();
         let timeout = self.sleep_duration();
