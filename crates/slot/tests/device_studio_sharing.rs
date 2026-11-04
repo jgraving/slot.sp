@@ -234,6 +234,49 @@ fn wallpapers_require_full_bounded_png_decode() {
     }
 }
 
+#[test]
+fn interrupted_staging_files_do_not_block_later_game_or_wallpaper_imports() {
+    let root = common::tmp_root_with_carts(&["Fusion"]);
+    let old = format!(".slot-upload-{}", std::process::id());
+    for folder in ["GBA", "Wallpapers"] {
+        fs::create_dir_all(root.path().join("Inbox").join(folder)).unwrap();
+    }
+    fs::create_dir_all(root.path().join("Wallpapers")).unwrap();
+    for folder in ["Games/GBA", "Wallpapers"] {
+        fs::write(root.path().join(folder).join(&old), b"old partial upload").unwrap();
+    }
+    fs::write(root.path().join("Inbox/GBA/Recovered.gba"), [1; 1024]).unwrap();
+    fs::write(
+        root.path().join("Inbox/Wallpapers/Recovered.png"),
+        wallpaper_png(4, 4),
+    )
+    .unwrap();
+    fs::write(
+        root.path().join("Inbox/Wallpapers/Corrupt.png"),
+        b"invalid PNG",
+    )
+    .unwrap();
+    let imported = sharing::import(root.path()).unwrap();
+    assert_eq!(imported.added.len(), 1);
+    assert_eq!(imported.wallpapers, 1);
+    assert_eq!(imported.skipped, 1);
+    for folder in ["Games/GBA", "Wallpapers"] {
+        let dir = root.path().join(folder);
+        assert_eq!(fs::read(dir.join(&old)).unwrap(), b"old partial upload");
+        let hidden: Vec<_> = fs::read_dir(dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.starts_with(".slot-upload-"))
+            .collect();
+        assert_eq!(
+            hidden,
+            [old.clone()],
+            "successful and rejected imports must clean up their own staging files"
+        );
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn wallpaper_imports_reject_source_target_and_directory_links() {

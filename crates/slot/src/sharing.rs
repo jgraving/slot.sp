@@ -381,7 +381,6 @@ pub fn import(root: &Path) -> io::Result<Import> {
                 result.skipped += 1;
                 continue;
             }
-            let temp = target.join(format!(".slot-upload-{}", std::process::id()));
             let mut reader = match fs::File::open(&path) {
                 Ok(reader) => reader,
                 Err(_) => {
@@ -389,12 +388,8 @@ pub fn import(root: &Path) -> io::Result<Import> {
                     continue;
                 }
             };
-            let mut writer = match fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)
-            {
-                Ok(writer) => writer,
+            let (temp, mut writer) = match staging_file(&target) {
+                Ok(staged) => staged,
                 Err(_) => {
                     result.skipped += 1;
                     continue;
@@ -496,14 +491,10 @@ fn import_wallpapers(root: &Path, result: &mut Import) {
         }
         // Validate the private copy, so no unvalidated or partial image reaches the selector.
         // SMB has already stopped; the source remains intact until publishing succeeds.
-        let temp = target.join(format!(".slot-upload-{}", std::process::id()));
         let staged = (|| -> io::Result<()> {
             let mut reader = fs::File::open(&path)?;
             let expected = reader.metadata()?.len();
-            let mut writer = fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)?;
+            let (temp, mut writer) = staging_file(&target)?;
             let copy = (|| -> io::Result<()> {
                 let copied = io::copy(
                     &mut reader.by_ref().take(MAX_WALLPAPER_FILE + 1),
@@ -557,6 +548,26 @@ fn validate_wallpaper(path: &Path) -> Option<()> {
     reader.next_frame(&mut pixels).ok()?;
     reader.finish().ok()?;
     Some(())
+}
+
+// A crash can leave its private staging file behind. Never reuse a PID-only name:
+// handheld startup often reuses PIDs, and a previous partial write must not block new imports.
+fn staging_file(target: &Path) -> io::Result<(PathBuf, fs::File)> {
+    use ring::rand::SecureRandom;
+    let mut random = [0; 8];
+    ring::rand::SystemRandom::new()
+        .fill(&mut random)
+        .map_err(|_| io::Error::other("could not create upload staging name"))?;
+    let path = target.join(format!(
+        ".slot-upload-{}-{:016x}",
+        std::process::id(),
+        u64::from_ne_bytes(random)
+    ));
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
+    Ok((path, file))
 }
 
 fn real_dir(path: &Path) -> bool {
