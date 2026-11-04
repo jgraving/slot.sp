@@ -147,6 +147,8 @@ struct WallpaperSync {
 struct AboutFace {
     tex: Option<TexId>,
     battery: Option<u8>,
+    body: Option<TexId>,
+    colour: Option<ShellColour>,
 }
 
 #[derive(Default)]
@@ -166,7 +168,6 @@ struct Clocks {
 }
 
 struct ShelfLook {
-    about_body: [TexId; 4],
     slot: [[TexId; 2]; 4],
     bolt: [TexId; 2],
     port: [Option<TexId>; 4],
@@ -399,10 +400,7 @@ impl Frontend {
             compositor.create_ui_texture(dark_bolt.w, dark_bolt.h, &dark_bolt.rgba),
             compositor.create_ui_texture(light_bolt.w, light_bolt.h, &light_bolt.rgba),
         ];
-        let about_body = ShellColour::FINISHES.map(|colour| compositor.create_texture(
-            slot_ui::ABOUT_BODY_TEXTURE_W, slot_ui::ABOUT_BODY_TEXTURE_H, slot_ui::shell_about_body(colour)));
         self.look = Some(ShelfLook {
-            about_body,
             slot,
             bolt,
             port: [None; 4],
@@ -436,7 +434,6 @@ impl Frontend {
             (
                 look.applied == Some((light, colour, legend_ready, port_ready)),
                 look.slot[colour.finish_index()],
-                look.about_body[colour.finish_index()],
                 look.bolt[i],
                 look.bolt[0],
                 look.port[colour.finish_index()],
@@ -445,7 +442,7 @@ impl Frontend {
                 port_ready,
             )
         });
-        let Some((done, slot, about_body, bolt, hud_bolt, port, legend, legend_ready, port_ready)) = ready
+        let Some((done, slot, bolt, hud_bolt, port, legend, legend_ready, port_ready)) = ready
         else {
             return;
         };
@@ -453,7 +450,6 @@ impl Frontend {
             return;
         }
         self.session.app_mut().set_slot_faces(slot[0], slot[1]);
-        self.session.app_mut().set_about_body_face(about_body);
         self.session.app_mut().set_bolt_face(bolt);
         self.session.app_mut().set_hud_bolt_face(hud_bolt);
         if let Some(tex) = port {
@@ -1721,8 +1717,18 @@ fn sync_quick_palette(app: &mut App, compositor: &mut Compositor, state: &mut Qu
 }
 
 fn sync_about(app: &mut App, compositor: &mut Compositor, state: &mut AboutFace) {
-    if !matches!(app.phase(), Phase::About) {
+    if !matches!(app.phase(), Phase::About) && app.about_reveal() == 0.0 {
         return;
+    }
+    // One high-density body texture, loaded on first reveal and reused when
+    // its finish changes. The visible exit always follows the current shell.
+    let colour = app.shell_colour();
+    if state.colour != Some(colour) {
+        let body = upload_rgba(compositor, &mut state.body,
+            slot_ui::ABOUT_BODY_TEXTURE_W, slot_ui::ABOUT_BODY_TEXTURE_H,
+            slot_ui::shell_about_body(colour));
+        app.set_about_body_face(body);
+        state.colour = Some(colour);
     }
     let battery = app.battery().map(|b| b.percent);
     if state.tex.is_some() && state.battery == battery {

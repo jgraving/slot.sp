@@ -4993,7 +4993,10 @@ impl App {
                 let offset=(top-slot_ui::expressive::CARD_TOP)*compact/2.0;
                 for draw in &mut out[chrome..title_end] {if let Draw::Tex{y,..}|Draw::Part{y,..}=draw{*y+=offset;}}
             }
-            self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,out);
+            let mut shown_hints = Vec::new();
+            self.menu_hint_motion.borrow_mut().present(page*32+kind,hints,&mut shown_hints);
+            self.draw_about_hint_backings(&shown_hints, out);
+            out.extend(shown_hints);
             let reveal=self.menu_motion.reveal();
             for d in &mut out[chrome..] {if let Draw::Tex{alpha,..}|Draw::Part{alpha,..}=d {*alpha*=reveal;}}
 
@@ -5647,6 +5650,38 @@ impl App {
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
+    }
+
+    fn draw_about_hint_backings(&self, hints: &[Draw], out: &mut Vec<Draw>) {
+        if !self.about_motion.active() { return; }
+        let mut sticker = Vec::new();
+        slot_ui::draw_about_sticker(self.canvas(), self.sticker_face, &mut sticker);
+        self.about_motion.transform(self.canvas(), &mut sticker);
+        let Some(Draw::Tex { x: sx, y: sy, w: sw, h: sh, .. }) = sticker.first().copied() else { return; };
+        // Captions keep their established backdrop contrast. Give each a small
+        // local surface only while the moving black label passes behind it.
+        // Merge crossfading legends on each side so their backings do not stack.
+        let mut bounds: [Option<[f32; 5]>; 2] = [None, None];
+        for d in hints {
+            if let Draw::Tex { x, y, w, h, alpha, .. } | Draw::Part { x, y, w, h, alpha, .. } = *d {
+                // Cached custom pages can put several actions in one broad
+                // atlas slice; never turn that slice into a footer-wide bar.
+                if w > 180.0 || h > 44.0 { continue; }
+                let side = usize::from(x + w / 2.0 > self.canvas().w / 2.0);
+                let b = [x, y, x + w, y + h, alpha];
+                bounds[side] = Some(bounds[side].map_or(b, |a| [a[0].min(b[0]), a[1].min(b[1]), a[2].max(b[2]), a[3].max(b[3]), a[4].max(b[4])]));
+            }
+        }
+        let contrast = self.footer_contrast.unwrap_or([self.light(); 2]);
+        for (side, b) in bounds.into_iter().enumerate().filter_map(|(i,b)|b.map(|b|(i,b))) {
+            if b[2] - b[0] > 180.0 { continue; }
+            let gap = (sx - b[2]).max(b[0] - (sx + sw)).max(sy - b[3]).max(b[1] - (sy + sh));
+            let cover = ((18.0 - gap) / 18.0).clamp(0.0, 1.0);
+            let cover = cover * cover * (3.0 - 2.0 * cover);
+            let alpha = cover * b[4] * self.menu_motion.reveal() * 0.96;
+            let rgb = if contrast[side] { [0.96, 0.975, 0.97] } else { [0.13, 0.145, 0.16] };
+            slot_ui::expressive::rounded(out, b[0] - 6.0, b[1] - 4.0, b[2] - b[0] + 12.0, b[3] - b[1] + 8.0, 20.0, [rgb[0], rgb[1], rgb[2], alpha]);
+        }
     }
 
     fn draw_menu_hardware(&self, out: &mut Vec<Draw>) {

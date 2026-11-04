@@ -1689,3 +1689,28 @@ fn general_selection_stays_live_during_about_exit_and_rapid_navigation() {
     a.update(1.0);
     assert!(drawn(&frame(&a), label(QuickRow::About, true)));
 }
+
+#[test]
+fn passing_about_sticker_has_local_hint_contrast_without_a_permanent_footer_bar() {
+    let (_d, mut a, _) = on_carousel();
+    a.set_panel((640, 480));
+    a.set_footer_contrast([false; 2]);
+    fake_faces(&mut a);
+    about_hardware(&mut a);
+    open_at(&mut a, QuickRow::About);
+    press(&mut a, Btn::A);
+    a.update(0.22);
+    let moving = frame(&a);
+    let backing = |d: &Draw| matches!(*d, Draw::RoundRect { colour, h, .. }
+        if colour[..3] == [0.13, 0.145, 0.16] && h == slot_ui::MENU_HINT_H as f32 + 8.0);
+    let backs: Vec<_> = moving.iter().enumerate().filter(|(_,d)|backing(d)).collect();
+    assert_eq!(backs.len(), 2, "each footer hint needs its own local contrast surface while the black sticker passes");
+    let sticker = moving.iter().position(|d|matches!(*d, Draw::Tex { tex, .. }|Draw::Part { tex, .. } if tex == TexId::from_raw(9103))).unwrap();
+    let hint = moving.iter().rposition(|d|matches!(*d, Draw::Tex { tex, .. }|Draw::Part { tex, .. } if tex == TexId::from_raw(404))).unwrap();
+    for (i,d) in backs {
+        assert!(i > sticker && i < hint, "hint backing must be over the hardware and under its text");
+        if let Draw::RoundRect { w, colour, .. } = d { assert!(*w < 180.0 && colour[3] > 0.9); }
+    }
+    a.update(1.0);
+    assert!(!frame(&a).iter().any(backing), "the local backings should disappear once the sticker clears the footer");
+}

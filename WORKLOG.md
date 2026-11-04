@@ -2,6 +2,15 @@
 
 ## Active recovery: photo-matched slot and About reveal — 2026-11-04
 
+### Final runtime polish
+
+- Published and verified test/export checkpoint `cfee4ba29f1d5037233b8015179b4168f101380b` on PR #195. Scaling, blending and shortcuts succeed on that revision; launcher/native and device build are still running.
+- Kept footer actions readable while the black sticker crosses them using small temporary contrast surfaces, drawn over hardware and under hints, removed once the sticker clears. Added a layer-order/size/lifetime regression; app/menu checks now total 228 and the complete targeted set totals 326.
+- About now lazily uploads/reuses one lower-body texture and recolors it during exit. This saves 6,912,000 GPU bytes versus the first checkpoint, with no per-frame rasterization/upload. Final added GPU memory versus main is approximately 6.94 MiB after first About; hardware performance remains unmeasured.
+- The before/after image uses identical native GLES640 views of original main and revised source, rendered from isolated checkouts. Cartridge dimensions/travel are unchanged.
+- Read-only merge-tree against #194 (`5425afe0`) merges runtime/tests/workflows cleanly; both branches' active CURRENT_WORK.md headings conflict and will need documentation reconciliation if combined. This is source compatibility only; no merge requested or performed.
+- Final native exports are being rendered from a fresh checkout-specific target after detecting a stale example executable in the earlier shared target. The initially attempted in-game exports did not exercise the new mode and are not validation evidence. Fresh executable markers are verified before the definitive captures.
+
 ### Native review and rapid-navigation correction
 
 - Draft PR: https://github.com/jgraving/slot.sp/pull/195. Runtime checkpoint `30de7b95486128c7f7cd19a6a02cf47c2c313cbc` was published and its branch ref verified.

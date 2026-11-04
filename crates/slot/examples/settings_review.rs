@@ -15,18 +15,26 @@ fn main(){
         fn settle(&mut self){for _ in 0..45 {self.frame(vec![]);}}
         fn save(&mut self,name:&str){self.settle();self.capture(name);}
         fn capture(&mut self,name:&str){let mut e=png::Encoder::new(std::fs::File::create(self.dir.join(format!("{name}.png"))).unwrap(),self.width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&self.g.read_frame()).unwrap();}
-        fn nav(&mut self,to:QuickRow){for _ in 0..32 {let at=self.f.app().quick_menu().unwrap();if at==to{return;}assert_eq!(at.page(),to.page());let b=if at.page()==QuickRow::MAIN {let a=at.position(&[]);let b=to.position(&[]);if a%4<b%4 {Btn::Right}else if a%4>b%4 {Btn::Left}else {Btn::Down}}else {Btn::Down};self.tap(b);}panic!("cannot reach {to:?}");}
+        fn nav(&mut self,to:QuickRow){for _ in 0..32 {let at=self.f.app().quick_menu().or_else(||self.f.app().in_game_menu()).unwrap();if at==to{return;}assert_eq!(at.page(),to.page());let hidden=if self.f.app().in_game_menu().is_some(){self.f.app().in_game_hidden()}else{self.f.app().hidden_rows()};let b=if slot_ui::menu_grid::is_page(at.page()) {let cols=slot_ui::menu_grid::columns(at,&hidden);let a=at.position(&hidden);let b=to.position(&hidden);if a%cols<b%cols {Btn::Right}else if a%cols>b%cols {Btn::Left}else {Btn::Down}}else {Btn::Down};self.tap(b);}panic!("cannot reach {to:?}");}
         fn home(&mut self){for _ in 0..12 {if matches!(self.f.app().phase(),Phase::Shelf)&&self.f.app().kid_menu.is_none()&&self.f.app().bluetooth.is_none()&&self.f.app().display_schedule.is_none(){self.tap(Btn::Menu);self.settle();return;}if self.f.app().kid_menu.as_ref().is_some_and(|m|m.entering_code()){self.tap(Btn::Menu);}else{self.tap(Btn::B);}}panic!("cannot close settings");}
     }
     let dir=std::path::PathBuf::from(std::env::args().nth(1).unwrap());std::fs::create_dir_all(&dir).unwrap();
     let width=std::env::args().nth(3).and_then(|s|s.parse().ok()).unwrap_or(640);
     let root=dir.join("card");slot::root::ensure(&root);
     let mut state=slot_store::SlotState::default();state.clock_set=true;state.clock_12h=true;state.appearance=if std::env::args().nth(4).as_deref()==Some("light"){slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(&root,&state).unwrap();
-    for (i,name) in ["Aurora","Borealis","Celeste"].into_iter().enumerate(){let mut rom=vec![0;256];rom[0xa0..0xa6].copy_from_slice(b"REVIEW");rom[0]=i as u8;std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")),rom).unwrap();}
+    let in_game=std::env::args().nth(5).as_deref()==Some("about-game");
+    let platform=match std::env::args().nth(6).as_deref(){Some("gb")=>slot_store::Platform::Gb,Some("gbc")=>slot_store::Platform::Gbc,_=>slot_store::Platform::Gba};
+    for (i,name) in ["Aurora","Borealis","Celeste"].into_iter().enumerate(){let mut rom=vec![0;0x150];let title=if platform==slot_store::Platform::Gba{0xa0}else{0x134};rom[title..title+6].copy_from_slice(b"REVIEW");if platform==slot_store::Platform::Gbc{rom[0x143]=0xc0;}rom[0]=i as u8;std::fs::write(root.join("Games").join(platform.dir_name()).join(format!("{name}.{}",platform.extensions()[0])),rom).unwrap();}
     let surface=support::Egl::new(std::env::args().nth(2).as_deref()!=Some("gl"));let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
     let mut f=Frontend::boot(Box::new(slot_power::SimPlatform::at(root).stopped_at(1_793_774_400)));f.upload_faces(&mut g);f.render(&mut g,(width,480));
-    let mut a=Review{f,g,now:0,dir,width};a.save("carousel");a.home();a.save("settings");
-    if std::env::args().nth(5).as_deref()==Some("about") {
+    let mut a=Review{f,g,now:0,dir,width};a.save("carousel");
+    if in_game {
+        a.tap(Btn::A);
+        for _ in 0..300 {a.frame(vec![]);if matches!(a.f.app().phase(),Phase::Playing{..}){break;}}
+        assert!(matches!(a.f.app().phase(),Phase::Playing{..}),"review cartridge did not start");
+        a.settle();a.tap(Btn::Menu);a.settle();a.nav(QuickRow::Settings);a.tap(Btn::A);a.save("settings");
+    }else{a.home();a.save("settings");}
+    if in_game || std::env::args().nth(5).as_deref()==Some("about") {
         a.nav(QuickRow::General);a.tap(Btn::A);a.nav(QuickRow::About);a.save("general-before");
         let initial=a.g.read_frame();
         // Capture every simulated display frame, including button down/up. The
@@ -51,7 +59,7 @@ fn main(){
             if frame==100 {assert!(matches!(a.f.app().phase(),Phase::About));a.capture("about-settled");}
             if frame==230 {assert!(matches!(a.f.app().phase(),Phase::About));}
         }
-        assert_eq!(a.f.app().quick_menu(),Some(QuickRow::About));
+        assert_eq!(a.f.app().quick_menu().or_else(||a.f.app().in_game_menu()),Some(QuickRow::About));
         a.capture("general-after");
         let final_pixels=a.g.read_frame();
         // Wallpaper continues to move; compare the opaque General card's centre

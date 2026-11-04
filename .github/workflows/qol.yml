@@ -58,6 +58,7 @@ jobs:
           for platform in gba gb gbc; do
             cargo run --locked -p slot --no-default-features --example slot_motion_review -- "$SLOT_QOL_PREVIEW/slot-$platform" "$platform" gles 640
             python3 tools/encode-slot-motion-review.py "$SLOT_QOL_PREVIEW/slot-$platform" "$SLOT_QOL_PREVIEW/slot-$platform-insert-remove.mp4"
+            cargo run --locked -p slot --no-default-features --example settings_review -- "$SLOT_QOL_PREVIEW/about-game-$platform" gles 640 light about-game "$platform"
           done
       - uses: actions/upload-artifact@v7
         if: always() && steps.renders.outcome != 'skipped'
