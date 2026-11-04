@@ -65,7 +65,7 @@ pub fn pages(
                     false,
                 ),
                 ("Approve for kids".into(), "X".into(), false),
-                ("Choose GBA emulator".into(), "START".into(), false),
+                ("Cart Studio / emulator".into(), "START".into(), false),
                 ("Start without resume".into(), "Hold A".into(), false),
             ],
         ));
