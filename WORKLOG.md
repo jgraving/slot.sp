@@ -2,9 +2,7 @@
 
 ## Website navigation and launcher previews — 2026-11-05
 
-Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. The header uses one shared layout and a more damped selection spring. Guide selection stays on its active row, with independent hover feedback. Page slides travel a short distance and the desktop guide sidebar stays anchored. Added native launcher captures and updated home and guide copy for Cart Studio, RetroAchievements, file sharing, on-device updates, and Wi-Fi reports.
-
-Strict Zensical build, JavaScript syntax checks, and all six website CI-routing tests pass locally. Browser checks are part of the website workflow.
+Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. PR #206 covers a shared, more stable header, shorter page slides, fixed guide topic selection, and current launcher captures. The feature guides cover Cart Studio, RetroAchievements, file sharing, on-device updates, and Wi-Fi reports. The strict site build and six CI-routing tests passed locally. Browser validation runs in the website workflow. Local Chromium could not launch in this workspace.
 
 ## Cart Studio shortcut and footer — 2026-11-04
 
