@@ -10,7 +10,10 @@ with tempfile.TemporaryDirectory() as d:
     env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader))
     def prepare(password='ABCDEFGH23456789',ip='192.168.1.2'):
         return subprocess.run(['sh',str(script),'prepare',str(root),ip],input=password+'\n',text=True,env=env,capture_output=True)
+    loader.chmod(0o644)
     assert prepare().returncode==0
+    for name in ('loader', 'rpcd_classic', 'rpcd_winreg'):
+        assert (run/'slot-smb'/name).stat().st_mode & 0o111
     cfg=(run/'slot-smb/smb.conf').read_text()
     for line in ['server min protocol = SMB3_00','server smb encrypt = required','server signing = mandatory','guest ok = no','follow symlinks = no','wide links = no','bind interfaces only = yes','interfaces = 192.168.1.2/32','valid users = nobody',f'path = {root}/Games',f'path = {root}/Labels',f'path = {root}/Wallpapers']:
         assert line in cfg,line

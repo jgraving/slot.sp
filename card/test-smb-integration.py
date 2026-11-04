@@ -52,6 +52,17 @@ with tempfile.TemporaryDirectory() as tmp:
     run=root/'run';run.mkdir()
     loader=next((root/'System/samba/lib').glob('ld-linux-*.so.*'))
     env=dict(os.environ,AGS_RUN=str(run),SLOT_SMB_LOADER=str(loader),SLOT_SMB_TEST_PORT='1445',SLOT_SMB_TEST_INTERFACE='lo',GCONV_PATH=str(root/'System/samba/gconv'))
+    # Model a content card whose mount drops execute permissions. The test
+    # client still needs the original loader, so use a non-executable server copy.
+    card_loader=root/'System/samba/lib/card-loader'
+    shutil.copyfile(loader,card_loader)
+    card_loader.chmod(0o644)
+    env['SLOT_SMB_LOADER']=str(card_loader)
+    for binary in (root/'System/samba/bin').iterdir():
+        if binary.name != 'smbclient':
+            binary.chmod(0o644)
+    for wrapper in (root/'System/samba/libexec').iterdir():
+        wrapper.chmod(0o644)
     password='ABCDEFGH23456789'
     subprocess.run(['sh',str(script),'prepare',str(root),'127.0.0.1'],input=password+'\n',env=env,text=True,check=True)
     config=(run/'slot-smb/smb.conf').read_text()

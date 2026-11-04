@@ -242,8 +242,8 @@ impl Menu {
     }
     fn changed(&mut self) { self.face = None; self.revision = self.revision.wrapping_add(1); }
     fn say(&mut self, message: impl Into<String>) { self.notice_tone=slot_ui::NoticeTone::Neutral;self.notice = message.into(); self.changed(); }
-    pub fn automatic_time_notice(&mut self) {
-        self.toast = Some(("Automatic time is on".into(), Instant::now()));
+    pub fn background_notice(&mut self, message: &str) {
+        self.toast = Some((message.into(), Instant::now()));
         self.toast_tone = slot_ui::NoticeTone::Neutral;
     }
     fn warn(&mut self,message:&str,tone:slot_ui::NoticeTone) {self.say(message);self.notice_tone=tone;}
@@ -804,6 +804,7 @@ impl Menu {
     }
     pub fn set_sharing_allowed(&mut self,allowed:bool) {self.sharing_allowed=allowed;if !allowed {self.sharing.request(None);}}
     pub fn take_shared_games(&mut self)->Vec<slot_store::Cart> {std::mem::take(&mut self.sharing_library)}
+    pub fn sharing_busy(&self) -> bool { !self.sharing.ready() }
     pub fn take_sharing_catalog(&mut self) -> Option<Vec<slot_store::Cart>> { self.sharing_catalog.take() }
     fn toggle_sharing(&mut self) {
         if self.prefs.sharing_enabled||self.sharing.view.active {
@@ -823,10 +824,11 @@ impl Menu {
                 self.changed();
                 if let Some(catalog)=catalog { self.sharing_catalog=Some(catalog); }
                 if let Some(import)=legacy {
-                let text=if import.added.is_empty()&&import.wallpapers==0&&import.skipped==0 {"No new uploads".into()}
-                    else {format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped)};
-                self.sharing_library.extend(import.added);self.say(text);
-            }},
+                    let text=if import.added.is_empty()&&import.wallpapers==0&&import.skipped==0 {"No new uploads".into()}
+                        else {format!("{} added · {} left in Inbox",import.added.len()+import.wallpapers,import.skipped)};
+                    self.sharing_library.extend(import.added);self.say(text);
+                }
+            },
             crate::sharing::Event::Failed(error)=>{self.prefs.sharing_enabled=false;self.store_preferences();self.warn(error,slot_ui::NoticeTone::Danger);},
             _=>self.changed(),
         }}
@@ -1492,6 +1494,27 @@ mod tests {
         app.apply(Action::GbaDown(Btn::A));assert!(app.network.as_ref().unwrap().prefs.automatic_time);assert!(!app.network.as_ref().unwrap().visible);
         app.apply(Action::GbaDown(Btn::Up));app.apply(Action::GbaDown(Btn::A));assert_eq!(app.network.as_ref().unwrap().page,Page::Updates);app.apply(Action::GbaDown(Btn::B));assert!(!app.network.as_ref().unwrap().visible);assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::Updates));
     }
+    #[test]
+    fn automatic_time_blocks_manual_editing_even_offline() {
+        let root = tempfile::tempdir().unwrap();
+        let mut app = crate::app::App::new(vec![]);
+        let mut menu = Menu::new(root.path().into());
+        menu.prefs.automatic_time = true;
+        app.network = Some(menu);
+        app.apply(Action::QuickMenu);
+        app.apply(Action::GbaDown(Btn::A));
+        for _ in 0..7 { app.apply(Action::GbaDown(Btn::Down)); }
+        assert_eq!(app.quick_menu(), Some(slot_ui::QuickRow::DateTime));
+        app.apply(Action::GbaDown(Btn::A));
+        assert_eq!(app.quick_menu(), Some(slot_ui::QuickRow::DateTime));
+        assert_eq!(app.settings_notice().unwrap().1, "Automatic time is on");
+        let menu = app.network.as_mut().unwrap();
+        menu.toggle_automatic_time();
+        assert!(!menu.automatic_time_enabled());
+        app.apply(Action::GbaDown(Btn::A));
+        assert!(matches!(app.phase(), crate::app::Phase::SetClock { .. }));
+    }
+
     #[derive(Default)]
     struct UpdateFake {asked:std::sync::Arc<std::sync::Mutex<Vec<UpdateJob>>>,events:std::collections::VecDeque<UpdateEvent>}
     impl UpdateJobs for UpdateFake {

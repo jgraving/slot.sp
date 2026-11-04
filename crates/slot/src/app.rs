@@ -3420,7 +3420,7 @@ impl App {
 
     fn manual_clock_locked(&mut self) -> bool {
         let Some(menu) = self.network.as_mut().filter(|m| m.automatic_time_enabled()) else { return false; };
-        menu.automatic_time_notice();
+        menu.background_notice("Automatic time is on");
         true
     }
 
@@ -4522,8 +4522,15 @@ impl App {
         self.catalog.sort_by(|a,b|(a.platform as u8,slot_store::sort_key(&a.stem)).cmp(&(b.platform as u8,slot_store::sort_key(&b.stem))));
         self.apply_kid_scope();
     }
+    fn sharing_blocks_library_access(&mut self) -> bool {
+        let Some(menu) = self.network.as_mut().filter(|m| m.sharing_busy()) else { return false; };
+        menu.background_notice("Turn off file sharing first");
+        true
+    }
+
     pub fn open_studio(&mut self) {
         if self.kids.active || self.studio.is_some() || self.link_active() || self.seated_cart().is_some() {return;}
+        if self.sharing_blocks_library_access() { return; }
         let Some(root)=self.root.clone() else {return;};
         let Some(cart)=self.shelf().carts.get(self.shelf().index).cloned() else {return;};
         let wifi=self.network.as_ref().is_some_and(|m|m.wifi_connected());
@@ -6209,7 +6216,7 @@ impl App {
             }
         }
 
-        if let [cancel, swap, choose, studio] = self.core_legend_faces.as_slice() {
+        if let [cancel, swap, choose, ..] = self.core_legend_faces.as_slice() {
             let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
             let swap_x = self.canvas().centred(seen(swap.1));
             for (tex, w, x) in [
@@ -6230,7 +6237,7 @@ impl App {
                     alpha: lift,
                 });
             }
-            if !self.kids.active {
+            if let Some(studio) = self.core_legend_faces.get(3).filter(|_| !self.kids.active) {
                 out.push(Draw::Tex {
                     x: self.canvas().centred(seen(studio.1)),
                     y: CORE_LEGEND_Y - 36.0,
@@ -6381,7 +6388,7 @@ impl App {
         if !self.kid_can_launch() {
             return;
         }
-        if !self.on_shelf() {
+        if !self.on_shelf() || self.sharing_blocks_library_access() {
             return;
         }
         let at = self.shelf().index;
@@ -6673,7 +6680,9 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
-        if action == Action::GbaDown(Btn::X) && !self.kids.active && !self.link_active() {
+        if action == Action::GbaDown(Btn::X) && !self.kids.active && !self.link_active()
+            && self.core_picker.is_some_and(|picker| !picker.closing())
+        {
             self.core_picker = None;
             self.open_studio();
             return;

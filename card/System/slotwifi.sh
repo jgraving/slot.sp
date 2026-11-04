@@ -75,6 +75,7 @@ wifi_up() {
 	stop_pid "$WATCH_PID"
 	# wpa_cli executes the callback directly. SD mounts can be noexec or
 	# omit executable bits, even though the launcher can run this file via sh.
+	SYSTEM_DIR="$(cd "$SYSTEM_DIR" && pwd -P)" || return 1
 	/bin/rm -f "$ACTION" || return 1
 	/bin/cp "$0" "$ACTION" && /bin/chmod 700 "$ACTION" && [ -x "$ACTION" ] || return 1
 	SLOT_WIFI_SYSTEM_DIR="$SYSTEM_DIR" "$WPA_CLI" -p "$CTRL_DIR" -i wlan0 -B -P "$WATCH_PID" -a "$ACTION" >/dev/null 2>&1

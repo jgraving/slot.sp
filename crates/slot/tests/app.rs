@@ -801,22 +801,23 @@ fn start_on(mut pressed: App, mut untouched: App) -> (Option<Core>, f32, bool) {
 }
 
 #[test]
-fn start_opens_no_picker_on_a_game_boy_cart() {
-    let (_d, gb) = on_shelf_gb(&["Tetris", "Zzz"]);
-    let (_twin, gb_twin) = on_shelf_gb(&["Tetris", "Zzz"]);
-    let (picker, shake, moved) = start_on(gb, gb_twin);
-    assert_eq!(picker, None, "a Game Boy cart opened the GBA picker");
-    assert_eq!(
-        shake, 0.0,
-        "START on a Game Boy cart was answered with a refusal shake"
-    );
-    assert!(!moved, "START changed what the shelf draws");
+fn start_opens_studio_for_gb_and_keeps_the_gba_picker() {
+    let (_d, mut gb) = on_shelf_gb(&["Tetris", "Zzz"]);
+    gb.apply(Action::GbaDown(Btn::Start));
+    assert!(gb.studio.is_some(), "START must edit the highlighted Game Boy cart");
+    assert_eq!(gb.core_picker(), None);
+    assert_eq!(gb.shelf_shake(), 0.0);
 
     let (_d, gba) = on_shelf(&["Emerald", "Zzz"]);
     let (_twin, gba_twin) = on_shelf(&["Emerald", "Zzz"]);
     let (picker, _, moved) = start_on(gba, gba_twin);
     assert_eq!(picker, Some(Core::Mgba), "START stopped opening the picker");
     assert!(moved, "the picker opened and the shelf drew the same frame");
+    let (_d, mut gba) = on_shelf(&["Emerald", "Zzz"]);
+    gba.apply(Action::GbaDown(Btn::Start));
+    gba.apply(Action::GbaDown(Btn::X));
+    assert!(gba.studio.is_some(), "X must edit the selected GBA cart");
+    assert_eq!(gba.core_picker(), None);
 }
 
 #[test]

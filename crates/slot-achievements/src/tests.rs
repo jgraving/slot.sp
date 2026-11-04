@@ -760,7 +760,7 @@ fn ram_credentials_prepare_games_without_creating_plaintext_account_files() {
     let root = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(root.path().join("Games/GBA")).unwrap();
     std::fs::write(root.path().join("Games/GBA/Test.gba"), b"fixture").unwrap();
-    let (calls, _) = mpsc::channel();
+    let (calls, requests) = mpsc::channel();
     let service = Service::spawn(
         root.path().into(),
         Server { calls },
@@ -770,8 +770,12 @@ fn ram_credentials_prepare_games_without_creating_plaintext_account_files() {
             password: "fixture-password".into(),
             token: String::new(),
         }),
-        true,
+        false,
     );
+    wait_for(|| service.sync_detail().is_some_and(|detail| detail.problem == "Waiting for Wi-Fi"));
+    assert_eq!(service.sync_status(), SyncStatus::Offline);
+    assert!(requests.try_recv().is_err());
+    service.set_wifi_connected(true);
     wait_for(|| service.sync_status() == SyncStatus::Ready);
     let token = service
         .take_token()
