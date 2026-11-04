@@ -293,7 +293,7 @@ pub(crate) fn usable_ipv4(value: &str) -> bool {
 }
 
 const ADDRESS_TIMEOUT: Duration = Duration::from_secs(30);
-const ADDRESS_ERROR: &str = "No IP address · try Reconnect";
+const ADDRESS_ERROR: &str = "No IP address · retry";
 #[derive(Default)]
 struct AddressWait {
     since: Option<std::time::Instant>,

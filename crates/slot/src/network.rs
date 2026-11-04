@@ -913,7 +913,7 @@ mod tests {
             let mut tick=0;
             for (name,busy,ip,error) in [
                 ("getting-address",wifi::Busy::Addressing,None,None),
-                ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · try Reconnect")),
+                ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · retry")),
                 ("late-success",wifi::Busy::Idle,Some("192.0.2.3"),None),
                 ("disconnected",wifi::Busy::Idle,None,Some("Wi-Fi disconnected · retry"))] {
                 f.app_mut_for_review().network.as_mut().unwrap().open_wifi();
@@ -935,7 +935,7 @@ mod tests {
         let mut view=wifi::WifiView{on:true,connected:Some("Home".into()),busy:wifi::Busy::Addressing,..Default::default()};
         menu.apply_wifi_view(view.clone());assert!(menu.show_progress());assert_eq!(menu.notice_text(),Some("Getting an IP address…"));
         menu.open_updates();assert_eq!(menu.notice_text(),Some("Getting an IP address…"));assert_eq!(menu.page,Page::Wifi);
-        view.busy=wifi::Busy::Idle;view.error=Some("No IP address · try Reconnect".into());menu.apply_wifi_view(view.clone());
+        view.busy=wifi::Busy::Idle;view.error=Some("No IP address · retry".into());menu.apply_wifi_view(view.clone());
         assert!(!menu.show_progress());assert!(menu.notice_text().unwrap().contains("No IP address"));assert!(!menu.wifi_connected());
         view.ip=Some("192.0.2.3".into());view.error=None;menu.apply_wifi_view(view);assert_eq!(menu.notice_text(),Some("Wi-Fi connected"));assert!(menu.wifi_connected());
     }

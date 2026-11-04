@@ -90,7 +90,7 @@ The build includes Samba and its private runtime; it does not require installing
 After Wi-Fi joins the router, **Getting an IP address…** keeps the progress
 indicator active while DHCP finishes. This can take ten seconds or more. A
 usable IPv4 address completes the connection; after 30 seconds without one,
-slot shows **No IP address · try Reconnect**. A late address
+slot shows **No IP address · retry**. A late address
 still recovers automatically. Updates stay unavailable until the address arrives.
 
 If connecting fails, leave the device on the affected network and choose
