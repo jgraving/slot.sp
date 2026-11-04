@@ -1,6 +1,28 @@
 # Development recovery log
 
-## PR completion and merge verification — 2026-11-04
+## Device and settings follow-up merged — 2026-11-04
+
+[PR #202](https://github.com/jgraving/slot.sp/pull/202) merged as `b38b33b437b687b6f0f5762bb48d12a77da7d0dc`. All six workflows passed on `5073bf02d10bebfab03bbd2a7530a5990c196ab7` and the merge introduced no file changes relative to that source.
+
+- Final CI passed for [Blending regression checks](https://github.com/jgraving/slot.sp/actions/runs/41896927078), [Shortcut guide regression checks](https://github.com/jgraving/slot.sp/actions/runs/41896927050), [Scaling regression checks](https://github.com/jgraving/slot.sp/actions/runs/41896927071), [pages](https://github.com/jgraving/slot.sp/actions/runs/41896927077), [Network and achievements test build](https://github.com/jgraving/slot.sp/actions/runs/41896926957), [Launcher quality of life checks](https://github.com/jgraving/slot.sp/actions/runs/41896927014).
+- Restored library and ROM-header scanning after sharing stops, repaired File sharing guide links, and aligned regression tests with the current menu order and cached or uncached RetroAchievements retry status.
+- Physical SMB and live RetroAchievements retests remain pending.
+
+## Merged network/settings usability — 2026-11-04
+
+PR [#203](https://github.com/jgraving/slot.sp/pull/203) merged as `ef57a6c91a87eca52d939dd5c5ea3e73c3d58477`. All six workflows passed on exact source `96ef3abdbe29c826d095a47ace6cef3731d2b290`, and the merged tree equals the tested tree `94746b4c567995ef3917a87a61784e0f23cb3651`. No runtime edits followed validation. Default brightness is Select + Up/Down; Start + Up was only a deliberately remapped test fixture.
+
+- Full content-SD read/write sharing is available at `smb://<IP>/SDCard`, username `slot`, with the device-displayed password and encrypted SMB3. There is no upload/import UI. All content-card folders are exposed; outside-card symlinks remain blocked. Eject in Finder, then turn sharing off before games, Cart Studio or OTA; these wait until the worker has fully stopped. Stopping refreshes additions/removals in the game library.
+- Network file sharing label/disclosure, update spinner, date/source version, installed BaseOS/check result, BaseOS discovery without a PATH-dependent status gate, automatic-time dimming/notification and offline disable, and Start → highlighted cartridge's Cart Studio/Emulator menu are implemented.
+- Wi-Fi checks the actual wlan0 IPv4 address; DHCP callback executable mode and watcher startup errors are fixed. RA reconnect wakes artwork retries and reports distinct transport failures. Diagnostics add sanitized clock/BaseOS/sharing/RA facts. No physical Mac or handheld reproduction, RG34xxSP cause, or live RA account success is claimed.
+- Final CI: [ARM64/server/device/package](https://github.com/jgraving/slot.sp/actions/runs/41868823745), [launcher/native](https://github.com/jgraving/slot.sp/actions/runs/41868823799), [website](https://github.com/jgraving/slot.sp/actions/runs/41868823804), [scaling](https://github.com/jgraving/slot.sp/actions/runs/41868824890), [blending](https://github.com/jgraving/slot.sp/actions/runs/41868823789), [shortcuts](https://github.com/jgraving/slot.sp/actions/runs/41868823819): all success. ARM64 includes real encrypted full-card transfers, outside-card isolation, 168 launcher unit tests, 32 RA tests, device compilation, both cores and package validation. The sandbox-blocked socket test passes in CI; existing live-account tests remain ignored.
+- Complete light/GLES640 and dark/GL720 native menus and motion checks pass, including Studio, sharing, clock, update and long-address captures. Local light screenshots were inspected. Local disk exhaustion prevented additional local captures; final CI captures are generated, not claimed independently inspected.
+- [Test System + corresponding sources](https://github.com/jgraving/slot.sp/actions/runs/41868823745/artifacts/13342804811) and [native captures](https://github.com/jgraving/slot.sp/actions/runs/41868823799/artifacts/13344214469) were present/unexpired at merge; one-day retention. The System ZIP is the update; sources are separate.
+- The post-merge [Build and release workflow](https://github.com/jgraving/slot.sp/actions/runs/41872586861) succeeded and published [build-2026.11.04-ef57a6c](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-ef57a6c) from the merged commit.
+- Earlier OTA #198 and Wi-Fi diagnostics #200 are merged. The [issue #182 reply](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6633575440) already requested the RG34xxSP reporter's sanitized report; do not send duplicate replies without new evidence.
+
+
+## Earlier PR completion checkpoint — 2026-11-04
 
 User authorized finishing and merging the outstanding device/settings work and its handoff, and explicitly excluded ZIP-support design PR #113. Continue on `fix/device-services-ux` / PR #202; finish documentation PR #204 after the verified runtime merge. Live main is `ef57a6c9` from already-merged #203; its release exists. The companion Cart Studio repository has no open PRs.
 
@@ -8,14 +30,14 @@ Rechecked exact head `b8abd89d`: all six workflows failed. Five device/launcher/
 
 ## File sharing, cartridge menu, clock and RetroAchievements — 2026-11-04
 
-Active draft [PR #202](https://github.com/jgraving/slot.sp/pull/202) on `fix/device-services-ux`. Reconciled with main `ef57a6c9` after PR #203 landed independently. Preserve the full SDCard share, current Samba safeguards, update handling, and Start-button cartridge menu from main. The draft’s older conflicting implementations are superseded by the merged-main tree plus the follow-ups below.
+Development notes for [PR #202](https://github.com/jgraving/slot.sp/pull/202) on `fix/device-services-ux`. Reconciled with main `ef57a6c9` after PR #203 landed independently. Preserve the full SDCard share, current Samba safeguards, update handling, and Start-button cartridge menu from main. The draft’s older conflicting implementations are superseded by the merged-main tree plus the follow-ups below.
 
 - File sharing has a masked password and native A-button Show/Hide hints. Set password opens the keyboard and applies the change after encrypted storage succeeds. Removed legacy Inbox code and tests. CI exercises a custom password over SMB3.
 - Developer Wi-Fi report shortcut is L1 + R1 on the Network page. The existing result pill confirms export to Diagnostics. No permanent row or public shortcut hint.
 - Cart Studio is in the Start-button cartridge menu. Gameplay has no duplicate entry and the picker has no over-cart Studio hint.
 - Time zone is an offset-only editor with dimmed calendar and clock fields. Offset updates recompute local display values and preserve UTC. Back restores the previous settings context.
 - RetroAchievements retries a failed current-game session independently of background library sync. The RA menu shows a persistent Current game status instead of a transient game-status pill. Added a regression with a failing session and successful library/artwork requests.
-- Local shell is blocked by a full sandbox filesystem. Run exact-source CI on the reconciled branch. Physical SMB and live RA verification remain pending.
+- Earlier local validation was blocked by a full sandbox filesystem. Final CI results are recorded above.
 
 ## Network and settings usability follow-up — 2026-11-04
 

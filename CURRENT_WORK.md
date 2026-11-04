@@ -1,6 +1,6 @@
-# Active device follow-up
+# Device and settings follow-up merged
 
-Continue on `fix/device-services-ux`, [PR #202](https://github.com/jgraving/slot.sp/pull/202), reconciled with merged PR #203. See WORKLOG.md for verification and hardware follow-up.
+Continue from `main`. [PR #202](https://github.com/jgraving/slot.sp/pull/202) merged as `b38b33b437b687b6f0f5762bb48d12a77da7d0dc`. All six workflows passed on `5073bf02d10bebfab03bbd2a7530a5990c196ab7` and the merge introduced no file changes relative to that source. The earlier [#203 release](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-ef57a6c) was published. Physical SMB and live RetroAchievements retests remain pending. See WORKLOG.md for CI evidence and release history.
 
 # Wi-Fi diagnostics complete
 
