@@ -1,3 +1,9 @@
+# Wi-Fi diagnostics and address-wait feedback
+
+Active branch: `fix/wifi-diagnostics`, based on main `75f54551`. See the newest WORKLOG.md entry. Implementing offline diagnostic export and accurate DHCP progress/errors for issue #182; user authorized a reply after reviewable implementation. No merge or release requested.
+
+---
+
 # OTA safety review complete
 
 Continue from `main`. PR #198 (`fix/ota-install-recovery`) merged as `b8b359fd1be4507888b6d5f114309384e2791ca9` after all five workflows passed on source `0cb14a5f941fa6c5ca2d93c6639bd6e85493c793`; the merged tree matches the tested source. See the newest WORKLOG.md entry and OTA-REVIEW.md for findings, recovery behavior and hardware limits. This supersedes earlier active-branch instructions. No handheld installation was performed.

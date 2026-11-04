@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Wi-Fi diagnostics and address-wait feedback — 2026-11-04
+
+Starting from main `75f54551f0bbadfd13f638b19bc2b97e25b69c4d` on `fix/wifi-diagnostics`. User requests on-device diagnostics and a reply to demifiend9 in issue #182, plus accurate progress/errors: their newer RG SP takes about ten seconds to get an IP after association. Add an offline, explicitly exported, sanitized report and keep connection progress active through DHCP with bounded timeout and late recovery. Preserve credentials and existing network controls; advanced manual network configuration is outside this change. Next: implement, exercise delayed/missing IP and privacy/export failure cases, publish a PR/test build, then reply with truthful availability and collection instructions. No hardware reproduction or root cause confirmed.
+
 ## Merged OTA safety handoff — 2026-11-04
 
 PR [#198](https://github.com/jgraving/slot.sp/pull/198) merged to main as `b8b359fd1be4507888b6d5f114309384e2791ca9`. Exact tested source: `0cb14a5f941fa6c5ca2d93c6639bd6e85493c793` on `fix/ota-install-recovery`. Verified unchanged main base before merge, successful PR merge, main ref, and identical tested/merged Git trees. Continue from main; earlier in-progress instructions below are historical.
