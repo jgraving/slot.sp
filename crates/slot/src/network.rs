@@ -1221,11 +1221,17 @@ mod tests {
         assert!(menu.rows()[2].1.ends_with("/SDCard"));
         assert!(menu.rows().iter().all(|r|r.0!="Import uploads"));
         std::fs::create_dir_all(root.path().join("Games/GBA")).unwrap();
-        std::fs::write(root.path().join("Games/GBA/New.gba"),[0;192]).unwrap();
+        let mut rom = [0; 192];
+        rom[0xa0..0xa8].copy_from_slice(b"NEW GAME");
+        rom[0xac..0xb0].copy_from_slice(b"TEST");
+        std::fs::write(root.path().join("Games/GBA/New.gba"), rom).unwrap();
         menu.toggle_sharing();
         let until=Instant::now()+Duration::from_secs(10);
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}
-        assert_eq!(menu.take_shared_snapshot().unwrap().iter().map(|c|c.stem.as_str()).collect::<Vec<_>>(),["New"]);
+        let snapshot = menu.take_shared_snapshot().unwrap();
+        assert_eq!(snapshot.iter().map(|c|c.stem.as_str()).collect::<Vec<_>>(), ["New"]);
+        assert_eq!(snapshot[0].title, "NEW GAME");
+        assert_eq!(snapshot[0].code, "TEST");
         menu.prefs.sharing_enabled=true;wait_for_sharing(&mut menu);
         std::fs::remove_file(root.path().join("Games/GBA/New.gba")).unwrap();menu.toggle_sharing();
         while !menu.sharing.ready(){menu.step_sharing();assert!(Instant::now()<until);std::thread::sleep(Duration::from_millis(5));}

@@ -158,6 +158,16 @@ impl Sharing {
         self.wanted.as_ref()
     }
 }
+
+// Read the current card only after the server has released its writers.
+fn scan_library(root: &Path) -> Option<Vec<slot_store::Cart>> {
+    let mut carts = slot_store::scan(root).ok()?;
+    for cart in &mut carts {
+        cart.read_header();
+    }
+    Some(carts)
+}
+
 pub fn password() -> Result<Zeroizing<String>, &'static str> {
     use ring::rand::SecureRandom;
     let mut bytes = [0u8; 16];

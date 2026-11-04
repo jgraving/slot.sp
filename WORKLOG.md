@@ -1,5 +1,11 @@
 # Development recovery log
 
+## PR completion and merge verification — 2026-11-04
+
+User authorized finishing and merging the outstanding device/settings work and its handoff, and explicitly excluded ZIP-support design PR #113. Continue on `fix/device-services-ux` / PR #202; finish documentation PR #204 after the verified runtime merge. Live main is `ef57a6c9` from already-merged #203; its release exists. The companion Cart Studio repository has no open PRs.
+
+Rechecked exact head `b8abd89d`: all six workflows failed. Five device/launcher/regression workflows stop at compilation because the Inbox cleanup removed `scan_library` while retaining both callers. The actual encrypted SMB server job passed. Website build fails on two stale `SETTINGS.md#network-game-uploads` links after the File sharing heading changed. Next: restore post-stop library/header scanning, repair stale guide links/instructions, finish independent UX review, then run fresh exact-source CI before merging. A fresh workspace is available; earlier disk-full notes are historical. Physical handheld/desktop/live-account checks remain unverified.
+
 ## File sharing, cartridge menu, clock and RetroAchievements — 2026-11-04
 
 Active draft [PR #202](https://github.com/jgraving/slot.sp/pull/202) on `fix/device-services-ux`. Reconciled with main `ef57a6c9` after PR #203 landed independently. Preserve the full SDCard share, current Samba safeguards, update handling, and Start-button cartridge menu from main. The draft’s older conflicting implementations are superseded by the merged-main tree plus the follow-ups below.
