@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Device services and settings follow-up — 2026-11-04
+
+Active branch `fix/device-services-ux`, based on main `1d45793`. Investigate Finder SMB access and direct SD content sharing, background RetroAchievements and Wi-Fi, slot.sp/BaseOS release detection, the update check spinner, automatic clock controls, and a per-game Cart Studio shortcut. Next: reproduce source-level failures, preserve credential and firmware safety boundaries, and publish a reviewable test build. Physical Mac and handheld verification pending.
+
 ## Merged Wi-Fi diagnostics — 2026-11-04
 
 Completion: [build-2026.11.04-b4bf214](https://github.com/jgraving/slot.sp/releases/tag/build-2026.11.04-b4bf214) is published with its System ZIP, SD2 ZIP, matching sources, checksums and build metadata. Verified release assets are uploaded, the tag points to merge `b4bf214e6ece23d0fba7f85dbcf4e39f951bbf71`, and [post-merge Build and release](https://github.com/jgraving/slot.sp/actions/runs/41848567747) succeeds. [Reply posted and read back](https://github.com/jgraving/slot.sp/issues/182#issuecomment-6633575440): maintainer has no RG34xxSP; asks demifiend9 to install this version, retry, save the offline report, shut down normally and attach the text file. Nothing is automatically uploaded. Await the reporter's device evidence; no confirmed RG34xxSP fix is claimed.
