@@ -215,3 +215,22 @@ fn staging_root_collisions_cannot_modify_an_unrelated_tree() {
     assert_eq!(std::fs::read(&keep).unwrap(),b"keep");
     assert_eq!(std::fs::read_dir(outside.path()).unwrap().count(),1);
 }
+
+#[test]
+fn baseos_failure_does_not_hide_a_launcher_update() {
+    let body=release().to_string().into_bytes();
+    let result=check_with(2_000_000_000,&mut |url| {
+        if url==LATEST {Ok(body.clone())}
+        else if url.contains("/compare/") {Ok(json!({"status":"ahead"}).to_string().into_bytes())}
+        else {Err(UpdateFail::Offline)}
+    },Running{slot:"22222222",baseos:Some(("rgsp","1.3.0"))});
+    let UpdateEvent::Available(offers)=result else {panic!("{result:?}");};
+    assert_eq!(offers.len(),1);assert_eq!(offers[0].kind,Kind::Slot);
+}
+#[test]
+fn newer_rgsp_baseos_is_offered_even_when_launcher_is_current() {
+    let v=json!({"draft":false,"prerelease":false,"tag_name":"v1.4.0","assets":[{"name":"baseos-rgsp-1.4.0.bosupd","state":"uploaded","size":54917120,"digest":format!("sha256:{}","ab".repeat(32)),"browser_download_url":"https://github.com/pvaibhav/BaseOS/releases/download/v1.4.0/baseos-rgsp-1.4.0.bosupd"}]}).to_string();
+    let result=check_with(2_000_000_000,&mut |url|Ok(if url==LATEST {release().to_string()}else{v.clone()}.into_bytes()),Running{slot:"11111111",baseos:Some(("rgsp","1.3.0"))});
+    let UpdateEvent::Available(offers)=result else {panic!("{result:?}");};
+    assert_eq!(offers.len(),1);assert_eq!(offers[0].kind,Kind::BaseOs);assert_eq!(offers[0].version,"1.4.0");
+}

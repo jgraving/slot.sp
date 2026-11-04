@@ -936,6 +936,17 @@ mod tests {
                 let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);
                 encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
+            for (name,busy) in [("updates-spinner",true),("updates-versions",false)] {
+                for _ in 0..90 {
+                    tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);
+                    let m=f.app_mut_for_review().network.as_mut().unwrap();
+                    m.visible=true;m.page=Page::Updates;m.selected=0;m.notice.clear();m.update_busy=busy;
+                    m.last_wifi.busy=wifi::Busy::Idle;m.baseos_message="1.4.0 available".into();m.face=None;
+                    f.compose(&mut g);
+                }
+                let mut encoder=png::Encoder::new(std::fs::File::create(dir.join(format!("{name}.png"))).unwrap(),width,480);
+                encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
         }
     }
 
@@ -1488,7 +1499,7 @@ mod tests {
     }
     #[test]
     fn automatic_time_can_be_disabled_offline_and_refuses_manual_clock_with_a_pill() {
-        let root=tempfile::tempdir().unwrap();let mut app=crate::App::boot(root.path());
+        let root=tempfile::tempdir().unwrap();let mut app=crate::app::App::boot(root.path());
         app.update(10.0);app.confirm_clock();app.update(10.0);
         let menu=app.network.as_mut().unwrap();menu.prefs.automatic_time=true;menu.wifi_on=false;
         menu.toggle_automatic_time();assert!(!menu.automatic_time_enabled());

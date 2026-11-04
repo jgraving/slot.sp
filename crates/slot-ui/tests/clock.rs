@@ -62,3 +62,16 @@ fn older_saves_and_screenshots_use_the_selected_clock_format(){
     assert_eq!(slot_ui::Polaroids::relative_time_format("2026-10-30_12-05-00","2026-10-31_14-00-00",true),"2026-10-30 12:05 PM");
     assert_eq!(slot_ui::Polaroids::relative_time_format("2026-10-30_23-05-00","2026-10-31_14-00-00",false),"2026-10-30 23:05");
 }
+
+#[test]
+fn automatic_time_keeps_date_and_time_read_only_but_allows_time_zone() {
+    use slot_ui::{ClockPicker,Field};
+    let mut picker=ClockPicker::from_secs(1_800_000_000);
+    let manual_key=picker.text();picker.set_automatic(true);assert_ne!(picker.text(),manual_key);
+    for field in [Field::Year,Field::Month,Field::Day,Field::Hour,Field::Minute] {
+        picker.field(field);picker.toggle_editing();assert!(!picker.editing());
+    }
+    picker.field(Field::Offset);picker.toggle_editing();assert!(picker.editing());
+    let before=picker.offset_min();picker.navigate(1,0);assert_ne!(picker.offset_min(),before);
+    picker.set_automatic(false);picker.field(Field::Year);assert!(picker.editing());
+}

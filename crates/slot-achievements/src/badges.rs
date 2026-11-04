@@ -222,6 +222,8 @@ mod tests {
         let mut http=Failing(0);q.step(&mut http);assert_eq!(http.0,1);assert!(q.waiting);assert!(q.retry_seconds()>=29);
         for _ in 0..100 {q.step(&mut http);}assert_eq!(http.0,1);
         q.retry=Instant::now();q.step(&mut http);assert_eq!(http.0,2);assert!(q.retry_seconds()>=59);
+        // A restored connection must wake artwork as well as the main RA queue.
+        q.network_available();assert!(!q.waiting);q.step(&mut http);assert_eq!(http.0,3);assert!(q.retry_seconds()<=30);
     }
     #[test]
     #[ignore = "fetches one public RA badge; no account or award request"]

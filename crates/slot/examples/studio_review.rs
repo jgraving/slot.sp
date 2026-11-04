@@ -130,12 +130,10 @@ fn main() {
     };
     a.settle();
     assert!(matches!(a.f.app().phase(), Phase::Shelf));
-    a.tap(Btn::Menu);
+    a.tap(Btn::Start);
     a.settle();
-    a.nav(QuickRow::Game);
-    a.tap(Btn::A);
-    a.nav(QuickRow::CartStudio);
-    a.save("gameplay-studio-row");
+    assert_eq!(a.f.app().quick_menu(),Some(QuickRow::CartEdit));
+    a.save("start-cartridge-menu");
     a.tap(Btn::A);
     assert!(a.f.app().studio.is_some());
     a.save("studio-offline");
