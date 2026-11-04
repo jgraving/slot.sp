@@ -6,7 +6,7 @@ Find scanned labels and logos, design your own labels, and choose cartridge colo
 
 ## Edit on the handheld
 
-Highlight a cartridge on the carousel, press **Start**, then select **Cart Studio**.
+Press **Start** on a highlighted GB or GBC cartridge to open Cart Studio. On a GBA cartridge, press **Start** to open the emulator picker, then **X** for Cart Studio.
 
 Use the D-pad and the button hints to change the label, shell color, finish or Game Boy cartridge shape. The custom color picker supports RGB and hex values. **B** goes back within the editor; **Save & close** saves the changes and updates the carousel. If saving fails, the editor stays open so you can retry.
 

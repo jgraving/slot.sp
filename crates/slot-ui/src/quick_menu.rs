@@ -124,8 +124,6 @@ pub enum QuickRow {
     AutomaticTime,
     TimeZone,
     CartStudio,
-    CartEdit,
-    CartCore,
 }
 
 impl QuickRow {
@@ -135,7 +133,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::AutomaticTime)
     }
-    pub const ALL: [QuickRow; 115] = [
+    pub const ALL: [QuickRow; 113] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -249,11 +247,8 @@ impl QuickRow {
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
         QuickRow::CartStudio,
-        QuickRow::CartEdit,
-        QuickRow::CartCore,
     ];
 
-    pub const CART: [QuickRow;2] = [QuickRow::CartEdit,QuickRow::CartCore];
 
     pub const MAIN: [QuickRow; 8] = [
         QuickRow::General,
@@ -410,7 +405,6 @@ impl QuickRow {
 
     pub fn page(self) -> &'static [QuickRow] {
         match self {
-            QuickRow::CartEdit|QuickRow::CartCore=>&QuickRow::CART,
             QuickRow::SecurityPin | QuickRow::Updates | QuickRow::AutomaticTime | QuickRow::TimeZone => &QuickRow::GENERAL,
             QuickRow::CarouselSounds => &QuickRow::SOUND_OPTIONS,
             QuickRow::Achievements | QuickRow::CartStudio => &QuickRow::GAME,
@@ -505,7 +499,6 @@ impl QuickRow {
     /// The title is cached once per page, never built during an animation.
     pub fn heading(self) -> &'static str {
         match self.page()[0] {
-            QuickRow::CartEdit => "Cartridge",
             QuickRow::General => "Settings",
             QuickRow::Resume => "Paused",
             QuickRow::PlayScreen => "Settings",
@@ -583,8 +576,7 @@ impl QuickRow {
             QuickRow::CarouselMotion => "Carousel motion",
             QuickRow::About => "About",
             QuickRow::Wifi => "Network",
-            QuickRow::CartStudio | QuickRow::CartEdit => "Cart Studio",
-            QuickRow::CartCore => "Emulator",
+            QuickRow::CartStudio => "Cart Studio",
             QuickRow::Achievements => "RetroAchievements",
             QuickRow::SecurityPin => "Device code",
             QuickRow::Updates => "Updates",
@@ -689,7 +681,7 @@ impl QuickRow {
                 | QuickRow::PlaySound
                 | QuickRow::About
                 | QuickRow::Wifi
-                | QuickRow::Achievements | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
+                | QuickRow::Achievements | QuickRow::CartStudio
                 | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
                 | QuickRow::Reference
                 | QuickRow::PlayReference
@@ -1670,7 +1662,7 @@ pub fn quick_description_face(lines: &[&str]) -> UndoFace {
     UndoFace { rgba, w, h }
 }
 
-/// Cancel, Swap, Choose. Swap keeps the button before the word, the way the old arrows did.
+/// Cancel, Swap, Choose and Cart Studio.
 pub fn core_button_legends() -> Vec<UndoFace> {
     vec![
         with_hint(button_face(ButtonLegend::B), "Cancel", None, true),
@@ -1681,6 +1673,7 @@ pub fn core_button_legends() -> Vec<UndoFace> {
             true,
         ),
         with_hint(button_face(ButtonLegend::A), "Choose", None, false),
+        with_hint(button_face(ButtonLegend::X), "Cart Studio", None, true),
     ]
 }
 

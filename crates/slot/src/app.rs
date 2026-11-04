@@ -1437,7 +1437,7 @@ impl App {
             | QuickRow::Kids
             | QuickRow::DateTime
             | QuickRow::About
-            | QuickRow::Wifi | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
+            | QuickRow::Wifi | QuickRow::CartStudio
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
@@ -1845,8 +1845,7 @@ impl App {
             WallpaperPick::File(_) | WallpaperPick::Random
         );
         let mut hidden = vec![];
-        if self.kids.active || self.shelf().carts.is_empty() {hidden.extend([QuickRow::CartStudio,QuickRow::CartEdit]);}
-        if !self.shelf().carts.get(self.shelf().index).is_some_and(|c|c.platform==Platform::Gba) {hidden.push(QuickRow::CartCore);}
+        if self.kids.active || self.shelf().carts.is_empty() {hidden.push(QuickRow::CartStudio);}
         if !own {
             hidden.push(QuickRow::WallpaperTint);
         }
@@ -3201,10 +3200,10 @@ impl App {
         match self.phase {
             Phase::Shelf => match action {
                 Action::GbaDown(Btn::Start) if self.core_picker.is_none() => {
-                    if !self.shelf().carts.is_empty() {
-                        self.play_held=None;self.shelf_mut().release_hold();
-                        let row=if self.kids.active {QuickRow::CartCore}else{QuickRow::CartEdit};
-                        if !self.hidden_rows().contains(&row) {self.phase=Phase::QuickMenu{row};}
+                    if self.shelf().carts.get(self.shelf().index).is_some_and(|c| c.platform == Platform::Gba) {
+                        self.open_core_picker();
+                    } else {
+                        self.open_studio();
                     }
                 }
                 _ if self.core_picker.is_some() => self.core_picker_input(action),
@@ -3285,7 +3284,6 @@ impl App {
     }
 
     fn quick_menu_input(&mut self, row: QuickRow, action: Action) {
-        if row.page()==QuickRow::CART && action==Action::GbaDown(Btn::Start) {self.phase=Phase::Shelf;return;}
         if row.page()==QuickRow::MAIN {
             let direction=match action {
                 Action::GbaDown(Btn::Left)=>Some((-1,0)),Action::GbaDown(Btn::Right)=>Some((1,0)),
@@ -3470,8 +3468,7 @@ impl App {
                     if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
                 }
             }
-            QuickRow::CartStudio | QuickRow::CartEdit => self.open_studio(),
-            QuickRow::CartCore => {self.phase=Phase::Shelf;self.open_core_picker();},
+            QuickRow::CartStudio => self.open_studio(),
             QuickRow::About => self.phase = Phase::About,
             QuickRow::Reference | QuickRow::PlayReference => self.open_reference(),
             QuickRow::GameDetails | QuickRow::PlayDetails => self.open_game_details(),
@@ -3757,7 +3754,7 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::Bluetooth
             | QuickRow::About
-            | QuickRow::Wifi | QuickRow::CartStudio | QuickRow::CartEdit | QuickRow::CartCore
+            | QuickRow::Wifi | QuickRow::CartStudio
             | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
@@ -6199,18 +6196,17 @@ impl App {
             }
         }
 
-        if let [cancel, swap, choose] = self.core_legend_faces.as_slice() {
+        if let [cancel, swap, choose, ..] = self.core_legend_faces.as_slice() {
             let seen = |w: u32| w.saturating_sub(HINT_EDGE) as f32;
-            let swap_x = self.canvas().centred(seen(swap.1));
-            for (tex, w, x) in [
-                (
-                    cancel.0,
-                    cancel.1,
-                    swap_x - CORE_LEGEND_GAP - seen(cancel.1),
+            let studio = self.core_legend_faces.get(3).copied().filter(|_| !self.kids.active);
+            let mut x = match studio {
+                Some((_, width)) => self.canvas().centred(
+                    seen(cancel.1) + seen(swap.1) + seen(choose.1) + seen(width)
+                        + 3.0 * CORE_LEGEND_GAP,
                 ),
-                (swap.0, swap.1, swap_x),
-                (choose.0, choose.1, swap_x + seen(swap.1) + CORE_LEGEND_GAP),
-            ] {
+                None => self.canvas().centred(seen(swap.1)) - CORE_LEGEND_GAP - seen(cancel.1),
+            };
+            for (tex, w) in [Some(*cancel), Some(*swap), Some(*choose), studio].into_iter().flatten() {
                 out.push(Draw::Tex {
                     x: x.round(),
                     y: CORE_LEGEND_Y,
@@ -6219,6 +6215,7 @@ impl App {
                     tex,
                     alpha: lift,
                 });
+                x += seen(w) + CORE_LEGEND_GAP;
             }
         }
     }
@@ -6654,6 +6651,13 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
+        if action == Action::GbaDown(Btn::X) && self.core_picker.is_some_and(|p| !p.closing()) {
+            self.open_studio();
+            if self.studio.is_some() {
+                self.core_picker = None;
+            }
+            return;
+        }
         let press = match action {
             Action::GbaDown(Btn::Left) | Action::ShelfLeft => Press::Left,
             Action::GbaDown(Btn::Right) | Action::ShelfRight => Press::Right,

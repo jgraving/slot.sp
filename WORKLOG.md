@@ -1,5 +1,12 @@
 # Development recovery log
 
+## Cart Studio shortcut and footer — 2026-11-04
+
+Active branch `fix/cart-studio-hint`, based on main `dd5a6b1`. Remove the Start cartridge settings card and restore direct cartridge controls. Keep the GBA Cart Studio hint in the picker footer, clear of the cartridge. Start now opens Cart Studio directly on GB/GBC and the existing emulator picker on GBA. X opens Cart Studio from that picker, with the hint in the same footer row as Cancel, Swap, and Choose.
+
+- Passed 217 focused tests for app behavior, bindings, settings, legends, and the shortcut reference.
+- Ran the Cart Studio workflow through the production frontend and visually checked the footer at 640×480 in light mode (GLES) and 720×480 in dark mode (GL).
+
 ## Device and settings follow-up merged — 2026-11-04
 
 [PR #202](https://github.com/jgraving/slot.sp/pull/202) merged as `b38b33b437b687b6f0f5762bb48d12a77da7d0dc`. All six workflows passed on `5073bf02d10bebfab03bbd2a7530a5990c196ab7` and the merge introduced no file changes relative to that source.

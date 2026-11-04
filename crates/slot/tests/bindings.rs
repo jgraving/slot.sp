@@ -802,7 +802,7 @@ fn a_brightness_pair_on_the_shoulders_works_on_the_shelf_without_switching() {
 }
 
 #[test]
-fn start_up_raises_brightness_and_start_alone_opens_cartridge_actions() {
+fn start_up_raises_brightness_and_start_alone_opens_the_emulator_picker() {
     let mut keys = ShortcutKeys::default();
     keys.set(
         Shortcut::BrightnessUp,
@@ -815,11 +815,10 @@ fn start_up_raises_brightness_and_start_alone_opens_cartridge_actions() {
     assert!(s.app().core_picker().is_none(), "START+Up opened the chip");
     assert!(s.app().quick_menu().is_none(), "START+Up opened cartridge actions");
     tap(&mut s, &mut now, Btn::Start);
-    assert_eq!(s.app().quick_menu(),Some(QuickRow::CartEdit), "START must open cartridge actions");
-    tap(&mut s, &mut now, Btn::Down);
-    assert_eq!(s.app().quick_menu(),Some(QuickRow::CartCore));
-    tap(&mut s, &mut now, Btn::A);
-    assert!(s.app().core_picker().is_some(), "Emulator must open the existing chip picker");
+    assert!(s.app().quick_menu().is_none());
+    assert!(s.app().core_picker().is_some(), "START must open the existing chip picker");
+    tap(&mut s, &mut now, Btn::X);
+    assert!(s.app().studio.is_some(), "X must open Cart Studio from the picker");
 }
 
 #[test]
