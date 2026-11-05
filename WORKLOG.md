@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Faster 3D preview checks — 2026-11-05
+
+Branch `ci/quick-3d-preview` from `889db1b`. Keep stable desktop and mobile 3D checks automatic, make timing-sensitive playback and WebKit capture manual, and narrow model CI routing. Next: test and publish a PR.
+
 ## Website navigation and launcher previews — 2026-11-05
 
 Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. PR #206 covers a shared, more stable header, shorter page slides, fixed guide topic selection, and current launcher captures. The feature guides cover Cart Studio, RetroAchievements, file sharing, on-device updates, and Wi-Fi reports. The strict site build and six CI-routing tests passed locally. Browser validation runs in the website workflow. Local Chromium could not launch in this workspace.
