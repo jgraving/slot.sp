@@ -65,6 +65,17 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         if (info.columns) assert.equal(info.columns,width>960?3:width>540?2:1,`${width}: feature columns`);
         assert(info.links.find(x=>x.text==='Install').href.endsWith('/installing/'));
         assert(info.links.find(x=>x.text==='Update').href.endsWith('/updating/'));
+        if (route === 'features/guide/' && width === 1366) {
+          const sidebar = page.locator('.md-sidebar--primary');
+          const current = sidebar.locator('a.md-nav__link--active:visible').first();
+          const other = sidebar.locator('a.md-nav__link:not(.md-nav__link--active):visible').first();
+          const before = await current.boundingBox();
+          const background = await current.evaluate(link => getComputedStyle(link).backgroundColor);
+          assert.notEqual(background,'rgba(0, 0, 0, 0)','Current topic has its own selected surface');
+          await other.hover();
+          assert.deepEqual(await current.boundingBox(),before,'Hovering another topic keeps the selected row in place');
+          assert.equal(await current.evaluate(link => getComputedStyle(link).backgroundColor),background);
+        }
         if (route.startsWith('features/') && width<1220) {
           await page.locator('.md-header label[for="__drawer"]').click();
           assert(await page.locator('#__drawer').isChecked(),`${width}: guide drawer did not open`);

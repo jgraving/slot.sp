@@ -72,3 +72,5 @@ indicator active while DHCP finishes. This can take ten seconds or more. A
 usable IPv4 address completes the connection; after 30 seconds without one,
 slot shows **No IP address · retry**. A late address
 still recovers automatically. Updates stay unavailable until the address arrives.
+
+If a connection repeatedly fails, press **L + R** together on the Network page to save an offline Wi-Fi report. The notification shows the filename in the SD card’s **Diagnostics** folder. The report leaves out network names, addresses, passwords, and account tokens.

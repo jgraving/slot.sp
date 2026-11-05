@@ -1,6 +1,6 @@
 /* Website and bundled Studio share a velocity-preserving navigation spring. */
 (() => {
-  function init(root, selector, key) {
+  function init(root, selector) {
     if (!root || root.classList.contains('slot-selector')) return;
     const links = [...root.querySelectorAll(selector)];
     if (!links.length) return;
@@ -13,7 +13,7 @@
     root.prepend(surface);
     const names = ['x','y','width','height'];
     let hovered = null, frame = 0, last = 0, current = null, target = null, bridging = false;
-    const headerBridge = !key && !!root.closest('header');
+    const headerBridge = !!root.closest('header');
     const velocity = Object.fromEntries(names.map(name => [name,0]));
     const visible = link => link && link.getBoundingClientRect().height > 0;
     function paint() {
@@ -26,12 +26,12 @@
       paint();
     }
     function step(now) {
-      // M3 Expressive fast spatial: stiffness 800, damping ratio .6, mass 1.
+      // M3 Expressive fast spatial: stiffness 800, damping ratio .76, mass 1.
       // Integrate analytically; retargeting preserves current position/velocity.
       const dt = Math.min((now - (last || now - 16.667)) / 1000, .064);
       last = now;
-      const omega = Math.sqrt(800), damping = .6 * omega;
-      const frequency = omega * Math.sqrt(1 - .6 ** 2);
+      const omega = Math.sqrt(800), damping = .76 * omega;
+      const frequency = omega * Math.sqrt(1 - .76 ** 2);
       const decay = Math.exp(-damping * dt);
       const cosine = Math.cos(frequency * dt), sine = Math.sin(frequency * dt);
       let settled = true;
@@ -67,8 +67,6 @@
           url:location.href,at:Date.now(),viewport:innerWidth,rootWidth:root.clientWidth,rect:current,opacity:Number(surface.style.opacity)
         })); } catch {}
       }
-      if (!key || !current || surface.style.opacity !== '1') return;
-      try { sessionStorage.setItem(key, JSON.stringify(current)); } catch {}
     }
     function restoreBridge() {
       if (!headerBridge || reduced.matches || document.documentElement.dataset.pageFallback !== 'incoming') return;
@@ -84,16 +82,20 @@
     }
     place(true);
     restoreBridge();
-    if (!reduced.matches && key) {
-      try {
-        const previous = JSON.parse(sessionStorage.getItem(key));
-        if (previous && names.every(name => Number.isFinite(previous[name])) && previous.width > 0 && previous.height > 0 && previous.x >= 0 && previous.y >= 0 && previous.x+previous.width <= root.clientWidth+2 && previous.y+previous.height <= root.scrollHeight+2) snap(previous);
-      } catch {}
-    }
     root.setAttribute('data-selector-ready', '');
-    if (key || bridging) requestAnimationFrame(() => place());
-    root.addEventListener('pointerover', event => { hovered = links.find(link => link.contains(event.target)) || null; place(); });
-    root.addEventListener('pointerleave', () => { hovered = null; place(); });
+    if (bridging) requestAnimationFrame(() => place());
+    root.addEventListener('pointerover', event => {
+      if (event.pointerType === 'touch') return;
+      const link = links.find(link => link.contains(event.target));
+      if (!link || link === hovered) return;
+      hovered = link;
+      place();
+    });
+    root.addEventListener('pointerleave', () => {
+      if (!hovered) return;
+      hovered = null;
+      place();
+    });
     root.addEventListener('focusin', () => place());
     root.addEventListener('focusout', () => requestAnimationFrame(() => place()));
     root.addEventListener('click', remember);
@@ -125,7 +127,6 @@
       else addEventListener('resize', measure);
     }
     init(document.querySelector('.mast-tabs,.mast-links'), 'a.mast-link,a.md-tabs__link');
-    init(document.querySelector('.md-sidebar--primary .md-nav--primary'), 'a.md-nav__link[href]', 'slot-guide-selector');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();

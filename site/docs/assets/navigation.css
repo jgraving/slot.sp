@@ -10,7 +10,11 @@
 .mast-tabs .md-tabs__item--active{border-bottom:0}
 .mast-tabs .md-tabs__link{text-decoration:none}
 .md-sidebar--primary .md-nav--primary a.md-nav__link{min-height:44px;align-items:center;padding:8px 12px;border-radius:22px;text-decoration:none}
-.md-sidebar--primary .md-nav--primary a.md-nav__link--active{color:var(--ink)}
+/* Each topic owns its state so scrolling and hovering cannot move the active pill. */
+.md-sidebar--primary .md-nav--primary a.md-nav__link{transition:background-color 160ms var(--motion-effects),color 160ms var(--motion-effects)}
+.md-sidebar--primary .md-nav--primary a.md-nav__link:is(:hover,:focus-visible){background:var(--surface);color:var(--ink)}
+.md-sidebar--primary .md-nav--primary a.md-nav__link:is(.md-nav__link--active,[aria-current=page]){background:var(--selected);color:var(--ink)}
+@media(prefers-reduced-motion:reduce){.md-sidebar--primary .md-nav--primary a.md-nav__link{transition:none}}
 @media(prefers-reduced-motion:reduce){.slot-selector[data-selector-ready]>.selector-surface,.slot-selector a.selector-link{transition:none!important}}
 
 /* Same 800 / .76 fast spatial spring as the device menu selection. */

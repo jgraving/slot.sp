@@ -10,14 +10,17 @@
     return !path ? 0 : path === 'installing' ? 1 : path === 'updating' ? 2 :
       path === 'features' || path === 'guide' ? 3 : path === 'studio' ? 4 : 5;
   }
+  if (section(location.href) === 3) root.dataset.pageSection = 'guide';
   function direction(from, to, backwards = false) {
     const a = section(from), b = section(to);
+    root.toggleAttribute('data-guide-transition', a === 3 && b === 3);
     root.dataset.pageDirection = a !== null && b !== null && a !== b ?
       (b < a ? 'back' : 'forward') : backwards ? 'back' : 'forward';
   }
   function ready() {
     delete root.dataset.pageTransition;
     delete root.dataset.pageFallback;
+    root.removeAttribute('data-guide-transition');
     document.dispatchEvent(new Event('slot:page-ready'));
   }
   if (native) {
@@ -52,7 +55,7 @@
   const from = previous?.url || document.referrer;
   const type = performance.getEntriesByType('navigation')[0]?.type;
   let generation = 0, exits = [];
-  const layers = () => [...document.querySelectorAll('.md-container,body>.wrap,body>.site-foot')];
+  const layers = () => [...document.querySelectorAll(root.hasAttribute('data-guide-transition') ? '.md-content__inner' : '.md-container,body>.wrap,body>.site-foot')];
   const cancelExits = () => { exits.forEach(animation => animation.cancel()); exits = []; };
   function incoming(source) {
     if (reduced.matches) { ready(); return; }
@@ -132,7 +135,7 @@
     cancelExits();
     root.dataset.pageFallback = 'leaving';
     document.dispatchEvent(new Event('slot:page-leaving'));
-    const distance = Math.min(144, Math.max(48, innerWidth * .1)) * (root.dataset.pageDirection === 'back' ? 1 : -1);
+    const distance = Math.min(112, Math.max(48, innerWidth * .08)) * (root.dataset.pageDirection === 'back' ? 1 : -1);
     exits = elements.map((element, i) => element.animate([
       {transform:start[i]}, {transform:`translate3d(${distance}px,0,0)`}
     ], {duration:reduced.matches ? 0 : 180, easing:'cubic-bezier(.4,0,1,1)', fill:'forwards'}));
