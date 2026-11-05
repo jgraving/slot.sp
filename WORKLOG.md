@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Website navigation and launcher previews merged — 2026-11-05
+
+[PR #206](https://github.com/jgraving/slot.sp/pull/206) merged as `889db1b` after [Pages CI](https://github.com/jgraving/slot.sp/actions/runs/41936279988) passed on `4d02985`. CI covered 48 responsive page/viewport combinations, 42 transitions, and the 3D preview, which passed on retry. [Website deployment](https://github.com/jgraving/slot.sp/actions/runs/41938301725) started on the merge commit.
+
 ## Website navigation and launcher previews — 2026-11-05
 
 Branch `fix/website-motion-and-features`, based on `3b7fa80`. Stabilize the shared header and guide navigation, refresh feature copy, and show current launcher screenshots. PR #206 covers a shared, more stable header, shorter page slides, fixed guide topic selection, and current launcher captures. The feature guides cover Cart Studio, RetroAchievements, file sharing, on-device updates, and Wi-Fi reports. The strict site build and six CI-routing tests passed locally. Browser validation runs in the website workflow. Local Chromium could not launch in this workspace.
