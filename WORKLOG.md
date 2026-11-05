@@ -1,5 +1,13 @@
 # Development recovery log
 
+## GB/GBC pause menu layering — 2026-11-05
+
+Branch `fix/gb-pause-menu-layering` from main `8a3b7f62`, fixing issue #209. The shared menu wrapper appends hardware after the pause card, so tall GB/GBC cartridges cover Resume/Settings/Exit. Move ordinary paused-game hardware below the card without changing About shell choreography or slot back/interior/front order. Add draw-order regression coverage and production-compositor captures for GB/GBC on light/dark, 640/720, GLES/GL; publish a reviewable PR and tag the reporter in a follow-up with verified results. Physical handheld testing remains pending.
+
+Validation: all 51 in-game-menu tests and 70 related quick-menu/session/accessibility tests pass locally. The native production-frontend/compositor matrix passes all 24 combinations (GBA/GB/GBC × light/dark × GLES/GL × 640/720), generating 96 captures. Restoring the original main renderer makes the draw-order test fail (`cart covers menu ink`) and the actual GB pixel comparison fail (`cartridge covers card at y=257`); the fixed renderer passes. Existing About carriage/depth tests pass. Native GB pause and GBC Settings captures were visually inspected. The game backdrop is a synthetic fixture, not a commercial ROM.
+
+PR #210 contains the fix, animation-frame regression, mandatory native pixel checks and `previews/issue-209/pause-menu-review.webp` for inline review. CI on runtime source `29ec34e2457836ea8f1b9382826d7d6752cdc155` is running at this checkpoint; do not claim completed remote validation or a physical handheld test. The screenshot/worklog follow-up changes no runtime source. User authorized a tagged reply to issue #209; link the PR and real UI preview, distinguish local validation from running CI, and ask the reporter to confirm on hardware. No merge was requested.
+
 ## Restore homepage section layout — 2026-11-05
 
 Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Removed the standalone showcase and unused images. Strict site build passed, and the generated homepage has the hero, feature grid, and existing Cart Studio section in order.

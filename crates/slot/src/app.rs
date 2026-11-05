@@ -5054,7 +5054,20 @@ impl App {
             if let Some((back,front))=self.slot_faces {
                 out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
             }
-            self.draw_menu_hardware(out);
+            let mut hardware = Vec::new();
+            self.draw_menu_hardware(&mut hardware);
+            if matches!(self.phase, Phase::Playing { .. } | Phase::Ejecting { .. })
+                && !self.about_motion.active()
+            {
+                // Tall GB/GBC paks extend into the pause card. Keep the whole
+                // slot assembly behind menu surfaces and ink, after the game
+                // and its tint. About deliberately carries it over the card.
+                let at = out[begin..].iter().rposition(|d| matches!(d, Draw::Game))
+                    .map_or(begin, |game| begin + game + 2);
+                out.splice(at..at, hardware);
+            } else {
+                out.extend(hardware);
+            }
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();

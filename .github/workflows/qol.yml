@@ -52,6 +52,19 @@ jobs:
           cargo run --locked -p slot --no-default-features --example accessibility_review -- "$SLOT_QOL_PREVIEW/accessibility-gl" gl 720
           cargo run --locked -p slot --no-default-features --example gallery_review -- "$SLOT_QOL_PREVIEW/gallery-gles" gles 640
           cargo run --locked -p slot --no-default-features --example gallery_review -- "$SLOT_QOL_PREVIEW/gallery-gl" gl 720
+      - name: Verify pause-card pixels and capture GB/GBC menu layering
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          for platform in gba gb gbc; do
+            for theme in light dark; do
+              for backend in gles gl; do
+                for width in 640 720; do
+                  cargo run --locked -p slot --no-default-features --example pause_layering_review -- "$SLOT_QOL_PREVIEW/pause-$platform-$theme-$backend-$width" "$backend" "$width" "$theme" "$platform"
+                done
+              done
+            done
+          done
       - name: Review photo-matched shell and real cartridge motion
         run: |
           cargo run --locked -p slot-ui --example slot_geometry_preview -- "$SLOT_QOL_PREVIEW/geometry-gles" gles 640
