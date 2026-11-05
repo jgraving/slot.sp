@@ -6,6 +6,7 @@ const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'../public');
 const out=path.resolve(process.argv[2]);fs.mkdirSync(out,{recursive:true});
+const full=process.env.SP_MODEL_FULL==='true';
 const origin='https://jakegraving.com/slot.sp/';
 const mime={'.js':'text/javascript','.css':'text/css','.html':'text/html','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.mp4':'video/mp4','.woff2':'font/woff2','.json':'application/json'};
 (async()=>{
@@ -137,7 +138,7 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
     report.push({nativeActions:true,osMappings:true,menuHold:true,autoplayTakeover:true,wrap:true,rapidInput:true,keyboard:true});
   }
   try {
-    for(const width of [1366,390,320]) {
+    for(const width of full?[1366,390,320]:[]) {
       const page=await pageFor(width,{reducedMotion:'no-preference'}),errors=[],requests=[];
       page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
       page.on('console',m=>{if(m.type()==='warning'||m.type()==='error')console.log('Browser:',m.type(),m.text());});
@@ -190,9 +191,9 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       assert.deepEqual(errors,[],`${width}: runtime errors`);
       report.push({width,rotation:true,opaqueModel:true,layoutStable:true,bootOnce:true,errors});await page.close();
     }
-    for(const width of [1366,820,390,320]) {
+    for(const width of full?[1366,820,390,320]:[1366,390]) {
       const page=await pageFor(width),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>requests.push(r.url()));
-      await page.goto(origin,{waitUntil:'networkidle'});await page.locator('.sp-stage').scrollIntoViewIfNeeded();
+      await page.goto(origin,{waitUntil:'domcontentloaded'});await page.locator('.sp-stage').scrollIntoViewIfNeeded();
       await page.locator('.sp-stage.model-ready[data-pose=open]').waitFor();await page.locator('#hero-screen[data-painted=true]').waitFor({state:'attached'});
       assert.equal(await page.locator('#hero-screen').getAttribute('data-demo'),'false');
       assert(await page.locator('#hero-preview').evaluate(v=>v.paused));
@@ -211,15 +212,15 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       await keyButton(page,'right').click();await waitScreen(page,'shelf',1);
       await keyButton(page,'a').click();await waitScreen(page,'seated',1);
       await holdMenu(page);await waitScreen(page,'shelf',1);
-      for(const name of ['Graphite','Pearl Blue','Pearl Pink','Platinum']) {
+      for(const name of full?['Graphite','Pearl Blue','Pearl Pink','Platinum']:['Pearl Blue']) {
         await page.getByRole('button',{name,exact:true}).click();
         await page.waitForFunction(f=>document.getElementById('hero-screen').dataset.finish===f,name.toLowerCase().replaceAll(' ','_'));
         assert.equal(await page.locator('.sp-stage').getAttribute('data-finish'),name.toLowerCase());
-        if(width===1366)await silhouette(page,name.toLowerCase().replaceAll(' ','-'));
+        if(!full||width===1366)await silhouette(page,name.toLowerCase().replaceAll(' ','-'));
       }
       const before=await boxes(page);await page.locator('.model-fold').press('Space');await page.locator('[data-pose=closed]').waitFor();
       await page.locator('.model-fold').press('Enter');await page.locator('[data-pose=open]').waitFor();stable(before,await boxes(page),'Reduced-motion lid');
-      if(width===1366){
+      if(full&&width===1366){
         await page.getByRole('button',{name:'Pearl Blue',exact:true}).click();await page.reload({waitUntil:'networkidle'});
         await page.locator('.sp-stage[data-finish="pearl blue"]').waitFor();
         assert.equal(await page.locator('.finish-name').textContent(),'Pearl Blue');
@@ -228,11 +229,14 @@ assert box and box[0]>1 and box[1]>1 and box[2]<w-1 and box[3]<h-1, ('Clipped ha
       }
       assert.deepEqual(errors,[]);report.push({width,reducedMotion:true,hitTargets:true,finishes:true});await page.close();
     }
-    const saved=await pageFor(390,{reducedMotion:'no-preference'});
-    await saved.addInitScript(()=>Object.defineProperty(navigator,'connection',{value:{saveData:true}}));
-    await saved.goto(origin,{waitUntil:'networkidle'});await saved.locator('.sp-stage.model-ready[data-pose=open]').waitFor();
-    assert.equal(await saved.locator('#hero-preview').getAttribute('src'),null);assert.equal(await saved.locator('#hero-screen').getAttribute('data-demo'),'false');
-    await saved.close();fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
-    console.log('PASS: rotating 3D, shoulder hit targets, boot-first autoplay, manual takeover, OS controls, stable layout, finishes and reduced motion');
+    if(full){
+      const saved=await pageFor(390,{reducedMotion:'no-preference'});
+      await saved.addInitScript(()=>Object.defineProperty(navigator,'connection',{value:{saveData:true}}));
+      await saved.goto(origin,{waitUntil:'networkidle'});await saved.locator('.sp-stage.model-ready[data-pose=open]').waitFor();
+      assert.equal(await saved.locator('#hero-preview').getAttribute('src'),null);assert.equal(await saved.locator('#hero-screen').getAttribute('data-demo'),'false');
+      await saved.close();
+    }
+    fs.writeFileSync(path.join(out,'checks.json'),JSON.stringify(report,null,2));
+    console.log(full?'PASS: rotating 3D, shoulder hit targets, boot-first autoplay, manual takeover, OS controls, stable layout, finishes and reduced motion':'PASS: desktop and phone WebGL, opacity, button targets, lid, finish, and reduced motion');
   }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

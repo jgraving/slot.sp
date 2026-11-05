@@ -82,7 +82,9 @@ The L1/R1 caps wrap over the outer rear corners, with long skirts extending down
 
 If WebGL is unavailable or its context is lost, the existing fixed-angle rendered fallback retains the native player and lid controls. `tools/capture-readme-model.cjs` captures matching open/closed posters, opening frames, button projections and rear/side review views. Collection packages these with matching closing clips and source hashes. Preparation requires the model source hash to match its fallback capture, preventing stale shoulder geometry or button positions.
 
-`site/scripts/check-sp-model.cjs` covers the renderer handoff, complete silhouette, drag and keyboard rotation, all shoulder targets, actual boot frames, automatic slotting, first-button takeover, all five cartridges, wrapping, rapid reversals, hold-to-exit, lid suspension, finish persistence and narrow layouts. `check-sp-video.cjs` explicitly disables WebGL to retain the existing Chromium/WebKit pixel comparisons for the video fallback. Navigation, Studio and link checks still run before deployment.
+Automatic Pages CI runs a Chromium 3D smoke check when the homepage or its model inputs change. It covers desktop and phone rendering, model opacity, button targets, the lid, a finish change, and reduced motion. Guide and unrelated asset changes still get the standard site checks.
+
+Run the **pages** workflow manually for the full 3D review. It includes timed boot playback, carousel and keyboard controls, rotation, finish persistence, and Chromium/WebKit pixel comparisons of the video fallback. Set `SP_MODEL_FULL=true` to run the full model script locally.
 
 ## Page transitions
 

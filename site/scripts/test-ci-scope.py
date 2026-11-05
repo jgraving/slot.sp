@@ -22,12 +22,15 @@ class WebsiteRouting(unittest.TestCase):
         for guide in scope.guides():
             self.assertEqual(scope.classify([guide]), (True, False), guide)
         for path in ['site/docs/questions.md', 'previews/current/provenance.json',
-                     'tools/check-site-navigation.cjs', 'site/studio.json']:
+                     'tools/check-site-navigation.cjs', 'site/studio.json',
+                     'site/docs/assets/launcher/cart-studio-dark.webp',
+                     'site/overrides/partials/footer.html']:
             self.assertEqual(scope.classify([path]), (True, False), path)
 
     def test_homepage_model_and_shared_dependencies_require_3d(self):
         for path in ['site/docs/index.md', 'site/docs/assets/sp-model.js',
-                     'site/docs/assets/slot.css', 'site/overrides/home.html',
+                     'site/docs/assets/slot.css', 'site/docs/assets/hero-player.js',
+                     'site/docs/assets/vendor/three-r180.min.js', 'site/overrides/home.html',
                      'site/overrides/main.html', 'site/zensical.toml',
                      'site/scripts/check-sp-video.cjs', 'previews/sp-model/model.glb',
                      'previews/interactive/provenance.json', 'tools/prepare-site.py',

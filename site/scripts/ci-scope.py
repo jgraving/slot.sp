@@ -22,6 +22,14 @@ SHARED = {
     'licenses/GoogleSansFlex-OFL.txt', 'site/zensical.toml',
 }
 
+MODEL_FILES = {
+    'site/docs/index.md', 'site/overrides/home.html', 'site/overrides/main.html',
+    'site/overrides/partials/page-motion.js',
+    'site/docs/assets/sp-model.js', 'site/docs/assets/hero-player.js',
+    'site/docs/assets/device.css', 'site/docs/assets/slot.css',
+    'site/docs/assets/header.css', 'site/docs/assets/page-motion.css',
+}
+
 
 def classify(paths, force=False):
     paths = set(paths)
@@ -30,9 +38,9 @@ def classify(paths, force=False):
             'tools/assemble-studio.py', 'tools/check-site.py',
             'tools/check-site-navigation.cjs', 'tools/check-page-motion.cjs',
         } for p in paths)
-    model = force or bool(paths & SHARED) or any(
-        p == 'site/docs/index.md' or p.startswith((
-            'site/overrides/', 'site/docs/assets/', 'site/docs/media/',
+    model = force or bool(paths & (SHARED | MODEL_FILES)) or any(
+        p.startswith((
+            'site/docs/assets/vendor/', 'site/docs/media/',
             'site/scripts/check-sp-', 'previews/sp-model/',
             'previews/interactive/', 'previews/homepage/',
         )) for p in paths)
