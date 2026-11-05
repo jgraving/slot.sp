@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Faster 3D preview checks merged — 2026-11-05
+
+[PR #207](https://github.com/jgraving/slot.sp/pull/207) merged to `main` as `04dc308` after [Pages CI](https://github.com/jgraving/slot.sp/actions/runs/41938943008) passed on `f1fc42b`, including the desktop and phone 3D smoke check. Timed playback and Chromium/WebKit comparisons remain available through manual Pages dispatch.
+
 ## Faster 3D preview checks — 2026-11-05
 
 Branch `ci/quick-3d-preview` from `889db1b`. Keep stable desktop and mobile 3D checks automatic, make timing-sensitive playback and WebKit capture manual, and narrow model CI routing. Automatic CI covers desktop and phone WebGL, opacity, hit targets, lid, finish, and reduced motion. Manual Pages runs retain timed playback and Chromium/WebKit captures. Six routing tests, JavaScript syntax, and diff checks passed locally. Browser verification runs in CI.
