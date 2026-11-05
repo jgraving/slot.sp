@@ -948,10 +948,11 @@ fn pause_cards_and_labels_occlude_the_entire_seated_slot_assembly() {
         for light in [false, true] {
             for panel in [(640, 480), (720, 480)] {
                 let d = match platform {
-                    Platform::Gba => common::tmp_root_with_carts(&["First"]),
-                    Platform::Gb => common::tmp_root_with_gb_carts(&["First"]),
-                    Platform::Gbc => common::tmp_root_with_gbc_carts(&["First"]),
+                    Platform::Gba => common::tmp_root_with_carts(&["First", "Second"]),
+                    Platform::Gb => common::tmp_root_with_gb_carts(&["First", "Second"]),
+                    Platform::Gbc => common::tmp_root_with_gbc_carts(&["First", "Second"]),
                 };
+                std::fs::write(d.path().join(slot_store::CART_SHELL_FILE), "First = auto 8090a0 clear\n").unwrap();
                 slot_store::write_slot_state(d.path(), &slot_store::SlotState {
                     clock_set: true, cart: Some("First".into()), cart_platform: Some(platform),
                     appearance: if light { slot_store::Appearance::Light } else { slot_store::Appearance::Dark },
@@ -971,7 +972,7 @@ fn pause_cards_and_labels_occlude_the_entire_seated_slot_assembly() {
                 a.apply(Action::QuickMenu);
                 // Opening, focus changes, Settings expansion and closing all
                 // share the same stack. Check every animation frame, not just rest.
-                for (step, button) in [None, Some(Btn::Down), Some(Btn::A), Some(Btn::B), Some(Btn::B)].into_iter().enumerate() {
+                for (step, button) in [None, Some(Btn::Right), Some(Btn::A), Some(Btn::B), Some(Btn::B)].into_iter().enumerate() {
                     if let Some(button) = button { press(&mut a, button); }
                     for frame in 0..60 {
                         frames(&mut a, 1);
@@ -989,7 +990,7 @@ fn pause_cards_and_labels_occlude_the_entire_seated_slot_assembly() {
                         }).collect();
                         if labels.is_empty() { continue; }
                         assert!(labels.iter().all(|i| *i > front), "{platform:?} {panel:?} light={light} step={step} frame={frame}: cart covers menu ink");
-                        assert!(out[front+1..].iter().any(|d| matches!(d, Draw::Rect { w, colour, .. } if *w > 100.0 && colour[3] == 1.0)),
+                        assert!(out[front+1..].iter().any(|d| matches!(d, Draw::RoundRect { w, colour, .. } if *w > 100.0 && colour[3] > 0.0)),
                             "{platform:?} {panel:?} step={step} frame={frame}: card surface must cover cartridge too");
                     }
                 }

@@ -4,6 +4,8 @@
 
 Branch `fix/gb-pause-menu-layering` from main `8a3b7f62`, fixing issue #209. The shared menu wrapper appends hardware after the pause card, so tall GB/GBC cartridges cover Resume/Settings/Exit. Move ordinary paused-game hardware below the card without changing About shell choreography or slot back/interior/front order. Add draw-order regression coverage and production-compositor captures for GB/GBC on light/dark, 640/720, GLES/GL; publish a reviewable PR and tag the reporter in a follow-up with verified results. Physical handheld testing remains pending.
 
+Validation checkpoint: all 51 in-game-menu tests pass locally, including the new animation matrix. Restoring the original main renderer makes the new regression fail with `cart covers menu ink`; the fixed renderer passes. Native GB dark/GLES640 generates real UI screenshots and passes the Resume/Settings pixel comparisons. The single-cart fixture hid Exit; adding a second cartridge to exercise that button too. Full walkthrough validation is pending. Corrected test fixtures to use clear shells for interior coverage and spatial Right navigation on the three-column pause grid. PR #210 remains draft while the full native matrix and exact-head CI run.
+
 ## Restore homepage section layout — 2026-11-05
 
 Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Removed the standalone showcase and unused images. Strict site build passed, and the generated homepage has the hero, feature grid, and existing Cart Studio section in order.

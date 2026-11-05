@@ -135,6 +135,11 @@ fn main() {
         rom,
     )
     .unwrap();
+    // A second cartridge enables Exit Game, as on a normal library.
+    std::fs::copy(
+        root.join("Games").join(platform.dir_name()).join(format!("Aurora.{}", platform.extensions()[0])),
+        root.join("Games").join(platform.dir_name()).join(format!("Borealis.{}", platform.extensions()[0])),
+    ).unwrap();
     let surface = support::Egl::new(es);
     let mut g = Compositor::new(&surface).unwrap();
     g.fit((width, 480));
@@ -164,7 +169,7 @@ fn main() {
     a.settle();
     assert_eq!(a.f.app().in_game_menu(), Some(QuickRow::Resume));
     a.save("resume", platform);
-    a.tap(Btn::Down);
+    a.tap(Btn::Right);
     assert_eq!(a.f.app().in_game_menu(), Some(QuickRow::Settings));
     a.save("settings-focus", platform);
     a.tap(Btn::A);
@@ -173,7 +178,7 @@ fn main() {
     a.tap(Btn::B);
     a.settle();
     assert_eq!(a.f.app().in_game_menu(), Some(QuickRow::Settings));
-    a.tap(Btn::Down);
+    a.tap(Btn::Right);
     assert_eq!(a.f.app().in_game_menu(), Some(QuickRow::ExitGame));
     a.save("exit", platform);
     a.tap(Btn::B);
