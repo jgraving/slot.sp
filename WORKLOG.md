@@ -2,7 +2,7 @@
 
 ## Faster 3D preview checks — 2026-11-05
 
-Branch `ci/quick-3d-preview` from `889db1b`. Keep stable desktop and mobile 3D checks automatic, make timing-sensitive playback and WebKit capture manual, and narrow model CI routing. Next: test and publish a PR.
+Branch `ci/quick-3d-preview` from `889db1b`. Keep stable desktop and mobile 3D checks automatic, make timing-sensitive playback and WebKit capture manual, and narrow model CI routing. Automatic CI covers desktop and phone WebGL, opacity, hit targets, lid, finish, and reduced motion. Manual Pages runs retain timed playback and Chromium/WebKit captures. Six routing tests, JavaScript syntax, and diff checks passed locally. Browser verification runs in CI.
 
 ## Website navigation and launcher previews — 2026-11-05
 
