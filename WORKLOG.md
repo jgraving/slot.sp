@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Homepage section layout restored — 2026-11-05
+
+[PR #208](https://github.com/jgraving/slot.sp/pull/208) merged as `8a3b7f6` after [Pages CI](https://github.com/jgraving/slot.sp/actions/runs/41969813590) passed on `0624e74`. The homepage again follows the interactive hero, feature grid, and original Cart Studio section. The added screenshot showcase and its unused assets were removed.
+
 ## Restore homepage section layout — 2026-11-05
 
 Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Removed the standalone showcase and unused images. Strict site build passed, and the generated homepage has the hero, feature grid, and existing Cart Studio section in order.
