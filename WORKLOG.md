@@ -2,7 +2,7 @@
 
 ## Restore homepage section layout — 2026-11-05
 
-Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Next: build and publish the correction for review.
+Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Removed the standalone showcase and unused images. Strict site build passed, and the generated homepage has the hero, feature grid, and existing Cart Studio section in order.
 
 ## Faster 3D preview checks — 2026-11-05
 
