@@ -940,3 +940,60 @@ fn about_carries_one_seated_cartridge_and_its_interior_with_the_shell() {
         assert!(matches!(a.phase(), Phase::Playing { cart } if cart == "First"));
     }
 }
+
+// #209: the tall GB/GBC cartridge used to be appended after the pause card.
+#[test]
+fn pause_cards_and_labels_occlude_the_entire_seated_slot_assembly() {
+    for platform in [Platform::Gba, Platform::Gb, Platform::Gbc] {
+        for light in [false, true] {
+            for panel in [(640, 480), (720, 480)] {
+                let d = match platform {
+                    Platform::Gba => common::tmp_root_with_carts(&["First"]),
+                    Platform::Gb => common::tmp_root_with_gb_carts(&["First"]),
+                    Platform::Gbc => common::tmp_root_with_gbc_carts(&["First"]),
+                };
+                slot_store::write_slot_state(d.path(), &slot_store::SlotState {
+                    clock_set: true, cart: Some("First".into()), cart_platform: Some(platform),
+                    appearance: if light { slot_store::Appearance::Light } else { slot_store::Appearance::Dark },
+                    ..Default::default()
+                }).unwrap();
+                let mut a = App::boot(d.path());
+                a.set_snapshot(common::StubSnapshot::boxed());
+                a.on_core_ready();
+                a.set_panel(panel);
+                a.set_game_ready(true);
+                frames(&mut a, 120);
+                menu_faces(&mut a);
+                paint_carts(&mut a);
+                let (back, interior, front) = (TexId::from_raw(9200), TexId::from_raw(9201), TexId::from_raw(9202));
+                a.set_slot_faces(back, front);
+                for shelf in 0..6 { for index in 0..8 { a.set_cart_interior(shelf, index, interior); } }
+                a.apply(Action::QuickMenu);
+                // Opening, focus changes, Settings expansion and closing all
+                // share the same stack. Check every animation frame, not just rest.
+                for (step, button) in [None, Some(Btn::Down), Some(Btn::A), Some(Btn::B), Some(Btn::B)].into_iter().enumerate() {
+                    if let Some(button) = button { press(&mut a, button); }
+                    for frame in 0..60 {
+                        frames(&mut a, 1);
+                        let mut out = vec![];
+                        a.draw(&mut out);
+                        let layer = |id| out.iter().position(|d| matches!(d, Draw::Tex { tex, .. } | Draw::Part { tex, .. } if *tex == id));
+                        let Some(cart) = layer(CART) else { continue; };
+                        let front = layer(front).unwrap();
+                        assert!(layer(back).unwrap() < layer(interior).unwrap());
+                        assert!(layer(interior).unwrap() < cart && cart < front);
+                        let labels: Vec<_> = out.iter().enumerate().filter_map(|(i, d)| match d {
+                            Draw::Tex { tex, .. } | Draw::Part { tex, .. }
+                                if (0..QuickRow::ALL.len()).any(|r| *tex == TexId::from_raw(100+r) || *tex == TexId::from_raw(130+r)) => Some(i),
+                            _ => None,
+                        }).collect();
+                        if labels.is_empty() { continue; }
+                        assert!(labels.iter().all(|i| *i > front), "{platform:?} {panel:?} light={light} step={step} frame={frame}: cart covers menu ink");
+                        assert!(out[front+1..].iter().any(|d| matches!(d, Draw::Rect { w, colour, .. } if *w > 100.0 && colour[3] == 1.0)),
+                            "{platform:?} {panel:?} step={step} frame={frame}: card surface must cover cartridge too");
+                    }
+                }
+            }
+        }
+    }
+}

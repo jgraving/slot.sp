@@ -1,5 +1,9 @@
 # Development recovery log
 
+## GB/GBC pause menu layering — 2026-11-05
+
+Branch `fix/gb-pause-menu-layering` from main `8a3b7f62`, fixing issue #209. The shared menu wrapper appends hardware after the pause card, so tall GB/GBC cartridges cover Resume/Settings/Exit. Move ordinary paused-game hardware below the card without changing About shell choreography or slot back/interior/front order. Add draw-order regression coverage and production-compositor captures for GB/GBC on light/dark, 640/720, GLES/GL; publish a reviewable PR and tag the reporter in a follow-up with verified results. Physical handheld testing remains pending.
+
 ## Restore homepage section layout — 2026-11-05
 
 Branch `fix/restore-homepage-flow` from `04dc308`. Remove the added Cart Studio screenshot showcase from the homepage. Keep the interactive hero, feature grid, and original Cart Studio section in their established order. Removed the standalone showcase and unused images. Strict site build passed, and the generated homepage has the hero, feature grid, and existing Cart Studio section in order.
