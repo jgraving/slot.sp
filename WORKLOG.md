@@ -1,5 +1,13 @@
 # Development recovery log
 
+## GB/GBC layering merged — 2026-11-05
+
+PR [#210](https://github.com/jgraving/slot.sp/pull/210) merged into main as `390f89bd84fa88bc16fa8dea5b7fc379333a886b` after all six workflows passed on exact source `a9223bf88582ef29d02cab3f8f6272156f1b8795`. Tested and merged Git trees both equal `636ed013069ca1cf7014ee67415b074b780e9806`. Passing runs: launcher/native `42085793641`, ARM64/server/device/package `42085793653`, website `42085793959`, scaling `42085793644`, blending `42085793781`, shortcuts `42085793701`. User authorized merging after CI and explicitly retained existing single-cartridge auto-start/eject behavior. Continue from main; earlier unmerged/pending notes below are superseded.
+
+Tagged the reporter with [real UI previews](https://github.com/jgraving/slot.sp/issues/209#issuecomment-6666097860), then [sent the requested test build](https://github.com/jgraving/slot.sp/issues/209#issuecomment-6666373226) after verifying successful packaging and an unexpired artifact. [System and sources download](https://github.com/jgraving/slot.sp/actions/runs/42085793653/artifacts/13443562077) expires 2026-11-06 18:44 UTC. `slot.sp-network-System.zip` is the update; the sources ZIP is not. Await physical handheld confirmation. No completed post-merge release is claimed.
+
+This final recovery checkpoint is saved on the feature branch because main requires pull requests for file updates. It changes Markdown only and is separate from the already merged, fully tested runtime tree.
+
 ## GB/GBC pause menu layering — 2026-11-05
 
 Branch `fix/gb-pause-menu-layering` from main `8a3b7f62`, fixing issue #209. The shared menu wrapper appends hardware after the pause card, so tall GB/GBC cartridges cover Resume/Settings/Exit. Move ordinary paused-game hardware below the card without changing About shell choreography or slot back/interior/front order. Add draw-order regression coverage and production-compositor captures for GB/GBC on light/dark, 640/720, GLES/GL; publish a reviewable PR and tag the reporter in a follow-up with verified results. Physical handheld testing remains pending.
