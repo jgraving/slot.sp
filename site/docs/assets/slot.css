@@ -118,15 +118,6 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var
 html{scroll-padding-top:calc(var(--site-header-height,64px) + 20px)}
 .md-sidebar--primary .md-nav--primary>.md-nav__list>.md-nav__item:not(.md-nav__item--active){display:none}
 
-.launcher-feature{padding:clamp(22px,5vw,48px);border:1px solid #60545b;border-radius:36px;background:#25212b}
-.md-typeset .launcher-feature h2{margin:0 0 8px;color:#fff0e7}
-.md-typeset .launcher-feature p{margin:0 0 20px;color:#e5d5d3;max-width:65ch}
-.launcher-views{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:22px}
-.launcher-views figure{display:block;margin:0;min-width:0}
-.md-typeset .launcher-views img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;background:#141721;border-radius:20px}
-.md-typeset .launcher-views figcaption{margin:8px 0 0;color:#e5d5d3;text-align:start;font-size:14px;font-style:normal}
-@media(max-width:620px){.launcher-views{grid-template-columns:1fr}}
-
 /* A reserved 4:5 stage shared by the live model and rendered fallback. */
 .md-typeset .sp-preview{width:100%;margin:0;padding:0;min-width:0;max-width:none}
 .sp-preview .sp-stage{position:relative;width:100%;max-width:448px;aspect-ratio:4/5;margin:0 auto 8px;isolation:isolate;background:var(--page);overflow:hidden;touch-action:pan-y}
