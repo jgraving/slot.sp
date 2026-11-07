@@ -853,3 +853,5 @@ Right D-pad now follows single disclosure chevrons in settings lists and the net
 Renamed the Display tile/heading to Display & appearance. Moved Recents and Sort Favorites out of General into that card, preserving stable enum/settings IDs. Updated parent/heading/order and Recents navigation regressions plus guide paths.
 
 CI caught a Date & Time regression fixture that walked a hard-coded seven rows in General after Recents/Favorites moved. Updated it to resolve DateTime’s current row position. The new Wi-Fi raster, RA pulse and disclosure tests passed in the same run; full fresh-source CI still required.
+
+Fresh CI passed all 178 launcher unit tests, then found an older navigation regression requiring Right to do nothing on Date & Time/About. Updated that test to the requested disclosure behavior: Left stays on the row, Right opens it, Back returns, and opening/cancelling does not write settings. Existing binding-row Left/Right behavior is retained.

@@ -450,23 +450,22 @@ fn colour_correction_leaves_the_settings_around_it_alone() {
 }
 
 #[test]
-fn the_arrows_change_nothing_on_a_row_that_opens() {
+fn left_keeps_disclosed_rows_and_right_opens_without_writing_settings() {
     let (d, mut a, _) = on_carousel();
     let before = std::fs::read(d.path().join("Config/slot.state")).expect("read slot.state");
-    for row in [QuickRow::General, QuickRow::DateTime, QuickRow::About] {
+    for row in [QuickRow::DateTime, QuickRow::About] {
         open_at(&mut a, row);
         press(&mut a, Btn::Left);
+        assert_eq!(a.quick_menu(), Some(row));
         press(&mut a, Btn::Right);
-        assert_eq!(a.quick_menu(), Some(row), "an arrow left {row:?}");
-        while a.quick_menu().is_some() {
-            press(&mut a, Btn::B);
-        }
+        if row==QuickRow::DateTime {assert!(a.picker().is_some());}
+        else {assert!(matches!(a.phase(),Phase::About));}
+        press(&mut a, Btn::B);
+        assert_eq!(a.quick_menu(),Some(row));
+        while a.quick_menu().is_some() {press(&mut a,Btn::B);}
     }
-    assert_eq!(
-        std::fs::read(d.path().join("Config/slot.state")).expect("read slot.state"),
-        before,
-        "an arrow on a row that opens wrote the card"
-    );
+    assert_eq!(std::fs::read(d.path().join("Config/slot.state")).unwrap(),before,
+        "opening a disclosure wrote settings");
 }
 
 #[test]
