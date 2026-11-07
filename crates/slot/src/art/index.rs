@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use serde::de::{MapAccess, Visitor};
 use serde_json::Value;
 use slot_ui::house_label::Band;
 
@@ -16,37 +15,32 @@ pub struct Entry {
     pub look: Option<Look>,
 }
 
-pub struct ArtIndex {
-    entries: Vec<Entry>,
-    by_crc: HashMap<u32, usize>,
-}
-
-impl ArtIndex {
-    pub fn parse(json: &str) -> Option<ArtIndex> {
-        let Value::Object(map) = serde_json::from_str::<Value>(json).ok()? else {
-            return None;
-        };
-        let mut index = ArtIndex {
-            entries: Vec::new(),
-            by_crc: HashMap::new(),
-        };
-        for (key, raw) in &map {
-            let at = index.entries.len();
-            index.entries.push(entry(raw));
-            let mut crcs: Vec<u32> = crc_of(key).into_iter().collect();
-            if let Some(list) = raw["crcs"].as_array() {
-                crcs.extend(list.iter().filter_map(|c| c.as_str().and_then(crc_of)));
-            }
-            for crc in crcs {
-                index.by_crc.insert(crc, at);
-            }
+/// Scan the catalog one entry at a time. The full catalog contains thousands of
+/// games; retaining its JSON tree and a second CRC map can exhaust device RAM.
+pub fn find(json: &[u8], crc: u32) -> Result<Option<Entry>, serde_json::Error> {
+    struct Match(u32);
+    impl<'de> Visitor<'de> for Match {
+        type Value = Option<Entry>;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("an artwork catalog")
         }
-        Some(index)
+        fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Self::Value, M::Error> {
+            let mut found = None;
+            while let Some((key, raw)) = map.next_entry::<String, Value>()? {
+                let alias = raw["crcs"].as_array().is_some_and(|list| {
+                    list.iter().any(|v| v.as_str().and_then(crc_of) == Some(self.0))
+                });
+                if crc_of(&key) == Some(self.0) || alias {
+                    found = Some(entry(&raw));
+                }
+            }
+            Ok(found)
+        }
     }
-
-    pub fn get(&self, crc: u32) -> Option<&Entry> {
-        self.by_crc.get(&crc).map(|&at| &self.entries[at])
-    }
+    let mut decoder = serde_json::Deserializer::from_slice(json);
+    let found = serde::de::Deserializer::deserialize_map(&mut decoder, Match(crc))?;
+    decoder.end()?;
+    Ok(found)
 }
 
 fn crc_of(key: &str) -> Option<u32> {
@@ -92,4 +86,18 @@ fn look(raw: &Value) -> Option<Look> {
         ground,
         band: Some(band),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find;
+
+    #[test]
+    fn picks_only_the_current_game_and_its_aliases() {
+        let json = br#"{"000206C0":{"support-texture":"GB/first.png"},"not-a-crc":{"crcs":["12345678"],"support-texture":"GBC/alias.png"},"87654321":{"wheel":"GBA/wheel.png"}}"#;
+        assert_eq!(find(json, 0x000206c0).unwrap().unwrap().real.as_deref(), Some("GB/first.png"));
+        assert_eq!(find(json, 0x12345678).unwrap().unwrap().real.as_deref(), Some("GBC/alias.png"));
+        assert!(find(json, 0x99999999).unwrap().is_none());
+        assert!(find(b"{broken", 0x000206c0).is_err());
+    }
 }
