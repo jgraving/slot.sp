@@ -6,7 +6,7 @@ use slot_input::{Action, Btn};
 use slot_power::{Battery, Charge, LedState, Platform};
 use slot_store::{Recent, ShellColour, SlotState};
 use std::{fs, io::Write, path::{Path, PathBuf}, process::{Child, ChildStdin, Command, Stdio}};
-const NAMES: [&str; 5] = ["Emerald", "Fusion", "Ruby", "Sapphire", "WarioWare"];
+const NAMES: [&str; 5] = ["Fern", "Orbit", "Rosette", "Tide", "Wander"];
 struct Device(PathBuf);
 impl Platform for Device {
     fn set_backlight(&mut self,_:u8){} fn battery(&self)->Option<Battery>{Some(Battery{percent:57,charge:Charge::Discharging})}
@@ -28,8 +28,8 @@ fn fixture(root:&Path,finish:ShellColour){
     slot::root::ensure(root);
     let repo=PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     for name in NAMES {let mut bytes=vec![0;256];let title=name.to_uppercase();bytes[0xa0..0xa0+title.len()].copy_from_slice(title.as_bytes());fs::write(root.join("Games/GBA").join(format!("{name}.gba")),bytes).unwrap();fs::copy(repo.join("previews/artwork").join(format!("{name}.png")),root.join("Labels/GBA").join(format!("{name}.png"))).unwrap();}
-    fs::write(root.join(slot_store::CART_SHELL_FILE),"Emerald = auto 239c47 clear\nRuby = auto b5253b clear\nSapphire = auto 2854b5 clear\n").unwrap();
-    let state=SlotState{clock_set:true,shell_colour:finish,shelf:Some("gba".into()),shelf_cart:Some(Recent{platform:slot_store::Platform::Gba,stem:"Emerald".into()}),..Default::default()};
+    fs::write(root.join(slot_store::CART_SHELL_FILE),"Fern = auto 239c47 clear\nRosette = auto b5253b clear\nTide = auto 2854b5 clear\n").unwrap();
+    let state=SlotState{clock_set:true,shell_colour:finish,shelf:Some("gba".into()),shelf_cart:Some(Recent{platform:slot_store::Platform::Gba,stem:"Fern".into()}),..Default::default()};
     slot_store::write_slot_state(root,&state).unwrap();
 }
 fn step(f:&mut Frontend,g:&mut Compositor,action:Option<Action>){f.preview_step(action);f.compose(g);}

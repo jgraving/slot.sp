@@ -11,7 +11,7 @@ use slot_ui::QuickRow;
 use std::{fs,io::Write,path::{Path,PathBuf},process::{Child,ChildStdin,Command,Stdio}};
 const W:u32=720;const H:u32=480;const FPS:u64=60;
 const CLOCK:i64=1_793_523_660;
-const NAMES:[&str;5]=["Emerald","Fusion","Ruby","Sapphire","WarioWare"];
+const NAMES:[&str;5]=["Fern","Orbit","Rosette","Tide","Wander"];
 struct Input(Vec<RawEvent>);impl InputSource for Input{fn poll(&mut self,_:Millis)->Vec<RawEvent>{std::mem::take(&mut self.0)}}
 struct CapturePlatform{root:PathBuf,clock:i64}
 impl Platform for CapturePlatform{
@@ -102,8 +102,8 @@ impl Capture{
   for _ in 0..6 {self.chord(Btn::Menu,Btn::X);self.wait(25);}
   self.wait(90);
   let root=self.f.app().root().unwrap().to_owned();let deadline=std::time::Instant::now()+std::time::Duration::from_secs(12);
-  while slot_store::ShotDir::new(&root,slot_store::Platform::Gba,"Emerald").list().unwrap().len()<6 {assert!(std::time::Instant::now()<deadline,"fixture screenshots were not written");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}
-  assert!(!slot_store::StateRing::new(&root,slot_store::Platform::Gba,slot_store::Core::Mgba,"Emerald").list().unwrap().is_empty(),"fixture save state was not written");
+  while slot_store::ShotDir::new(&root,slot_store::Platform::Gba,"Fern").list().unwrap().len()<6 {assert!(std::time::Instant::now()<deadline,"fixture screenshots were not written");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}
+  assert!(!slot_store::StateRing::new(&root,slot_store::Platform::Gba,slot_store::Core::Mgba,"Fern").list().unwrap().is_empty(),"fixture save state was not written");
   self.nav_play(QuickRow::States);self.tap(Btn::A);self.wait(100);assert!(matches!(self.f.app().phase(),Phase::Polaroids{..}));self.shot("save-states");self.close_menus();
   self.nav_play(QuickRow::Screenshots);self.tap(Btn::A);self.wait(60);assert!(self.f.app().shot_viewer().is_some());let expected=self.f.app().shot_viewer().unwrap().thumb_order(self.f.app().canvas()).len();let deadline=std::time::Instant::now()+std::time::Duration::from_secs(12);while self.f.gallery_textures()<expected{assert!(std::time::Instant::now()<deadline,"gallery thumbnails did not finish");self.frame(vec![]);std::thread::sleep(std::time::Duration::from_millis(10));}self.wait(10);self.shot("screenshots");
   self.tap(Btn::Select);self.tap(Btn::A);self.tap(Btn::Right);self.tap(Btn::A);self.save("screenshots-select");self.tap(Btn::B);
@@ -132,13 +132,12 @@ impl Capture{
  }
  fn settings(&mut self,light:bool){
   self.save("carousel");self.boot("boot");self.tap(Btn::Menu);self.save("settings");
-  self.nav(QuickRow::General);self.rec("settings");self.tap(Btn::A);self.wait(65);self.nav(QuickRow::Theme);self.wait(45);self.shot("general");
-  self.nav(QuickRow::CarouselSounds);self.tap(Btn::A);self.wait(45);self.tap(Btn::A);self.wait(45);self.tap(Btn::B);self.wait(50);self.cut();
-  self.nav(QuickRow::Screen);self.tap(Btn::A);self.save("screen");self.tap(Btn::B);self.wait(35);
+  self.nav(QuickRow::Screen);self.rec("settings");self.tap(Btn::A);self.wait(65);self.nav(QuickRow::Theme);self.wait(45);self.shot("general");self.wait(45);self.cut();
+  self.save("screen");self.tap(Btn::B);self.wait(35);
   self.nav(QuickRow::Bluetooth);self.tap(Btn::A);self.save("sound");self.tap(Btn::B);self.wait(35);
   self.nav(QuickRow::Power);self.tap(Btn::A);self.save("power");self.tap(Btn::B);self.wait(35);
   self.nav(QuickRow::Controls);self.tap(Btn::A);self.save("controls");self.tap(Btn::B);self.wait(35);
-  self.nav(QuickRow::About);self.tap(Btn::A);self.save("about");self.tap(Btn::B);self.wait(35);
+  self.nav(QuickRow::General);self.tap(Btn::A);self.nav(QuickRow::About);self.tap(Btn::A);self.save("about");self.tap(Btn::B);self.wait(35);self.tap(Btn::B);self.wait(35);
   self.nav(QuickRow::Kids);self.tap(Btn::A);self.save("parent-settings");self.tap(Btn::Down);self.rec("parent-code");self.tap(Btn::A);self.wait(30);
   for b in [Btn::L1,Btn::R1,Btn::L2]{self.tap(b);self.wait(16);}self.shot("parent-code");self.wait(20);self.tap(Btn::R2);self.wait(30);for b in [Btn::L1,Btn::R1,Btn::L2,Btn::R2]{self.tap(b);self.wait(12);}self.wait(45);self.cut();
   self.tap(Btn::Down);self.tap(Btn::Down);self.tap(Btn::A);self.save("parent-time");self.tap(Btn::B);self.tap(Btn::B);self.wait(45);
@@ -153,8 +152,8 @@ fn save_png(path:&Path,pixels:&[u8]){let mut e=png::Encoder::new(fs::File::creat
 fn fixture(root:&Path,light:bool,finish:ShellColour,playing:bool,kid:bool){
  if root.exists(){fs::remove_dir_all(root).unwrap();}slot::root::ensure(root);let repo=PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
  for name in NAMES{let mut bytes=vec![0;256];let title=name.to_uppercase();bytes[0xa0..0xa0+title.len()].copy_from_slice(title.as_bytes());fs::write(root.join("Games/GBA").join(format!("{name}.gba")),bytes).unwrap();let art=repo.join("previews/artwork").join(format!("{}.png",name.replace(' ',"-")));fs::copy(art,root.join("Labels/GBA").join(format!("{name}.png"))).unwrap();}
- fs::write(root.join(slot_store::CART_SHELL_FILE),"Emerald = auto 239c47 clear\nRuby = auto b5253b clear\nSapphire = auto 2854b5 clear\n").unwrap();
- let state=SlotState{clock_set:true,cart:playing.then(||"Emerald".into()),appearance:if light{Appearance::Light}else{Appearance::Dark},shell_colour:finish,show_recents:true,recents:NAMES[..3].iter().map(|name|Recent{platform:slot_store::Platform::Gba,stem:(*name).into()}).collect(),shelf:Some("gba".into()),shelf_cart:Some(Recent{platform:slot_store::Platform::Gba,stem:"Emerald".into()}),favorites:NAMES.into_iter().map(|name|Recent{platform:slot_store::Platform::Gba,stem:name.into()}).collect(),..Default::default()};slot_store::write_slot_state(root,&state).unwrap();
+ fs::write(root.join(slot_store::CART_SHELL_FILE),"Fern = auto 239c47 clear\nRosette = auto b5253b clear\nTide = auto 2854b5 clear\n").unwrap();
+ let state=SlotState{clock_set:true,cart:playing.then(||"Fern".into()),appearance:if light{Appearance::Light}else{Appearance::Dark},shell_colour:finish,show_recents:true,recents:NAMES[..3].iter().map(|name|Recent{platform:slot_store::Platform::Gba,stem:(*name).into()}).collect(),shelf:Some("gba".into()),shelf_cart:Some(Recent{platform:slot_store::Platform::Gba,stem:"Fern".into()}),favorites:NAMES.into_iter().map(|name|Recent{platform:slot_store::Platform::Gba,stem:name.into()}).collect(),..Default::default()};slot_store::write_slot_state(root,&state).unwrap();
  let mut policy=slot::kid_policy::Policy::default();policy.minutes=90;policy.volume_limit=50;policy.approved=NAMES[..3].iter().map(|s|(slot_store::Platform::Gba,(*s).into())).collect();if kid{policy.begin(CLOCK).unwrap();let mut gate=slot::parent_code::Gate::new(slot::kid_policy::Policy::directory(root).join("code"));gate.set(&[8,9,10,11]).unwrap();}policy.save(root).unwrap();
 }
 fn main(){

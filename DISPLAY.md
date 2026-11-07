@@ -4,7 +4,7 @@
 
 [Colors](#colors) · [Backgrounds & animation](#backgrounds--animation) · [Screen effects & borders](#screen-effects--borders) · [Your own artwork](#your-own-backgrounds--borders)
 
-![General settings with Light UI theme selected](previews/current/light/general.png)
+![Screen settings with Light UI theme selected](previews/current/light/general.png)
 
 ## Text
 

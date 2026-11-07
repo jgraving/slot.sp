@@ -21,8 +21,8 @@ fn main(){
  assert!(slot_store::ShellColour::FINISHES.contains(&colour));
  let stem=args.get(2).map(|_|format!("hero-{}",colour.key())).unwrap_or("hero-glass".into());
  let carts=slot_store::scan(std::path::Path::new(root)).unwrap();
- let cart=carts.iter().find(|c|c.stem=="Emerald").unwrap().clone();
- let other=carts.iter().find(|c|c.stem=="Fusion").unwrap().clone();
+ let cart=carts.iter().find(|c|c.stem=="Fern").unwrap().clone();
+ let other=carts.iter().find(|c|c.stem=="Orbit").unwrap().clone();
  let mut clock=App::new(vec![cart.clone(),other]);
  let surface=egl_surface::HeadlessSurface::new().unwrap();let mut c=Compositor::new(&surface).unwrap();
  let face=texture(&mut c,slot_ui::cart_face(&cart));

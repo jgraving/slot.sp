@@ -4,23 +4,23 @@
   "duration": 11.84,
   "poster_index": 15,
   "model_sha256": "c88d21517d19dc03ec70649e5359c26da7104da5577b1b831e27305a3683dbe2",
-  "browser_version": "156.0.8078.47",
+  "browser_version": "156.0.8078.79",
   "logo_sha256": "a3f3f9b12c0e3a924161572723948f67a382abb954c985e49fc658b7f4058a6c",
   "logo_font_sha256": "4459a82bdff1f86a4c64996826fb5cdd1c6573cd9900881cd5ea184058a538f4",
   "logo_font_profile": "display",
-  "native_sha256": "7d00e6e64a1d1fccb88b441098e8f4618257ad2efe7c9c1cfaaccf80e88a165a",
-  "source_commit": "b10154efab23545d07a06de64c0a1b36d2984801",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41555512881",
+  "native_sha256": "62302adb7278df2d8d31070ef6eb2d525202e802937f7795ca0ce208c1ac9874",
+  "source_commit": "528f000f5d4664b0383ec3a984a17cf2a6c7818b",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/42371236846",
   "files": [
     {
       "path": "previews/readme-model/hero-3d.gif",
-      "bytes": 2693179,
-      "sha256": "05d0c586813956b0ee7edd95203a44b865428d4150f383874eadb9f500482937"
+      "bytes": 2774426,
+      "sha256": "d53ec81164ffa16a3b448a1c1dee78f27393ea43b49518b432a3e4210ac0b94e"
     },
     {
       "path": "previews/readme-model/hero-3d.png",
-      "bytes": 155394,
-      "sha256": "367c6fee6d8a6953f8fc01b9e93b4ee5bc867411fc4bc9c32e62a2be77db05f2"
+      "bytes": 151035,
+      "sha256": "91b9b519745d34ae21f39e9d2d9ee7e7cd60231d2891f108ef2b69320c715242"
     }
   ]
 }

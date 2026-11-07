@@ -1,6 +1,6 @@
 # Customization
 
-Add your own cartridge labels, colors, wallpapers and game borders. [Cart Studio](../features/cart-studio.md) provides a browser editor for labels and cartridge appearance; the sections below describe the files on the card.
+Add your own cartridge labels, colors, wallpapers and game borders. [Cart Studio](../features/cart-studio.md) edits labels and cartridge appearance on the handheld; the sections below describe the files on the card.
 
 ## Cart labels
 
@@ -14,7 +14,7 @@ Put a PNG in the matching `Labels/GBA`, `Labels/GB` or `Labels/GBC` folder. Give
 
 Restart slot.sp after adding labels.
 
-Use [Cart Studio](https://jakegraving.com/slot.sp/studio/) to find artwork, design labels and choose cartridge colors. The [Studio guide](../features/cart-studio.md) covers card access and ZIP export.
+Use Cart Studio on the handheld to find artwork and choose cartridge colors. The [on-device guide](../features/cart-studio.md) explains the controls and saving.
 
 ## Cart shells
 

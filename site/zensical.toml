@@ -24,10 +24,9 @@ nav = [
     { "Sleep & power" = "features/power-options.md" },
     { "Link play" = "features/link-play.md" },
     { "Wi-Fi & achievements" = "features/retroachievements.md" },
-    { "Cart Studio guide" = "features/cart-studio.md" },
+    { "On-device Cart Studio" = "features/cart-studio.md" },
     { "Reference" = ["features/settings.md", "guide/storage.md", "guide/customizing.md", "guide/troubleshooting.md"] },
   ] },
-  { "Cart Studio" = "https://jakegraving.com/slot.sp/studio/" },
   { "About" = ["questions.md", "credits.md", "ai.md", "impressum.md", "datenschutz.md"] },
 ]
 

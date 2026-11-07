@@ -15,7 +15,7 @@ out = root / 'publish/previews/interactive'
 review = root / 'review'
 out.mkdir(parents=True, exist_ok=True)
 review.mkdir(parents=True, exist_ok=True)
-names = ['Emerald', 'Fusion', 'Ruby', 'Sapphire', 'WarioWare']
+names = ['Fern', 'Orbit', 'Rosette', 'Tide', 'Wander']
 files = []
 timelines = {}
 checks = []

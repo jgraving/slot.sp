@@ -12,7 +12,7 @@ E-Mail: [jgraving@gmail.com](mailto:jgraving@gmail.com)
 
 ## Über dieses Angebot
 
-slot.sp ist ein Open-Source-Projekt für Anbernic-Handhelds. Diese Website bietet Informationen, Anleitungen, Downloads und Cart Studio zur lokalen Bearbeitung von Spiele-Labels.
+slot.sp ist ein Open-Source-Projekt für Anbernic-Handhelds. Diese Website bietet Informationen, Anleitungen, Downloads und Anleitungen zur Bearbeitung von Spiele-Labels auf dem Handheld.
 
 Game Boy ist eine Marke von Nintendo. Dieses Projekt ist weder mit Nintendo verbunden noch von Nintendo unterstützt.
 

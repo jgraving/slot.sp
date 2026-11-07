@@ -97,6 +97,14 @@ assert studio_info['renderer_repository'] == 'jgraving/slot.sp'
 assert studio_info['assets_base'] == f"assets/{studio_info['source_commit'][:12]}/"
 assert (ROOT / 'studio' / studio_info['assets_base'] / 'pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
+assert 'const REMOTE_ARTWORK = false;' in (ROOT/'studio'/studio_info['assets_base']/'studio.js').read_text()
+for source, page in pages.items():
+    if source.is_relative_to(ROOT/'studio'):
+        continue
+    for _, link in page.links:
+        destination = urlsplit(urljoin('https://'+ORIGIN+BASE+str(source.relative_to(ROOT)), link))
+        assert not (destination.netloc == ORIGIN and destination.path.startswith(BASE+'studio/')), f'Public editor link in {source}'
+
 hero_durations = []
 hero_manifest = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())
 hero_revision = hero_manifest.get('capture_source_commit',hero_manifest['source_commit'])[:12]
@@ -146,7 +154,13 @@ site_bytes = sum(path.stat().st_size for path in ROOT.rglob('*') if path.is_file
 assert site_bytes <= 950 * 1024 * 1024, f'Website exceeds 950 MiB deployment budget: {site_bytes} bytes'
 print(f'Website size: {site_bytes / 1024 / 1024:.1f} MiB (950 MiB budget)')
 art_index=json.loads((art_root/'index.json').read_text())
-assert art_index, 'Studio artwork catalog is empty'
+art_enabled=json.loads((art_root/'availability.json').read_text())['catalog_enabled']
+assert art_enabled == json.loads((ROOT.parent/'artwork-policy.json').read_text())['catalog_enabled']
+if art_enabled:
+    assert art_index, 'Studio artwork catalog is empty'
+else:
+    assert art_index == {}, 'Disabled catalog must be empty'
+    assert not list(art_root.rglob('*.png')), 'Disabled catalog retained artwork'
 for entry in art_index.values():
     for kind in ('support-texture','wheel'):
         if name:=entry.get(kind):

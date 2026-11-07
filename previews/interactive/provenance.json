@@ -1,6 +1,6 @@
 {
-  "source_commit": "49fe989f0f9ad2d980a200599316df4458c41e72",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/41490287336",
+  "source_commit": "528f000f5d4664b0383ec3a984a17cf2a6c7818b",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/42371236846",
   "capture": "previews/interactive_hero.rs",
   "dimensions": [
     720,
@@ -11,68 +11,68 @@
   "files": [
     {
       "path": "previews/interactive/graphite.mp4",
-      "bytes": 1666618,
-      "sha256": "b1cdeb11984871f671a793c4c34e3b1307356bef923f930784ba894910fe8e25"
+      "bytes": 1055871,
+      "sha256": "5ec1d5f2212d80e84e247d81d39de8161afa6f8d700249d206a2a926908bf88b"
     },
     {
       "path": "previews/interactive/graphite.png",
-      "bytes": 218406,
-      "sha256": "d7c8755f0ca9f7e067b056777d27993a44b84884247be420f7d3e1db84a0d8d6"
+      "bytes": 134210,
+      "sha256": "65305e7c2994215e6ffc9a37c8fb2f9d284b768404cd948884e417427cfe15d2"
     },
     {
       "path": "previews/interactive/graphite.webp",
-      "bytes": 178794,
-      "sha256": "573edcb5e3772b1de7a6e18b6e1df87c241d7cc7a7a97c4dd7fb2073a59e3bf4"
+      "bytes": 119676,
+      "sha256": "bb4866386a209bc95a49be432698470348f5f592aa1288a0c5bdf559412559db"
     },
     {
       "path": "previews/interactive/pearl_blue.mp4",
-      "bytes": 1675694,
-      "sha256": "3b531518e71f3f071aec87ff49e3dd83ffde022b14f0f4a206f69679516330c8"
+      "bytes": 1071691,
+      "sha256": "0d7556ee2a0387fc7556d2eae6ad6da742ea1d1b406a01a7487d143f38ce075d"
     },
     {
       "path": "previews/interactive/pearl_blue.png",
-      "bytes": 221057,
-      "sha256": "5d326c59c282f302524fb6a8b851f14b39684931606f7bbada794374bc7265fd"
+      "bytes": 137325,
+      "sha256": "6d53c279b34f086ad8652711c523cbcd75ba7002937d9f010374d478267967e0"
     },
     {
       "path": "previews/interactive/pearl_blue.webp",
-      "bytes": 180618,
-      "sha256": "f37c01eab7e71e0e1277f1430e1926c7858cce890b040c616cc604b05c40b215"
+      "bytes": 123282,
+      "sha256": "b43bb51a0e630dc4ec088ae96b05d2c5ee952b3afd7a32b61b60ddba75247ab2"
     },
     {
       "path": "previews/interactive/pearl_pink.mp4",
-      "bytes": 1681652,
-      "sha256": "89f0a19a81ca3644342ca49d14935046c137143ba4529bf40630c3b6f4faab20"
+      "bytes": 1074755,
+      "sha256": "d364860763609a13bde41f586d35604e36ad9f080a3bf81a26f431c0fcaef4b0"
     },
     {
       "path": "previews/interactive/pearl_pink.png",
-      "bytes": 221106,
-      "sha256": "49ed976d660e291b5128f5a5e8834a94c5b91e5f574aeafc7671999666c69570"
+      "bytes": 137343,
+      "sha256": "088b63b356b20c27c29420703ae1652a6831ef04a0e6f9cbafcd70fd38d0d64c"
     },
     {
       "path": "previews/interactive/pearl_pink.webp",
-      "bytes": 181316,
-      "sha256": "015894d736e8ae2326185056b372d822ba3765adc9e280f61afb0ed9cc068c74"
+      "bytes": 124542,
+      "sha256": "b73ac8a5e986f761eba7d3dde0fae373fd3729034900c27a2860e08bfe573112"
     },
     {
       "path": "previews/interactive/platinum.mp4",
-      "bytes": 1669420,
-      "sha256": "89a58e1e33805d49b124a6edafb494645e461e0d968f9e0ef645156940ccd368"
+      "bytes": 1065994,
+      "sha256": "b0ad24d23bc501aa01d6758a9712e8c40375d176944e196bf4edf23e11d95465"
     },
     {
       "path": "previews/interactive/platinum.png",
-      "bytes": 219126,
-      "sha256": "61207f0d8e0748a3368093bfd6d8841c112d525f1fc8ac1ac0aae933aec79b28"
+      "bytes": 135738,
+      "sha256": "3a4dbe12187da811604520d471cc06adccdd2226057c3d201f588ec19b0f3132"
     },
     {
       "path": "previews/interactive/platinum.webp",
-      "bytes": 178536,
-      "sha256": "75e147924e15058ee4063d0388d0ac725690bc42897d22ca243ff1b88ce9278d"
+      "bytes": 122316,
+      "sha256": "d948d9943c47fd316df3fae53772d42dd0a6e8e27d03d308854a75b3be2be4b0"
     },
     {
       "path": "previews/interactive/timeline.json",
-      "bytes": 515,
-      "sha256": "ebd739737d4c4225e0566ec62ca2a460f2f5a21113a2e243f3e59850c31ad623"
+      "bytes": 507,
+      "sha256": "c93dc6a741dfcbefd69496025d00fef7a1482c212778bff24b3e47f6b4f1e6dc"
     }
   ]
 }

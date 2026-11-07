@@ -12,8 +12,8 @@ fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let [root, out] = args.as_slice() else { panic!("ROOT OUT") };
     let carts = slot_store::scan(std::path::Path::new(root)).unwrap();
-    let cart = carts.iter().find(|c| c.stem == "Emerald").unwrap().clone();
-    let other = carts.iter().find(|c| c.stem == "Fusion").unwrap().clone();
+    let cart = carts.iter().find(|c| c.stem == "Fern").unwrap().clone();
+    let other = carts.iter().find(|c| c.stem == "Orbit").unwrap().clone();
     let mut app = App::new(vec![cart.clone(), other]);
     let surface = egl_surface::HeadlessSurface::new().unwrap();
     let mut c = Compositor::new(&surface).unwrap();

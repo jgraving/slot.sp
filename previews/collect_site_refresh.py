@@ -33,7 +33,7 @@ def duration(path):return float(subprocess.check_output(['ffprobe','-v','error',
 timelines=[];hero_durations=[]
 # The legacy full run still uses the older pinned UI. Only the focused run
 # supplies the new gallery's readable Light controls.
-excluded_light={'link-host','link-join','save-states'} | (set() if args.refresh_hero_gallery else set(gallery))
+excluded_light={'link-host','link-join','save-states'}
 for theme in ['dark','light']:
  source=root/'raw/current'/theme;target=current/theme;target.mkdir(exist_ok=True)
  if source.exists():

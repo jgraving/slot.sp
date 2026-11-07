@@ -1,4 +1,4 @@
-"""Prepare original label crops and a custom wallpaper for README captures."""
+"""Prepare original demo labels and a custom wallpaper for README captures."""
 import json
 import sys
 import shutil
