@@ -1,5 +1,9 @@
 # Development recovery log
 
+## Upstream on-device Studio integration — 2026-11-07
+
+Branch `feat/upstream-device-studio` from main `9d36c36`. Compare original project `slot-cfw/slot` at `0fe8f5cf` and adapt useful on-device Studio behavior to slot.sp's card, typography, hints, motion and cartridge layers. Existing Studio model already includes latest palette selection and title fallback; preserve offline title editing and original-color restoration fixes. Next: implement visual sticker choices, duplicate suppression and apply feedback; audit targeted OS fixes, add regression/native captures, push a reviewable PR and verify exact-source CI. Do not bulk-merge upstream's Collections, Gamebit web server, ROM-renaming sweep or emulator/core migration into this UI change. Preserve artwork cleanup, direct-download shell marks, sharing lifecycle and save rollback. Physical networking/handheld tests remain pending.
+
 ## GB/GBC pause menu layering — 2026-11-05
 
 Branch `fix/gb-pause-menu-layering` from main `8a3b7f62`, fixing issue #209. The shared menu wrapper appends hardware after the pause card, so tall GB/GBC cartridges cover Resume/Settings/Exit. Move ordinary paused-game hardware below the card without changing About shell choreography or slot back/interior/front order. Add draw-order regression coverage and production-compositor captures for GB/GBC on light/dark, 640/720, GLES/GL; publish a reviewable PR and tag the reporter in a follow-up with verified results. Physical handheld testing remains pending.
