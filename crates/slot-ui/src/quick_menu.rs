@@ -1212,7 +1212,8 @@ pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
 pub fn quick_heading_face(label: &str) -> UndoFace {
     let label=menu_sentence_case(label);let h=crate::expressive::TITLE_H as u32;
     let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h};};
-    let layout=text::fit_preserving_case(font,&label,260.0,1,32.0,24.0);
+    let width=if label=="Display & appearance" {380.0}else{260.0};
+    let layout=text::fit_preserving_case(font,&label,width,1,32.0,24.0);
     let w=layout.lines.iter().map(|line|text::line_width(font,line,layout.px,layout.tracking)).fold(0.0,f32::max).ceil() as u32+2*MENU_PAD;
     let mut rgba=vec![0;(w*h*4)as usize];text::draw_centred(&mut rgba,w,h,&layout,MENU_INK);UndoFace{rgba,w,h}
 }

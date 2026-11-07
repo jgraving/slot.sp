@@ -661,3 +661,10 @@ fn library_presentation_settings_live_in_display_and_appearance() {
         assert_eq!(row.heading(),"Display & appearance");
     }
 }
+
+#[test]
+fn the_full_appearance_heading_fits_between_status_corners() {
+    let face=slot_ui::quick_heading_face("Display & appearance");
+    assert!(face.w>260 && face.w<=400,"appearance was truncated or overlaps the corners: {}",face.w);
+    let (_,last)=ink_columns(&face);assert!(last>260,"the last word was not rasterized");
+}
