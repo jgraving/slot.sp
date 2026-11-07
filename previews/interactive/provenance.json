@@ -1,6 +1,6 @@
 {
-  "source_commit": "528f000f5d4664b0383ec3a984a17cf2a6c7818b",
-  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/42371236846",
+  "source_commit": "77358c762610980c0818b25c54d5cb0b4ca88f75",
+  "run_url": "https://github.com/jgraving/slot.sp/actions/runs/42376368137",
   "capture": "previews/interactive_hero.rs",
   "dimensions": [
     720,
@@ -11,63 +11,63 @@
   "files": [
     {
       "path": "previews/interactive/graphite.mp4",
-      "bytes": 1055871,
-      "sha256": "5ec1d5f2212d80e84e247d81d39de8161afa6f8d700249d206a2a926908bf88b"
+      "bytes": 1041747,
+      "sha256": "ae75aa2832ce0d4fa8dbc340d7a9e81cf49959256ad28490d7ca3afdf274399f"
     },
     {
       "path": "previews/interactive/graphite.png",
-      "bytes": 134210,
-      "sha256": "65305e7c2994215e6ffc9a37c8fb2f9d284b768404cd948884e417427cfe15d2"
+      "bytes": 129932,
+      "sha256": "e483972f1b8997e53efd0c7ce7c545381f88b930f355dcc912f453bcd28a2e6d"
     },
     {
       "path": "previews/interactive/graphite.webp",
-      "bytes": 119676,
-      "sha256": "bb4866386a209bc95a49be432698470348f5f592aa1288a0c5bdf559412559db"
+      "bytes": 118346,
+      "sha256": "aca5f29879503332f027c396c7bc7400b08a0ebc2f60f91f084e3acce4122657"
     },
     {
       "path": "previews/interactive/pearl_blue.mp4",
-      "bytes": 1071691,
-      "sha256": "0d7556ee2a0387fc7556d2eae6ad6da742ea1d1b406a01a7487d143f38ce075d"
+      "bytes": 1053257,
+      "sha256": "5371bf84450ea4ddf5e3103e4d7d9322fe72c52f329bdd67578b6fd3f7626736"
     },
     {
       "path": "previews/interactive/pearl_blue.png",
-      "bytes": 137325,
-      "sha256": "6d53c279b34f086ad8652711c523cbcd75ba7002937d9f010374d478267967e0"
+      "bytes": 133351,
+      "sha256": "c57e6f372442ba001f4f5864277539de919f68ef2c78dfd4707c79871cdbd33a"
     },
     {
       "path": "previews/interactive/pearl_blue.webp",
-      "bytes": 123282,
-      "sha256": "b43bb51a0e630dc4ec088ae96b05d2c5ee952b3afd7a32b61b60ddba75247ab2"
+      "bytes": 120888,
+      "sha256": "b654707ff06e5118002ac8a0ce9e7805b41092d2f3d0a8fe446d35291b5bbd9d"
     },
     {
       "path": "previews/interactive/pearl_pink.mp4",
-      "bytes": 1074755,
-      "sha256": "d364860763609a13bde41f586d35604e36ad9f080a3bf81a26f431c0fcaef4b0"
+      "bytes": 1057396,
+      "sha256": "b4bb38cd8e8209ce7664b969dafe58adbb7613486217c026247da29f24991de3"
     },
     {
       "path": "previews/interactive/pearl_pink.png",
-      "bytes": 137343,
-      "sha256": "088b63b356b20c27c29420703ae1652a6831ef04a0e6f9cbafcd70fd38d0d64c"
+      "bytes": 133207,
+      "sha256": "5488688287d1bf09329111d7c29aba34f2e3f273b69dcbae9270d15ea48d5ae9"
     },
     {
       "path": "previews/interactive/pearl_pink.webp",
-      "bytes": 124542,
-      "sha256": "b73ac8a5e986f761eba7d3dde0fae373fd3729034900c27a2860e08bfe573112"
+      "bytes": 122238,
+      "sha256": "54afebb5317fade14b6bd6a99f1504c0abbc02f1a8623201fed0cd3b92a885d0"
     },
     {
       "path": "previews/interactive/platinum.mp4",
-      "bytes": 1065994,
-      "sha256": "b0ad24d23bc501aa01d6758a9712e8c40375d176944e196bf4edf23e11d95465"
+      "bytes": 1048792,
+      "sha256": "a66f3a84852d2bd3afe4adc3e81a3ca7b187e69ff21ceadb64585793eddbf57a"
     },
     {
       "path": "previews/interactive/platinum.png",
-      "bytes": 135738,
-      "sha256": "3a4dbe12187da811604520d471cc06adccdd2226057c3d201f588ec19b0f3132"
+      "bytes": 131381,
+      "sha256": "d8517dec02358edb1ae2d0bf25d16a473c49167970dcc234aa32942017ee740f"
     },
     {
       "path": "previews/interactive/platinum.webp",
-      "bytes": 122316,
-      "sha256": "d948d9943c47fd316df3fae53772d42dd0a6e8e27d03d308854a75b3be2be4b0"
+      "bytes": 120190,
+      "sha256": "e4cae515c405601019a7f6c52b0a827753cf3d3f4a2430ae6f1372d0dc2ceab6"
     },
     {
       "path": "previews/interactive/timeline.json",
