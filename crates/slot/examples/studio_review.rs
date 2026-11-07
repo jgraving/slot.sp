@@ -36,19 +36,23 @@ fn main() {
             }
         }
         fn save(&mut self, name: &str) {
+            self.settle();
             let until = std::time::Instant::now() + std::time::Duration::from_secs(10);
             while self
                 .f
                 .app()
                 .studio
                 .as_ref()
-                .is_some_and(|m| !m.preview_ready())
+                .is_some_and(|m| !m.preview_ready() || m.applying())
             {
                 assert!(std::time::Instant::now() < until);
                 std::thread::sleep(std::time::Duration::from_millis(5));
                 self.frame(vec![]);
             }
-            self.settle();
+            self.frame(vec![]);
+            self.write(name);
+        }
+        fn write(&self, name: &str) {
             let mut e = png::Encoder::new(
                 std::fs::File::create(self.dir.join(format!("{name}.png"))).unwrap(),
                 self.width,
@@ -83,10 +87,13 @@ fn main() {
         ..Default::default()
     };
     slot_store::write_slot_state(&root, &state).unwrap();
+    let (system, extension) = match std::env::args().nth(5).as_deref() {
+        Some("gb") => ("GB", "gb"), Some("gbc") => ("GBC", "gbc"), _ => ("GBA", "gba"),
+    };
     for name in ["Aurora", "Borealis"] {
         std::fs::write(
-            root.join("Games/GBA").join(format!("{name}.gba")),
-            vec![0; 256],
+            root.join("Games").join(system).join(format!("{name}.{extension}")),
+            vec![0; 0x150],
         )
         .unwrap();
     }
@@ -114,6 +121,11 @@ fn main() {
     a.tap(Btn::A);
     a.save("studio-label-choice");
     a.tap(Btn::A);
+    assert!(a.f.app().studio.as_ref().unwrap().applying());
+    for frame in 0..32 {
+        a.frame(vec![]);
+        if [0,10,20,30].contains(&frame) {a.write(&format!("studio-apply-{frame:02}"));}
+    }
     a.save("studio-title-applied");
     a.tap(Btn::B);
     for _ in 0..3 {a.tap(Btn::Down);}
@@ -140,7 +152,7 @@ fn main() {
         a.frame(vec![]);
     }
     a.save("studio-saved");
-    assert!(root.join("Labels/GBA/Aurora.png").is_file());
+    assert!(root.join("Labels").join(system).join("Aurora.png").is_file());
 }
 #[cfg(not(target_os = "linux"))]
 fn main() {}

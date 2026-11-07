@@ -37,6 +37,8 @@ jobs:
           cargo test --locked -p slot --no-default-features --lib network::tests::native_ra_progress_review -- --ignored --exact
           cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-light-gles" gles 640 light
           cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-dark-gl" gl 720 dark
+          cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-gb-light-gles" gles 640 light gb
+          cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-gbc-dark-gl" gl 720 dark gbc
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-light-gles" gles 640 light
           cargo run --locked -p slot --no-default-features --example network_review -- "$SLOT_QOL_PREVIEW/network-dark-gl" gl 720 dark
           SLOT_WIFI_PREVIEW="$SLOT_QOL_PREVIEW/wifi-status" cargo test --locked -p slot --no-default-features --lib native_wifi_progress_review -- --ignored --test-threads=1
