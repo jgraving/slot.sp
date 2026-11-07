@@ -717,3 +717,17 @@ fn the_label_picker_starts_on_the_preset_in_use() {
         Screen::Chips { target: Target::Label, at: chip_at(Chip::Preset(3)) }
     );
 }
+
+#[test]
+fn a_failed_label_lookup_can_restart_without_losing_the_edited_shell() {
+    let mut s=gba();
+    s.shell=Some(slot_store::ShellChoice{outline:slot_store::Outline::Auto,colour:[23,45,67],finish:slot_store::ShellFinish::Glitter});
+    let shell=s.shell;
+    s.art_failed=true;
+    s.art_arrived(false,false);
+    s.retry_art();
+    assert!(!s.art_failed);
+    assert!(!s.art_ready());
+    assert_eq!(s.sheet,vec![LabelKind::Real,LabelKind::Logo]);
+    assert_eq!(s.shell,shell);
+}

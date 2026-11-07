@@ -22,6 +22,7 @@ pub struct Menu {
     now: u64,
     printed_at: u64,
     applying: Option<(LabelKind, u64, usize)>,
+    landed: Option<LabelKind>,
     pub model: Studio,
     pub face: Option<TexId>,
     pub art_face: Option<TexId>,
@@ -99,7 +100,7 @@ impl Menu {
         });
         let mut menu = Self {
             model,
-            gallery_tex: None, gallery: None, now: 0, printed_at: 0, applying: None,
+            gallery_tex: None, gallery: None, now: 0, printed_at: 0, applying: None, landed: None,
             face: None,
             art_face: None,
             visible: true,
@@ -214,6 +215,7 @@ impl Menu {
             match done {
                 Done::Preview(gen, face, gallery) if gen == self.generation => {
                     self.gallery = Some(gallery);
+                    self.landed = None;
                     self.printed_at = self.now;
                     self.preview = Some(face);
                     self.preview_generation = gen;
@@ -264,7 +266,9 @@ impl Menu {
                 self.notice = "Finding labels…".into();
             }
             Some(Effect::Fetch) if self.art.real.is_none() && self.art.logo.is_none() => {
-                self.notice = "More labels need Wi-Fi".into();
+                self.notice = if !self.model.wifi_available() { "More labels need Wi-Fi" }
+                    else if self.model.duplicates { "No new labels" }
+                    else { "No matching artwork" }.into();
             }
             Some(Effect::Apply(kind)) => {
                 if let Screen::Sheet { at } = self.model.screen {
@@ -285,6 +289,7 @@ impl Menu {
     fn complete_apply(&mut self) {
         if let Some((kind, _, _)) = self.applying.take() {
             self.model.applied(kind);
+            self.landed = Some(kind);
             self.rebuild();
         }
     }
@@ -301,7 +306,7 @@ impl Menu {
             rect[1] -= (1.0 - feed) * 18.0;
             gallery.draw(tex, kind, rect, feed, out);
         }
-        if let Some((kind, started, index)) = self.applying {
+        if let Some((kind, started, index)) = self.applying.or_else(|| self.landed.map(|k| (k, 0, 0))) {
             if let (Some((_, w, h)), Some(cart)) = (gallery.slots.iter().find(|(k,_,_)| *k == kind), &self.preview) {
                 let from = Gallery::rect(canvas, index, *w, *h);
                 let edge = canvas.w * 0.47;
@@ -312,7 +317,8 @@ impl Menu {
                 let (x,y,w,h) = slot_ui::label_rect(slot_ui::gb_shell_of(&edited));
                 let to = [cx + x * cart.w as f32 * scale, cy + y * cart.h as f32 * scale,
                     w * cart.w as f32 * scale, h * cart.h as f32 * scale];
-                let rect = studio_gallery::application_rect(from, to, self.now.saturating_sub(started));
+                let elapsed = if self.applying.is_some() { self.now.saturating_sub(started) } else { studio_gallery::APPLY_MS };
+                let rect = studio_gallery::application_rect(from, to, elapsed);
                 gallery.draw(tex, kind, rect, 1.0, out);
             }
         }

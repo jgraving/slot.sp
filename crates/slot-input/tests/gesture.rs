@@ -1039,3 +1039,14 @@ fn select_pressed_in_a_game_does_not_open_controls_after_returning_to_the_shelf(
     g.set_context(slot_input::Context::Shelf);
     assert_eq!(g.feed(Up(Select),SELECT_CHORD_MS+100),vec![GbaUp(Select)]);
 }
+
+#[test]
+fn select_brightness_and_volume_chords_never_open_studio() {
+    for (button, action) in [(Btn::Up, BrightnessUp),(Btn::Down,BrightnessDown),(Btn::Left,VolumeDown),(Btn::Right,VolumeUp)] {
+        let mut g=on_shelf(vec![entry(Some(Mod::Select),button,action,slot_input::Contexts::ALL)]);
+        assert!(g.feed(Down(Select),0).is_empty());
+        assert!(g.feed(Down(button),30).contains(&action));
+        assert!(!g.feed(Up(button),50).contains(&CartStudio));
+        assert!(!g.feed(Up(Select),60).contains(&CartStudio));
+    }
+}

@@ -242,6 +242,8 @@ impl Studio {
         }
     }
 
+    pub fn wifi_available(&self) -> bool { self.wifi }
+
     pub fn art_ready(&self) -> bool {
         self.art_ready
     }
