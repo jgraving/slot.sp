@@ -851,3 +851,5 @@ Native review found a duplicate SVG fill attribute in the new Wi-Fi atlas; corre
 Right D-pad now follows single disclosure chevrons in settings lists and the network File sharing / Change Device code rows. Tile grids retain directional navigation, adjustable rows retain value changes, binding controls retain capture behavior, and plain actions are not aliased to A. Added network disclosure input coverage.
 
 Renamed the Display tile/heading to Display & appearance. Moved Recents and Sort Favorites out of General into that card, preserving stable enum/settings IDs. Updated parent/heading/order and Recents navigation regressions plus guide paths.
+
+CI caught a Date & Time regression fixture that walked a hard-coded seven rows in General after Recents/Favorites moved. Updated it to resolve DateTime’s current row position. The new Wi-Fi raster, RA pulse and disclosure tests passed in the same run; full fresh-source CI still required.

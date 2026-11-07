@@ -1643,7 +1643,7 @@ mod tests {
         menu.toggle_automatic_time();assert!(!menu.automatic_time_enabled());
         menu.prefs.automatic_time=true;
         app.apply(Action::QuickMenu);app.apply(Action::GbaDown(Btn::A));
-        for _ in 0..7 {app.apply(Action::GbaDown(Btn::Down));}
+        for _ in 0..slot_ui::QuickRow::DateTime.position(&app.hidden_rows()) {app.apply(Action::GbaDown(Btn::Down));}
         assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::DateTime));
         app.apply(Action::GbaDown(Btn::A));assert!(app.picker().is_none());
         assert_eq!(app.settings_notice().unwrap().1,"Automatic time is on");
