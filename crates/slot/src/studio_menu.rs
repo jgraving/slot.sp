@@ -526,11 +526,11 @@ impl Menu {
                     if adjustable {
                         let left=slot_ui::quick_caret_face(false);
                         let right=slot_ui::quick_caret_face(true);
-                        place(&mut face,&left,x+2.0,y+8.0,1.0);
-                        place(&mut face,&right,x+20.0,y+8.0,1.0);
+                        place(&mut face,&left,x+2.0,y-3.0,1.0);
+                        place(&mut face,&right,x+20.0,y-3.0,1.0);
                     } else {
                         let right=slot_ui::quick_caret_face(true);
-                        place(&mut face,&right,x+w-right.w as f32,y+8.0,1.0);
+                        place(&mut face,&right,x+w-right.w as f32,y-3.0,1.0);
                     }
                 }
             }
