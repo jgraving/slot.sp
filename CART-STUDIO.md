@@ -8,7 +8,7 @@ Prefer a browser? Visit [Slot Cart Studio](https://studio.slot-cfw.fyi/).
 
 ## Open the editor
 
-Press **Select** on any highlighted cartridge to open Cart Studio. Select’s volume and brightness shortcuts still work. **Start** also opens Studio on GB and GBC cartridges. On a GBA cartridge, press **Start** to open the emulator picker, then **X** for Cart Studio. You can also open it from **Settings → Gameplay → Cart Studio**.
+Press **Select** on any highlighted cartridge to open Cart Studio. Select’s volume and brightness shortcuts still work. **Start** also opens Studio on GB and GBC cartridges. On a GBA cartridge, press **Start** to open the emulator picker, then **Select** for Cart Studio. You can also open it from **Settings → Gameplay → Cart Studio**.
 
 The editor is unavailable during games, link play and kid mode.
 

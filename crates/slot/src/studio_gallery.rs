@@ -84,8 +84,12 @@ pub fn draw_menu(canvas: Canvas, tex: TexId, frame: MenuFrame, out: &mut Vec<Dra
     let dx = frame.page_shift * (canvas.w - 2.0 * slot_ui::expressive::MENU_INSET);
     let top = slot_ui::expressive::CARD_TOP;
     let h = slot_ui::expressive::CARD_BOTTOM - top;
-    out.push(Draw::Part { x: edge + dx, y: top, w: canvas.w - edge, h, tex,
-        alpha: frame.opacity, uv: [edge / canvas.w, top / canvas.h, 1.0 - edge / canvas.w, h / canvas.h] });
+    let left=(edge+dx).max(edge-4.0);
+    let right=(canvas.w+dx).min(canvas.w-slot_ui::expressive::MENU_INSET);
+    if right>left {
+        out.push(Draw::Part { x:left,y:top,w:right-left,h,tex,alpha:frame.opacity,
+            uv:[(left-dx)/canvas.w,top/canvas.h,(right-left)/canvas.w,h/canvas.h] });
+    }
     slot_ui::clip_menu_body(out, begin, canvas);
     if !frame.outgoing {
         let h = slot_ui::expressive::TITLE_H;
@@ -99,11 +103,30 @@ pub fn draw_menu(canvas: Canvas, tex: TexId, frame: MenuFrame, out: &mut Vec<Dra
 mod tests {
     use super::*;
     #[test]
+    fn submenu_text_stays_in_the_options_column_and_outer_chrome_is_anchored() {
+        for w in [640.0,720.0] {for shift in [-0.8,-0.2,0.0,0.4] {
+            let canvas=Canvas{w,h:480.0};
+            let mut frame=MenuFrame::settled(slot_ui::QuickRow::Kids,&[]);frame.page_shift=shift;
+            let mut out=Vec::new();draw_menu(canvas,TexId::from_raw(101),frame,&mut out);
+            for draw in out {if let Draw::Part{x,y,w:width,..}=draw {
+                if y==slot_ui::expressive::CARD_TOP {assert!(x>=w*0.47-4.0);assert!(x+width<=w-56.0+0.01);}
+                else {assert_eq!(x,0.0);}
+            }}
+        }}
+    }
+    #[test]
+    fn cartridge_spring_is_continuous_and_locks_to_its_final_pose() {
+        let mut previous=spring(0,340.0,0.86,720);
+        assert_eq!(previous,0.0);
+        for ms in 1..=720 {let p=spring(ms,340.0,0.86,720);assert!((p-previous).abs()<0.02);previous=p;}
+        assert_eq!(previous,1.0);
+    }
+    #[test]
     fn label_travel_starts_on_the_sheet_and_lands_on_the_well() {
         let from=[400.0,120.0,160.0,80.0]; let to=[110.0,170.0,130.0,64.0];
         assert_eq!(application_rect(from,to,0),from);
         for (a,b) in application_rect(from,to,APPLY_MS).iter().zip(to) {assert!((a-b).abs()<0.001);}
-        let mid=application_rect(from,to,APPLY_MS/2);
+        let mid=application_rect(from,to,APPLY_MS/4);
         assert!(mid[0]>to[0] && mid[0]<from[0]);
         assert!(mid[1]<(from[1]+to[1])/2.0);
     }

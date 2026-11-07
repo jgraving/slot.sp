@@ -384,6 +384,7 @@ pub struct App {
     power_switch_faces: Option<[[TexId; 2]; 4]>,
     repair_faces: Vec<(TexId, u32, u32)>,
     core_picker: Option<CorePicker>,
+    studio_after_picker: bool,
     core_board_face: Option<TexId>,
     core_interior_face: Option<TexId>,
     core_lid_face: Option<TexId>,
@@ -673,6 +674,7 @@ impl App {
             power_switch_faces: None,
             repair_faces: Vec::new(),
             core_picker: None,
+            studio_after_picker: false,
             core_board_face: None,
             core_interior_face: None,
             core_lid_face: None,
@@ -4206,7 +4208,11 @@ impl App {
         }
         if self.core_picker.is_some_and(|p| p.finished(now)) {
             self.core_picker = None;
+            if std::mem::take(&mut self.studio_after_picker) && !self.shutting_down() && matches!(self.phase,Phase::Shelf) {
+                self.open_studio();
+            }
         }
+        if !matches!(self.phase,Phase::Shelf) || self.shutting_down() {self.studio_after_picker=false;}
         if !self.on_shelf() {
             self.shelf_mut().release_hold();
         }
@@ -6728,11 +6734,11 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
-        if action == Action::GbaDown(Btn::X) && self.core_picker.is_some_and(|p| !p.closing()) {
-            self.open_studio();
-            if self.studio.is_some() {
-                self.core_picker = None;
-            }
+        if action == Action::GbaDown(Btn::Select) && !self.kids.active
+            && self.core_picker.is_some_and(|p| !p.closing()) {
+            let now=self.now();
+            self.studio_after_picker=true;
+            if let Some(picker)=&mut self.core_picker {picker.press(Press::Back,now);}
             return;
         }
         let press = match action {

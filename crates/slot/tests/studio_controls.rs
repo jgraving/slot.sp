@@ -85,3 +85,66 @@ fn fetched_art_suppresses_matching_pixels_but_keeps_the_logo_wheel() {
     let mut both=slot::art::Artwork{real:Some(original.clone()),logo:Some(original),..Default::default()};
     assert!(both.without_duplicates(None));assert!(both.real.is_some());assert!(both.logo.is_none());
 }
+
+fn change_finish(menu:&mut Menu) {
+    let row=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Finish).unwrap();
+    menu.model.screen=Screen::List{row};
+    menu.input(Action::GbaDown(Btn::Right));
+}
+fn wait_for_save(menu:&mut Menu) {
+    let deadline=Instant::now()+Duration::from_secs(15);
+    while menu.busy() {menu.update();assert!(Instant::now()<deadline);std::thread::sleep(Duration::from_millis(5));}
+}
+#[test]
+fn save_stays_open_and_b_closes_without_reprompting_once_saved() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut menu=Menu::new(root.path().into(),cart,false);
+    change_finish(&mut menu);assert!(menu.has_unsaved_changes());
+    let row=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
+    menu.model.screen=Screen::List{row};menu.input(Action::GbaDown(Btn::A));wait_for_save(&mut menu);
+    assert!(menu.visible);assert!(menu.take_saved().is_some());assert!(!menu.has_unsaved_changes());
+    menu.input(Action::GbaDown(Btn::B));assert!(!menu.visible);assert!(!menu.confirming_close());
+}
+#[test]
+fn unsaved_close_can_resume_editing_or_discard_without_touching_the_card() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let stem=cart.stem.clone();let original=cart.shell;
+    let mut menu=Menu::new(root.path().into(),cart,false);change_finish(&mut menu);
+    menu.input(Action::GbaDown(Btn::B));assert!(menu.confirming_close());assert!(!menu.busy());
+    menu.input(Action::GbaDown(Btn::B));assert!(!menu.confirming_close());assert!(menu.visible);
+    menu.input(Action::GbaDown(Btn::B));menu.input(Action::GbaDown(Btn::Down));menu.input(Action::GbaDown(Btn::A));
+    assert!(!menu.visible);assert!(menu.take_saved().is_none());
+    assert_eq!(slot_store::scan(root.path()).unwrap().into_iter().find(|c|c.stem==stem).unwrap().shell,original);
+}
+#[test]
+fn unchanged_close_needs_neither_save_nor_confirmation() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut menu=Menu::new(root.path().into(),cart,false);
+    menu.input(Action::GbaDown(Btn::B));assert!(!menu.visible);assert!(!menu.busy());
+    assert!(!menu.confirming_close());assert!(menu.take_saved().is_none());
+}
+#[test]
+fn submenus_keep_the_cartridge_pose_after_the_shared_arrival() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut menu=Menu::new(root.path().into(),cart,false);ready(&mut menu);
+    menu.source_rect=Some([122.0,90.0,396.0,228.0]);menu.update_at(1000);
+    let canvas=slot_ui::Canvas{w:640.0,h:480.0};assert_eq!(menu.shown_cart_rect(canvas),menu.source_rect.unwrap());
+    menu.update_at(2000);let rest=menu.shown_cart_rect(canvas);
+    assert!(rest[2]<396.0 && rest[0]<122.0);
+    menu.input(Action::GbaDown(Btn::Right));assert!(matches!(menu.model.screen,Screen::Sheet{..}));
+    assert_eq!(menu.shown_cart_rect(canvas),rest);
+    menu.input(Action::GbaDown(Btn::B));assert_eq!(menu.shown_cart_rect(canvas),rest);
+}
+#[test]
+fn right_opens_disclosures_but_finish_adjusts_and_save_requires_a() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut menu=Menu::new(root.path().into(),cart,false);
+    let color=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Color).unwrap();
+    menu.model.screen=Screen::List{row:color};menu.input(Action::GbaDown(Btn::Right));
+    assert!(matches!(menu.model.screen,Screen::Chips{..}));menu.input(Action::GbaDown(Btn::B));
+    let old=menu.model.current_shell();change_finish(&mut menu);
+    assert_ne!(menu.model.current_shell(),old);assert!(matches!(menu.model.screen,Screen::List{..}));
+    let save=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
+    menu.model.screen=Screen::List{row:save};menu.input(Action::GbaDown(Btn::Right));
+    assert!(!menu.busy());assert!(menu.visible);
+}

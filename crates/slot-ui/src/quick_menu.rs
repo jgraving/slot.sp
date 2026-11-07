@@ -1669,7 +1669,7 @@ pub fn core_button_legends() -> Vec<UndoFace> {
             true,
         ),
         with_hint(button_face(ButtonLegend::A), "Choose", None, false),
-        with_hint(button_face(ButtonLegend::X), "Cart Studio", None, true),
+        with_hint(button_face(ButtonLegend::Select), "Cart Studio", None, true),
     ]
 }
 

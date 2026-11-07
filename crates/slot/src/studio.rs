@@ -416,17 +416,17 @@ impl Studio {
             (Btn::Down, _) => self.screen = Screen::List { row: (row + 1) % count },
             (Btn::B, _) => return Some(Effect::Close),
             (Btn::A, Row::Save) => return Some(Effect::Save),
-            (Btn::A, Row::Label) => {
+            (Btn::A | Btn::Right, Row::Label) => {
                 self.screen = Screen::Sheet { at: 0 };
                 return Some(Effect::Fetch);
             }
-            (Btn::A, Row::Color) => {
+            (Btn::A | Btn::Right, Row::Color) => {
                 self.screen = Screen::Chips {
                     target: Target::Shell,
                     at: self.chip_in_use(Target::Shell),
                 }
             }
-            (Btn::A, Row::LabelColor) => {
+            (Btn::A | Btn::Right, Row::LabelColor) => {
                 self.screen = Screen::Chips {
                     target: Target::Label,
                     at: self.chip_in_use(Target::Label),
