@@ -391,6 +391,7 @@ pub struct App {
     core_interior_face: Option<TexId>,
     core_lid_face: Option<TexId>,
     core_faces_stem: Option<String>,
+    cart_appearance_revision: u64,
     core_socket_faces: Vec<TexId>,
     core_chip_faces: Vec<TexId>,
     core_blank_chip_face: Option<TexId>,
@@ -683,6 +684,7 @@ impl App {
             core_interior_face: None,
             core_lid_face: None,
             core_faces_stem: None,
+            cart_appearance_revision: 0,
             core_socket_faces: Vec::new(),
             core_chip_faces: Vec::new(),
             core_blank_chip_face: None,
@@ -4560,7 +4562,13 @@ impl App {
         menu.source_rect=Some(self.shelf().selected_rect(self.canvas()));
         self.studio=Some(menu);
     }
+    pub fn cart_appearance_revision(&self) -> u64 {self.cart_appearance_revision}
+    fn invalidate_core_appearance(&mut self) {
+        self.cart_appearance_revision=self.cart_appearance_revision.wrapping_add(1);
+        self.core_faces_stem=None;
+    }
     fn update_cart_appearance(&mut self,cart:&Cart) {
+        self.invalidate_core_appearance();
         for c in &mut self.catalog {if c.platform==cart.platform && c.stem==cart.stem {*c=cart.clone();}}
         for (_,shelf) in &mut self.shelves {for i in 0..shelf.carts.len() {
             if shelf.carts[i].platform==cart.platform && shelf.carts[i].stem==cart.stem {
@@ -4601,6 +4609,7 @@ impl App {
                 && !matches!(self.phase, Phase::Doze { .. } | Phase::SetClock { .. })
                 && self.network.as_ref().is_some_and(|m| m.wifi_connected());
             if self.shell_logos.step(root, online, self.now()) {
+                self.invalidate_core_appearance();
                 if let Some(menu) = &mut self.studio { menu.refresh_shell(); }
                 for (_, shelf) in &mut self.shelves {
                     for i in 0..shelf.carts.len() { self.orphaned.extend(shelf.take_face(i)); }
@@ -7924,6 +7933,17 @@ fn bezel_slot(platform: Platform) -> usize {
 #[cfg(test)]
 mod bluetooth_tests {
     use super::*;
+
+    #[test]
+    fn a_saved_appearance_invalidates_ready_picker_art_even_for_the_same_filename() {
+        let cart=Cart{platform:Platform::Gba,stem:"Aurora".into(),rom:"Games/GBA/Aurora.gba".into(),
+            label:None,title:"AURORA".into(),code:String::new(),shell:None};
+        let mut app=App::new(vec![cart.clone()]);
+        app.set_core_board_faces(TexId::from_raw(981),TexId::from_raw(982));
+        assert!(app.core_faces_ready());let revision=app.cart_appearance_revision();
+        app.update_cart_appearance(&cart);
+        assert_eq!(app.cart_appearance_revision(),revision+1);assert!(!app.core_faces_ready());
+    }
 
     #[test]
     fn right_opens_disclosed_lists_but_keeps_values_and_plain_actions_distinct() {

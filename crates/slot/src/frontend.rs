@@ -83,9 +83,9 @@ pub struct Frontend {
     rebuild_faces: RebuildFaces,
     link_art: LinkArtBuilder,
     link_art_done: bool,
-    core_asked: Option<String>,
+    core_asked: Option<(String,u64)>,
     core_tex: CoreTextures,
-    core_built: Option<String>,
+    core_built: Option<(String,u64)>,
     undo_tex: Option<TexId>,
     switcher: Switcher,
     clocks: Clocks,
@@ -1790,26 +1790,20 @@ fn sync_core_picker(
     app: &mut App,
     compositor: &mut Compositor,
     builder: &FaceBuilder,
-    asked: &mut Option<String>,
+    asked: &mut Option<(String,u64)>,
     tex: &mut CoreTextures,
-    built: &mut Option<String>,
+    built: &mut Option<(String,u64)>,
 ) {
-    let highlighted = app.selected_stem().map(str::to_string);
+    let highlighted = app.selected_stem().map(|s|(s.to_string(),app.cart_appearance_revision()));
     if highlighted.is_some() && *asked != highlighted {
-        if let Some(cart) = app
-            .carts()
-            .find(|c| highlighted.as_deref() == Some(c.stem.as_str()))
-        {
-            builder.request(cart.clone());
+        if let Some(cart) = app.carts().find(|c| highlighted.as_ref().is_some_and(|(stem,_)|stem.as_str()==c.stem.as_str())) {
+            builder.request_revision(cart.clone(),app.cart_appearance_revision());
         }
         *asked = highlighted.clone();
     }
-    let Some(faces) = builder.take() else {
-        return;
-    };
-    if highlighted.as_deref() != Some(faces.stem.as_str()) || *built == highlighted {
-        return;
-    }
+    let Some(faces) = builder.take() else {return;};
+    // A late result for the same filename must not restore the previous sticker.
+    if !highlighted.as_ref().is_some_and(|(stem,revision)|faces.matches(stem,*revision)) || *built==highlighted {return;}
     let interior_id = upload_rgba(
         compositor,
         &mut tex.interior,
@@ -1833,7 +1827,7 @@ fn sync_core_picker(
         &faces.lid.rgba,
     );
     app.set_core_board_faces(board_id, lid_id);
-    *built = Some(faces.stem);
+    *built = highlighted;
 }
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {
