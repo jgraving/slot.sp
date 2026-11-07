@@ -5771,6 +5771,14 @@ impl App {
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
+        if let Some(activity)=self.ra_sync_indicator {
+            // Keep activity visible throughout a slow, continuous three-second breath.
+            let phase=(self.now()%3000) as f32/3000.0*std::f32::consts::TAU;
+            let pulse=0.72+0.28*phase.cos();
+            for draw in &mut out[audio_start..] {
+                if let Draw::Tex{tex,alpha,..}=draw {if *tex==activity {*alpha*=pulse;}}
+            }
+        }
     }
 
     fn draw_about_hint_backings(&self, hints: &[Draw], out: &mut Vec<Draw>) {
@@ -7848,6 +7856,24 @@ fn bezel_slot(platform: Platform) -> usize {
 #[cfg(test)]
 mod bluetooth_tests {
     use super::*;
+
+    #[test]
+    fn background_achievement_icon_breathes_without_disappearing_or_moving() {
+        let mut app=App::new(vec![]);
+        let icon=TexId::from_raw(987);app.ra_sync_indicator=Some(icon);
+        let mut samples=Vec::new();
+        for now in [0,750,1500,2250,3000] {
+            app.tick_ms(now);let mut draws=Vec::new();app.draw_status_bar(&mut draws);
+            let d=draws.into_iter().find(|d|matches!(d,Draw::Tex{tex,..} if *tex==icon)).unwrap();
+            if let Draw::Tex{x,y,w,h,alpha,..}=d {samples.push((x,y,w,h,alpha));}
+        }
+        assert_eq!(samples[0],samples[4]);
+        assert!(samples[0].4>samples[1].4 && samples[1].4>samples[2].4);
+        assert!(samples[2].4>=0.43 && samples[3].4>samples[2].4);
+        for s in &samples {assert_eq!((s.0,s.1,s.2,s.3),(samples[0].0,samples[0].1,samples[0].2,samples[0].3));}
+        app.ra_sync_indicator=None;let mut draws=Vec::new();app.draw_status_bar(&mut draws);
+        assert!(!draws.iter().any(|d|matches!(d,Draw::Tex{tex,..} if *tex==icon)));
+    }
 
     #[test]
     fn active_output_distinguishes_bluetooth_from_a_plugged_in_jack() {

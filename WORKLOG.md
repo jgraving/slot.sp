@@ -9,6 +9,9 @@ Implementation: one cached dot/wave atlas animates outward via GPU alpha during 
 
 Local validation: Wi-Fi credential boundaries, Wi-Fi diagnostics (1), OTA recovery (7), shell update suite and whitespace checks pass. The shell suite initially could not create `/tmp`; reran successfully with a workspace TMPDIR. No Rust compilation or native rendering result is claimed. Separate shelf/HUD atlases preserve in-game contrast. Automatic approval review rejected `git push -u origin fix/wifi-progress-ota` because publication needs explicit user authorization; do not bypass it with connector writes. Finish locally, then ask to push and run CI. Changes remain on this local branch until authorized.
 
+
+User explicitly approved publishing/PR creation and merge when green. Published as PR #215 at `ffd2fb9`; ARM64 network/device/package, scaling, blending, shortcuts and Pages pass. Launcher/native workflow failed and needs log inspection before merge. Follow-up request: make the RetroAchievements background-activity icon slowly pulse; change draw alpha after shared status transforms, preserving cached textures and the existing activity gate. Cart Studio is separately tracked in PR #216.
+
 ## Upstream on-device Studio integration — 2026-11-07
 
 ### Device scanned-label follow-up
@@ -842,3 +845,5 @@ All six workflows pass on source b21dd2f9baf1830fadf28509a56aacebe66d48aa: ARM64
 - Native review: https://github.com/jgraving/slot.sp/actions/runs/41750769859/artifacts/13286511236 (present/unexpired; one-day retention).
 - Existing draft PR #194 contains all wallpaper, interruption-recovery, editor artwork, lifecycle, Samba/RPC/conversion and wire-test fixes. Keep draft; no merge/release requested. Physical PC/Mac discovery and handheld transfer/reboot/lid behavior remain explicit device checks.
 - Final recovery update changes only CURRENT_WORK.md and WORKLOG.md. Use [skip ci] for this Markdown-only checkpoint because GitHub PR path filtering uses cumulative changed paths and would rerun/cancel the same already-passing feature suites. Compare current HEAD to the verified source before resuming; do not claim an unverified runtime change.
+
+Native review found a duplicate SVG fill attribute in the new Wi-Fi atlas; corrected it and added a real four-layer rasterization regression. The first ARM64/package pass did not exercise native asset construction; native rendering remains a merge gate. The RA pulse now has draw-level lifecycle/position coverage. Change Device code uses a vector right-facing chevron instead of Set; locked and unset status remain informative.

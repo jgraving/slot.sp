@@ -1486,8 +1486,8 @@ pub fn wifi_connecting_face(ink: [u8; 3]) -> UndoFace {
         r#"<path d="M2.3 8.8Q14 .2 25.7 8.8"/>"#];
     let mut rgba = Vec::with_capacity(28 * 112 * 4);
     for (i, path) in paths.iter().enumerate() {
-        let style = if i == 0 {""} else {r#"fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round""#};
-        let svg = format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}" {style}>{path}</g></svg>"##, ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);
+        let style = if i == 0 {r#"fill="currentColor""#} else {r#"fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round""#};
+        let svg = format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g color="#{:02x}{:02x}{:02x}" {style}>{path}</g></svg>"##, ink[0],ink[1],ink[2]);
         rgba.extend(crate::art::render_svg(&svg, 28, 28).expect("Wi-Fi layer"));
     }
     UndoFace { rgba, w: 28, h: 112 }
@@ -1507,6 +1507,10 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
         let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
         let label_face = parent_label_face(label, lit, !value.is_empty(), width);
         parent_blit(&mut face, &label_face, QUICK_LABEL_X - pad, y);
+        if label=="Change Device code" && value.is_empty() {
+            let caret=quick_caret_face(true);
+            parent_blit(&mut face,&caret,right-caret.w as f32,y);continue;
+        }
         if value.is_empty() { continue; }
         if let Some(fraction)=crate::setting_slider(label,value) {
             if switches {let slider=crate::slider_face(fraction);parent_blit(&mut face,&slider,right-crate::MENU_SLIDER_SPAN-pad,y);}

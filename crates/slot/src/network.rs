@@ -734,7 +734,7 @@ impl Menu {
         let mut rows = match self.page {
             Page::Security => vec![
                 ("Unlock with".into(),match self.creating_method {Method::Buttons=>"Button code",Method::Passphrase=>"Passphrase"}.into(),true),
-                (if self.encrypted {"Change Device code"} else {"Set Device code"}.into(),if self.locked {"Locked"} else if self.encrypted {"Set"} else {"Not set"}.into(),false),
+                (if self.encrypted {"Change Device code"} else {"Set Device code"}.into(),if self.locked {"Locked"} else if self.encrypted {""} else {"Not set"}.into(),false),
                 ("Startup access".into(),if self.prefs.lock_device {"Require code"}else{"Code optional"}.into(),true),
                 ("Forget Device code".into(),String::new(),false),
             ],

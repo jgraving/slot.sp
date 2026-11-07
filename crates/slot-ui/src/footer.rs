@@ -205,6 +205,16 @@ fn draw_connection(
 mod connection_tests {
     use super::*;
     #[test]
+    fn connecting_atlas_rasterizes_all_four_visible_layers() {
+        let face=crate::wifi_connecting_face([244,241,234]);
+        assert_eq!((face.w,face.h),(28,112));
+        assert_eq!(face.rgba.len(),28*112*4);
+        for layer in face.rgba.chunks_exact(28*28*4) {
+            assert!(layer.chunks_exact(4).any(|p|p[3]>128));
+        }
+    }
+
+    #[test]
     fn connecting_waves_travel_outward_without_moving_the_status_slot() {
         let mut frames=Vec::new();
         for now in [0, 240, 480, 1200] {
