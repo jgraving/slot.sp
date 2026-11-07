@@ -1,5 +1,5 @@
-# Cart Studio final validation
+# Completed Wi-Fi/OTA and Cart Studio work
 
-Active PR: #216, `fix/studio-motion-affordances`, incorporating main `7b4b9b2` from verified PR #215.
+PR #215 and separate Cart Studio PR #216 are merged into main. #216 merge: 97fb96d60db7f07a1607af2e378fbe93a4a6acfa, identical tree to tested source 4f6695498c7b82ea7e28e843e536d80f228364ce. All six workflows passed and final native captures were inspected. Read WORKLOG.md for evidence and package links.
 
-Read WORKLOG.md. User authorizes merge only after checks pass. Wi-Fi/OTA/status/settings PR #215 is merged with six successful workflows and an identical tested merge tree. Finish combined-source CI for Studio, inspect anchored chrome, floating cartridge/title, picker-close-before-entry and explicit Save-and-stay captures, then merge #216. Keep the PRs separate. Physical handheld checks remain pending.
+Recovery branch: fix/studio-motion-affordances. This post-merge checkpoint changes documentation only. No implementation is pending from the recovered request; physical handheld checks remain pending. Check live main/PR state before beginning any new work.

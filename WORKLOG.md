@@ -879,3 +879,16 @@ All six workflows passed on ce6db8a, and native Wi-Fi joining/connected frames a
 Native source 6c722f2 passed all six workflows. Independently inspected light GBA/GB, dark GBC, label-sheet, transfer, entrance and save-confirmation PNGs from artifact 13592478125. The floating layout, captions, chevrons and save confirmation are visible. Entry review caught global heading/footer being translated with the rising card; preserve their anchored chrome positions while moving only the option body. Final combined-source rendering remains required for this correction and the new picker/Save captures.
 
 All six combined-source workflows passed on 19866a4. Final native captures confirmed anchored chrome and Save-and-stay, but picker-to-Studio frames exposed an existing same-stem cache bug: after saving, picker parts still showed the previous label/finish. Add an appearance revision to builder requests/results and frontend cache keys; invalidate readiness on Save (and shell-logo refresh) and reject late old-revision results. Require fresh CI and inspect the same transition again before merging #216.
+
+
+### Recovered and completed Studio validation — 2026-11-08 (Europe/Zurich)
+
+Recovered live state after the frozen chat. PR #215 was already merged as 7b4b9b20149c57d063f8aeaf6e63d7c49aaf6ae0. PR #216 head 4f6695498c7b82ea7e28e843e536d80f228364ce had five passing workflows and native rendering still active. Read repository instructions, routing notes and branch log; reviewed Studio changes and the last appearance-cache fix.
+
+All six workflows now pass on exact source 4f6695498c7b82ea7e28e843e536d80f228364ce: launcher/native 42421902936, ARM64 sharing/device/package 42421902950, shortcuts 42421902952, blending 42421902969, scaling 42421902941, website 42421902935. Native main renders, full pause-layering matrix and final geometry/About/cartridge-motion checks all passed. No tests were bypassed.
+
+Downloaded native artifact 13594527140 and visually inspected light/dark GBA, GB/GBC layouts, label captions and application frames, entry frames, unsaved confirmation, Save-and-stay, and saved shelf → fully open picker → closing → Studio captures. The updated gray title label and glitter finish appear consistently in the picker and Studio, resolving the stale same-filename artwork finding. Card rises alongside the moving/shrinking cartridge; settled submenu artwork/title remain anchored. Physical handheld testing remains pending.
+
+Merged #216 at the tested head using expected-head protection as 97fb96d60db7f07a1607af2e378fbe93a4a6acfa. Verified both commits have identical tree 9a4cd5d88322fdbfe73847a9054afe4c83daf54d. Updated PR description with exact-source results, visual-review evidence and package link. Test System artifact: https://github.com/jgraving/slot.sp/actions/runs/42421902950/artifacts/13593509442 (one-day retention).
+
+This post-merge recovery checkpoint changes only WORKLOG.md and CURRENT_WORK.md on fix/studio-motion-affordances; it does not alter the tested/merged runtime. No active implementation remains from this request. Next: user handheld testing of Wi-Fi/OTA and Studio interactions.
