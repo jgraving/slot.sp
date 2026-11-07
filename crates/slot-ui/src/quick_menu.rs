@@ -269,13 +269,11 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    pub const GENERAL: [QuickRow; 7] = [
         QuickRow::SecurityPin,
         QuickRow::Updates,
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
-        QuickRow::Recents,
-        QuickRow::FavoriteSort,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
         QuickRow::About,
@@ -330,7 +328,7 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 12] = [
+    pub const SCREEN: [QuickRow; 14] = [
         QuickRow::Brightness,
         QuickRow::BlueLight,
         QuickRow::DisplaySchedule,
@@ -340,6 +338,8 @@ impl QuickRow {
         QuickRow::ShellColour,
         QuickRow::ShowTitles,
         QuickRow::CarouselMotion,
+        QuickRow::Recents,
+        QuickRow::FavoriteSort,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -439,9 +439,8 @@ impl QuickRow {
             | QuickRow::EjectSave => &QuickRow::GAME,
             QuickRow::Wallpaper | QuickRow::WallpaperTint | QuickRow::ShellColour
             | QuickRow::Theme | QuickRow::ShowTitles
-            | QuickRow::CarouselMotion => &QuickRow::SCREEN,
-            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime
-            | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::GENERAL,
+            | QuickRow::CarouselMotion | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::SCREEN,
+            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -565,7 +564,7 @@ impl QuickRow {
             QuickRow::ShutDown => "Power Off",
             QuickRow::FastForward => "Fast Forward",
             QuickRow::FastForwardSound => "Fast Forward Sound",
-            QuickRow::Screen => "Display",
+            QuickRow::Screen => "Display & appearance",
             QuickRow::Rumble => "Rumble",
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",
@@ -1213,7 +1212,8 @@ pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
 pub fn quick_heading_face(label: &str) -> UndoFace {
     let label=menu_sentence_case(label);let h=crate::expressive::TITLE_H as u32;
     let Some(font)=text::font(text::Role::Display) else {return UndoFace{rgba:vec![],w:0,h};};
-    let layout=text::fit_preserving_case(font,&label,260.0,1,32.0,24.0);
+    let width=if label=="Display & appearance" {380.0}else{260.0};
+    let layout=text::fit_preserving_case(font,&label,width,1,32.0,24.0);
     let w=layout.lines.iter().map(|line|text::line_width(font,line,layout.px,layout.tracking)).fold(0.0,f32::max).ceil() as u32+2*MENU_PAD;
     let mut rgba=vec![0;(w*h*4)as usize];text::draw_centred(&mut rgba,w,h,&layout,MENU_INK);UndoFace{rgba,w,h}
 }
@@ -1478,6 +1478,21 @@ pub fn wifi_signal_face(bars:u8,ink:[u8;3])->UndoFace {
     let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g fill="#{:02x}{:02x}{:02x}" color="#{:02x}{:02x}{:02x}">{paths}</g></svg>"##,ink[0],ink[1],ink[2],ink[0],ink[1],ink[2]);
     UndoFace{rgba:crate::art::render_svg(&svg,28,28).expect("Wi-Fi signal"),w:28,h:28}
 }
+/// Four isolated layers (dot, inner, middle, outer wave) for GPU-only animation.
+pub fn wifi_connecting_face(ink: [u8; 3]) -> UndoFace {
+    let paths = [r#"<circle cx="14" cy="21" r="1.6"/>"#,
+        r#"<path d="M9.8 16.8Q14 13.6 18.2 16.8"/>"#,
+        r#"<path d="M6 12.8Q14 6.8 22 12.8"/>"#,
+        r#"<path d="M2.3 8.8Q14 .2 25.7 8.8"/>"#];
+    let mut rgba = Vec::with_capacity(28 * 112 * 4);
+    for (i, path) in paths.iter().enumerate() {
+        let style = if i == 0 {r#"fill="currentColor""#} else {r#"fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round""#};
+        let svg = format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><g color="#{:02x}{:02x}{:02x}" {style}>{path}</g></svg>"##, ink[0],ink[1],ink[2]);
+        rgba.extend(crate::art::render_svg(&svg, 28, 28).expect("Wi-Fi layer"));
+    }
+    UndoFace { rgba, w: 28, h: 112 }
+}
+
 fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], selected: usize, footer: u8, status: &str, reserve: f32, switches: bool) -> UndoFace {
     let width=canvas.w as u32;
     let mut face = parent_footer_face_on(canvas,footer,rows.get(selected).is_some_and(|r|r.2));
@@ -1492,6 +1507,10 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
         let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
         let label_face = parent_label_face(label, lit, !value.is_empty(), width);
         parent_blit(&mut face, &label_face, QUICK_LABEL_X - pad, y);
+        if label=="Change Device code" && value.is_empty() {
+            let caret=quick_caret_face(true);
+            parent_blit(&mut face,&caret,right-caret.w as f32,y);continue;
+        }
         if value.is_empty() { continue; }
         if let Some(fraction)=crate::setting_slider(label,value) {
             if switches {let slider=crate::slider_face(fraction);parent_blit(&mut face,&slider,right-crate::MENU_SLIDER_SPAN-pad,y);}

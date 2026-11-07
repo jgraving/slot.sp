@@ -37,7 +37,7 @@ Read the short error message at the bottom of the screen. Wake the headphones an
 
 ## Light mode and night mode seem different
 
-They control different things. **Display → UI theme** selects Light or Dark menus. **Display → Night mode** controls saved brightness and warmth, including an optional schedule. See [Day & night](../features/night-display.md).
+They control different things. **Display & appearance → UI theme** selects Light or Dark menus. **Display & appearance → Night mode** controls saved brightness and warmth, including an optional schedule. See [Day & night](../features/night-display.md).
 
 ## Reporting a bug
 

@@ -1,5 +1,5 @@
 # Cart Studio motion and affordances
 
-Active branch: `fix/studio-motion-affordances`, based on main `50a9c233`.
+Active PR: #216, `fix/studio-motion-affordances`. Status/settings are separately in #215, `fix/wifi-progress-ota`. Both are authorized for merge only after checks pass.
 
-Read WORKLOG.md. Keep this PR separate from Wi-Fi/OTA PR #215. User authorizes pushing both PRs and merging each only after checks pass. Fix affordances, anchored submenu cartridge/title, coordinated rising card and moving/shrinking cart, printer springs and option spacing. Physical device checks remain pending.
+Read WORKLOG.md. A combined checkout is prepared on `integrate/studio-after-settings`, but must not replace #216 until #215 merges and the actual main tree is verified. Run fresh combined-source checks. Keep the floating cartridge/title, compact right options card, explicit Save / unsaved-close confirmation, Select picker choreography and right-chevron navigation. Physical hardware checks remain pending.

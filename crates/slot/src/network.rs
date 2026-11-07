@@ -155,6 +155,10 @@ impl Menu {
             self.unlock(if self.prefs.wifi_enabled {Some(AfterUnlock::Reconnect)}else{None});
         }
     }
+    pub fn wifi_connecting(&self) -> bool {
+        self.wifi_on && matches!(self.last_wifi.busy,
+            wifi::Busy::Starting | wifi::Busy::Joining(_) | wifi::Busy::Addressing)
+    }
     pub fn wifi_connected(&self) -> bool {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
@@ -614,7 +618,9 @@ impl Menu {
             let count = self.rows().len(); self.selected = (self.selected + if btn==Btn::Down {1} else {count-1}) % count;
             self.notice.clear(); self.changed(); return;
         }
-        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
+        let disclosure=btn==Btn::Right && ((self.page==Page::Security && self.selected==1 && self.encrypted && !self.locked)
+            || (self.page==Page::Wifi && self.selected==4));
+        if btn != Btn::A && !disclosure && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
         match self.page {
             Page::Security => match self.selected {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
@@ -730,7 +736,7 @@ impl Menu {
         let mut rows = match self.page {
             Page::Security => vec![
                 ("Unlock with".into(),match self.creating_method {Method::Buttons=>"Button code",Method::Passphrase=>"Passphrase"}.into(),true),
-                (if self.encrypted {"Change Device code"} else {"Set Device code"}.into(),if self.locked {"Locked"} else if self.encrypted {"Set"} else {"Not set"}.into(),false),
+                (if self.encrypted {"Change Device code"} else {"Set Device code"}.into(),if self.locked {"Locked"} else if self.encrypted {""} else {"Not set"}.into(),false),
                 ("Startup access".into(),if self.prefs.lock_device {"Require code"}else{"Code optional"}.into(),true),
                 ("Forget Device code".into(),String::new(),false),
             ],
@@ -993,6 +999,7 @@ mod tests {
             let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
             let mut tick=0;
             for (name,busy,ip,error) in [
+                ("joining",wifi::Busy::Joining("Home".into()),None,None),
                 ("getting-address",wifi::Busy::Addressing,None,None),
                 ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · retry")),
                 ("late-success",wifi::Busy::Idle,Some("192.0.2.3"),None),
@@ -1020,6 +1027,30 @@ mod tests {
                 encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
         }
+    }
+
+    #[test]
+    fn right_opens_only_disclosed_network_rows() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::Right));
+        assert_eq!(menu.page,Page::Sharing);
+        menu.page=Page::Security;menu.selected=1;menu.encrypted=true;menu.locked=false;
+        assert!(menu.rows()[1].1.is_empty());
+        menu.input(Action::GbaDown(Btn::Right));assert!(menu.is_keyboard());
+    }
+
+    #[test]
+    fn status_icon_animates_only_while_connecting_even_outside_settings() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.wifi_on=true;
+        for busy in [wifi::Busy::Starting, wifi::Busy::Joining("Home".into()), wifi::Busy::Addressing] {
+            menu.last_wifi.busy=busy;assert!(menu.wifi_connecting());
+        }
+        for busy in [wifi::Busy::Idle, wifi::Busy::Scanning] {
+            menu.last_wifi.busy=busy;assert!(!menu.wifi_connecting());
+        }
+        menu.last_wifi.busy=wifi::Busy::Joining("Home".into());menu.wifi_on=false;
+        assert!(!menu.wifi_connecting());
     }
 
     #[test]
@@ -1612,7 +1643,7 @@ mod tests {
         menu.toggle_automatic_time();assert!(!menu.automatic_time_enabled());
         menu.prefs.automatic_time=true;
         app.apply(Action::QuickMenu);app.apply(Action::GbaDown(Btn::A));
-        for _ in 0..7 {app.apply(Action::GbaDown(Btn::Down));}
+        for _ in 0..slot_ui::QuickRow::DateTime.position(&app.hidden_rows()) {app.apply(Action::GbaDown(Btn::Down));}
         assert_eq!(app.quick_menu(),Some(slot_ui::QuickRow::DateTime));
         app.apply(Action::GbaDown(Btn::A));assert!(app.picker().is_none());
         assert_eq!(app.settings_notice().unwrap().1,"Automatic time is on");

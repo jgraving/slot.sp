@@ -43,7 +43,7 @@ fn main() {
                 .app()
                 .studio
                 .as_ref()
-                .is_some_and(|m| !m.preview_ready() || m.applying())
+                .is_some_and(|m| !m.preview_ready() || m.applying() || m.busy())
             {
                 assert!(std::time::Instant::now() < until);
                 std::thread::sleep(std::time::Duration::from_millis(5));
@@ -160,6 +160,38 @@ fn main() {
     }
     a.save("studio-saved");
     assert!(root.join("Labels").join(system).join("Aurora.png").is_file());
+    if system=="GBA" {
+        a.tap(Btn::Start);a.settle();
+        let until=std::time::Instant::now()+std::time::Duration::from_secs(10);
+        while a.f.app().core_picker_openness()!=Some(1.0) {
+            assert!(std::time::Instant::now()<until,"picker did not finish opening");
+            std::thread::sleep(std::time::Duration::from_millis(5));a.frame(vec![]);
+        }
+        a.write("picker-before-studio");
+        assert!(a.f.app().core_picker().is_some());
+        a.tap(Btn::X);assert!(a.f.app().studio.is_none());
+        a.tap(Btn::Select);assert!(a.f.app().studio.is_none());
+        for frame in 0..68 {
+            a.frame(vec![]);
+            if frame==10 {assert!(a.f.app().studio.is_none(),"picker must close first");}
+            if [0,8,16,22,30,42,64].contains(&frame) {a.write(&format!("picker-to-studio-{frame:02}"));}
+        }
+        a.save("studio-from-picker");
+        assert!(a.f.app().core_picker().is_none());
+        for _ in 0..8 {
+            if a.f.app().studio.as_ref().unwrap().model.row()==Some(slot::studio::Row::Finish) {break;}
+            a.tap(Btn::Down);
+        }
+        assert_eq!(a.f.app().studio.as_ref().unwrap().model.row(),Some(slot::studio::Row::Finish));
+        a.tap(Btn::Right);
+        for _ in 0..8 {
+            if a.f.app().studio.as_ref().unwrap().model.row()==Some(slot::studio::Row::Save) {break;}
+            a.tap(Btn::Down);
+        }
+        a.save("studio-save-option");a.tap(Btn::A);a.save("studio-saved-open");
+        assert!(a.f.app().studio.as_ref().is_some_and(|m|!m.has_unsaved_changes()));
+        a.tap(Btn::B);a.save("studio-clean-close");assert!(a.f.app().studio.is_none());
+    }
 }
 #[cfg(not(target_os = "linux"))]
 fn main() {}

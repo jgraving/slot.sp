@@ -340,17 +340,49 @@ fn check_report_with(now_unix:u64, fetch:&mut dyn FnMut(&str)->Result<Vec<u8>,Up
     let mut offers=Vec::new();
     if !slot.source.starts_with(slot.running.as_str()) {
         if slot.running.is_empty()||!slot.running.bytes().all(|c|c.is_ascii_hexdigit()) {return UpdateEvent::Failed(UpdateFail::Bad);}
-        // A test build may be newer than stable or on a diverged branch. Never offer
-        // an older launcher just because its source hash differs from this build.
+        // Ancestry orders normal releases even when their displayed dates match.
+        // A squashed/rebased test branch needs source timestamps to order its tip.
         let url=format!("https://api.github.com/repos/{SLOT_REPO}/compare/{}...{}",slot.running,slot.source);
         let ancestry=match fetch(&url).and_then(|b|serde_json::from_slice::<serde_json::Value>(&b).map_err(|_|UpdateFail::Bad)) {Ok(v)=>v,Err(e)=>return UpdateEvent::Failed(e)};
-        match ancestry["status"].as_str() {Some("ahead")=>offers.push(slot),Some("behind"|"diverged"|"identical")=>{},_=>return UpdateEvent::Failed(UpdateFail::Bad)}
+        match ancestry["status"].as_str() {
+            Some("ahead") => offers.push(slot),
+            Some("behind" | "identical") => {},
+            Some("diverged") => {
+                // Release publication time is unsuitable: an old source can be
+                // published after a newer test build. Compare the source tips.
+                let base = &ancestry["base_commit"];
+                if !base["sha"].as_str().is_some_and(|s| s.starts_with(&slot.running)) {
+                    return UpdateEvent::Failed(UpdateFail::Bad);
+                }
+                let url = format!("https://api.github.com/repos/{SLOT_REPO}/commits/{}", slot.source);
+                let head = match fetch(&url).and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).map_err(|_| UpdateFail::Bad)) {
+                    Ok(v) => v, Err(e) => return UpdateEvent::Failed(e),
+                };
+                if head["sha"] != slot.source { return UpdateEvent::Failed(UpdateFail::Bad); }
+                match (source_date(&head), source_date(base)) {
+                    (Some(released), Some(installed)) if released > installed => offers.push(slot),
+                    (Some(_), Some(_)) => {},
+                    _ => return UpdateEvent::Failed(UpdateFail::Bad),
+                }
+            },
+            _ => return UpdateEvent::Failed(UpdateFail::Bad),
+        }
     }
     if let Some(baseos)=baseos.filter(|r|newer(&r.version,&r.running)) {offers.push(baseos);}
     match offers.is_empty() {
         true => UpdateEvent::UpToDate,
         false => UpdateEvent::Available(offers),
     }
+}
+
+// GitHub commit dates are canonical UTC RFC3339, so lexical order is time order.
+fn source_date(commit: &serde_json::Value) -> Option<&str> {
+    let date = commit["commit"]["committer"]["date"].as_str()?;
+    let b = date.as_bytes();
+    (b.len() == 20 && b.iter().enumerate().all(|(i, c)| match i {
+        4 | 7 => *c == b'-', 10 => *c == b'T', 13 | 16 => *c == b':',
+        19 => *c == b'Z', _ => c.is_ascii_digit(),
+    })).then_some(date)
 }
 
 pub fn install_with(
@@ -654,7 +686,7 @@ fn run(root: &Path, job: &UpdateJob, ticket: &Ticket, tx: &Sender<UpdateEvent>) 
                 now_unix(),
                 &mut |url| fetch(url, API_TIMEOUT, &mut |_| {}),
                 Running {
-                    slot: crate::build_info::Build::current().hash,
+                    slot: env!("SLOT_SOURCE_COMMIT"),
                     baseos: target.as_deref().zip(version.as_deref()),
                 },
                 &mut |message| {let _=tx.send(UpdateEvent::BaseOsStatus(message));},

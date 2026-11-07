@@ -36,7 +36,7 @@ Keep all three options lowercase. A line slot.sp can't read is skipped.
 
 ## Wallpapers
 
-Put a PNG in `Wallpapers/` and choose it in **Menu → Display → Wallpaper**. **Random** picks one of these images at startup.
+Put a PNG in `Wallpapers/` and choose it in **Menu → Display & appearance → Wallpaper**. **Random** picks one of these images at startup.
 
 | Device | Suggested Size |
 | --- | --- |
