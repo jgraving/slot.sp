@@ -845,3 +845,5 @@ Follow-up: Select replaces X in the emulator picker; wait for its existing shell
 Save-and-stay review found the worker may coalesce/drop a pending preview when prioritizing Save. On save success while staying open, and on failure, enqueue a fresh preview so the editor cannot remain stale or permanently not-ready. Save/retry regressions now wait for preview readiness as well as the write result.
 
 On source a37f020, scaling and blending pass. Shortcut suite passes 10/11 Studio lifecycle tests and catches a test setup error: ready() had already initialized the entrance clock at zero before the test asserted its initial pose at 1000ms. Initialize the entrance clock before waiting for preview readiness, matching runtime ordering. No production motion timing is changed by this correction. Remaining CI/native checks still pending.
+
+Power/suspend follow-up: if explicit Save is already writing when finish() arrives, retain the close-after-save request instead of leaving the editor open. Reuse the existing write and add an in-flight-save close regression; no duplicate write is started.

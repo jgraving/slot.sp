@@ -161,3 +161,13 @@ fn failed_explicit_save_keeps_edits_and_the_preview_ready_for_retry() {
     assert!(menu.visible);assert!(menu.has_unsaved_changes());assert!(menu.take_saved().is_none());
     assert_eq!(menu.notice_text(),Some("Could not save · try again"));
 }
+
+#[test]
+fn power_close_during_explicit_save_closes_after_the_existing_write() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let mut menu=Menu::new(root.path().into(),cart,false);change_finish(&mut menu);
+    let row=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
+    menu.model.screen=Screen::List{row};menu.input(Action::GbaDown(Btn::A));
+    assert!(menu.busy());menu.finish();wait_for_save(&mut menu);
+    assert!(!menu.visible);assert!(menu.take_saved().is_some());
+}

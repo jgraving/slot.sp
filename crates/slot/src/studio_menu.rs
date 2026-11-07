@@ -162,6 +162,8 @@ impl Menu {
     pub fn finish(&mut self) {self.save_changes(true);}
     fn save_changes(&mut self, close: bool) {
         if self.saving {
+            // A power/suspend close must still take effect if Save is already writing.
+            self.close_after_save |= close;
             return;
         }
         self.complete_apply();
