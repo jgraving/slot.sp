@@ -267,7 +267,6 @@ export function mountSP(stage, video, options={}) {
   slab(back,16.6,3.6,.24,1.8,.1,chrome,0,29,.12);
   slab(back,15.7,2.85,.1,1.4,.03,material({color:0x13161a,roughness:.22,metalness:.05,clearcoat:.8}),0,29,.22);
   // The rear is flipped around both axes when shut; keep the badge upright.
-  engraving('ANBERNIC',back,0,29,.3,14,2,'#c8cdd0').rotation.z=Math.PI;
 
   // Each surface has its own hardware: TF1 + volume on the left; TF2,
   // power and reset on the right; two display/charging ports at the rear.
@@ -340,7 +339,6 @@ export function mountSP(stage, video, options={}) {
   for(const x of [-36.4,36.4])for(const y of [-10.5,-69.5]) {
     disc(underside,2.2,.1,dark,x,y,.06);disc(underside,1.35,.14,chrome,x,y,.14);engraving('+',underside,x,y,.3,1.55,1.55);
   }
-  engraving('ANBERNIC',underside,0,-29,.1,24,3.1);
   engraving('RG SP',underside,0,-33.8,.1,7,1.9);
   engraving('MADE IN CHINA',underside,0,-41,.1,18,1.4);
   const shadowMap=textureCanvas(256,128,(ctx,w,h)=>{

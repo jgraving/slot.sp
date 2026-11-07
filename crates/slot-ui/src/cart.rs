@@ -402,7 +402,7 @@ fn dress(s: &Spec, rgba: &mut [u8]) {
 }
 
 fn stamp_console(rgba: &mut [u8], w: u32, h: u32, title: &str, label_top: u32) {
-    let Some(font) = text::label_font() else {
+    let Some(font) = text::font(text::Role::Display) else {
         return;
     };
     let band = label_top.max(1);

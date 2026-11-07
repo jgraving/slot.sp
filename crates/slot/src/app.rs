@@ -348,6 +348,7 @@ pub struct App {
     pub network: Option<crate::network::Menu>,
     pub studio: Option<crate::studio_menu::Menu>,
     net_time: crate::net_time::NetTime,
+    shell_logos: crate::shell_logos::Loader,
     pub display_schedule: Option<crate::display_schedule::Menu>,
     kid_error: bool,
     catalog: Vec<Cart>,
@@ -624,6 +625,7 @@ impl App {
             network: None,
             studio: None,
             net_time: crate::net_time::NetTime::new(Arc::new(crate::sntp::fetch)),
+            shell_logos: crate::shell_logos::Loader::default(),
             display_schedule: None,
             kid_error: false,
             catalog,
@@ -4570,6 +4572,17 @@ impl App {
     }
 
     fn timers(&mut self) {
+        #[cfg(feature = "device")]
+        if let Some(root) = self.root.as_deref() {
+            let online = !self.kids.active && !self.shutting_down() && !self.link_active()
+                && !matches!(self.phase, Phase::Doze { .. } | Phase::SetClock { .. })
+                && self.network.as_ref().is_some_and(|m| m.wifi_connected());
+            if self.shell_logos.step(root, online, self.now()) {
+                for (_, shelf) in &mut self.shelves {
+                    for i in 0..shelf.carts.len() { self.orphaned.extend(shelf.take_face(i)); }
+                }
+            }
+        }
         if let Some(menu)=&mut self.studio {menu.update();}
         if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);self.studio=None;}
         let sharing_allowed=!self.kids.active && !self.shutting_down() && !self.link_active() && self.studio.is_none() && matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}|Phase::About|Phase::SetClock{..});

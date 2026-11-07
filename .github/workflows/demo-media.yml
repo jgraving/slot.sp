@@ -1,7 +1,7 @@
 name: Capture original demo media
 on:
   push:
-    branches: [refresh/demo-media]
+    branches: [refresh/demo-media, refresh/device-shell-logos]
     paths: ['previews/*.rs', 'previews/*.py', 'previews/artwork/**', 'assets/**', 'crates/slot-ui/src/cart.rs', '.github/workflows/demo-media.yml']
   workflow_dispatch:
 permissions:
