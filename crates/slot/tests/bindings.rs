@@ -818,7 +818,10 @@ fn start_up_raises_brightness_and_start_alone_opens_the_emulator_picker() {
     assert!(s.app().quick_menu().is_none());
     assert!(s.app().core_picker().is_some(), "START must open the existing chip picker");
     tap(&mut s, &mut now, Btn::X);
-    assert!(s.app().studio.is_some(), "X must open Cart Studio from the picker");
+    assert!(s.app().studio.is_none(),"X no longer opens Studio");
+    tap(&mut s, &mut now, Btn::Select);
+    for _ in 0..30 {now+=17;s.update(0.017);}
+    assert!(s.app().studio.is_some(), "Select must open Studio after closing the picker");
 }
 
 #[test]

@@ -386,10 +386,12 @@ pub struct App {
     power_switch_faces: Option<[[TexId; 2]; 4]>,
     repair_faces: Vec<(TexId, u32, u32)>,
     core_picker: Option<CorePicker>,
+    studio_after_picker: bool,
     core_board_face: Option<TexId>,
     core_interior_face: Option<TexId>,
     core_lid_face: Option<TexId>,
     core_faces_stem: Option<String>,
+    cart_appearance_revision: u64,
     core_socket_faces: Vec<TexId>,
     core_chip_faces: Vec<TexId>,
     core_blank_chip_face: Option<TexId>,
@@ -677,10 +679,12 @@ impl App {
             power_switch_faces: None,
             repair_faces: Vec::new(),
             core_picker: None,
+            studio_after_picker: false,
             core_board_face: None,
             core_interior_face: None,
             core_lid_face: None,
             core_faces_stem: None,
+            cart_appearance_revision: 0,
             core_socket_faces: Vec::new(),
             core_chip_faces: Vec::new(),
             core_blank_chip_face: None,
@@ -2772,6 +2776,10 @@ impl App {
         self.core_picker.map(|p| p.seat())
     }
 
+    pub fn core_picker_openness(&self) -> Option<f32> {
+        self.core_picker.map(|p|p.openness(self.now()))
+    }
+
     pub fn core_picker_chip(&self) -> Option<Chip> {
         self.core_picker.map(|p| p.chip(self.now()))
     }
@@ -4216,7 +4224,11 @@ impl App {
         }
         if self.core_picker.is_some_and(|p| p.finished(now)) {
             self.core_picker = None;
+            if std::mem::take(&mut self.studio_after_picker) && !self.shutting_down() && matches!(self.phase,Phase::Shelf) {
+                self.open_studio();
+            }
         }
+        if !matches!(self.phase,Phase::Shelf) || self.shutting_down() {self.studio_after_picker=false;}
         if !self.on_shelf() {
             self.shelf_mut().release_hold();
         }
@@ -4546,9 +4558,17 @@ impl App {
         if self.network.as_mut().is_some_and(|m|!m.local_files_ready()) {return;}
         let wifi=self.network.as_ref().is_some_and(|m|m.wifi_connected());
         self.play_held=None;self.shelf_mut().release_hold();
-        self.studio=Some(crate::studio_menu::Menu::new(root,cart,wifi));
+        let mut menu=crate::studio_menu::Menu::new(root,cart,wifi);
+        menu.source_rect=Some(self.shelf().selected_rect(self.canvas()));
+        self.studio=Some(menu);
+    }
+    pub fn cart_appearance_revision(&self) -> u64 {self.cart_appearance_revision}
+    fn invalidate_core_appearance(&mut self) {
+        self.cart_appearance_revision=self.cart_appearance_revision.wrapping_add(1);
+        self.core_faces_stem=None;
     }
     fn update_cart_appearance(&mut self,cart:&Cart) {
+        self.invalidate_core_appearance();
         for c in &mut self.catalog {if c.platform==cart.platform && c.stem==cart.stem {*c=cart.clone();}}
         for (_,shelf) in &mut self.shelves {for i in 0..shelf.carts.len() {
             if shelf.carts[i].platform==cart.platform && shelf.carts[i].stem==cart.stem {
@@ -4589,6 +4609,7 @@ impl App {
                 && !matches!(self.phase, Phase::Doze { .. } | Phase::SetClock { .. })
                 && self.network.as_ref().is_some_and(|m| m.wifi_connected());
             if self.shell_logos.step(root, online, self.now()) {
+                self.invalidate_core_appearance();
                 if let Some(menu) = &mut self.studio { menu.refresh_shell(); }
                 for (_, shelf) in &mut self.shelves {
                     for i in 0..shelf.carts.len() { self.orphaned.extend(shelf.take_face(i)); }
@@ -4597,7 +4618,8 @@ impl App {
         }
         let studio_now=self.now();
         if let Some(menu)=&mut self.studio {menu.update_at(studio_now);}
-        if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);self.studio=None;}
+        if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);}
+        if self.studio.as_ref().is_some_and(|m|!m.visible&&!m.busy()) {self.studio=None;}
         let sharing_allowed=!self.kids.active && !self.shutting_down() && !self.link_active() && self.studio.is_none() && matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}|Phase::About|Phase::SetClock{..});
         if let Some(network)=&mut self.network {network.set_sharing_allowed(sharing_allowed);}
         let linking=self.link_active();
@@ -5584,6 +5606,12 @@ impl App {
         self.current_custom_sliders=self.visible_custom_sliders();
     }
     fn draw_menu_shelf(&self,out:&mut Vec<Draw>){
+        if let Some(menu)=&self.studio {
+            let begin=out.len();
+            self.shelf().draw_row(self.canvas(),Some(&menu.model.cart.stem),0.0,0.0,1.0,out);
+            shift_down(&mut out[begin..],menu.entry().clamp(0.0,1.0)*(self.canvas().h+96.0));
+            return;
+        }
         let begin=out.len();self.shelf().draw(self.canvas(),self.shelf_shake(),None,out);
         slot_ui::draw_slot_name_sized(self.canvas(),self.shelf_platform,self.shelf_platform_h,self.slot_name_alpha(),out);
         slot_ui::draw_slot_title(self.canvas(),self.shelf_title,self.title_alpha(),out);
@@ -5616,11 +5644,21 @@ impl App {
         match key {
             4100|4101|4103=>{
                 let edge=self.canvas().w*0.47;let x=edge+4.0;let w=self.canvas().w-76.0-edge+4.0;
-                let pitch=if key==4100 {self.studio.as_ref().map_or(64.0,|m|(262.0/m.model.rows().len().max(1)as f32).min(64.0))}else if key==4101 {110.0}else{52.0};
-                let top=if key==4100 {80.0}else if key==4101 {104.0}else{128.0};
+                let pitch=if key==4100 {self.studio.as_ref().map_or(60.0,|m|m.option_pitch())}else if key==4101 {crate::studio_gallery::SHEET_PITCH}else{52.0};
+                let top=if key==4100 {74.0}else if key==4101 {108.0}else{128.0};
                 let offset=(frame.focus_y-slot_ui::expressive::ROW_TOP)/slot_ui::QUICK_PITCH;
                 let dx=if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
-                slot_ui::expressive::rounded(out,x+dx,top+offset*pitch,w,pitch-4.0,12.0,slot_ui::expressive::SELECTED);
+                let (y,h)=if key==4100 {
+                    let last=self.studio.as_ref().map_or(0,|m|m.model.rows().len().saturating_sub(1)) as f32;
+                    let end=(offset-(last-1.0)).clamp(0.0,1.0);
+                    (top+offset*pitch+(326.0-top-last*pitch)*end,pitch-4.0+(34.0-(pitch-4.0))*end)
+                }else{(top+offset*pitch,pitch-4.0)};
+                slot_ui::expressive::rounded(out,x+dx,y,w,h,12.0,slot_ui::expressive::SELECTED);
+            },
+            4105=>{
+                let x=self.canvas().w*0.47+4.0;let w=self.canvas().w-76.0-x+8.0;
+                let offset=(frame.focus_y-slot_ui::expressive::ROW_TOP)/slot_ui::QUICK_PITCH;
+                slot_ui::expressive::rounded(out,x,138.0+offset*60.0,w,52.0,12.0,slot_ui::expressive::SELECTED);
             },
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
@@ -5640,7 +5678,9 @@ impl App {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
                     if let Some(key)=self.menu_motion.outgoing_custom_key(){self.draw_custom_focus(key,frame,out);}
-                    slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
+                    if self.menu_motion.outgoing_custom_key().is_some_and(|k|(4100..=4105).contains(&k)) {
+                        crate::studio_gallery::draw_menu(self.canvas(),tex,frame,out);
+                    } else {slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);}
                     slot_ui::draw_menu_switches(self.canvas(),&self.previous_custom_switches,&self.switch_motion,frame,out);
                     slot_ui::draw_menu_sliders(self.canvas(),&self.previous_custom_sliders,&self.slider_motion,frame,out);
                             }
@@ -5659,18 +5699,49 @@ impl App {
             surface.focus_compact=if self.kid_menu.is_some() {self.kid_surface.value()}else{0.0};
             if self.kid_menu.is_some() {slot_ui::expressive::draw_kid_pause_surface(self.canvas(),surface,out);}else{slot_ui::expressive::draw_pause_surface(self.canvas(),surface,&[],out);}
         }
-        if !over_game {slot_ui::expressive::draw_card(self.canvas(),out);}
+        if !over_game {
+            if self.studio.is_some() {
+                let x=self.canvas().w*0.47-4.0;
+                slot_ui::expressive::rounded(out,x,slot_ui::expressive::CARD_TOP,
+                    self.canvas().w-slot_ui::expressive::MENU_INSET-x,
+                    slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::CARD_TOP,28.0,slot_ui::expressive::SURFACE);
+            } else {slot_ui::expressive::draw_card(self.canvas(),out);}
+        }
         self.draw_outgoing_menu(over_game,out);
         if !self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard()) {if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}}
-        slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
-        if let Some(art)=self.studio.as_ref().and_then(|m|m.art_face) {slot_ui::expressive::draw_cached_menu(self.canvas(),art,frame,out);}
-        if let Some(menu)=&self.studio {menu.draw_gallery(self.canvas(),frame,out);}
+        if self.studio.is_some() {crate::studio_gallery::draw_menu(self.canvas(),tex,frame,out);}
+        else {slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);}
+        if let Some(art)=self.studio.as_ref().and_then(|m|m.art_face) {crate::studio_gallery::draw_menu(self.canvas(),art,frame,out);}
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
         if let Some((_,total,_,visible))=scroll {slot_ui::expressive::draw_scrollbar(self.canvas(),slot_ui::expressive::ROW_TOP,visible,total,frame.window_start,out);}
-        self.transform_settings_panel(&mut out[begin..]);
+        if let Some(menu)=&self.studio {
+            // The option card rises independently, behind the floating cartridge.
+            let dy=(1.0-menu.entry())*(self.canvas().h+32.0);
+            for draw in &mut out[begin..] {
+                if !slot_ui::expressive::is_chrome(draw) {shift_down(std::slice::from_mut(draw),dy);}
+            }
+        } else {self.transform_settings_panel(&mut out[begin..]);}
         slot_ui::expressive::clip_panel(out,begin,self.canvas());
+        if let Some(menu)=&self.studio {
+            let [x,y,w,h]=menu.shown_cart_rect(self.canvas());
+            if let Some(cart)=menu.cart_face {
+                out.push(Draw::Tex{x,y,w,h,tex:cart,alpha:1.0});
+            } else {
+                let from=self.shelf().selected_rect(self.canvas());
+                let start=out.len();self.shelf().draw_selected(self.canvas(),out);
+                for d in &mut out[start..] {
+                    if let Draw::Tex{x:dx,y:dy,w:dw,h:dh,..}|Draw::Rect{x:dx,y:dy,w:dw,h:dh,..}=d {
+                        *dx=x+(*dx-from[0])*w/from[2];*dy=y+(*dy-from[1])*h/from[3];
+                        *dw*=w/from[2];*dh*=h/from[3];
+                    }
+                }
+            }
+            menu.draw_title(self.canvas(),tex,out);
+            let start=out.len();menu.draw_gallery(self.canvas(),frame,out);
+            shift_down(&mut out[start..],(1.0-menu.entry())*(self.canvas().h+32.0));
+        }
     }
     fn transform_settings_panel(&self, draws: &mut [Draw]) {
         self.menu_motion.transform(self.canvas(), draws);
@@ -6701,11 +6772,11 @@ impl App {
     }
 
     fn core_picker_input(&mut self, action: Action) {
-        if action == Action::GbaDown(Btn::X) && self.core_picker.is_some_and(|p| !p.closing()) {
-            self.open_studio();
-            if self.studio.is_some() {
-                self.core_picker = None;
-            }
+        if action == Action::GbaDown(Btn::Select) && !self.kids.active
+            && self.core_picker.is_some_and(|p| !p.closing()) {
+            let now=self.now();
+            self.studio_after_picker=true;
+            if let Some(picker)=&mut self.core_picker {picker.press(Press::Back,now);}
             return;
         }
         let press = match action {
@@ -7862,6 +7933,17 @@ fn bezel_slot(platform: Platform) -> usize {
 #[cfg(test)]
 mod bluetooth_tests {
     use super::*;
+
+    #[test]
+    fn a_saved_appearance_invalidates_ready_picker_art_even_for_the_same_filename() {
+        let cart=Cart{platform:Platform::Gba,stem:"Aurora".into(),rom:"Games/GBA/Aurora.gba".into(),
+            label:None,title:"AURORA".into(),code:String::new(),shell:None};
+        let mut app=App::new(vec![cart.clone()]);
+        app.set_core_board_faces(TexId::from_raw(981),TexId::from_raw(982));
+        assert!(app.core_faces_ready());let revision=app.cart_appearance_revision();
+        app.update_cart_appearance(&cart);
+        assert_eq!(app.cart_appearance_revision(),revision+1);assert!(!app.core_faces_ready());
+    }
 
     #[test]
     fn right_opens_disclosed_lists_but_keeps_values_and_plain_actions_distinct() {

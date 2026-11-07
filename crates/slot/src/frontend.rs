@@ -41,6 +41,7 @@ pub struct Frontend {
     network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
     studio_gallery_tex:Option<TexId>,
     studio_art_tex:Option<TexId>,
+    studio_cart_tex:Option<TexId>,
     studio_tex: Option<TexId>,
     studio_old_tex: Option<TexId>,
     studio_page: Option<u64>,
@@ -82,9 +83,9 @@ pub struct Frontend {
     rebuild_faces: RebuildFaces,
     link_art: LinkArtBuilder,
     link_art_done: bool,
-    core_asked: Option<String>,
+    core_asked: Option<(String,u64)>,
     core_tex: CoreTextures,
-    core_built: Option<String>,
+    core_built: Option<(String,u64)>,
     undo_tex: Option<TexId>,
     switcher: Switcher,
     clocks: Clocks,
@@ -220,7 +221,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_gallery_tex:None,studio_old_tex:None,studio_page:None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_cart_tex:None,studio_gallery_tex:None,studio_old_tex:None,studio_page:None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -830,6 +831,9 @@ impl Frontend {
             }
             if let Some(face) = menu.take_gallery_pixels() {
                 menu.gallery_tex=Some(upload_rgba(compositor,&mut self.studio_gallery_tex,face.w,face.h,&face.rgba));
+            }
+            if let Some(face)=menu.take_cart_pixels() {
+                menu.cart_face=Some(upload_rgba(compositor,&mut self.studio_cart_tex,face.w,face.h,&face.rgba));
             }
             if menu.face.is_none() {menu.face=Some(upload_menu_face(compositor,&mut self.studio_tex,&mut self.menu_chrome_cache,menu.screen_face(sound_canvas),&mut chrome_updates));
                 let face=menu.artwork_face(sound_canvas);menu.art_face=Some(upload_rgba(compositor,&mut self.studio_art_tex,face.w,face.h,&face.rgba));}
@@ -1786,26 +1790,20 @@ fn sync_core_picker(
     app: &mut App,
     compositor: &mut Compositor,
     builder: &FaceBuilder,
-    asked: &mut Option<String>,
+    asked: &mut Option<(String,u64)>,
     tex: &mut CoreTextures,
-    built: &mut Option<String>,
+    built: &mut Option<(String,u64)>,
 ) {
-    let highlighted = app.selected_stem().map(str::to_string);
+    let highlighted = app.selected_stem().map(|s|(s.to_string(),app.cart_appearance_revision()));
     if highlighted.is_some() && *asked != highlighted {
-        if let Some(cart) = app
-            .carts()
-            .find(|c| highlighted.as_deref() == Some(c.stem.as_str()))
-        {
-            builder.request(cart.clone());
+        if let Some(cart) = app.carts().find(|c| highlighted.as_ref().is_some_and(|(stem,_)|stem.as_str()==c.stem.as_str())) {
+            builder.request_revision(cart.clone(),app.cart_appearance_revision());
         }
         *asked = highlighted.clone();
     }
-    let Some(faces) = builder.take() else {
-        return;
-    };
-    if highlighted.as_deref() != Some(faces.stem.as_str()) || *built == highlighted {
-        return;
-    }
+    let Some(faces) = builder.take() else {return;};
+    // A late result for the same filename must not restore the previous sticker.
+    if !highlighted.as_ref().is_some_and(|(stem,revision)|faces.matches(stem,*revision)) || *built==highlighted {return;}
     let interior_id = upload_rgba(
         compositor,
         &mut tex.interior,
@@ -1829,7 +1827,7 @@ fn sync_core_picker(
         &faces.lid.rgba,
     );
     app.set_core_board_faces(board_id, lid_id);
-    *built = Some(faces.stem);
+    *built = highlighted;
 }
 
 fn upload(compositor: &mut Compositor, slot: &mut Option<TexId>, face: slot_ui::UndoFace) -> TexId {

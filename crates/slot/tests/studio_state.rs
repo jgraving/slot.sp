@@ -26,19 +26,19 @@ fn to_row(s: &mut Studio, row: Row) {
 
 #[test]
 fn rows_for_a_gba_cart() {
-    assert_eq!(gba().rows(), vec![Row::Label, Row::Color, Row::Finish]);
+    assert_eq!(gba().rows(), vec![Row::Label, Row::Color, Row::Finish, Row::Save]);
 }
 
 #[test]
 fn shape_only_on_game_boy() {
     let s = Studio::new(cart(Platform::Gb, true), true);
-    assert_eq!(s.rows(), vec![Row::Label, Row::Color, Row::Finish, Row::Shape]);
+    assert_eq!(s.rows(), vec![Row::Label, Row::Color, Row::Finish, Row::Shape, Row::Save]);
 }
 
 #[test]
 fn title_labels_are_editable_without_wifi() {
     let s = Studio::new(cart(Platform::Gba, true), false);
-    assert_eq!(s.rows(), vec![Row::Label, Row::Color, Row::Finish]);
+    assert_eq!(s.rows(), vec![Row::Label, Row::Color, Row::Finish, Row::Save]);
 }
 
 #[test]

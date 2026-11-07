@@ -798,6 +798,11 @@ fn studio_shortcuts_open_the_highlighted_cartridge_and_back_returns_to_it() {
     app.apply(Action::GbaDown(Btn::Start));
     assert!(app.quick_menu().is_none());
     app.apply(Action::GbaDown(Btn::X));
+    assert!(app.studio.is_none());
+    app.apply(Action::GbaDown(Btn::Select));
+    assert!(app.studio.is_none(),"close the picker before opening Studio");
+    let deadline=Instant::now()+Duration::from_secs(5);
+    while app.studio.is_none() {app.update(0.02);assert!(Instant::now()<deadline);std::thread::sleep(Duration::from_millis(5));}
     assert_eq!(app.studio.as_ref().unwrap().model.cart.stem, "Fusion");
     app.apply(Action::GbaDown(Btn::B));
     let deadline=Instant::now()+Duration::from_secs(5);

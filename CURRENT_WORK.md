@@ -1,5 +1,5 @@
-# Wi-Fi progress and OTA identity
+# Cart Studio final validation
 
-Active branch: `fix/wifi-progress-ota`, based on main `50a9c233`.
+Active PR: #216, `fix/studio-motion-affordances`, incorporating main `7b4b9b2` from verified PR #215.
 
-Read WORKLOG.md for scope and verification. Add connecting Wi-Fi status waves and reliable source-based OTA detection, including same-day and diverged test builds. Prior Studio PR #214 is merged. Physical handheld checks remain pending.
+Read WORKLOG.md. User authorizes merge only after checks pass. Wi-Fi/OTA/status/settings PR #215 is merged with six successful workflows and an identical tested merge tree. Finish combined-source CI for Studio, inspect anchored chrome, floating cartridge/title, picker-close-before-entry and explicit Save-and-stay captures, then merge #216. Keep the PRs separate. Physical handheld checks remain pending.

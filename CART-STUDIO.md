@@ -8,7 +8,7 @@ Prefer a browser? Visit [Slot Cart Studio](https://studio.slot-cfw.fyi/).
 
 ## Open the editor
 
-Press **Select** on any highlighted cartridge to open Cart Studio. Select’s volume and brightness shortcuts still work. **Start** also opens Studio on GB and GBC cartridges. On a GBA cartridge, press **Start** to open the emulator picker, then **X** for Cart Studio. You can also open it from **Settings → Gameplay → Cart Studio**.
+Press **Select** on any highlighted cartridge to open Cart Studio. Select’s volume and brightness shortcuts still work. **Start** also opens Studio on GB and GBC cartridges. On a GBA cartridge, press **Start** to open the emulator picker, then **Select** for Cart Studio. You can also open it from **Settings → Gameplay → Cart Studio**.
 
 The editor is unavailable during games, link play and kid mode.
 
@@ -24,7 +24,7 @@ Existing custom PNGs on the card remain available. Rounded scan corners are clea
 
 ## Save your changes
 
-Choose **Save & close** to save the changes and update the carousel. If saving fails, the editor stays open so you can retry.
+Choose **Save** on the options card to save changes and keep editing. **B** closes the editor immediately when everything is saved. With unsaved changes, choose **Save and close**, **Discard changes**, or **Keep editing**. A failed save keeps the editor open for retry.
 
 Labels use the game's filename:
 

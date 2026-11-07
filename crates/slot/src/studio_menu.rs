@@ -26,6 +26,13 @@ pub struct Menu {
     pub model: Studio,
     pub face: Option<TexId>,
     pub art_face: Option<TexId>,
+    pub cart_face: Option<TexId>,
+    cart_dirty: bool,
+    opened_at: Option<u64>,
+    pub source_rect: Option<[f32;4]>,
+    clean: Studio,
+    close_choice: Option<usize>,
+    close_after_save: bool,
     pub visible: bool,
     root: PathBuf,
     original: Option<Arc<Vec<u8>>>,
@@ -99,10 +106,12 @@ impl Menu {
             }
         });
         let mut menu = Self {
+            clean: model.clone(), close_choice: None, close_after_save: false, source_rect: None,
             model,
             gallery_tex: None, gallery: None, now: 0, printed_at: 0, applying: None, landed: None,
             face: None,
             art_face: None,
+            cart_face: None, cart_dirty: false, opened_at: None,
             visible: true,
             root,
             original,
@@ -124,9 +133,11 @@ impl Menu {
         self.preview_generation == self.generation
     }
     pub fn focus_info(&self)->Option<(usize,usize)> {
+        if let Some(at)=self.close_choice {return Some((at,0));}
         match self.model.screen {Screen::List{row}=>Some((row,0)),Screen::Sheet{at}=>Some((at,0)),Screen::Custom{channel,..}=>Some((channel,0)),_=>None}
     }
     pub fn page_key(&self) -> u64 {
+        if self.close_choice.is_some() {return 4105;}
         4100 + match self.model.screen {
             Screen::List { .. } => 0,
             Screen::Sheet { .. } => 1,
@@ -141,11 +152,26 @@ impl Menu {
     pub fn take_saved(&mut self) -> Option<Cart> {
         self.saved.take()
     }
-    pub fn finish(&mut self) {
+    pub fn has_unsaved_changes(&self) -> bool {
+        self.applying.is_some() || self.model.current_shell()!=self.clean.current_shell()
+            || self.model.wearing!=self.clean.wearing
+            || self.model.preview_ground()!=self.clean.preview_ground()
+    }
+    pub fn confirming_close(&self) -> bool {self.close_choice.is_some()}
+    pub fn option_pitch(&self) -> f32 {(240.0/self.model.rows().len().saturating_sub(1).max(1) as f32).min(60.0)}
+    pub fn finish(&mut self) {self.save_changes(true);}
+    fn save_changes(&mut self, close: bool) {
         if self.saving {
+            // A power/suspend close must still take effect if Save is already writing.
+            self.close_after_save |= close;
             return;
         }
         self.complete_apply();
+        self.close_choice=None;
+        self.close_after_save=close;
+        if !self.has_unsaved_changes() {
+            self.visible=!close;self.notice="Saved".into();self.face=None;return;
+        }
         self.saving = true;
         self.notice = "Saving cartridge…".into();
         if self
@@ -178,6 +204,7 @@ impl Menu {
     pub fn update(&mut self) { self.update_at(self.now); }
     pub fn update_at(&mut self, now: u64) {
         self.now = now;
+        self.opened_at.get_or_insert(now);
         if self.applying.is_some_and(|(_, at, _)| now.saturating_sub(at) >= studio_gallery::APPLY_MS) {
             self.complete_apply();
         }
@@ -218,18 +245,24 @@ impl Menu {
                     self.landed = None;
                     self.printed_at = self.now;
                     self.preview = Some(face);
+                    self.cart_dirty = true;
                     self.preview_generation = gen;
                     self.face = None;
                 }
                 Done::Saved(Ok(cart)) => {
                     self.saved = Some(cart);
+                    self.clean=self.model.clone();
                     self.saving = false;
-                    self.visible = false;
+                    self.visible = !self.close_after_save;
+                    self.notice="Saved".into();self.face=None;
+                    // A save can supersede a coalesced preview job. Refresh it
+                    // when staying open so the latest label cannot stay stale.
+                    if self.visible {self.rebuild();}
                 }
                 Done::Saved(Err(_)) => {
                     self.saving = false;
                     self.notice = "Could not save · try again".into();
-                    self.face = None;
+                    self.rebuild();
                 }
                 _ => {}
             }
@@ -244,13 +277,28 @@ impl Menu {
             Action::QuickMenu => Btn::B,
             _ => return,
         };
+        if let Some(at)=self.close_choice {
+            match btn {
+                Btn::Up=>self.close_choice=Some((at+2)%3),
+                Btn::Down=>self.close_choice=Some((at+1)%3),
+                Btn::B=>self.close_choice=None,
+                Btn::A=>match at {
+                    0=>self.save_changes(true),
+                    1=>{self.visible=false;self.close_choice=None;},
+                    _=>self.close_choice=None,
+                }, _=>{},
+            }
+            self.face=None;return;
+        }
         if self.applying.is_some() { return; }
         self.notice.clear();
         let before = self.model.clone();
         match self.model.press(btn) {
             Some(Effect::Close) => {
-                self.finish();
+                if self.has_unsaved_changes() {self.close_choice=Some(0);}
+                else {self.visible=false;}
             }
+            Some(Effect::Save) => self.save_changes(false),
             Some(Effect::Fetch) if (!self.model.art_ready() || self.model.art_failed) && self.fetch.is_none() => {
                 self.model.retry_art();
                 let (tx, rx) = channel();
@@ -283,6 +331,31 @@ impl Menu {
             || before.wearing != self.model.wearing { self.rebuild(); }
         else { self.face = None; }
     }
+    pub fn entry(&self) -> f32 {
+        studio_gallery::spring(self.now.saturating_sub(self.opened_at.unwrap_or(self.now)), 340.0, 0.86, 720)
+    }
+    pub fn take_cart_pixels(&mut self) -> Option<UndoFace> {
+        if !self.cart_dirty { return None; }
+        self.cart_dirty = false;
+        self.preview.as_ref().map(|f| UndoFace { rgba:f.rgba.clone(), w:f.w, h:f.h })
+    }
+    pub fn cart_rect(&self, canvas: Canvas) -> [f32;4] {
+        let (w,h) = self.preview.as_ref().map(|f|(f.w,f.h))
+            .unwrap_or_else(||slot_ui::cart_box(self.model.cart.platform));
+        let edge=canvas.w*0.47;
+        let scale=((edge-76.0-12.0)/w as f32).min(210.0/h as f32);
+        [76.0+(edge-76.0-w as f32*scale)/2.0, 102.0+(210.0-h as f32*scale)/2.0,
+            w as f32*scale, h as f32*scale]
+    }
+    pub fn shown_cart_rect(&self, canvas: Canvas) -> [f32;4] {
+        let to=self.cart_rect(canvas);
+        studio_gallery::entry_rect(self.source_rect.unwrap_or(to),to,self.entry())
+    }
+    pub fn draw_title(&self, canvas: Canvas, tex: TexId, out: &mut Vec<slot_ui::Draw>) {
+        let x=76.0; let w=canvas.w*0.47-x;
+        out.push(slot_ui::Draw::Part { x,y:308.0,w,h:52.0,tex,alpha:self.entry().clamp(0.0,1.0),
+            uv:[x/canvas.w,308.0/canvas.h,w/canvas.w,52.0/canvas.h] });
+    }
     pub fn take_gallery_pixels(&mut self) -> Option<UndoFace> {
         self.gallery.as_mut()?.pixels.take()
     }
@@ -302,21 +375,21 @@ impl Menu {
             let Some((_, w, h)) = gallery.slots.iter().find(|(k,_,_)| *k == kind) else { continue };
             let mut rect = Gallery::rect(canvas, index, *w, *h);
             let elapsed = self.now.saturating_sub(self.printed_at).saturating_sub(index as u64 * 100);
-            let feed = (elapsed as f32 / 300.0).clamp(0.0, 1.0);
-            rect[1] -= (1.0 - feed) * 18.0;
-            gallery.draw(tex, kind, rect, feed, out);
+            let feed = studio_gallery::spring(elapsed, 420.0, 0.74, 620);
+            rect[1] -= (1.0 - feed) * 24.0;
+            let opacity=(elapsed as f32/140.0).clamp(0.0,1.0);
+            if !self.applying.is_some_and(|(selected,_,_)|selected==kind) {
+                gallery.draw(tex, kind, rect, opacity, out);
+            }
         }
         if let Some((kind, started, index)) = self.applying.or_else(|| self.landed.map(|k| (k, 0, 0))) {
-            if let (Some((_, w, h)), Some(cart)) = (gallery.slots.iter().find(|(k,_,_)| *k == kind), &self.preview) {
+            if let (Some((_, w, h)), Some(_cart)) = (gallery.slots.iter().find(|(k,_,_)| *k == kind), &self.preview) {
                 let from = Gallery::rect(canvas, index, *w, *h);
-                let edge = canvas.w * 0.47;
-                let scale = ((edge - 76.0 - 12.0) / cart.w as f32).min(210.0 / cart.h as f32);
-                let cx = 76.0 + (edge - 76.0 - cart.w as f32 * scale) / 2.0;
-                let cy = 102.0 + (210.0 - cart.h as f32 * scale) / 2.0;
+                let [cx,cy,cw,ch] = self.shown_cart_rect(canvas);
                 let mut edited = self.model.cart.clone(); edited.shell = self.model.shell;
                 let (x,y,w,h) = slot_ui::label_rect(slot_ui::gb_shell_of(&edited));
-                let to = [cx + x * cart.w as f32 * scale, cy + y * cart.h as f32 * scale,
-                    w * cart.w as f32 * scale, h * cart.h as f32 * scale];
+                let to = [cx + x * cw, cy + y * ch,
+                    w * cw, h * ch];
                 let elapsed = if self.applying.is_some() { self.now.saturating_sub(started) } else { studio_gallery::APPLY_MS };
                 let rect = studio_gallery::application_rect(from, to, elapsed);
                 gallery.draw(tex, kind, rect, 1.0, out);
@@ -333,21 +406,6 @@ impl Menu {
         };
         let left = 76.0;
         let edge = canvas.w * 0.47;
-        if let Some(cart) = &self.preview {
-            let scale = ((edge - left - 12.0) / cart.w as f32).min(210.0 / cart.h as f32);
-            let src = UndoFace {
-                rgba: cart.rgba.clone(),
-                w: cart.w,
-                h: cart.h,
-            };
-            place(
-                &mut face,
-                &src,
-                left + (edge - left - cart.w as f32 * scale) / 2.0,
-                102.0 + (210.0 - cart.h as f32 * scale) / 2.0,
-                scale,
-            );
-        }
         if let Screen::Chips { at, .. } = self.model.screen {
             use slot_ui::palette::{chip_grid, Chip};
             let grid = chip_grid(0.0, 0.0);
@@ -391,7 +449,7 @@ impl Menu {
         };
         let title = slot_ui::quick_heading_face("Cart Studio");
         place(&mut face, &title, canvas.centred(title.w as f32), 0.0, 1.0);
-        let mode = match self.model.screen {
+        let mode = if self.close_choice.is_some() {7} else if self.model.row()==Some(Row::Save) {6} else { match self.model.screen {
             Screen::List { .. } => 0,
             Screen::Sheet { .. } => 1,
             Screen::Chips { at, .. } => {
@@ -406,9 +464,9 @@ impl Menu {
             }
             Screen::Custom { .. } => 3,
             Screen::Hex { .. } => 4,
-        };
+        }};
         let hints = slot_ui::cart_studio_legends(
-            mode == 0,
+            matches!(self.model.screen,Screen::List{..}) && self.close_choice.is_none(),
             mode,
             matches!(self.model.row(), Some(Row::Finish | Row::Shape)),
         );
@@ -436,10 +494,17 @@ impl Menu {
         );
         let x = edge + 12.0;
         let w = right - x;
+        if let Some(at)=self.close_choice {
+            text(&mut face,"Save changes?",x,84.0,w,24.0,true);
+            for (i,name) in ["Save and close","Discard changes","Keep editing"].iter().enumerate() {
+                text(&mut face,name,x,144.0+i as f32*60.0,w,22.0,i==at);
+            }
+            return face;
+        }
         match self.model.screen {
             Screen::List { row } => {
                 let rows = self.model.rows();
-                let pitch = (262.0 / rows.len().max(1) as f32).min(64.0);
+                let pitch = self.option_pitch();
                 for (i, item) in rows.iter().enumerate() {
                     let name = match item {
                         Row::Label => "Label",
@@ -447,6 +512,7 @@ impl Menu {
                         Row::Color => "Shell color",
                         Row::Finish => "Finish",
                         Row::Shape => "Shape",
+                        Row::Save => "Save",
                     };
                     let value = match item {
                         Row::Finish => match self.model.current_shell().finish {
@@ -469,9 +535,20 @@ impl Menu {
                             .unwrap_or_else(|| "Automatic".into()),
                         _ => "Choose…".into(),
                     };
-                    let y = 82.0 + i as f32 * pitch;
-                    text(&mut face, name, x, y, w, 24.0, i == row);
-                    text(&mut face, &value, x, y + 27.0, w, 20.0, false);
+                    let y = if *item==Row::Save {330.0} else {76.0+i as f32*pitch};
+                    if *item==Row::Save {
+                        text(&mut face,"Save",x,y,w,24.0,i==row);continue;
+                    }
+                    let adjustable=matches!(item,Row::Finish|Row::Shape);
+                    let inset=if adjustable {20.0}else{0.0};
+                    text(&mut face, name, x+inset, y, w-20.0-inset, 22.0, i == row);
+                    text(&mut face, &value, x+inset, y + 24.0, w-20.0-inset, 18.0, false);
+                    let right=slot_ui::quick_caret_face(true);
+                    place(&mut face,&right,x+w-right.w as f32,y+10.0,1.0);
+                    if adjustable {
+                        let left=slot_ui::quick_caret_face(false);
+                        place(&mut face,&left,x,y+10.0,1.0);
+                    }
                 }
             }
             Screen::Sheet { at } => {
@@ -485,7 +562,7 @@ impl Menu {
                         LabelKind::Logo => "Logo only",
                         LabelKind::Title => "Title only",
                     };
-                    let y = 182.0 + i as f32 * 110.0;
+                    let y = 184.0 + i as f32 * studio_gallery::SHEET_PITCH;
                     text(&mut face, name, x, y, w, 24.0, i == at);
                 }
             }
