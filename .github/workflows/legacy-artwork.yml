@@ -1,0 +1,34 @@
+name: Legacy artwork storage
+on:
+  pull_request:
+    paths: ['tools/legacy-artwork*', '.github/workflows/legacy-artwork.yml']
+  workflow_dispatch:
+    inputs:
+      clear:
+        description: 'Clear retired artwork caches and completed Pages upload bundles (unchecked = audit only)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: node --test tools/legacy-artwork.test.cjs
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const {run} = require('./tools/legacy-artwork.cjs');
+            await run({github, context, core, dryRun:context.payload.inputs.clear !== 'true'});
