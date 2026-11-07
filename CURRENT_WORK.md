@@ -1,5 +1,5 @@
-# Upstream on-device Studio integration
+# Wi-Fi progress and OTA identity
 
-Active branch: `feat/upstream-device-studio`, based on main `9d36c36`.
+Active branch: `fix/wifi-progress-ota`, based on main `50a9c233`.
 
-Read WORKLOG.md for scope and verification. Compare original project `slot-cfw/slot` at `0fe8f5cf`; adapt Studio visual label choices, duplicate suppression and apply feedback to our native UI. Preserve offline editing, artwork cleanup and saving/sharing safeguards. Targeted OS fixes follow the audit; Collections/emulator migrations need separate compatibility work. No physical device result is claimed.
+Read WORKLOG.md for scope and verification. Add connecting Wi-Fi status waves and reliable source-based OTA detection, including same-day and diverged test builds. Prior Studio PR #214 is merged. Physical handheld checks remain pending.

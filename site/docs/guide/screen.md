@@ -1,5 +1,5 @@
 ---
-title: Display
+title: Display & appearance
 template: redirect.html
 redirect: features/display/
 search:

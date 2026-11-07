@@ -16,7 +16,14 @@ fn main() {
         println!("cargo:rerun-if-changed=../../.git/packed-refs");
     }
 
-    let hash = git(&["rev-parse", "--short=8", "HEAD"])
+    // Checkout can move a symbolic branch without changing .git/HEAD.
+    println!("cargo:rerun-if-env-changed=GITHUB_SHA");
+    if let Some(reference) = git(&["symbolic-ref", "-q", "HEAD"]) {
+        if let Some(path) = git(&["rev-parse", "--git-path", &reference]) {
+            println!("cargo:rerun-if-changed={path}");
+        }
+    }
+    let source = git(&["rev-parse", "HEAD"])
         .or_else(|| {
             let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
             let root = root.canonicalize().ok()?;
@@ -27,9 +34,10 @@ fn main() {
                 "safe.directory",
                 root.to_str()?,
             ])?;
-            git(&["rev-parse", "--short=8", "HEAD"])
+            git(&["rev-parse", "HEAD"])
         })
         .unwrap_or_else(|| "unknown".into());
+    let hash = &source[..source.len().min(8)];
     let date = Command::new("date")
         .args(["-u", "+%Y-%m-%d"])
         .output()
@@ -40,6 +48,7 @@ fn main() {
 
     let version=format!("{}-{}",date.replace('-',"."),&hash[..hash.len().min(7)]);
     println!("cargo:rustc-env=SLOT_GIT_HASH={hash}");
+    println!("cargo:rustc-env=SLOT_SOURCE_COMMIT={source}");
     println!("cargo:rustc-env=SLOT_VERSION={version}");
     println!("cargo:rustc-env=SLOT_BUILD_DATE={date}");
 }

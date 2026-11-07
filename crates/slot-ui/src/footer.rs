@@ -162,6 +162,23 @@ pub fn draw_corner_indicator(canvas:Canvas,battery:Option<Battery>,percent:Print
     draw_connection(canvas,battery,percent,Some(icon),CORNER_MARGIN+STATUS_STEP*preceding as f32,(PLATE_H-crate::STATUS_ICON_SIZE as f32)/2.0,out);
 }
 
+/// Reuse one four-layer atlas; the outward pulse changes only draw alpha.
+pub fn draw_corner_wifi_connecting(canvas: Canvas, battery: Option<Battery>, percent: Printed,
+    atlas: TexId, preceding: usize, now_ms: u64, out: &mut Vec<Draw>) {
+    draw_corner_indicator(canvas, battery, percent, atlas, preceding, out);
+    if let Some(Draw::Tex { x, y, w, h, .. }) = out.pop() {
+        let phase = (now_ms % 1200) as f32 / 1200.0;
+        for layer in 0..4 {
+            let alpha = if layer == 0 { 1.0 } else {
+                let distance = (phase - (layer - 1) as f32 * 0.2).rem_euclid(1.0);
+                0.22 + 0.78 * ((distance * std::f32::consts::TAU).cos() * 0.5 + 0.5).powi(4)
+            };
+            out.push(Draw::Part { x, y, w, h, tex: atlas, alpha,
+                uv: [0.0, layer as f32 / 4.0, 1.0, 0.25] });
+        }
+    }
+}
+
 fn draw_connection(
     canvas: Canvas,
     battery: Option<Battery>,
@@ -187,6 +204,34 @@ fn draw_connection(
 #[cfg(test)]
 mod connection_tests {
     use super::*;
+    #[test]
+    fn connecting_atlas_rasterizes_all_four_visible_layers() {
+        let face=crate::wifi_connecting_face([244,241,234]);
+        assert_eq!((face.w,face.h),(28,112));
+        assert_eq!(face.rgba.len(),28*112*4);
+        for layer in face.rgba.chunks_exact(28*28*4) {
+            assert!(layer.chunks_exact(4).any(|p|p[3]>128));
+        }
+    }
+
+    #[test]
+    fn connecting_waves_travel_outward_without_moving_the_status_slot() {
+        let mut frames=Vec::new();
+        for now in [0, 240, 480, 1200] {
+            let mut draws=Vec::new();
+            draw_corner_wifi_connecting(Canvas { w: 640.0, h: 480.0 }, None, Printed::default(),
+                TexId::from_raw(9), 2, now, &mut draws);
+            assert_eq!(draws.len(),4);
+            let alpha:Vec<_>=draws.iter().map(|d|match d {
+                Draw::Part{x,y,w,h,alpha,uv,..}=>{assert_eq!((*w,*h),(crate::STATUS_ICON_SIZE as f32,crate::STATUS_ICON_SIZE as f32));assert!(x.is_finite()&&y.is_finite());assert_eq!(uv[2],1.0);*alpha},
+                _=>panic!("expected cached atlas slice"),
+            }).collect();
+            assert_eq!(alpha[0],1.0);frames.push(alpha);
+        }
+        assert!(frames[0][1]>frames[0][2]);assert!(frames[1][2]>frames[1][1]);
+        assert!(frames[2][3]>frames[2][2]);assert_eq!(frames[0],frames[3]);
+    }
+
     #[test]
     fn mute_follows_connection_without_overlapping_the_battery_or_clock() {
         let connection = TexId::from_raw(2);

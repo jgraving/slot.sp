@@ -354,6 +354,8 @@ pub struct App {
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
     pub ra_sync_indicator: Option<TexId>,
+    pub wifi_connecting_indicator: Option<TexId>,
+    pub hud_wifi_connecting_indicator: Option<TexId>,
     pub wifi_indicator: Option<TexId>,
     pub hud_wifi_indicator: Option<TexId>,
     pub audio_indicator: Option<TexId>,
@@ -629,6 +631,8 @@ impl App {
             bluetooth_supported: false,
             kid_status_icon: None,
             ra_sync_indicator: None,
+            wifi_connecting_indicator: None,
+            hud_wifi_connecting_indicator: None,
             wifi_indicator: None,
             hud_wifi_indicator: None,
             audio_indicator: None,
@@ -3310,6 +3314,9 @@ impl App {
                 _ => {}
             }
         }
+        if action==Action::GbaDown(Btn::Right) && row.disclosure() && !row.binds() {
+            return self.open_quick_row(row);
+        }
         let row = match action {
             Action::GbaDown(Btn::Up) => row.up(&self.hidden_rows()),
             Action::GbaDown(Btn::Down) => row.down(&self.hidden_rows()),
@@ -3346,6 +3353,9 @@ impl App {
                 Action::GbaDown(Btn::Left | Btn::Right) => return,
                 _ => {}
             }
+        }
+        if action==Action::GbaDown(Btn::Right) && row.disclosure() && !row.binds() {
+            return self.open_in_game_row(row);
         }
         self.in_game_menu = match action {
             Action::GbaDown(Btn::Up) => Some(row.up(hidden)),
@@ -5748,21 +5758,33 @@ impl App {
             },
             out,
         );
-        if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
-            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+        let mut preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+        if let Some(atlas) = if in_game {self.hud_wifi_connecting_indicator} else {self.wifi_connecting_indicator} {
+            slot_ui::draw_corner_wifi_connecting(self.canvas(), self.battery, self.battery_percent,
+                atlas, preceding, self.now(), out);
+            preceding += 1;
+        } else if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+            preceding += 1;
         }
         if let Some(tex) = self.ra_sync_indicator {
-            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+            preceding += 1;
         }
         if self.kids.active {
             if let Some(tex)=self.kid_status_icon {
-                let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
                 slot_ui::draw_corner_kid(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
             }
         }
         self.status_motion.apply(&mut out[audio_start..]);
+        if let Some(activity)=self.ra_sync_indicator {
+            // Keep activity visible throughout a slow, continuous three-second breath.
+            let phase=(self.now()%3000) as f32/3000.0*std::f32::consts::TAU;
+            let pulse=0.72+0.28*phase.cos();
+            for draw in &mut out[audio_start..] {
+                if let Draw::Tex{tex,alpha,..}=draw {if *tex==activity {*alpha*=pulse;}}
+            }
+        }
     }
 
     fn draw_about_hint_backings(&self, hints: &[Draw], out: &mut Vec<Draw>) {
@@ -7840,6 +7862,40 @@ fn bezel_slot(platform: Platform) -> usize {
 #[cfg(test)]
 mod bluetooth_tests {
     use super::*;
+
+    #[test]
+    fn right_opens_disclosed_lists_but_keeps_values_and_plain_actions_distinct() {
+        let mut app=App::new(vec![]);
+        app.phase=Phase::QuickMenu{row:QuickRow::ScreenGba};
+        app.quick_menu_input(QuickRow::ScreenGba,Action::GbaDown(Btn::Right));
+        assert_eq!(app.quick_menu(),Some(QuickRow::GbaShader));
+        app.phase=Phase::QuickMenu{row:QuickRow::ShowTitles};
+        let before=app.quick_value(QuickRow::ShowTitles);
+        app.quick_menu_input(QuickRow::ShowTitles,Action::GbaDown(Btn::Right));
+        assert_ne!(app.quick_value(QuickRow::ShowTitles),before);
+        assert_eq!(app.quick_menu(),Some(QuickRow::ShowTitles));
+        app.phase=Phase::QuickMenu{row:QuickRow::SleepNow};
+        app.quick_menu_input(QuickRow::SleepNow,Action::GbaDown(Btn::Right));
+        assert!(matches!(app.phase,Phase::QuickMenu{row:QuickRow::SleepNow}));
+    }
+
+    #[test]
+    fn background_achievement_icon_breathes_without_disappearing_or_moving() {
+        let mut app=App::new(vec![]);
+        let icon=TexId::from_raw(987);app.ra_sync_indicator=Some(icon);
+        let mut samples=Vec::new();
+        for now in [0,750,1500,2250,3000] {
+            app.tick_ms(now);let mut draws=Vec::new();app.draw_status_bar(&mut draws);
+            let d=draws.into_iter().find(|d|matches!(d,Draw::Tex{tex,..} if *tex==icon)).unwrap();
+            if let Draw::Tex{x,y,w,h,alpha,..}=d {samples.push((x,y,w,h,alpha));}
+        }
+        assert_eq!(samples[0],samples[4]);
+        assert!(samples[0].4>samples[1].4 && samples[1].4>samples[2].4);
+        assert!(samples[2].4>=0.43 && samples[3].4>samples[2].4);
+        for s in &samples {assert_eq!((s.0,s.1,s.2,s.3),(samples[0].0,samples[0].1,samples[0].2,samples[0].3));}
+        app.ra_sync_indicator=None;let mut draws=Vec::new();app.draw_status_bar(&mut draws);
+        assert!(!draws.iter().any(|d|matches!(d,Draw::Tex{tex,..} if *tex==icon)));
+    }
 
     #[test]
     fn active_output_distinguishes_bluetooth_from_a_plugged_in_jack() {
