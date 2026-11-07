@@ -126,8 +126,8 @@ fn unchanged_close_needs_neither_save_nor_confirmation() {
 #[test]
 fn submenus_keep_the_cartridge_pose_after_the_shared_arrival() {
     let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
-    let mut menu=Menu::new(root.path().into(),cart,false);ready(&mut menu);
-    menu.source_rect=Some([122.0,90.0,396.0,228.0]);menu.update_at(1000);
+    let mut menu=Menu::new(root.path().into(),cart,false);
+    menu.source_rect=Some([122.0,90.0,396.0,228.0]);menu.update_at(1000);ready(&mut menu);
     let canvas=slot_ui::Canvas{w:640.0,h:480.0};assert_eq!(menu.shown_cart_rect(canvas),menu.source_rect.unwrap());
     menu.update_at(2000);let rest=menu.shown_cart_rect(canvas);
     assert!(rest[2]<396.0 && rest[0]<122.0);
