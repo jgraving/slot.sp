@@ -1,12 +1,11 @@
 name: Capture original demo media
 on:
   push:
-    branches: [refresh/demo-media, refresh/device-shell-logos]
+    branches: [refresh/demo-media]
     paths: ['previews/*.rs', 'previews/*.py', 'previews/artwork/**', 'assets/**', 'crates/slot-ui/src/cart.rs', '.github/workflows/demo-media.yml']
   workflow_dispatch:
 permissions:
   contents: write
-  actions: read
 concurrency:
   group: demo-media-${{ github.ref }}
   cancel-in-progress: true
@@ -21,35 +20,34 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Restore the completed native capture
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs=require('node:fs'), path=require('node:path'), crypto=require('node:crypto');
-            const {owner,repo}=context.repo;
-            const artifact=await github.rest.actions.downloadArtifact({owner,repo,artifact_id:13575119875,archive_format:'zip'});
-            const bytes=Buffer.from(artifact.data);
-            if(crypto.createHash('sha256').update(bytes).digest('hex')!=='3e5fa3fbc465a5970f260d32676034a5c7b2ce2522949143f36695fc4b55b880') throw new Error('Capture archive differs');
-            const zip=path.join(process.env.RUNNER_TEMP,'completed-capture.zip');fs.writeFileSync(zip,bytes);
-            const out=path.join(process.env.RUNNER_TEMP,'demo-media/publish');fs.mkdirSync(out,{recursive:true});
-            require('node:child_process').execFileSync('python3',['-c',`
-            import sys,zipfile
-            from pathlib import Path
-            with zipfile.ZipFile(sys.argv[1]) as z:
-                for name in z.namelist():
-                    p=Path(name)
-                    assert not p.is_absolute() and '..' not in p.parts and p.parts[0]=='previews',name
-                z.extractall(sys.argv[2])
-            `,zip,out],{stdio:'inherit'});
-            for(const file of ['current','homepage','interactive','readme-model','sp-model']) {
-              const manifest=JSON.parse(fs.readFileSync(path.join(out,'previews',file,'provenance.json'),'utf8'));
-              if(manifest.source_commit!=='77358c762610980c0818b25c54d5cb0b4ca88f75') throw new Error('Unexpected capture source');
-              for(const entry of manifest.files) {
-                const file=path.resolve(out,entry.path);
-                if(!file.startsWith(out+path.sep)) throw new Error('Unexpected media path');
-                if(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==entry.sha256) throw new Error('Media hash differs');
-              }
-            }
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Install capture tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1-mesa-dri
+          python3 -m pip install pillow==13.0.0 av==16.0.0 numpy
+          npm install --prefix "$RUNNER_TEMP/model-browser" playwright@1.62.1
+      - name: Capture current guides and native hero
+        run: |
+          python3 previews/prepare_site_capture.py
+          cargo build --locked -p slot --no-default-features --example site_refresh
+          target/debug/examples/site_refresh "$RUNNER_TEMP/demo-media" all
+          target/debug/examples/site_refresh "$RUNNER_TEMP/demo-media" audio
+          UI_RELEASE_REV="$GITHUB_SHA" python3 previews/collect_site_refresh.py "$RUNNER_TEMP/demo-media"
+      - name: Capture interactive homepage actions
+        run: |
+          python3 previews/prepare_interactive_capture.py
+          cargo run --locked -p slot --no-default-features --example interactive_hero -- "$RUNNER_TEMP/demo-interactive/raw"
+          python3 previews/collect_interactive_hero.py "$RUNNER_TEMP/demo-interactive"
+          cp -R "$RUNNER_TEMP/demo-interactive/publish/previews/interactive" "$RUNNER_TEMP/demo-media/publish/previews/"
+      - name: Capture README model
+        env:
+          NODE_PATH: ${{ runner.temp }}/model-browser/node_modules
+        run: |
+          node tools/capture-readme-model.cjs "$RUNNER_TEMP/demo-media" "$RUNNER_TEMP/demo-media/publish/previews/homepage/hero-light-platinum.mp4"
+          mkdir -p "$RUNNER_TEMP/demo-media/publish/previews/readme-model"
+          python3 tools/opaque_preview_gif.py "$RUNNER_TEMP/demo-media/model-frames" "$RUNNER_TEMP/demo-media/publish/previews/readme-model/hero.gif" --width 820 --frame-ms 80
+          python3 previews/collect_readme_model.py "$RUNNER_TEMP/demo-media"
       - name: Check and save generated media to the source branch
         uses: actions/github-script@v8
         env:
@@ -59,7 +57,7 @@ jobs:
             const fs = require('node:fs'), path = require('node:path');
             const {owner, repo} = context.repo;
             const branch = context.ref.replace('refs/heads/', '');
-            if (branch !== 'refresh/device-shell-logos') throw new Error('Capture only updates refresh/device-shell-logos');
+            if (branch !== 'refresh/demo-media') throw new Error('Capture only updates refresh/demo-media');
             const {data: head} = await github.rest.git.getRef({owner, repo, ref: `heads/${branch}`});
             if (head.object.sha !== context.sha) throw new Error('Source advanced; rerun capture on the new source');
             const {data: parent} = await github.rest.git.getCommit({owner, repo, commit_sha: context.sha});
