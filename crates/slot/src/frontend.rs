@@ -54,6 +54,8 @@ pub struct Frontend {
     bluetooth_spinner: Vec<TexId>,
     spinner_frames: Option<std::sync::mpsc::Receiver<Vec<slot_ui::UndoFace>>>,
     ra_sync_icon: Option<TexId>,
+    wifi_connecting_icon: Option<TexId>,
+    hud_wifi_connecting_icon: Option<TexId>,
     wifi_icon: Option<TexId>,
     hud_wifi_icon: Option<TexId>,
     audio_icon: Option<TexId>,
@@ -232,6 +234,8 @@ impl Frontend {
                 rx
             }),
             ra_sync_icon: None,
+            wifi_connecting_icon: None,
+            hud_wifi_connecting_icon: None,
             wifi_icon: None,
             hud_wifi_icon: None,
             audio_icon: None,
@@ -693,6 +697,13 @@ impl Frontend {
         }
         self.session.app_mut().mute_indicator = self.mute_icon;
         self.session.app_mut().hud_mute_indicator = self.hud_mute_icon;
+        let connecting = self.session.app().network.as_ref().is_some_and(|m| m.wifi_connecting());
+        if connecting && self.wifi_connecting_icon.is_none() {
+            upload(compositor, &mut self.wifi_connecting_icon, slot_ui::wifi_connecting_face(HUD_INK));
+            upload(compositor, &mut self.hud_wifi_connecting_icon, slot_ui::wifi_connecting_face(HUD_INK));
+        }
+        self.session.app_mut().wifi_connecting_indicator = if connecting { self.wifi_connecting_icon } else { None };
+        self.session.app_mut().hud_wifi_connecting_indicator = if connecting { self.hud_wifi_connecting_icon } else { None };
         if self.session.app().network.as_ref().is_some_and(|m|m.wifi_connected()) {
             if self.wifi_icon.is_none() {
                 upload(compositor,&mut self.wifi_icon,slot_ui::wifi_signal_face(3,HUD_INK));
@@ -862,7 +873,7 @@ impl Frontend {
         self.session.app_mut().set_footer_contrast(footer);
         compositor.set_backdrop_light(header);
         compositor.set_hint_light(footer);
-        for tex in [self.mute_icon,self.audio_icon,self.wifi_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
+        for tex in [self.mute_icon,self.audio_icon,self.wifi_icon,self.wifi_connecting_icon].into_iter().flatten(){compositor.mark_backdrop_texture(tex,1);}
         sync_clock(self.session.app_mut(), compositor, &mut self.clocks,header);
         sync_binding_faces(self.session.app_mut(), compositor);
         sync_about(self.session.app_mut(), compositor, &mut self.about);

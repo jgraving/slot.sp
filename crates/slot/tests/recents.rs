@@ -72,9 +72,8 @@ fn press(a: &mut App, btn: Btn) {
 
 fn flip_recents(a: &mut App) {
     a.apply(Action::QuickMenu);
-    for _ in 0..QuickRow::General.position(&[]) {
-        press(a, Btn::Down);
-    }
+    press(a, Btn::Right);
+    assert_eq!(a.quick_menu(),Some(QuickRow::Screen));
     press(a, Btn::A);
     for _ in 0..QuickRow::Recents.position(&a.hidden_rows()) {
         press(a, Btn::Down);

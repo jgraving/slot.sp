@@ -66,7 +66,7 @@ pub fn tile_face_label(row:QuickRow,lit:bool,label_override:Option<&str>)->UndoF
         QuickRow::PlayReference=>("Shortcuts",r##"<path d="M7 7h34v34H7z"/><path fill="#192125" d="M13 15h6v6h-6zM23 15h6v6h-6zM33 15h3v6h-3zM13 27h23v5H13z"/>"##),
         _=>("About",r##"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M22 21v14h4V21z M24 12a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>"##),
     };
-    let label=label_override.unwrap_or(match row {QuickRow::Screen=>"Display",QuickRow::Settings=>"Settings",QuickRow::UndoSave=>"Undo save",QuickRow::UndoLoad=>"Undo load",_=>label});
+    let label=label_override.unwrap_or(match row {QuickRow::Screen=>"Display &\nappearance",QuickRow::Settings=>"Settings",QuickRow::UndoSave=>"Undo save",QuickRow::UndoLoad=>"Undo load",_=>label});
     let ink=if lit {"#effbf8"}else{"#dce4e7"};
     let svg=format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="{ink}">{paths}</g></svg>"##);
     let icon=crate::art::render_svg(&svg,44,44).expect("menu tile SVG");

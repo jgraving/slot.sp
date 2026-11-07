@@ -12,7 +12,7 @@ Menus, game names and notices use Google Sans Flex. The selected setting has hea
 
 ## Colors
 
-Open **Menu → Display → Shell Color** to choose the SP artwork's color:
+Open **Menu → Display & appearance → Shell Color** to choose the SP artwork's color:
 
 | Choice | Appearance |
 | :--- | :--- |
@@ -22,13 +22,13 @@ Open **Menu → Display → Shell Color** to choose the SP artwork's color:
 | **Pearl Pink** | Pink. |
 | **Theme** | Graphite with the dark theme; Platinum with the light theme. |
 
-The selected color also appears on the animated power switch and link screen. **Display → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
+The selected color also appears on the animated power switch and link screen. **Display & appearance → UI theme** chooses Dark or Light. Light uses a warm gray-beige background, white cards and dark green controls. Dark uses a dark background with teal controls. The clock, status icons and button hints change color to remain readable over custom wallpapers. During play, the game stays visible behind the settings card.
 
 [Preview all four SP colors on the homepage](https://jakegraving.com/slot.sp/#intro-title).
 
 ## Backgrounds & animation
 
-Open **Menu → Display**:
+Open **Menu → Display & appearance**:
 
 | Setting | What to choose |
 | :--- | :--- |
@@ -49,7 +49,7 @@ Custom and random wallpapers are lightened in Light mode. **Wallpaper Tint** adj
 
 ## Screen effects & borders
 
-Open **Menu → Display**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
+Open **Menu → Display & appearance**, then choose **Game Boy Advance**, **Game Boy Color** or **Game Boy**. During a game, use **Menu → Settings → Screen** for the current system.
 
 | Setting | What it changes |
 | :--- | :--- |
@@ -92,11 +92,11 @@ The screen-size choice is remembered per game. Brightness and warmth have separa
 
 ### Automatic day and night
 
-Set start times in **Display → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
+Set start times in **Display & appearance → Night mode** to change brightness and warmth automatically. This schedule is separate from the Light/Dark menu theme. See [Day & night](NIGHT-DISPLAY.md#switch-automatically) for setup and manual overrides.
 
 ## Your own backgrounds & borders
 
-Place PNG backgrounds in `Wallpapers/`, then choose them in **Display → Wallpaper**.
+Place PNG backgrounds in `Wallpapers/`, then choose them in **Display & appearance → Wallpaper**.
 
 You can also [copy wallpapers over Wi-Fi](SETTINGS.md#file-sharing). Open the handheld’s **SDCard** share, copy PNGs into **Wallpapers**, then eject the share and turn **Sharing** off on the handheld.
 

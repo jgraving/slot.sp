@@ -1,10 +1,24 @@
 # Development recovery log
 
+PR #215 merged as `7b4b9b20149c57d063f8aeaf6e63d7c49aaf6ae0` after all six workflows passed on `4c775ddfd7f4686818dbf65c578ff46de22e6fc8`; the merge tree equals the tested tree. Native Wi-Fi and corrected appearance-heading frames were inspected. This Studio checkout incorporates that verified main tree; runtime files merged cleanly and both recovery logs are retained. Publish on PR #216 and require fresh combined-source CI, plus inspection of the corrected anchored chrome and picker/Save captures, before merging Studio.
+
 ## Cart Studio motion and affordances — 2026-11-07
 
 Separate branch `fix/studio-motion-affordances` from main `50a9c233`; Wi-Fi/OTA is independently published as PR #215. User explicitly requests separate PRs and authorizes push, PR creation and merge only after green checks. Add directional Finish/Shape chevrons and opening chevrons, anchor cartridge/title across submenus, separate rising card from the moving/shrinking highlighted cartridge, let only side cartridges retreat downward, improve printer spring motion and caption spacing. Next: separate cached layers, add motion regressions/native captures and validate exact source in CI. Hardware testing remains pending.
 
 Scope refinements: the option card occupies only the right column; the cartridge and title float on the left. Add an explicit Save row that stays in the editor. Root B closes clean edits immediately, otherwise asks Save and close / Discard changes / Keep editing. Preserve pending-label completion and automatic saving on power/suspend paths. Added independent full-resolution cart texture and a shelf fallback so worker timing cannot make the cartridge pop into existence.
+
+## Wi-Fi progress and OTA identity — 2026-11-07
+
+Branch `fix/wifi-progress-ota` from main `50a9c233` (PR #214 is merged; the older routing note below is historical). User requests a radiating status-bar Wi-Fi icon during connection and reliable same-day OTA detection. Existing OTA uses source ancestry, not the displayed date, but silently suppresses diverged builds. Next: add cached GPU-animated Wi-Fi waves through join/DHCP; strengthen full-source build identity and diverged-release comparison; add regressions, publish a PR and inspect exact-source CI. Physical device state and the user’s installed source are unknown.
+
+Implementation: one cached dot/wave atlas animates outward via GPU alpha during starting, joining and DHCP, including outside the Network page; connected icon is steady and errors/off stop it. OTA now embeds the full source SHA, watches branch-ref/GitHub SHA changes for Cargo cache invalidation, and resolves diverged tips using canonical source commit timestamps rather than publication dates. An older/equal divergent source is not offered; missing comparison metadata fails visibly. Added same-day/rollback/comparison-failure, icon lifecycle and traveling-wave regressions; existing native Wi-Fi captures now include joining. Local Rust is unavailable, so compilation/native validation must run in CI. `git diff --check` passes.
+
+
+Local validation: Wi-Fi credential boundaries, Wi-Fi diagnostics (1), OTA recovery (7), shell update suite and whitespace checks pass. The shell suite initially could not create `/tmp`; reran successfully with a workspace TMPDIR. No Rust compilation or native rendering result is claimed. Separate shelf/HUD atlases preserve in-game contrast. Automatic approval review rejected `git push -u origin fix/wifi-progress-ota` because publication needs explicit user authorization; do not bypass it with connector writes. Finish locally, then ask to push and run CI. Changes remain on this local branch until authorized.
+
+
+User explicitly approved publishing/PR creation and merge when green. Published as PR #215 at `ffd2fb9`; ARM64 network/device/package, scaling, blending, shortcuts and Pages pass. Launcher/native workflow failed and needs log inspection before merge. Follow-up request: make the RetroAchievements background-activity icon slowly pulse; change draw alpha after shared status transforms, preserving cached textures and the existing activity gate. Cart Studio is separately tracked in PR #216.
 
 ## Upstream on-device Studio integration — 2026-11-07
 
@@ -847,3 +861,19 @@ Save-and-stay review found the worker may coalesce/drop a pending preview when p
 On source a37f020, scaling and blending pass. Shortcut suite passes 10/11 Studio lifecycle tests and catches a test setup error: ready() had already initialized the entrance clock at zero before the test asserted its initial pose at 1000ms. Initialize the entrance clock before waiting for preview readiness, matching runtime ordering. No production motion timing is changed by this correction. Remaining CI/native checks still pending.
 
 Power/suspend follow-up: if explicit Save is already writing when finish() arrives, retain the close-after-save request instead of leaving the editor open. Reuse the existing write and add an in-flight-save close regression; no duplicate write is started.
+
+Native review found a duplicate SVG fill attribute in the new Wi-Fi atlas; corrected it and added a real four-layer rasterization regression. The first ARM64/package pass did not exercise native asset construction; native rendering remains a merge gate. The RA pulse now has draw-level lifecycle/position coverage. Change Device code uses a vector right-facing chevron instead of Set; locked and unset status remain informative.
+
+Right D-pad now follows single disclosure chevrons in settings lists and the network File sharing / Change Device code rows. Tile grids retain directional navigation, adjustable rows retain value changes, binding controls retain capture behavior, and plain actions are not aliased to A. Added network disclosure input coverage.
+
+Renamed the Display tile/heading to Display & appearance. Moved Recents and Sort Favorites out of General into that card, preserving stable enum/settings IDs. Updated parent/heading/order and Recents navigation regressions plus guide paths.
+
+CI caught a Date & Time regression fixture that walked a hard-coded seven rows in General after Recents/Favorites moved. Updated it to resolve DateTime’s current row position. The new Wi-Fi raster, RA pulse and disclosure tests passed in the same run; full fresh-source CI still required.
+
+Fresh CI passed all 178 launcher unit tests, then found an older navigation regression requiring Right to do nothing on Date & Time/About. Updated that test to the requested disclosure behavior: Left stays on the row, Right opens it, Back returns, and opening/cancelling does not write settings. Existing binding-row Left/Right behavior is retained.
+
+Combined native review now also drives physical Start → X (no Studio) → Select from the GBA emulator picker, captures the shell closure before Studio entry, and verifies the explicit Save row keeps the editor open with a clean baseline before B closes it. Capture waits include save completion as well as preview readiness.
+
+All six workflows passed on ce6db8a, and native Wi-Fi joining/connected frames and settings root were visually inspected. Screenshot review caught the longer Display & appearance page heading being truncated by the legacy 260px heading limit, despite the tile fitting correctly. Give only this heading a 380px one-line allowance, preserving other headings and status corners; add actual raster-width/ink coverage and re-run exact-source CI before merge.
+
+Native source 6c722f2 passed all six workflows. Independently inspected light GBA/GB, dark GBC, label-sheet, transfer, entrance and save-confirmation PNGs from artifact 13592478125. The floating layout, captions, chevrons and save confirmation are visible. Entry review caught global heading/footer being translated with the rising card; preserve their anchored chrome positions while moving only the option body. Final combined-source rendering remains required for this correction and the new picker/Save captures.

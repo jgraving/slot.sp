@@ -82,11 +82,11 @@ fn the_fast_forward_row_offers_off_a_slow_speed_and_the_four_ceilings() {
 fn the_rows_run_in_the_order_the_user_chose() {
     assert_eq!(
         QuickRow::MAIN.map(QuickRow::label),
-        ["General", "Display", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Network"]
+        ["General", "Display & appearance", "Sound", "Gameplay", "Power & lid", "Device controls", "Parental controls", "Network"]
     );
     assert_eq!(
         QuickRow::GENERAL.map(QuickRow::label),
-        ["Device code", "Updates", "Automatic time", "Time zone", "Recents", "Sort Favorites", "Clock format", "Date & Time", "About"]
+        ["Device code", "Updates", "Automatic time", "Time zone", "Clock format", "Date & Time", "About"]
     );
     assert_eq!(
         QuickRow::CONTROL_PAGES.map(QuickRow::label),
@@ -98,7 +98,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
     );
     assert_eq!(
         QuickRow::SCREEN.map(QuickRow::label),
-        ["Brightness", "Color temp.", "Night mode", "UI theme", "Wallpaper", "Wallpaper Tint", "Shell Color", "Game Titles", "Carousel motion", "Game Boy Advance", "Game Boy Color", "Game Boy"]
+        ["Brightness", "Color temp.", "Night mode", "UI theme", "Wallpaper", "Wallpaper Tint", "Shell Color", "Game Titles", "Carousel motion", "Recents", "Sort Favorites", "Game Boy Advance", "Game Boy Color", "Game Boy"]
     );
     assert_eq!(
         QuickRow::SCREEN_GENERAL.map(QuickRow::label),
@@ -488,7 +488,7 @@ fn appearance_options_share_the_display_page_and_return_to_its_tile() {
         assert!(QuickRow::SCREEN.contains(&row));
         assert!(!QuickRow::GENERAL.contains(&row));
         assert_eq!(row.parent(), Some(QuickRow::Screen));
-        assert_eq!(row.heading(), "Display");
+        assert_eq!(row.heading(), "Display & appearance");
     }
     assert_eq!(QuickRow::BootAnimation.parent(), Some(QuickRow::Power));
     assert_eq!(QuickRow::CarouselSounds.parent(), Some(QuickRow::Bluetooth));
@@ -651,4 +651,20 @@ fn pause_grid_vertical_moves_reach_the_next_row_from_every_column() {
             }
         }
     }
+}
+
+#[test]
+fn library_presentation_settings_live_in_display_and_appearance() {
+    for row in [QuickRow::Recents,QuickRow::FavoriteSort] {
+        assert!(QuickRow::SCREEN.contains(&row));assert!(!QuickRow::GENERAL.contains(&row));
+        assert_eq!(row.parent(),Some(QuickRow::Screen));
+        assert_eq!(row.heading(),"Display & appearance");
+    }
+}
+
+#[test]
+fn the_full_appearance_heading_fits_between_status_corners() {
+    let face=slot_ui::quick_heading_face("Display & appearance");
+    assert!(face.w>260 && face.w<=400,"appearance was truncated or overlaps the corners: {}",face.w);
+    let (_,last)=ink_columns(&face);assert!(last>260,"the last word was not rasterized");
 }
