@@ -1,5 +1,5 @@
-# Cart Studio final validation
+# Studio layout cleanup
 
-Active PR: #216, `fix/studio-motion-affordances`, incorporating main `7b4b9b2` from verified PR #215.
+Active branch: fix/studio-layout-cleanup, based on main 97fb96d (#216 merged).
 
-Read WORKLOG.md. User authorizes merge only after checks pass. Wi-Fi/OTA/status/settings PR #215 is merged with six successful workflows and an identical tested merge tree. Finish combined-source CI for Studio, inspect anchored chrome, floating cartridge/title, picker-close-before-entry and explicit Save-and-stay captures, then merge #216. Keep the PRs separate. Physical handheld checks remain pending.
+Read WORKLOG.md. Simplify the Studio root into single-line rows, increase cartridge/card spacing, inset Save and remove rectangular placeholder-wordmark backing. Implementation is ready for CI/native visual review. Preserve anchored submenu artwork, Save/close semantics, Select picker transition and prior status/settings behavior. Physical handheld checks remain pending.

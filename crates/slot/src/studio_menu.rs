@@ -158,7 +158,7 @@ impl Menu {
             || self.model.preview_ground()!=self.clean.preview_ground()
     }
     pub fn confirming_close(&self) -> bool {self.close_choice.is_some()}
-    pub fn option_pitch(&self) -> f32 {(240.0/self.model.rows().len().saturating_sub(1).max(1) as f32).min(60.0)}
+    pub fn option_pitch(&self) -> f32 {if self.model.rows().len()>5 {44.0}else{52.0}}
     pub fn finish(&mut self) {self.save_changes(true);}
     fn save_changes(&mut self, close: bool) {
         if self.saving {
@@ -343,8 +343,10 @@ impl Menu {
         let (w,h) = self.preview.as_ref().map(|f|(f.w,f.h))
             .unwrap_or_else(||slot_ui::cart_box(self.model.cart.platform));
         let edge=canvas.w*0.47;
-        let scale=((edge-76.0-12.0)/w as f32).min(210.0/h as f32);
-        [76.0+(edge-76.0-w as f32*scale)/2.0, 102.0+(210.0-h as f32*scale)/2.0,
+        let left=60.0;
+        let right=edge-36.0;
+        let scale=((right-left)/w as f32).min(210.0/h as f32);
+        [left+(right-left-w as f32*scale)/2.0, 102.0+(210.0-h as f32*scale)/2.0,
             w as f32*scale, h as f32*scale]
     }
     pub fn shown_cart_rect(&self, canvas: Canvas) -> [f32;4] {
@@ -352,7 +354,7 @@ impl Menu {
         studio_gallery::entry_rect(self.source_rect.unwrap_or(to),to,self.entry())
     }
     pub fn draw_title(&self, canvas: Canvas, tex: TexId, out: &mut Vec<slot_ui::Draw>) {
-        let x=76.0; let w=canvas.w*0.47-x;
+        let x=60.0; let w=canvas.w*0.47-36.0-x;
         out.push(slot_ui::Draw::Part { x,y:308.0,w,h:52.0,tex,alpha:self.entry().clamp(0.0,1.0),
             uv:[x/canvas.w,308.0/canvas.h,w/canvas.w,52.0/canvas.h] });
     }
@@ -480,7 +482,7 @@ impl Menu {
             place(&mut face, hint, x, 378.0, 1.0);
             x += hint.w as f32 + 12.0;
         }
-        let left = 76.0;
+        let left = 60.0;
         let edge = canvas.w * 0.47;
         let right = canvas.w - 76.0;
         text(
@@ -488,7 +490,7 @@ impl Menu {
             &slot_ui::label_text(&self.model.cart),
             left,
             316.0,
-            edge - left - 8.0,
+            edge - 36.0 - left,
             22.0,
             false,
         );
@@ -514,40 +516,21 @@ impl Menu {
                         Row::Shape => "Shape",
                         Row::Save => "Save",
                     };
-                    let value = match item {
-                        Row::Finish => match self.model.current_shell().finish {
-                            slot_store::ShellFinish::Solid => "Solid",
-                            slot_store::ShellFinish::Clear => "Clear",
-                            slot_store::ShellFinish::Glitter => "Glitter",
-                        }
-                        .into(),
-                        Row::Shape => match self.model.current_shell().outline {
-                            slot_store::Outline::Auto => "Automatic",
-                            slot_store::Outline::Notched => "Notched",
-                            slot_store::Outline::Rounded => "Rounded",
-                        }
-                        .into(),
-                        Row::Color => rgb(self.model.current_shell().colour),
-                        Row::LabelColor => self
-                            .model
-                            .ground
-                            .map(rgb)
-                            .unwrap_or_else(|| "Automatic".into()),
-                        _ => "Choose…".into(),
-                    };
-                    let y = if *item==Row::Save {330.0} else {76.0+i as f32*pitch};
+                    let y = 86.0 + i as f32 * pitch;
                     if *item==Row::Save {
                         text(&mut face,"Save",x,y,w,24.0,i==row);continue;
                     }
                     let adjustable=matches!(item,Row::Finish|Row::Shape);
-                    let inset=if adjustable {20.0}else{0.0};
-                    text(&mut face, name, x+inset, y, w-20.0-inset, 22.0, i == row);
-                    text(&mut face, &value, x+inset, y + 24.0, w-20.0-inset, 18.0, false);
-                    let right=slot_ui::quick_caret_face(true);
-                    place(&mut face,&right,x+w-right.w as f32,y+10.0,1.0);
+                    // Keep the row name on one line; the cartridge shows its current appearance.
+                    text(&mut face, name, x+40.0, y, w-64.0, 23.0, i == row);
                     if adjustable {
                         let left=slot_ui::quick_caret_face(false);
-                        place(&mut face,&left,x,y+10.0,1.0);
+                        let right=slot_ui::quick_caret_face(true);
+                        place(&mut face,&left,x+2.0,y+8.0,1.0);
+                        place(&mut face,&right,x+20.0,y+8.0,1.0);
+                    } else {
+                        let right=slot_ui::quick_caret_face(true);
+                        place(&mut face,&right,x+w-right.w as f32,y+8.0,1.0);
                     }
                 }
             }
