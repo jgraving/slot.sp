@@ -101,7 +101,7 @@ fn save_stays_open_and_b_closes_without_reprompting_once_saved() {
     let mut menu=Menu::new(root.path().into(),cart,false);
     change_finish(&mut menu);assert!(menu.has_unsaved_changes());
     let row=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
-    menu.model.screen=Screen::List{row};menu.input(Action::GbaDown(Btn::A));wait_for_save(&mut menu);
+    menu.model.screen=Screen::List{row};menu.input(Action::GbaDown(Btn::A));wait_for_save(&mut menu);ready(&mut menu);
     assert!(menu.visible);assert!(menu.take_saved().is_some());assert!(!menu.has_unsaved_changes());
     menu.input(Action::GbaDown(Btn::B));assert!(!menu.visible);assert!(!menu.confirming_close());
 }
@@ -147,4 +147,17 @@ fn right_opens_disclosures_but_finish_adjusts_and_save_requires_a() {
     let save=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
     menu.model.screen=Screen::List{row:save};menu.input(Action::GbaDown(Btn::Right));
     assert!(!menu.busy());assert!(menu.visible);
+}
+
+#[test]
+fn failed_explicit_save_keeps_edits_and_the_preview_ready_for_retry() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let path=root.path().join("Labels/GBA").join(format!("{}.png",cart.stem));
+    std::fs::create_dir_all(path).unwrap();
+    let mut menu=Menu::new(root.path().into(),cart,false);ready(&mut menu);
+    menu.model.wearing=LabelKind::Title;
+    let row=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Save).unwrap();
+    menu.model.screen=Screen::List{row};menu.input(Action::GbaDown(Btn::A));wait_for_save(&mut menu);ready(&mut menu);
+    assert!(menu.visible);assert!(menu.has_unsaved_changes());assert!(menu.take_saved().is_none());
+    assert_eq!(menu.notice_text(),Some("Could not save · try again"));
 }

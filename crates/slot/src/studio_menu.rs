@@ -253,11 +253,14 @@ impl Menu {
                     self.saving = false;
                     self.visible = !self.close_after_save;
                     self.notice="Saved".into();self.face=None;
+                    // A save can supersede a coalesced preview job. Refresh it
+                    // when staying open so the latest label cannot stay stale.
+                    if self.visible {self.rebuild();}
                 }
                 Done::Saved(Err(_)) => {
                     self.saving = false;
                     self.notice = "Could not save · try again".into();
-                    self.face = None;
+                    self.rebuild();
                 }
                 _ => {}
             }
