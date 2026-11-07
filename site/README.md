@@ -12,12 +12,13 @@ python -m venv .venv-site
 mkdir -p _studio
 git clone https://github.com/jgraving/slot-cart-studio.git _studio/slot-cart-studio
 git -C _studio/slot-cart-studio checkout "$(python -c 'import json; print(json.load(open("site/studio.json"))["ref"])')"
-git clone https://github.com/BrandonKowalski/slot.git _studio/slot
+git clone https://github.com/jgraving/slot.sp.git _studio/slot
 git -C _studio/slot checkout "$(cat _studio/slot-cart-studio/slot.ref)"
 (cd _studio/slot-cart-studio && wasm-pack build --release --target web --no-typescript --out-dir web/pkg)
 .venv-site/bin/python tools/prepare-site.py
 .venv-site/bin/zensical build --clean --strict -f site/zensical.build.toml
 .venv-site/bin/python tools/assemble-studio.py
+.venv-site/bin/python tools/studio-artwork.py
 .venv-site/bin/python tools/check-site.py
 ```
 
@@ -52,7 +53,7 @@ The README uses the same production 3D model, flips it open, and plays the Plati
 
 ## Layout and copy
 
-- Give installation, the guide and Studio a clear place in navigation. Keep one maintained guide per topic; preserve superseded URLs with redirects.
+- Give installation, updates and the guide a clear place in navigation. The browser editor has no public navigation entry. Keep one maintained guide per topic; preserve superseded URLs with redirects.
 - Use the actual interface beside the steps it explains. Give clips play controls and keep them quiet until requested.
 - Name each feature and explain what someone can do with it. Use the actual menu labels for steps. Explain terms such as save state or bezel when they first appear.
 - Keep all existing feature topics represented. Add missing features to the existing summary and link to their guides; use the guides for detailed steps and screenshots.
@@ -100,3 +101,11 @@ The lid video renders normally and remains opaque across the model. Only the emp
 `previews/interactive_hero.rs` records the production Frontend, carousel springs, cartridge occlusion and boot compositor. The disposable capture checkout exposes App stepping and fixes the wallpaper phase; it never drives an emulator. These recorder-only changes are made by `prepare_interactive_capture.py`, are not committed to the device source, and do not enter release builds. Five synthetic headers use the repository sample artwork. Each color has one 60 Hz H.264 film, a compact WebP strip of settled poses, and a frame-indexed timeline. Collection checks every action join and records source identity and hashes.
 
 `hero-player.js` paints frames into a 720×480 canvas, used as a WebGL texture or projected into the rendered fallback. A decoded frame stays visible while the video seeks; the player never exposes an unrelated segment. A bounded destination and desired slot state preserve rapid presses and reversals. The current finish is loaded on demand; reduced motion and Save-Data use only static native poses. No menu UI, WebAssembly runtime or game core is loaded. Autoplay uses the same bounded action queue as manual input. Its timer runs only while visible, open and active; any hardware button permanently takes control until the visitor explicitly presses Play preview. The current clip reaches a matching endpoint before queued input continues. A manually inserted cartridge stays seated until MENU is held. Browser checks cover boot ordering, automatic browsing/slotting, takeover, all five cartridges, wrapping, rapid input, keyboard controls, lid suspension and state continuity.
+
+## Editor and artwork controls
+
+Automatic artwork lookup is supported on the handheld. The direct-address browser editor supports local PNGs and cartridge appearance; its deployment disables automatic image downloads. No catalog images are downloaded or mirrored by the Pages build. `tools/studio-artwork.py` removes stale output and publishes an empty compatibility catalog.
+
+The normal Pages deployment replaces the published mirror with an empty catalog. Existing Actions caches can be removed separately from repository Actions settings; automated cache/bundle cleanup is deferred.
+
+Current cleanup progress is tracked in [CLEANUP-WORK.md](../CLEANUP-WORK.md).

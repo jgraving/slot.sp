@@ -53,7 +53,7 @@ Yes. **Device controls** has separate pages for game buttons, carousel controls 
 
 ### Can I use my own artwork?
 
-Yes. Add cartridge labels, choose shell colors and finishes, or use custom wallpapers and game borders. [Cart Studio](features/cart-studio.md) can edit one cartridge or a group in your browser. The [customization reference](guide/customizing.md) explains the card folders and file formats.
+Yes. Add cartridge labels, choose shell colors and finishes, or use custom wallpapers and game borders. [Cart Studio](features/cart-studio.md) edits cartridge labels, colors and finishes on the handheld. The [customization reference](guide/customizing.md) explains the card folders and file formats.
 
 ### Where can I report a problem or suggest a change?
 

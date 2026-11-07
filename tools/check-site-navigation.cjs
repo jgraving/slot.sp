@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '../site/public');
 const output = path.resolve(process.argv[2]);
 fs.mkdirSync(output, {recursive:true});
 const origin = 'https://jakegraving.com/slot.sp/';
-const names = ['Install','Update','Guide','Cart Studio','About'];
+const names = ['Install','Update','Guide','About'];
 const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wasm':'application/wasm','.woff2':'font/woff2','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.mp4':'video/mp4','.json':'application/json'};
 (async () => {
   const browser = await chromium.launch({executablePath:process.env.CHROME_BIN || '/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
@@ -23,7 +23,7 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
         if (!fs.existsSync(file)) return route.fulfill({status:404,body:'Missing test asset'});
         await route.fulfill({path:file,contentType:mime[path.extname(file)] || 'application/octet-stream'});
       });
-      for (const [route,active] of [['',''],['installing/','Install'],['updating/','Update'],['features/guide/','Guide'],['features/bluetooth/','Guide'],['studio/','Cart Studio']]) {
+      for (const [route,active] of [['',''],['installing/','Install'],['updating/','Update'],['features/guide/','Guide'],['features/bluetooth/','Guide'],['studio/','']]) {
         await page.goto(origin+route, {waitUntil:'domcontentloaded'});
         await page.locator('header .slot-selector[data-selector-ready]').waitFor();
         await page.evaluate(() => document.fonts.ready);
@@ -92,6 +92,6 @@ const mime = {'.js':'text/javascript','.css':'text/css','.html':'text/html','.wa
       await page.close();
     }
     fs.writeFileSync(path.join(output,'navigation.json'),JSON.stringify(results,null,2));
-    console.log('PASS: 48 page/viewport combinations; compact desktop headers, Android desktop width, five global destinations, active tabs, feature columns, unobstructed links and guide drawers');
+    console.log('PASS: 48 page/viewport combinations; compact desktop headers, Android desktop width, four global destinations, active tabs, feature columns, unobstructed links and guide drawers');
   } finally { await browser.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -6,7 +6,7 @@ title: Datenschutz
 
 Stand: 26. Oktober 2026
 
-Diese Erklärung gilt für die slot.sp-Website und das hier angebotene Cart Studio.
+Diese Erklärung gilt für die slot.sp-Website und ihre optionale lokale Dateibearbeitung.
 
 ## Verantwortlicher
 
@@ -21,13 +21,13 @@ Die Website wird über GitHub Pages bereitgestellt. Beim Abruf werden technisch 
 
 Anbieter sind GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, USA, beziehungsweise GitHub B.V., Prins Bernhardplein 200, 1097 JB Amsterdam, Niederlande. Verbindungsdaten können auch in den USA verarbeitet werden. GitHub beschreibt die geltenden Übermittlungsmechanismen, darunter das EU–US Data Privacy Framework und Standardvertragsklauseln, sowie seine Speichergrundsätze in der [GitHub-Datenschutzerklärung](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). Die Speicherdauer der Hostingprotokolle wird von GitHub bestimmt; der Websitebetreiber legt keine eigene Frist dafür fest.
 
-## Cart Studio: Dateien bleiben auf deinem Gerät
+## Lokale Dateibearbeitung: Dateien bleiben auf deinem Gerät
 
-Cart Studio verarbeitet ausgewählte Spiele, Labels und Änderungen lokal im Browser. Diese Dateien werden nicht an den Websitebetreiber oder einen Server hochgeladen. Erst wenn du selbst speicherst, werden Änderungen auf deine SD-Karte geschrieben oder als ZIP-Datei heruntergeladen. Browserzugriffe auf Ordner und Dateien erfolgen nur nach deiner Auswahl beziehungsweise Freigabe.
+Die optionale Dateibearbeitung verarbeitet ausgewählte Spiele, Labels und Änderungen lokal im Browser. Diese Dateien werden nicht an den Websitebetreiber oder einen Server hochgeladen. Erst wenn du selbst speicherst, werden Änderungen auf deine SD-Karte geschrieben oder als ZIP-Datei heruntergeladen. Browserzugriffe auf Ordner und Dateien erfolgen nur nach deiner Auswahl beziehungsweise Freigabe.
 
-Für die Erkennung von Spielen und passende Logos lädt Studio Datenbanken und Bilder von GitHub über `raw.githubusercontent.com` herunter. Dabei erhält der Anbieter übliche Verbindungsdaten einschließlich deiner IP-Adresse und der angeforderten Adresse. Bei Bildabrufen kann die Adresse den Spielnamen enthalten. Bei einer ausdrücklich über die URL konfigurierten alternativen Artwork-Quelle können auch Plattform und Spielprüfsumme Teil der Anfrage sein. Die Spieldateien selbst werden nicht übertragen.
+Für die Erkennung von Spielen lädt die Dateibearbeitung Datenbanken von GitHub über `raw.githubusercontent.com` herunter. Dabei erhält der Anbieter übliche Verbindungsdaten einschließlich deiner IP-Adresse und der angeforderten Adresse. Automatische Bildabrufe sind auf dieser Website deaktiviert. Die Spieldateien selbst werden nicht übertragen.
 
-Diese Abrufe ermöglichen die von dir genutzten Erkennungs- und Artworkfunktionen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bereitstellung dieser Funktionen). Für die Verarbeitung bei GitHub gelten die oben verlinkten Datenschutzinformationen. Heruntergeladene Daten können im Browsercache liegen; diesen kannst du in den Browsereinstellungen löschen. Nicht gespeicherte Änderungen gehen beim Schließen oder Neuladen möglicherweise verloren.
+Diese Abrufe ermöglichen die von dir genutzten Erkennungsfunktionen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bereitstellung dieser Funktionen). Für die Verarbeitung bei GitHub gelten die oben verlinkten Datenschutzinformationen. Heruntergeladene Daten können im Browsercache liegen; diesen kannst du in den Browsereinstellungen löschen. Nicht gespeicherte Änderungen gehen beim Schließen oder Neuladen möglicherweise verloren.
 
 ## Cookies, Schriften und Analyse
 

@@ -13,7 +13,7 @@ Browse your games as cartridges, press A to play, and use MENU for settings. Thi
 | **[⬇ Installation & updates](GETTING-STARTED.md)** | Choose a download, prepare a card, add games and update an existing installation. |
 | **[🕹️ Buttons & shortcuts](CONTROLS.md)** | Default controls for the carousel, games and menus; remapping your buttons. |
 | **[⭐ Games & artwork](LIBRARY.md)** | Browse systems, sort Favorites by name or play history, and add labels and cartridge colors. |
-| **[🎨 Cart Studio](CART-STUDIO.md)** | Find labels and logos, change colors and finishes, edit several cartridges together, and save to a card or ZIP. |
+| **[🎨 Cart Studio](CART-STUDIO.md)** | Find labels and logos, change cartridge colors and finishes, and save directly on the handheld. |
 | **[💾 Playing & saving](PLAYING.md)** | Resume a game, save a snapshot, undo a save or load, choose an emulator, and use fast-forward, rewind or turbo. |
 | **[📸 Screenshots](SCREENSHOTS.md)** | Capture, browse, zoom and manage pictures. |
 | **[🎨 Appearance & screen](DISPLAY.md)** | Light and Dark themes, SP colors, wallpapers, startup animation, screen effects, palettes and picture size. |

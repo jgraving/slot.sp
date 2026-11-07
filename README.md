@@ -5,7 +5,7 @@
   <img src="previews/readme-model/hero-3d.gif" width="820" alt="slot.sp: Your games. SP style. A metallic 3D RG SP flips open to the current light interface: a cartridge enters the slot, ejects and returns to the carousel.">
 </picture>
 
-**[Website & guide](https://jakegraving.com/slot.sp/)** · **[New installation](https://jakegraving.com/slot.sp/installing/)** · **[Update](https://jakegraving.com/slot.sp/updating/)** · **[Cart Studio](https://jakegraving.com/slot.sp/studio/)**
+**[Website & guide](https://jakegraving.com/slot.sp/)** · **[New installation](https://jakegraving.com/slot.sp/installing/)** · **[Update](https://jakegraving.com/slot.sp/updating/)**
 
 </div>
 

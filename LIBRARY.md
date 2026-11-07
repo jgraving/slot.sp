@@ -70,7 +70,7 @@ slot.sp detects rounded label scans with black corners and cleans the background
 
 Restart after adding artwork. **Menu → About**, then <kbd>X</kbd>, restarts the launcher.
 
-**[Open Cart Studio](https://jakegraving.com/slot.sp/studio/)** to find artwork, design labels and choose cartridge colors. Save to the card or download a ZIP. See the [Cart Studio guide](CART-STUDIO.md) for the steps.
+Use Cart Studio on the handheld to find artwork and change cartridge colors and finishes. See the [on-device guide](CART-STUDIO.md) for the steps.
 
 ## Cartridge colors
 

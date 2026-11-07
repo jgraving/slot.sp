@@ -36,6 +36,7 @@ def classify(paths, force=False):
     website = force or bool(paths & (guides() | SHARED)) or any(
         p.startswith(('site/', 'previews/')) or p in {
             'tools/assemble-studio.py', 'tools/check-site.py',
+            'tools/studio-artwork.py', 'tools/test-studio-artwork.py',
             'tools/check-site-navigation.cjs', 'tools/check-page-motion.cjs',
         } for p in paths)
     model = force or bool(paths & (SHARED | MODEL_FILES)) or any(

@@ -23,6 +23,11 @@ script = bundle / 'studio.js'
 text, count = re.subn(r"^const BUILD = 'dev';$", f"const BUILD = '{commit}';", script.read_text(), flags=re.M)
 assert count == 1, 'Studio build stamp is missing'
 script.write_text(text)
+# The direct-address browser editor keeps local imports and appearance editing.
+# Online artwork lookup belongs to the on-device editor.
+text = script.read_text()
+assert text.count('const REMOTE_ARTWORK = true;') == 1
+script.write_text(text.replace('const REMOTE_ARTWORK = true;', 'const REMOTE_ARTWORK = false;'))
 # Studio CSS previously lived one directory below the website's font assets.
 for css in bundle.glob('*.css'):
     css.write_text(css.read_text().replace('../assets/fonts/', '/slot.sp/assets/fonts/'))

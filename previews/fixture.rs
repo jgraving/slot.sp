@@ -5,7 +5,7 @@ fn main() {
     let colour = std::env::args().nth(2).map(|s| slot_store::ShellColour::parse(&s)
         .expect("SP finish")).unwrap_or(slot_store::ShellColour::Graphite);
     slot::root::ensure(&root);
-    let names = ["Emerald", "Fusion", "Ruby", "Sapphire", "WarioWare"];
+    let names = ["Fern", "Orbit", "Rosette", "Tide", "Wander"];
     for name in names {
         let mut header = vec![0u8; 256];
         let title = name.to_uppercase();
@@ -13,17 +13,17 @@ fn main() {
         std::fs::write(root.join("Games/GBA").join(format!("{name}.gba")), header).unwrap();
     }
     std::fs::write(root.join(slot_store::CART_SHELL_FILE),
-        "Emerald = auto 239c47 clear\nRuby = auto b5253b clear\nSapphire = auto 2854b5 clear\n"
+        "Fern = auto 239c47 clear\nRosette = auto b5253b clear\nTide = auto 2854b5 clear\n"
     ).unwrap();
     let carts = slot_store::scan(&root).unwrap();
-    for name in ["Emerald", "Ruby", "Sapphire"] {
+    for name in ["Fern", "Rosette", "Tide"] {
         let cart = carts.iter().find(|cart| cart.stem == name).unwrap();
         assert_eq!(cart.shell.unwrap().finish, slot_store::ShellFinish::Clear);
     }
     write_slot_state(&root, &SlotState {
         clock_set: true,
         shelf: Some("gba".into()),
-        shelf_cart: Some(Recent { platform: Platform::Gba, stem: "Emerald".into() }),
+        shelf_cart: Some(Recent { platform: Platform::Gba, stem: "Fern".into() }),
         favorites: names.into_iter().map(|name| Recent { platform: Platform::Gba, stem: name.into() }).collect(),
         shell_colour: colour,
         wallpaper: slot_store::WallpaperPick::Default,
@@ -31,7 +31,7 @@ fn main() {
     }).unwrap();
     {
         let mut kids = slot::kid_policy::Policy::default();
-        kids.approved.push((Platform::Gba, "Emerald".into()));
+        kids.approved.push((Platform::Gba, "Fern".into()));
         kids.save(&root).unwrap();
     }
 }

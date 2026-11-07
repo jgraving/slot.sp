@@ -146,7 +146,13 @@ site_bytes = sum(path.stat().st_size for path in ROOT.rglob('*') if path.is_file
 assert site_bytes <= 950 * 1024 * 1024, f'Website exceeds 950 MiB deployment budget: {site_bytes} bytes'
 print(f'Website size: {site_bytes / 1024 / 1024:.1f} MiB (950 MiB budget)')
 art_index=json.loads((art_root/'index.json').read_text())
-assert art_index, 'Studio artwork catalog is empty'
+art_enabled=json.loads((art_root/'availability.json').read_text())['catalog_enabled']
+assert art_enabled == json.loads((ROOT.parent/'artwork-policy.json').read_text())['catalog_enabled']
+if art_enabled:
+    assert art_index, 'Studio artwork catalog is empty'
+else:
+    assert art_index == {}, 'Disabled catalog must be empty'
+    assert not list(art_root.rglob('*.png')), 'Disabled catalog retained artwork'
 for entry in art_index.values():
     for kind in ('support-texture','wheel'):
         if name:=entry.get(kind):
