@@ -354,6 +354,8 @@ pub struct App {
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
     pub ra_sync_indicator: Option<TexId>,
+    pub wifi_connecting_indicator: Option<TexId>,
+    pub hud_wifi_connecting_indicator: Option<TexId>,
     pub wifi_indicator: Option<TexId>,
     pub hud_wifi_indicator: Option<TexId>,
     pub audio_indicator: Option<TexId>,
@@ -629,6 +631,8 @@ impl App {
             bluetooth_supported: false,
             kid_status_icon: None,
             ra_sync_indicator: None,
+            wifi_connecting_indicator: None,
+            hud_wifi_connecting_indicator: None,
             wifi_indicator: None,
             hud_wifi_indicator: None,
             audio_indicator: None,
@@ -5748,17 +5752,21 @@ impl App {
             },
             out,
         );
-        if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
-            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+        let mut preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
+        if let Some(atlas) = if in_game {self.hud_wifi_connecting_indicator} else {self.wifi_connecting_indicator} {
+            slot_ui::draw_corner_wifi_connecting(self.canvas(), self.battery, self.battery_percent,
+                atlas, preceding, self.now(), out);
+            preceding += 1;
+        } else if let Some(tex)=if in_game {self.hud_wifi_indicator}else{self.wifi_indicator} {
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+            preceding += 1;
         }
         if let Some(tex) = self.ra_sync_indicator {
-            let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
             slot_ui::draw_corner_indicator(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
+            preceding += 1;
         }
         if self.kids.active {
             if let Some(tex)=self.kid_status_icon {
-                let preceding=out[audio_start..].iter().filter(|d|matches!(d,Draw::Tex{..})).count();
                 slot_ui::draw_corner_kid(self.canvas(),self.battery,self.battery_percent,tex,preceding,out);
             }
         }

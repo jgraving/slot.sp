@@ -1,5 +1,14 @@
 # Development recovery log
 
+## Wi-Fi progress and OTA identity — 2026-11-07
+
+Branch `fix/wifi-progress-ota` from main `50a9c233` (PR #214 is merged; the older routing note below is historical). User requests a radiating status-bar Wi-Fi icon during connection and reliable same-day OTA detection. Existing OTA uses source ancestry, not the displayed date, but silently suppresses diverged builds. Next: add cached GPU-animated Wi-Fi waves through join/DHCP; strengthen full-source build identity and diverged-release comparison; add regressions, publish a PR and inspect exact-source CI. Physical device state and the user’s installed source are unknown.
+
+Implementation: one cached dot/wave atlas animates outward via GPU alpha during starting, joining and DHCP, including outside the Network page; connected icon is steady and errors/off stop it. OTA now embeds the full source SHA, watches branch-ref/GitHub SHA changes for Cargo cache invalidation, and resolves diverged tips using canonical source commit timestamps rather than publication dates. An older/equal divergent source is not offered; missing comparison metadata fails visibly. Added same-day/rollback/comparison-failure, icon lifecycle and traveling-wave regressions; existing native Wi-Fi captures now include joining. Local Rust is unavailable, so compilation/native validation must run in CI. `git diff --check` passes.
+
+
+Local validation: Wi-Fi credential boundaries, Wi-Fi diagnostics (1), OTA recovery (7), shell update suite and whitespace checks pass. The shell suite initially could not create `/tmp`; reran successfully with a workspace TMPDIR. No Rust compilation or native rendering result is claimed. Separate shelf/HUD atlases preserve in-game contrast. Automatic approval review rejected `git push -u origin fix/wifi-progress-ota` because publication needs explicit user authorization; do not bypass it with connector writes. Finish locally, then ask to push and run CI. Changes remain on this local branch until authorized.
+
 ## Upstream on-device Studio integration — 2026-11-07
 
 ### Device scanned-label follow-up

@@ -117,11 +117,67 @@ fn update_checks_use_fork_api_and_skip_the_running_source() {
 }
 
 #[test]
-fn newer_or_diverged_test_builds_are_never_offered_an_older_stable_launcher() {
-    for status in ["behind","diverged","identical"] {
+fn newer_test_builds_are_never_offered_an_ancestor_or_identical_launcher() {
+    for status in ["behind","identical"] {
         let v=release().to_string().into_bytes();
         let result=check_with(2_000_000_000,&mut |url| if url==LATEST {Ok(v.clone())}else {assert!(url.starts_with("https://api.github.com/repos/jgraving/slot.sp/compare/"));Ok(json!({"status":status}).to_string().into_bytes())},Running{slot:"22222222",baseos:None});
         assert_eq!(result,UpdateEvent::UpToDate);
+    }
+}
+
+#[test]
+fn same_day_releases_are_ordered_by_source_ancestry() {
+    let v = release().to_string().into_bytes();
+    let e = check_with(2_000_000_000, &mut |url| {
+        if url == LATEST { Ok(v.clone()) } else { Ok(json!({"status":"ahead"}).to_string().into_bytes()) }
+    }, Running { slot: "22222222", baseos: None });
+    assert!(matches!(e, UpdateEvent::Available(r) if r.len() == 1 && r[0].source == SHA));
+}
+
+#[test]
+fn diverged_test_builds_use_source_time_even_on_the_same_day() {
+    for (released, expected) in [("2026-11-03T12:00:01Z", true),
+        ("2026-11-03T11:59:59Z", false), ("2026-11-03T12:00:00Z", false)] {
+        let v = release().to_string().into_bytes();
+        let e = check_with(2_000_000_000, &mut |url| {
+            Ok(if url == LATEST { v.clone() }
+            else if url.contains("/compare/") { json!({"status":"diverged", "base_commit":{
+                "sha":"2222222222222222222222222222222222222222",
+                "commit":{"committer":{"date":"2026-11-03T12:00:00Z"}}
+            }}).to_string().into_bytes() }
+            else { assert_eq!(url, format!("https://api.github.com/repos/{SLOT_REPO}/commits/{SHA}"));
+                json!({"sha":SHA,"commit":{"committer":{"date":released}}}).to_string().into_bytes() })
+        }, Running { slot: "22222222", baseos: None });
+        assert_eq!(matches!(e, UpdateEvent::Available(_)), expected);
+        if !expected { assert_eq!(e, UpdateEvent::UpToDate); }
+    }
+}
+
+#[test]
+fn incomplete_or_failed_comparison_never_claims_up_to_date() {
+    for response in [Err(UpdateFail::Offline), Ok(json!({"status":"diverged"}).to_string().into_bytes()),
+        Ok(json!({"status":"unknown"}).to_string().into_bytes())] {
+        let e = check_with(2_000_000_000, &mut |url| if url == LATEST {
+            Ok(release().to_string().into_bytes())
+        } else { response.clone() }, Running { slot: "22222222", baseos: None });
+        assert!(matches!(e, UpdateEvent::Failed(_)));
+    }
+}
+
+#[test]
+fn diverged_tip_lookup_errors_or_missing_dates_require_retry() {
+    for head in [Err(UpdateFail::Offline), Ok(json!({"sha":SHA}).to_string().into_bytes()),
+        Ok(json!({"sha":SHA,"commit":{"committer":{"date":"not-a-date"}}}).to_string().into_bytes()),
+        Ok(json!({"sha":"wrong-source","commit":{"committer":{"date":"2026-11-03T12:00:01Z"}}}).to_string().into_bytes())] {
+        let e = check_with(2_000_000_000, &mut |url| {
+            if url == LATEST { Ok(release().to_string().into_bytes()) }
+            else if url.contains("/compare/") { Ok(json!({"status":"diverged","base_commit":{
+                "sha":"2222222222222222222222222222222222222222",
+                "commit":{"committer":{"date":"2026-11-03T12:00:00Z"}}
+            }}).to_string().into_bytes()) }
+            else { head.clone() }
+        }, Running { slot: "22222222", baseos: None });
+        assert!(matches!(e, UpdateEvent::Failed(_)));
     }
 }
 

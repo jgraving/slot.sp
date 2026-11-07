@@ -155,6 +155,10 @@ impl Menu {
             self.unlock(if self.prefs.wifi_enabled {Some(AfterUnlock::Reconnect)}else{None});
         }
     }
+    pub fn wifi_connecting(&self) -> bool {
+        self.wifi_on && matches!(self.last_wifi.busy,
+            wifi::Busy::Starting | wifi::Busy::Joining(_) | wifi::Busy::Addressing)
+    }
     pub fn wifi_connected(&self) -> bool {
         self.wifi_on && self.last_wifi.on && self.last_wifi.connected.is_some() && self.last_wifi.ip.is_some()
     }
@@ -993,6 +997,7 @@ mod tests {
             let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
             let mut tick=0;
             for (name,busy,ip,error) in [
+                ("joining",wifi::Busy::Joining("Home".into()),None,None),
                 ("getting-address",wifi::Busy::Addressing,None,None),
                 ("address-timeout",wifi::Busy::Idle,None,Some("No IP address · retry")),
                 ("late-success",wifi::Busy::Idle,Some("192.0.2.3"),None),
@@ -1020,6 +1025,20 @@ mod tests {
                 encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
         }
+    }
+
+    #[test]
+    fn status_icon_animates_only_while_connecting_even_outside_settings() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.wifi_on=true;
+        for busy in [wifi::Busy::Starting, wifi::Busy::Joining("Home".into()), wifi::Busy::Addressing] {
+            menu.last_wifi.busy=busy;assert!(menu.wifi_connecting());
+        }
+        for busy in [wifi::Busy::Idle, wifi::Busy::Scanning] {
+            menu.last_wifi.busy=busy;assert!(!menu.wifi_connecting());
+        }
+        menu.last_wifi.busy=wifi::Busy::Joining("Home".into());menu.wifi_on=false;
+        assert!(!menu.wifi_connecting());
     }
 
     #[test]

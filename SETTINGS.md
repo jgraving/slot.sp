@@ -53,6 +53,8 @@ The clock, status icons and button hints change between light and dark colors to
 **Updates** and **Automatic time** follow Device code in General. They are grey without a connected Wi-Fi network; selecting them opens Network with a short explanation. **Time zone** opens the UTC-offset field directly, works offline, and applies changes immediately. Automatic time corrects UTC in the background; choose your own local offset.
 
 
+OTA compares exact source commits, so multiple releases on the same day are detected. For a diverged test build, a newer stable source can be offered using its source timestamp; an older stable source is not offered. A failed check asks you to retry.
+
 ## File sharing
 
 On a trusted Wi-Fi network, open **Settings → Network → File sharing** and turn **Sharing** on. Choose **Set password** to enter 8–32 printable characters, or use the generated password. Select **Password** to show or hide it. Sign in with username **slot** and the sharing password.
@@ -66,6 +68,8 @@ The **SDCard** share writes directly to the content card. Finish copying and tur
 Sharing requires authenticated, encrypted SMB3. It turns **off after reboot by default**. **Keep on after reboot** can restore it after the Device code unlocks the vault and the saved network reconnects. Only share on a trusted network.
 
 ### Wi-Fi connection progress
+
+The status-bar Wi-Fi icon pulses outward while connecting and getting an IP address, then stays steady once connected.
 
 After Wi-Fi joins the router, **Getting an IP address…** keeps the progress
 indicator active while DHCP finishes. This can take ten seconds or more. A
