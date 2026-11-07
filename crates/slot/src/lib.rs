@@ -84,3 +84,5 @@ pub mod studio_menu;
 pub mod art;
 
 pub mod sharing;
+
+pub mod shell_logos;

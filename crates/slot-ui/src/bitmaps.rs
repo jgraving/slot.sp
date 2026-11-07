@@ -1,4 +1,5 @@
-use std::sync::OnceLock;
+use std::borrow::Cow;
+use std::sync::{OnceLock, RwLock};
 
 use slot_gfx::OUT_W;
 
@@ -242,7 +243,7 @@ const GBC_CLEAR_PNG: &[u8] = include_bytes!("../../../assets/gbc_clear.png");
 
 /// The neutral shell asset for a mould, opaque or the separate clear one. The game's colour is
 /// blended onto it by the caller.
-pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
+pub fn shell_asset(mould: Mould, clear: bool) -> Cow<'static, [u8]> {
     static GBA: OnceLock<Vec<u8>> = OnceLock::new();
     static GB: OnceLock<Vec<u8>> = OnceLock::new();
     static GBC: OnceLock<Vec<u8>> = OnceLock::new();
@@ -257,7 +258,68 @@ pub fn shell_asset(mould: Mould, clear: bool) -> &'static [u8] {
         (Mould::Notched, true) => (GB_CLEAR_PNG, GB_CART_W, GB_CART_H, &GB_CLEAR),
         (Mould::Rounded, true) => (GBC_CLEAR_PNG, GB_CART_W, GB_CART_H, &GBC_CLEAR),
     };
-    load(bytes, w, h, slot)
+    let fallback = load(bytes, w, h, slot);
+    let key = shell_logo_key(mould, clear);
+    let logos = SHELL_LOGOS.read().unwrap_or_else(|e| e.into_inner());
+    let Some(logo) = logos[key].as_ref() else { return Cow::Borrowed(fallback); };
+    Cow::Owned(apply_shell_logo(fallback, logo, mould))
+}
+
+static SHELL_LOGOS: RwLock<[Option<Vec<u8>>; 5]> = RwLock::new([None, None, None, None, None]);
+
+fn shell_logo_key(mould: Mould, clear: bool) -> usize {
+    match (mould, clear) {
+        (Mould::Gba, false) => 0, (Mould::Gba, true) => 1,
+        (Mould::Notched, _) => 2, (Mould::Rounded, false) => 3, (Mould::Rounded, true) => 4,
+    }
+}
+
+pub fn shell_logo_band(mould: Mould) -> (u32, u32, u32, u32) {
+    match mould {
+        Mould::Gba => (76, 286, 23, 46),
+        Mould::Notched => (47, 267, 41, 69),
+        Mould::Rounded => (53, 263, 39, 70),
+    }
+}
+
+/// Validate upstream shell artwork before retaining only its logo band.
+/// No downloaded pixels outside that band enter the local shell geometry.
+pub fn extract_shell_logo(bytes: &[u8], mould: Mould) -> Option<Vec<u8>> {
+    let (w, h) = if mould == Mould::Gba { (GBA_CART_W, GBA_CART_H) } else { (GB_CART_W, GB_CART_H) };
+    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" || &bytes[12..16] != b"IHDR" { return None; }
+    let sw = u32::from_be_bytes(bytes[16..20].try_into().ok()?);
+    let sh = u32::from_be_bytes(bytes[20..24].try_into().ok()?);
+    if sh != h || sw < w || sw > w + 64 { return None; }
+    let (rgba, dw, dh) = decode_png_bytes(bytes)?;
+    if (dw, dh) != (sw, sh) { return None; }
+    let offset = (sw-w)/2;
+    let (left, right, top, bottom) = shell_logo_band(mould);
+    let mut band = Vec::new();
+    for y in top..bottom {
+        let start = ((y*sw+offset+left)*4) as usize;
+        band.extend_from_slice(&rgba[start..start+((right-left)*4) as usize]);
+    }
+    Some(band)
+}
+
+/// Install validated bands from the handheld's background downloader.
+pub fn install_shell_logos(logos: [Option<Vec<u8>>; 5]) {
+    *SHELL_LOGOS.write().unwrap_or_else(|e| e.into_inner()) = logos;
+}
+
+fn apply_shell_logo(fallback: &[u8], logo: &[u8], mould: Mould) -> Vec<u8> {
+    let w = if mould == Mould::Gba { GBA_CART_W } else { GB_CART_W };
+    let (left, right, top, bottom) = shell_logo_band(mould);
+    let mut out = fallback.to_vec();
+    if logo.len() != ((right-left)*(bottom-top)*4) as usize { return out; }
+    for (row, y) in (top..bottom).enumerate() {
+        for x in left..right {
+            let i = ((y*w+x)*4) as usize;
+            let j = (row*(right-left) as usize+(x-left) as usize)*4;
+            out[i..i+3].copy_from_slice(&logo[j..j+3]);
+        }
+    }
+    out
 }
 
 /// Source button artwork. Menu hints downsample uniformly to their own height.
@@ -275,4 +337,35 @@ pub(crate) enum ButtonLegend {
     Start,
     Menu,
     L, R, L1, R1, L2, R2, VolumeDown, VolumeUp,
+}
+
+#[cfg(test)]
+mod shell_logo_tests {
+    use super::*;
+    #[test]
+    fn logos_change_only_the_band_and_preserve_all_alpha() {
+        for mould in [Mould::Gba, Mould::Notched, Mould::Rounded] {
+            let (w,h) = if mould == Mould::Gba { (GBA_CART_W,GBA_CART_H) } else { (GB_CART_W,GB_CART_H) };
+            let fallback = vec![100; (w*h*4) as usize];
+            let (l,r,t,b) = shell_logo_band(mould);
+            let logo = vec![50; ((r-l)*(b-t)*4) as usize];
+            let out = apply_shell_logo(&fallback, &logo, mould);
+            for y in 0..h { for x in 0..w {
+                let i=((y*w+x)*4) as usize;
+                assert_eq!(out[i+3],100);
+                assert_eq!(out[i],if (l..r).contains(&x) && (t..b).contains(&y) {50} else {100});
+            }}
+            assert_eq!(apply_shell_logo(&fallback, &[], mould), fallback);
+        }
+    }
+    #[test]
+    fn extraction_rejects_wrong_geometry_and_invalid_data() {
+        assert!(extract_shell_logo(GBA_SHELL_PNG, Mould::Gba).is_some());
+        assert!(extract_shell_logo(GB_SHELL_PNG, Mould::Notched).is_some());
+        assert!(extract_shell_logo(GBA_SHELL_PNG, Mould::Notched).is_none());
+        assert!(extract_shell_logo(b"not png", Mould::Gba).is_none());
+        let mut huge=GBA_SHELL_PNG.to_vec();
+        huge[16..20].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(extract_shell_logo(&huge, Mould::Gba).is_none());
+    }
 }

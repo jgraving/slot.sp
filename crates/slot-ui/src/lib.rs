@@ -3,7 +3,7 @@ pub use art::{cover, cover_label,cover_label_bytes};
 mod bitmaps;
 mod label_mask;
 mod label_fit;
-pub use bitmaps::{
+pub use bitmaps::{extract_shell_logo, install_shell_logos,
     link_port, link_port_light, slot_back, slot_back_light, slot_front, slot_front_light,
     slot_plugged, slot_plugged_light, Mould, SLOT_H, SLOT_W, SLOT_TEXTURE_W, SLOT_TEXTURE_H,
     ABOUT_BODY_W, ABOUT_BODY_H, ABOUT_BODY_TEXTURE_W, ABOUT_BODY_TEXTURE_H,

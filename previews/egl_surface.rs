@@ -1,7 +1,7 @@
 // Surfaceless Mesa context for the production compositor; no window or device.
 use std::ffi::{c_void, CString};
 use slot_gfx::{Surface, GfxError};
-pub struct HeadlessSurface { lib: libloading::Library }
+pub struct HeadlessSurface { lib: libloading::Library, display: *mut c_void, context: *mut c_void }
 impl HeadlessSurface {
  pub fn new() -> Result<Self, GfxError> { unsafe {
   let lib=libloading::Library::new("libEGL.so.1").unwrap();
@@ -15,7 +15,7 @@ impl HeadlessSurface {
   let ca=[0x3098,3,0x30FB,3,0x30FD,1,0x3038];
   let ctx=call!("eglCreateContext",unsafe extern "C" fn(*mut c_void,*mut c_void,*mut c_void,*const i32)->*mut c_void,d,config,std::ptr::null_mut(),ca.as_ptr()); assert!(!ctx.is_null());
   assert_ne!(call!("eglMakeCurrent",unsafe extern "C" fn(*mut c_void,*mut c_void,*mut c_void,*mut c_void)->u32,d,std::ptr::null_mut(),std::ptr::null_mut(),ctx),0);
-  Ok(Self{lib})
+  Ok(Self{lib,display:d,context:ctx})
  } }
 }
 impl Surface for HeadlessSurface {
@@ -23,4 +23,16 @@ impl Surface for HeadlessSurface {
  fn window_size(&self)->(u32,u32){(720,480)}
  fn swap(&mut self)->Result<(),GfxError>{Ok(())}
  fn proc_address(&self,name:&str)->*const c_void{unsafe{let name=CString::new(name).unwrap();self.lib.get::<unsafe extern "C" fn(*const i8)->*const c_void>(b"eglGetProcAddress\0").unwrap()(name.as_ptr())}}
+}
+
+// The context must be detached and destroyed before libEGL is unloaded. Leaving
+// Mesa worker threads attached can crash at process teardown after capture.
+impl Drop for HeadlessSurface {
+ fn drop(&mut self) { unsafe {
+  let make_current=self.lib.get::<unsafe extern "C" fn(*mut c_void,*mut c_void,*mut c_void,*mut c_void)->u32>(b"eglMakeCurrent\0").unwrap();
+  make_current(self.display,std::ptr::null_mut(),std::ptr::null_mut(),std::ptr::null_mut());
+  self.lib.get::<unsafe extern "C" fn(*mut c_void,*mut c_void)->u32>(b"eglDestroyContext\0").unwrap()(self.display,self.context);
+  self.lib.get::<unsafe extern "C" fn(*mut c_void)->u32>(b"eglTerminate\0").unwrap()(self.display);
+  self.lib.get::<unsafe extern "C" fn()->u32>(b"eglReleaseThread\0").unwrap()();
+ } }
 }

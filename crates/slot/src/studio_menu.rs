@@ -153,6 +153,7 @@ impl Menu {
     pub fn busy(&self) -> bool {
         self.saving
     }
+    pub(crate) fn refresh_shell(&mut self) { self.rebuild(); }
     fn rebuild(&mut self) {
         self.generation = self.generation.wrapping_add(1);
         self.face = None;

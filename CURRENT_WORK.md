@@ -1,7 +1,9 @@
-# Active work: demo media and editor cleanup
+# Device shell logos and model refresh
 
-Branch: `refresh/demo-media`, based on main `390f89bd84fa88bc16fa8dea5b7fc379333a886b`.
+Delivery: [PR #213](https://github.com/jgraving/slot.sp/pull/213), branch `refresh/device-shell-logos`.
 
-Read [CLEANUP-WORK.md](CLEANUP-WORK.md) for the current changes, validation and remaining work. Finish cleanup before the separate upstream on-device Studio update. Keep notes limited to implementation and tests.
+Read [CLEANUP-WORK.md](CLEANUP-WORK.md) for implementation and validation. Cleanup PR #211 and browser editor PRs #26/#27 are merged. The maintainer completed the one-time retired artwork cache deletion. No cleanup controls were added.
 
-Historical completed work remains in WORKLOG.md. No merge, publication or physical-device verification is claimed for this branch yet.
+Changes: cached direct-download device shell logos, lowercase `slot.sp` fallback marks, removal of the website model's lid and underside brand engravings, regenerated preview media, and an external “Slot Cart Studio” link. All native CI passes on runtime source `77358c762610980c0818b25c54d5cb0b4ca88f75`; all 124 generated media hashes are verified. Final delivery status is shown on PR #213. Physical-device networking remains unverified.
+
+Next separate task: compare the latest original project's on-device Studio and adapt useful updates to our typography, menus, motion and controls. Historical completed work remains in WORKLOG.md; current scoped checkpoints are in CLEANUP-WORK.md.
