@@ -39,6 +39,7 @@ pub struct Frontend {
     kid_meter_tex:Option<TexId>,kid_meter_key:Option<(u64,u64,bool)>,
     hud_meter_tex:[Option<TexId>;2],hud_meter_key:Option<(slot_ui::HudKind,u8,Icon,bool)>,
     network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
+    studio_gallery_tex:Option<TexId>,
     studio_art_tex:Option<TexId>,
     studio_tex: Option<TexId>,
     studio_old_tex: Option<TexId>,
@@ -217,7 +218,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_old_tex:None,studio_page:None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_gallery_tex:None,studio_old_tex:None,studio_page:None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -372,9 +373,6 @@ impl Frontend {
         self.session.app_mut().set_kid_face(id, smiley.w, smiley.h);
         let smiley=slot_ui::kid_status_face();
         self.session.app_mut().kid_status_icon=Some(compositor.create_ui_texture(smiley.w,smiley.h,&smiley.rgba));
-        let icons=[slot_ui::Icon::Volume,slot_ui::Icon::VolumeMuted,slot_ui::Icon::Bluetooth,slot_ui::Icon::BlueLight].into_iter().map(|icon|{let f=slot_ui::control_icon_face(icon,32,[246,244,239]);(compositor.create_ui_texture(f.w,f.h,&f.rgba),f.w,f.h)}).collect();
-        let hints=slot_ui::quick_controls_legends().into_iter().enumerate().map(|(side,f)|{let tex=compositor.create_ui_texture(f.w,f.h,&f.rgba);compositor.mark_hint_texture(tex,side);(tex,f.w,f.h)}).collect();
-        self.session.app_mut().set_quick_control_faces(icons,hints);
         let shadow = cart_shadow();
         let id = compositor.create_texture(shadow.w, shadow.h, &shadow.rgba);
         self.session.app_mut().set_cart_shadow(id);
@@ -756,7 +754,7 @@ impl Frontend {
             .app()
             .bluetooth
             .as_ref()
-            .is_some_and(|m| m.show_progress()) || self.session.app().quick_bluetooth.as_ref().is_some_and(|m|m.show_progress());
+            .is_some_and(|m| m.show_progress());
         let network_busy=self.session.app().network.as_ref().is_some_and(|m|m.show_progress());
         if let Some(frames)=self.spinner_frames.as_ref().and_then(|rx|rx.try_recv().ok()) {
             self.bluetooth_spinner=frames.into_iter().map(|face|upload(compositor,&mut None,face)).collect();
@@ -769,7 +767,6 @@ impl Frontend {
         } else {
             None
         };
-        self.session.app_mut().set_quick_control_progress(if sound_busy {progress}else{None});
         let sound_footer_ink = slot_ui::footer_ink(self.session.app().light());
         let sound_canvas = self.session.app().canvas();
         let mut chrome_updates=vec![];
@@ -819,6 +816,9 @@ impl Frontend {
         if let Some(menu)=self.session.app_mut().studio.as_mut() {
             if self.studio_page!=Some(menu.page_key()) {
                 std::mem::swap(&mut self.studio_tex,&mut self.studio_old_tex);self.studio_page=Some(menu.page_key());menu.face=None;
+            }
+            if let Some(face) = menu.take_gallery_pixels() {
+                menu.gallery_tex=Some(upload_rgba(compositor,&mut self.studio_gallery_tex,face.w,face.h,&face.rgba));
             }
             if menu.face.is_none() {menu.face=Some(upload_menu_face(compositor,&mut self.studio_tex,&mut self.menu_chrome_cache,menu.screen_face(sound_canvas),&mut chrome_updates));
                 let face=menu.artwork_face(sound_canvas);menu.art_face=Some(upload_rgba(compositor,&mut self.studio_art_tex,face.w,face.h,&face.rgba));}

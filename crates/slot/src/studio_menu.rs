@@ -14,7 +14,15 @@ use std::{
     },
 };
 
+use crate::studio_gallery::{self, Gallery};
+
 pub struct Menu {
+    pub gallery_tex: Option<TexId>,
+    gallery: Option<Gallery>,
+    now: u64,
+    printed_at: u64,
+    applying: Option<(LabelKind, u64, usize)>,
+    landed: Option<LabelKind>,
     pub model: Studio,
     pub face: Option<TexId>,
     pub art_face: Option<TexId>,
@@ -24,7 +32,7 @@ pub struct Menu {
     art: Arc<Artwork>,
     jobs: Sender<Job>,
     done: Receiver<Done>,
-    fetch: Option<Receiver<Result<Artwork, crate::update::UpdateFail>>>,
+    fetch: Option<Receiver<Result<(Artwork, bool), crate::update::UpdateFail>>>,
     preview: Option<CartFace>,
     generation: u64,
     preview_generation: u64,
@@ -37,7 +45,7 @@ enum Job {
     Save(Studio, Arc<Artwork>, Option<Arc<Vec<u8>>>),
 }
 enum Done {
-    Preview(u64, CartFace),
+    Preview(u64, CartFace, Gallery),
     Saved(Result<Cart, std::io::Error>),
 }
 impl Menu {
@@ -76,6 +84,7 @@ impl Menu {
                     Job::Preview(gen, model, art, original) => Done::Preview(
                         gen,
                         preview(&model, &art, original.as_deref().map(Vec::as_slice)),
+                        gallery(&model, &art, original.as_deref().map(Vec::as_slice)),
                     ),
                     Job::Save(model, art, original) => Done::Saved(save(
                         &card,
@@ -91,6 +100,7 @@ impl Menu {
         });
         let mut menu = Self {
             model,
+            gallery_tex: None, gallery: None, now: 0, printed_at: 0, applying: None, landed: None,
             face: None,
             art_face: None,
             visible: true,
@@ -135,6 +145,7 @@ impl Menu {
         if self.saving {
             return;
         }
+        self.complete_apply();
         self.saving = true;
         self.notice = "Saving cartridge…".into();
         if self
@@ -164,18 +175,24 @@ impl Menu {
             self.original.clone(),
         ));
     }
-    pub fn update(&mut self) {
+    pub fn update(&mut self) { self.update_at(self.now); }
+    pub fn update_at(&mut self, now: u64) {
+        self.now = now;
+        if self.applying.is_some_and(|(_, at, _)| now.saturating_sub(at) >= studio_gallery::APPLY_MS) {
+            self.complete_apply();
+        }
         if let Some(result) = self.fetch.as_ref().and_then(|rx| rx.try_recv().ok()) {
             self.fetch = None;
             match result {
-                Ok(art) => {
+                Ok((art, duplicates)) => {
+                    self.model.duplicates = duplicates;
                     self.model
                         .art_arrived(art.real.is_some(), art.logo.is_some());
                     if art.wheel.is_some() {
                         self.model.wheel_arrived();
                     }
                     if art.real.is_none() && art.logo.is_none() {
-                        self.notice = "No matching artwork".into();
+                        self.notice = if duplicates { "No new labels" } else { "No matching artwork" }.into();
                     } else {
                         self.notice.clear();
                     }
@@ -196,7 +213,10 @@ impl Menu {
         }
         while let Ok(done) = self.done.try_recv() {
             match done {
-                Done::Preview(gen, face) if gen == self.generation => {
+                Done::Preview(gen, face, gallery) if gen == self.generation => {
+                    self.gallery = Some(gallery);
+                    self.landed = None;
+                    self.printed_at = self.now;
                     self.preview = Some(face);
                     self.preview_generation = gen;
                     self.face = None;
@@ -224,32 +244,85 @@ impl Menu {
             Action::QuickMenu => Btn::B,
             _ => return,
         };
+        if self.applying.is_some() { return; }
         self.notice.clear();
         let before = self.model.clone();
         match self.model.press(btn) {
             Some(Effect::Close) => {
                 self.finish();
             }
-            Some(Effect::Fetch) if !self.model.art_ready() && self.fetch.is_none() => {
+            Some(Effect::Fetch) if (!self.model.art_ready() || self.model.art_failed) && self.fetch.is_none() => {
+                self.model.retry_art();
                 let (tx, rx) = channel();
-                let (root, cart) = (self.root.clone(), self.model.cart.clone());
+                let (root, cart, original) = (self.root.clone(), self.model.cart.clone(), self.original.clone());
                 std::thread::spawn(move || {
-                    let _ = tx.send(art::fetch(&root, &cart));
+                    let result = art::fetch(&root, &cart).map(|mut art| {
+                        let duplicates = art.without_duplicates(original.as_deref().map(Vec::as_slice));
+                        (art, duplicates)
+                    });
+                    let _ = tx.send(result);
                 });
                 self.fetch = Some(rx);
                 self.notice = "Finding labels…".into();
             }
             Some(Effect::Fetch) if self.art.real.is_none() && self.art.logo.is_none() => {
-                self.notice = "More labels need Wi-Fi".into();
+                self.notice = if !self.model.wifi_available() { "More labels need Wi-Fi" }
+                    else if self.model.duplicates { "No new labels" }
+                    else { "No matching artwork" }.into();
             }
-            Some(Effect::Apply(kind)) => self.model.applied(kind),
+            Some(Effect::Apply(kind)) => {
+                if let Screen::Sheet { at } = self.model.screen {
+                    if self.gallery.as_ref().is_some_and(|g| g.slots.iter().any(|(k,_,_)| *k == kind)) {
+                        self.applying = Some((kind, self.now, at));
+                    }
+                }
+            },
             _ => {}
         }
-        if before != self.model {
+        if before.shell != self.model.shell || before.ground != self.model.ground
+            || before.wearing != self.model.wearing { self.rebuild(); }
+        else { self.face = None; }
+    }
+    pub fn take_gallery_pixels(&mut self) -> Option<UndoFace> {
+        self.gallery.as_mut()?.pixels.take()
+    }
+    fn complete_apply(&mut self) {
+        if let Some((kind, _, _)) = self.applying.take() {
+            self.model.applied(kind);
+            self.landed = Some(kind);
             self.rebuild();
-        } else {
-            self.face = None;
         }
+    }
+    pub fn applying(&self) -> bool { self.applying.is_some() }
+    pub fn draw_gallery(&self, canvas: Canvas, frame: slot_ui::MenuFrame, out: &mut Vec<slot_ui::Draw>) {
+        let (Some(gallery), Some(tex)) = (&self.gallery, self.gallery_tex) else { return };
+        let Screen::Sheet { .. } = self.model.screen else { return };
+        let begin = out.len();
+        for (index, kind) in self.model.sheet.iter().copied().enumerate() {
+            let Some((_, w, h)) = gallery.slots.iter().find(|(k,_,_)| *k == kind) else { continue };
+            let mut rect = Gallery::rect(canvas, index, *w, *h);
+            let elapsed = self.now.saturating_sub(self.printed_at).saturating_sub(index as u64 * 100);
+            let feed = (elapsed as f32 / 300.0).clamp(0.0, 1.0);
+            rect[1] -= (1.0 - feed) * 18.0;
+            gallery.draw(tex, kind, rect, feed, out);
+        }
+        if let Some((kind, started, index)) = self.applying.or_else(|| self.landed.map(|k| (k, 0, 0))) {
+            if let (Some((_, w, h)), Some(cart)) = (gallery.slots.iter().find(|(k,_,_)| *k == kind), &self.preview) {
+                let from = Gallery::rect(canvas, index, *w, *h);
+                let edge = canvas.w * 0.47;
+                let scale = ((edge - 76.0 - 12.0) / cart.w as f32).min(210.0 / cart.h as f32);
+                let cx = 76.0 + (edge - 76.0 - cart.w as f32 * scale) / 2.0;
+                let cy = 102.0 + (210.0 - cart.h as f32 * scale) / 2.0;
+                let mut edited = self.model.cart.clone(); edited.shell = self.model.shell;
+                let (x,y,w,h) = slot_ui::label_rect(slot_ui::gb_shell_of(&edited));
+                let to = [cx + x * cart.w as f32 * scale, cy + y * cart.h as f32 * scale,
+                    w * cart.w as f32 * scale, h * cart.h as f32 * scale];
+                let elapsed = if self.applying.is_some() { self.now.saturating_sub(started) } else { studio_gallery::APPLY_MS };
+                let rect = studio_gallery::application_rect(from, to, elapsed);
+                gallery.draw(tex, kind, rect, 1.0, out);
+            }
+        }
+        studio_gallery::transform(canvas, frame, out, begin);
     }
     /// Cartridge pixels and palette swatches bypass semantic light-theme recoloring.
     pub fn artwork_face(&self, canvas: Canvas) -> UndoFace {
@@ -402,6 +475,9 @@ impl Menu {
                 }
             }
             Screen::Sheet { at } => {
+                text(&mut face, "Label printer", x, 76.0, w, 24.0, true);
+                // A small paper slot sits above the two label previews.
+                slot_ui::expressive::raster_round(&mut face, x + 8.0, 108.0, w - 16.0, 4.0, 2.0, slot_ui::expressive::SELECTED);
                 for (i, kind) in self.model.sheet.iter().enumerate() {
                     let name = match kind {
                         LabelKind::Existing => "Original label",
@@ -409,7 +485,7 @@ impl Menu {
                         LabelKind::Logo => "Logo only",
                         LabelKind::Title => "Title only",
                     };
-                    let y = 96.0 + i as f32 * 60.0;
+                    let y = 182.0 + i as f32 * 110.0;
                     text(&mut face, name, x, y, w, 24.0, i == at);
                 }
             }
@@ -671,4 +747,27 @@ pub fn save(
     cart.shell = model.shell;
     cart.label = png.map(|_| path);
     Ok(cart)
+}
+
+fn gallery(model: &Studio, art: &Artwork, original: Option<&[u8]>) -> Gallery {
+    let mut faces = Vec::new();
+    for kind in [LabelKind::Existing, LabelKind::Real, LabelKind::Logo, LabelKind::Title] {
+        let mut choice = model.clone();
+        if kind != choice.wearing { choice.applied(kind); }
+        let mut cart = choice.cart.clone(); cart.shell = choice.shell;
+        let bytes = label(&choice, art, original).or_else(|| {
+            (kind == LabelKind::Title || (kind == LabelKind::Existing && cart.label.is_none()))
+                .then(|| art::make::text_label(&cart, slot_ui::label_colour(&slot_ui::label_text(&cart))))
+        });
+        let Some(bytes) = bytes else { continue };
+        let (w,h) = slot_ui::label_size(&cart);
+        let scale = (studio_gallery::CELL_W as f32 / w as f32)
+            .min(studio_gallery::CELL_H as f32 / h as f32);
+        let (w,h) = ((w as f32 * scale).floor().max(1.0) as u32,
+            (h as f32 * scale).floor().max(1.0) as u32);
+        if let Some(rgba) = slot_ui::cover_label_bytes(&bytes,w,h) {
+            faces.push((kind, UndoFace { rgba,w,h }));
+        }
+    }
+    Gallery::new(faces)
 }

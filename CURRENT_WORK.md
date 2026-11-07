@@ -1,9 +1,5 @@
-# Device shell logos and model refresh
+# Upstream on-device Studio integration
 
-Delivery: [PR #213](https://github.com/jgraving/slot.sp/pull/213), branch `refresh/device-shell-logos`.
+Active branch: `feat/upstream-device-studio`, based on main `9d36c36`.
 
-Read [CLEANUP-WORK.md](CLEANUP-WORK.md) for implementation and validation. Cleanup PR #211 and browser editor PRs #26/#27 are merged. The maintainer completed the one-time retired artwork cache deletion. No cleanup controls were added.
-
-Changes: cached direct-download device shell logos, lowercase `slot.sp` fallback marks, removal of the website model's lid and underside brand engravings, regenerated preview media, and an external “Slot Cart Studio” link. All native CI passes on runtime source `77358c762610980c0818b25c54d5cb0b4ca88f75`; all 124 generated media hashes are verified. Final delivery status is shown on PR #213. Physical-device networking remains unverified.
-
-Next separate task: compare the latest original project's on-device Studio and adapt useful updates to our typography, menus, motion and controls. Historical completed work remains in WORKLOG.md; current scoped checkpoints are in CLEANUP-WORK.md.
+Read WORKLOG.md for scope and verification. Compare original project `slot-cfw/slot` at `0fe8f5cf`; adapt Studio visual label choices, duplicate suppression and apply feedback to our native UI. Preserve offline editing, artwork cleanup and saving/sharing safeguards. Targeted OS fixes follow the audit; Collections/emulator migrations need separate compatibility work. No physical device result is claimed.

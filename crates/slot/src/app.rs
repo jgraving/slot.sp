@@ -1,7 +1,5 @@
 #[path = "kid_controls.rs"]
 mod kid_controls;
-#[path="quick_controls.rs"]
-mod quick_controls;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -353,8 +351,6 @@ pub struct App {
     kid_error: bool,
     catalog: Vec<Cart>,
     pub bluetooth: Option<crate::bluetooth::Manager>,
-    pub(crate) quick_bluetooth:Option<crate::bluetooth::Manager>,
-    quick_card:quick_controls::QuickCard,
     bluetooth_supported: bool,
     pub(crate) kid_status_icon: Option<TexId>,
     pub ra_sync_indicator: Option<TexId>,
@@ -630,8 +626,6 @@ impl App {
             kid_error: false,
             catalog,
             bluetooth: None,
-            quick_bluetooth:None,
-            quick_card:Default::default(),
             bluetooth_supported: false,
             kid_status_icon: None,
             ra_sync_indicator: None,
@@ -2259,7 +2253,7 @@ impl App {
             || self.in_game_menu().is_some()
             || self.repair_prompt()
             || self.shutting_down();
-        let shelf = !self.quick_card.shown && self.kid_menu.is_none()
+        let shelf = self.kid_menu.is_none()
             && matches!(self.phase, Phase::Shelf)
             && self.core_picker.is_none()
             && !self.repair_prompt
@@ -2983,7 +2977,15 @@ impl App {
         if !self.kid_action_allowed(action) {
             return;
         }
-        if self.quick_control_input(action) {return;}
+        if action == Action::CartStudio {
+            if matches!(self.phase, Phase::Shelf) && self.kid_menu.is_none()
+                && self.bluetooth.is_none() && self.core_picker.is_none()
+                && !self.network.as_ref().is_some_and(|m| m.visible)
+            {
+                self.open_studio();
+            }
+            return;
+        }
         if self
             .wake_guard
             .is_some_and(|until| std::time::Instant::now() < until)
@@ -4183,7 +4185,6 @@ impl App {
         if let Some(menu)=&mut self.kid_menu {if menu.twelve!=self.state.clock_12h {menu.twelve=self.state.clock_12h;menu.face=None;}}
         if let Phase::SetClock{picker,..}=&mut self.phase {picker.set_twelve(self.state.clock_12h);}
         for (_,shelf) in &mut self.shelves {shelf.wheel=self.state.carousel_wheel;}
-        self.quick_card.motion.update(self.quick_card.shown,dt);
         self.clock += dt as f64 * 1000.0;
         let repeated = self.kid_menu.as_mut().and_then(|menu| menu.update(dt));
         if let Some(action) = repeated { self.kid_input(action); }
@@ -4584,7 +4585,8 @@ impl App {
                 }
             }
         }
-        if let Some(menu)=&mut self.studio {menu.update();}
+        let studio_now=self.now();
+        if let Some(menu)=&mut self.studio {menu.update_at(studio_now);}
         if let Some(cart)=self.studio.as_mut().and_then(|m|m.take_saved()) {self.update_cart_appearance(&cart);self.studio=None;}
         let sharing_allowed=!self.kids.active && !self.shutting_down() && !self.link_active() && self.studio.is_none() && matches!(self.phase,Phase::Shelf|Phase::QuickMenu{..}|Phase::About|Phase::SetClock{..});
         if let Some(network)=&mut self.network {network.set_sharing_allowed(sharing_allowed);}
@@ -4599,7 +4601,6 @@ impl App {
             }
         }
         self.step_net_time();
-        self.tick_quick_controls();
         self.sync_display_schedule();
         self.tick_play_history();
         self.tick_kid_policy();
@@ -5119,7 +5120,6 @@ impl App {
         }
     }
     fn draw_scene(&self, out: &mut Vec<Draw>) {
-        if !self.shutting_down() && !matches!(self.phase,Phase::Doze{..}) && self.draw_quick_controls(out) {return;}
         if !self.shutting_down() && !matches!(self.phase, Phase::Doze { .. }) {
             if let Some(tex) = self.studio.as_ref().and_then(|m|m.face).or_else(||self.network.as_ref().filter(|m|m.visible).and_then(|m|m.face))
                 .or_else(||self.display_schedule.as_ref().and_then(|m| m.face))
@@ -5606,8 +5606,8 @@ impl App {
         match key {
             4100|4101|4103=>{
                 let edge=self.canvas().w*0.47;let x=edge+4.0;let w=self.canvas().w-76.0-edge+4.0;
-                let pitch=if key==4100 {self.studio.as_ref().map_or(64.0,|m|(262.0/m.model.rows().len().max(1)as f32).min(64.0))}else if key==4101 {60.0}else{52.0};
-                let top=if key==4100 {80.0}else if key==4101 {92.0}else{128.0};
+                let pitch=if key==4100 {self.studio.as_ref().map_or(64.0,|m|(262.0/m.model.rows().len().max(1)as f32).min(64.0))}else if key==4101 {110.0}else{52.0};
+                let top=if key==4100 {80.0}else if key==4101 {104.0}else{128.0};
                 let offset=(frame.focus_y-slot_ui::expressive::ROW_TOP)/slot_ui::QUICK_PITCH;
                 let dx=if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
                 slot_ui::expressive::rounded(out,x+dx,top+offset*pitch,w,pitch-4.0,12.0,slot_ui::expressive::SELECTED);
@@ -5654,6 +5654,7 @@ impl App {
         if !self.network.as_ref().is_some_and(|m|m.visible && m.is_keyboard()) {if let Some(key)=self.custom_menu_key(){self.draw_custom_focus(key,frame,out);}}
         slot_ui::expressive::draw_cached_menu(self.canvas(),tex,frame,out);
         if let Some(art)=self.studio.as_ref().and_then(|m|m.art_face) {slot_ui::expressive::draw_cached_menu(self.canvas(),art,frame,out);}
+        if let Some(menu)=&self.studio {menu.draw_gallery(self.canvas(),frame,out);}
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
         let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
@@ -7609,9 +7610,6 @@ impl App {
             let message=menu.lines().get(1)?.clone();
             if message.is_empty() || message=="CONFIRM_FORGET" { return None; }
             (menu.page_key(),message)
-        } else if let Some(menu)=&self.quick_bluetooth {
-            if !menu.status.starts_with("Error:"){return None;}
-            (6000,crate::bluetooth::error_notice(&menu.status).into())
         } else { return None; };
         Some((page ^ self.settings_notice_revision.wrapping_mul(65536),message))
     }

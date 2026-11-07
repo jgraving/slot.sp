@@ -242,6 +242,8 @@ impl Studio {
         }
     }
 
+    pub fn wifi_available(&self) -> bool { self.wifi }
+
     pub fn art_ready(&self) -> bool {
         self.art_ready
     }
@@ -260,6 +262,15 @@ impl Studio {
             let at = at.min(self.sheet.len().saturating_sub(1));
             self.screen = Screen::Sheet { at };
         }
+    }
+
+    /// A failed lookup is retryable by returning to the label sheet.
+    pub fn retry_art(&mut self) {
+        self.art_failed = false;
+        self.art_ready = false;
+        self.duplicates = false;
+        self.sheet = vec![LabelKind::Real, LabelKind::Logo];
+        if let Screen::Sheet { .. } = self.screen { self.screen = Screen::Sheet { at: 0 }; }
     }
 
     pub fn row(&self) -> Option<Row> {

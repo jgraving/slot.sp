@@ -1,0 +1,84 @@
+//! Sticker previews and GPU motion adapted from Slot's on-device label printer.
+//! Raster work runs on the Studio worker; animation only moves cached quads.
+use crate::studio::LabelKind;
+use slot_ui::{Canvas, Draw, MenuFrame, TexId, UndoFace};
+
+pub const CELL_W: u32 = 160;
+pub const CELL_H: u32 = 96;
+pub const APPLY_MS: u64 = 520;
+
+pub struct Gallery {
+    pub pixels: Option<UndoFace>,
+    pub slots: Vec<(LabelKind, u32, u32)>,
+}
+impl Gallery {
+    pub fn new(labels: Vec<(LabelKind, UndoFace)>) -> Self {
+        let mut pixels = UndoFace { w: CELL_W, h: CELL_H * labels.len().max(1) as u32,
+            rgba: vec![0; (CELL_W * CELL_H * labels.len().max(1) as u32 * 4) as usize] };
+        let mut slots = Vec::new();
+        for (i, (kind, face)) in labels.into_iter().enumerate() {
+            for y in 0..face.h {
+                let from = (y * face.w * 4) as usize;
+                let to = (((i as u32 * CELL_H + y) * CELL_W) * 4) as usize;
+                pixels.rgba[to..to + face.w as usize * 4]
+                    .copy_from_slice(&face.rgba[from..from + face.w as usize * 4]);
+            }
+            slots.push((kind, face.w, face.h));
+        }
+        Self { pixels: Some(pixels), slots }
+    }
+    pub fn rect(canvas: Canvas, index: usize, w: u32, h: u32) -> [f32; 4] {
+        let x = canvas.w * 0.47 + 12.0;
+        let width = canvas.w - 76.0 - x;
+        let scale = (width / w as f32).min(1.0).min(76.0 / h as f32);
+        [x + (width - w as f32 * scale) / 2.0,
+            112.0 + index as f32 * 110.0 + (76.0 - h as f32 * scale) / 2.0,
+            w as f32 * scale, h as f32 * scale]
+    }
+    pub fn draw(&self, tex: TexId, kind: LabelKind, rect: [f32; 4], alpha: f32, out: &mut Vec<Draw>) {
+        let Some((i, (_, w, h))) = self.slots.iter().enumerate().find(|(_, (k, _, _))| *k == kind) else { return };
+        let [x,y,w0,h0] = rect;
+        out.push(Draw::Part { x,y,w:w0,h:h0,tex,alpha,
+            uv:[0.0, i as f32 / self.slots.len().max(1) as f32,
+                *w as f32 / CELL_W as f32, *h as f32 / (CELL_H * self.slots.len().max(1) as u32) as f32] });
+    }
+}
+
+pub fn transform(canvas: Canvas, frame: MenuFrame, out: &mut Vec<Draw>, begin: usize) {
+    let dx = frame.page_shift * (canvas.w - 2.0 * slot_ui::expressive::MENU_INSET);
+    for draw in &mut out[begin..] {
+        if let Draw::Part { x, alpha, .. } = draw { *x += dx; *alpha *= frame.opacity; }
+    }
+    slot_ui::clip_menu_body(out, begin, canvas);
+}
+
+/// Lift, travel, then settle, without rebuilding text or artwork per frame.
+pub fn application_rect(from: [f32;4], to: [f32;4], elapsed: u64) -> [f32;4] {
+    let p = (elapsed as f32 / APPLY_MS as f32).clamp(0.0,1.0);
+    let ease = p * p * (3.0 - 2.0 * p);
+    let mut rect = std::array::from_fn(|i| from[i] + (to[i] - from[i]) * ease);
+    rect[1] -= (p * std::f32::consts::PI).sin() * 24.0;
+    rect
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn label_travel_starts_on_the_sheet_and_lands_on_the_well() {
+        let from=[400.0,120.0,160.0,80.0]; let to=[110.0,170.0,130.0,64.0];
+        assert_eq!(application_rect(from,to,0),from);
+        for (a,b) in application_rect(from,to,APPLY_MS).iter().zip(to) {assert!((a-b).abs()<0.001);}
+        let mid=application_rect(from,to,APPLY_MS/2);
+        assert!(mid[0]>to[0] && mid[0]<from[0]);
+        assert!(mid[1]<(from[1]+to[1])/2.0);
+    }
+    #[test]
+    fn sticker_tiles_fit_the_card_in_both_layouts() {
+        for w in [640.0,720.0] {for i in 0..2 {
+            let r=Gallery::rect(Canvas{w,h:480.0},i,160,96);
+            assert!(r[0]>=w*0.47 && r[0]+r[2]<=w-76.0);
+            assert!(r[1]>=112.0 && r[1]+r[3]<slot_ui::expressive::CARD_BOTTOM);
+        }}
+    }
+}

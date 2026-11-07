@@ -65,7 +65,8 @@ pub fn pages(
                     false,
                 ),
                 ("Approve for kids".into(), "X".into(), false),
-                ("Cart Studio / emulator".into(), "START".into(), false),
+                ("Cart Studio".into(), "SELECT".into(), false),
+                ("Emulator / cartridge".into(), "START".into(), false),
                 ("Start without resume".into(), "Hold A".into(), false),
             ],
         ));

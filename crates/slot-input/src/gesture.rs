@@ -37,7 +37,7 @@ pub enum Action {
     VolumeUp,
     VolumeDown,
     QuickMenu,
-    QuickControls,
+    CartStudio,
     GameMenu,
     MuteToggle,
     ColourCorrectionToggle,
@@ -608,8 +608,8 @@ impl Gestures {
         let Select::Held { chorded, sent, .. } = std::mem::take(&mut self.select) else {
             return Vec::new();
         };
-        // Quick controls are parked; retain the card/action for future use.
-        if self.context==Context::Shelf && shelf_press && !chorded {return Vec::new();}
+        // Resolve a shelf tap only on release, after every modifier chord had its chance.
+        if self.context==Context::Shelf && shelf_press && !chorded {return vec![Action::CartStudio];}
         match (sent, chorded) {
             (Some(at), _) if now.saturating_sub(at) >= SELECT_TAP_MS => {
                 vec![Action::GbaUp(Btn::Select)]

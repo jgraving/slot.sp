@@ -37,7 +37,7 @@ fn reference_uses_saved_bindings_and_child_pages_never_advertise_blocked_shortcu
         "Rewind",
         "Fast Forward",
         "Approve for kids",
-        "Cart Studio / emulator",
+        "Cart Studio",
         "Turbo",
     ] {
         assert!(!text.contains(forbidden), "{forbidden}");
