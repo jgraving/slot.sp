@@ -27,7 +27,8 @@ Branch: `refresh/device-shell-logos`, based on the cleanup merge.
 - Fetch five fixed shell assets directly from a pinned upstream GitHub revision on the device when Wi-Fi is available. Retain only logo-band pixels for rendering and cache validated files on the SD card. Preserve bundled shell shapes, alpha and finishes. Offline and failed requests retain the lowercase project fallback; no website requests are added.
 - Use the rounded display font for lowercase `slot.sp` shell placeholders.
 - Remove the lid and underside brand engravings from the website model and regenerate affected previews.
-- Validation: downloader offline/cache/size tests, logo-band geometry/alpha tests and device-feature compilation pass locally. Full source CI and regenerated media are pending.
+- Validation: two downloader tests and 142 UI/render tests pass locally, as does device-feature compilation. Original upstream files were also loaded through production extraction/rendering for visual comparison. Full source CI and regenerated media are pending. The first media run completed native guide/hero recording, then crashed at interactive-recorder teardown (exit 139). Added explicit EGL context/thread teardown before library unload; no device graphics code is changed.
+- Browser editor #27 passes full CI and is merged; the website pins its lowercase renderer build. The site footer and Cart Studio guide link to the original browser editor as “Slot Cart Studio.” Downloaded shell logos refresh both shelf textures and an already-open native editor.
 
 ## Deferred follow-up
 

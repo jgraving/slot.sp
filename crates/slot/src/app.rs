@@ -4578,6 +4578,7 @@ impl App {
                 && !matches!(self.phase, Phase::Doze { .. } | Phase::SetClock { .. })
                 && self.network.as_ref().is_some_and(|m| m.wifi_connected());
             if self.shell_logos.step(root, online, self.now()) {
+                if let Some(menu) = &mut self.studio { menu.refresh_shell(); }
                 for (_, shelf) in &mut self.shelves {
                     for i in 0..shelf.carts.len() { self.orphaned.extend(shelf.take_face(i)); }
                 }
