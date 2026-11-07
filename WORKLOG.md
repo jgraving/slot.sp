@@ -847,3 +847,7 @@ All six workflows pass on source b21dd2f9baf1830fadf28509a56aacebe66d48aa: ARM64
 - Final recovery update changes only CURRENT_WORK.md and WORKLOG.md. Use [skip ci] for this Markdown-only checkpoint because GitHub PR path filtering uses cumulative changed paths and would rerun/cancel the same already-passing feature suites. Compare current HEAD to the verified source before resuming; do not claim an unverified runtime change.
 
 Native review found a duplicate SVG fill attribute in the new Wi-Fi atlas; corrected it and added a real four-layer rasterization regression. The first ARM64/package pass did not exercise native asset construction; native rendering remains a merge gate. The RA pulse now has draw-level lifecycle/position coverage. Change Device code uses a vector right-facing chevron instead of Set; locked and unset status remain informative.
+
+Right D-pad now follows single disclosure chevrons in settings lists and the network File sharing / Change Device code rows. Tile grids retain directional navigation, adjustable rows retain value changes, binding controls retain capture behavior, and plain actions are not aliased to A. Added network disclosure input coverage.
+
+Renamed the Display tile/heading to Display & appearance. Moved Recents and Sort Favorites out of General into that card, preserving stable enum/settings IDs. Updated parent/heading/order and Recents navigation regressions plus guide paths.

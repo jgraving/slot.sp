@@ -618,7 +618,9 @@ impl Menu {
             let count = self.rows().len(); self.selected = (self.selected + if btn==Btn::Down {1} else {count-1}) % count;
             self.notice.clear(); self.changed(); return;
         }
-        if btn != Btn::A && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
+        let disclosure=btn==Btn::Right && ((self.page==Page::Security && self.selected==1 && self.encrypted && !self.locked)
+            || (self.page==Page::Wifi && self.selected==4));
+        if btn != Btn::A && !disclosure && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
         match self.page {
             Page::Security => match self.selected {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
@@ -1025,6 +1027,16 @@ mod tests {
                 encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
         }
+    }
+
+    #[test]
+    fn right_opens_only_disclosed_network_rows() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        menu.open_wifi();menu.selected=4;menu.input(Action::GbaDown(Btn::Right));
+        assert_eq!(menu.page,Page::Sharing);
+        menu.page=Page::Security;menu.selected=1;menu.encrypted=true;menu.locked=false;
+        assert!(menu.rows()[1].1.is_empty());
+        menu.input(Action::GbaDown(Btn::Right));assert!(menu.is_keyboard());
     }
 
     #[test]

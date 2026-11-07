@@ -269,13 +269,11 @@ impl QuickRow {
         QuickRow::ShutDown,
     ];
 
-    pub const GENERAL: [QuickRow; 9] = [
+    pub const GENERAL: [QuickRow; 7] = [
         QuickRow::SecurityPin,
         QuickRow::Updates,
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
-        QuickRow::Recents,
-        QuickRow::FavoriteSort,
         QuickRow::ClockFormat,
         QuickRow::DateTime,
         QuickRow::About,
@@ -330,7 +328,7 @@ impl QuickRow {
         QuickRow::ScNight,
     ];
 
-    pub const SCREEN: [QuickRow; 12] = [
+    pub const SCREEN: [QuickRow; 14] = [
         QuickRow::Brightness,
         QuickRow::BlueLight,
         QuickRow::DisplaySchedule,
@@ -340,6 +338,8 @@ impl QuickRow {
         QuickRow::ShellColour,
         QuickRow::ShowTitles,
         QuickRow::CarouselMotion,
+        QuickRow::Recents,
+        QuickRow::FavoriteSort,
         QuickRow::ScreenGba,
         QuickRow::ScreenGbc,
         QuickRow::ScreenGb,
@@ -439,9 +439,8 @@ impl QuickRow {
             | QuickRow::EjectSave => &QuickRow::GAME,
             QuickRow::Wallpaper | QuickRow::WallpaperTint | QuickRow::ShellColour
             | QuickRow::Theme | QuickRow::ShowTitles
-            | QuickRow::CarouselMotion => &QuickRow::SCREEN,
-            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime
-            | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::GENERAL,
+            | QuickRow::CarouselMotion | QuickRow::Recents | QuickRow::FavoriteSort => &QuickRow::SCREEN,
+            QuickRow::About | QuickRow::ClockFormat | QuickRow::DateTime => &QuickRow::GENERAL,
             QuickRow::Reference | QuickRow::ControlsShelf | QuickRow::Shortcuts | QuickRow::ControlsInGame => {
                 &QuickRow::CONTROL_PAGES
             }
@@ -565,7 +564,7 @@ impl QuickRow {
             QuickRow::ShutDown => "Power Off",
             QuickRow::FastForward => "Fast Forward",
             QuickRow::FastForwardSound => "Fast Forward Sound",
-            QuickRow::Screen => "Display",
+            QuickRow::Screen => "Display & appearance",
             QuickRow::Rumble => "Rumble",
             QuickRow::LeftStick => "Left Stick as D-Pad",
             QuickRow::ScreenGeneral => "General",

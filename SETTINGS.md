@@ -2,12 +2,12 @@
 
 Tap <kbd>MENU</kbd> on the carousel to open the settings grid. During a game, tap <kbd>MENU</kbd> and choose **Settings** to open the same settings grid. Changes save as you make them.
 
-Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> to return. Inside a card, Up/Down chooses a row; Left/Right changes its value. Follow the on-screen hints for editors and confirmations.
+Use the D-pad to select a tile, <kbd>A</kbd> to open its card and <kbd>B</kbd> to return. Inside a card, Up/Down chooses a row; Left/Right changes its value. Right also opens a row marked with a single right-facing chevron, just like A. Follow the on-screen hints for editors and confirmations.
 
 | Tile | Use it for | Instructions |
 | :--- | :--- | :--- |
-| **General** | Device code, Updates, Automatic time, Time zone, Recents, Favorites order, clock format, date/time and About. | [Clock & time](POWER-OPTIONS.md#set-the-clock) · [Device code](#device-code) |
-| **Display** | Brightness, screen warmth, night schedules, UI theme, wallpaper, SP color, game names and carousel motion, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
+| **General** | Device code, Updates, Automatic time, Time zone, clock format, date/time and About. | [Clock & time](POWER-OPTIONS.md#set-the-clock) · [Device code](#device-code) |
+| **Display & appearance** | Brightness, screen warmth, night schedules, UI theme, wallpaper, SP color, game names, carousel motion, Recents and Favorites order, plus screen effects, palettes and borders for each system. | [Screen](DISPLAY.md#screen-effects--borders) · [Day & night](NIGHT-DISPLAY.md) |
 | **Sound** | Choose an audio output, pair headphones, set volume after a disconnect and optionally pause when audio disconnects, and toggle carousel sounds. | [Audio & headphones](BLUETOOTH.md) |
 | **Gameplay** | Automatic resume and saving on exit, fast-forward speed and sound, rewind, turbo and rumble where supported. RetroAchievements is the first entry. | [Playing & saving](PLAYING.md) |
 | **Power & lid** | Lid behavior, sleep, shutdown timer and startup animation. | [Sleep & power](POWER-OPTIONS.md) |

@@ -3314,6 +3314,9 @@ impl App {
                 _ => {}
             }
         }
+        if action==Action::GbaDown(Btn::Right) && row.disclosure() && !row.binds() {
+            return self.open_quick_row(row);
+        }
         let row = match action {
             Action::GbaDown(Btn::Up) => row.up(&self.hidden_rows()),
             Action::GbaDown(Btn::Down) => row.down(&self.hidden_rows()),
@@ -3350,6 +3353,9 @@ impl App {
                 Action::GbaDown(Btn::Left | Btn::Right) => return,
                 _ => {}
             }
+        }
+        if action==Action::GbaDown(Btn::Right) && row.disclosure() && !row.binds() {
+            return self.open_in_game_row(row);
         }
         self.in_game_menu = match action {
             Action::GbaDown(Btn::Up) => Some(row.up(hidden)),
