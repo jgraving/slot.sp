@@ -7864,6 +7864,22 @@ mod bluetooth_tests {
     use super::*;
 
     #[test]
+    fn right_opens_disclosed_lists_but_keeps_values_and_plain_actions_distinct() {
+        let mut app=App::new(vec![]);
+        app.phase=Phase::QuickMenu{row:QuickRow::ScreenGba};
+        app.quick_menu_input(QuickRow::ScreenGba,Action::GbaDown(Btn::Right));
+        assert_eq!(app.quick_menu(),Some(QuickRow::GbaShader));
+        app.phase=Phase::QuickMenu{row:QuickRow::ShowTitles};
+        let before=app.quick_value(QuickRow::ShowTitles);
+        app.quick_menu_input(QuickRow::ShowTitles,Action::GbaDown(Btn::Right));
+        assert_ne!(app.quick_value(QuickRow::ShowTitles),before);
+        assert_eq!(app.quick_menu(),Some(QuickRow::ShowTitles));
+        app.phase=Phase::QuickMenu{row:QuickRow::SleepNow};
+        app.quick_menu_input(QuickRow::SleepNow,Action::GbaDown(Btn::Right));
+        assert!(matches!(app.phase,Phase::QuickMenu{row:QuickRow::SleepNow}));
+    }
+
+    #[test]
     fn background_achievement_icon_breathes_without_disappearing_or_moving() {
         let mut app=App::new(vec![]);
         let icon=TexId::from_raw(987);app.ra_sync_indicator=Some(icon);
