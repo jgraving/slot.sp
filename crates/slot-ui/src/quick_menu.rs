@@ -2167,13 +2167,15 @@ mod keycap_tests {
 }
 
 /// The cartridge editor uses the same bitmap button capsules as all other menus.
-pub fn cart_studio_legends(save:bool,mode:u8,adjustable:bool)->Vec<UndoFace> {
+pub fn cart_studio_legends(root:bool,mode:u8,adjustable:bool)->Vec<UndoFace> {
     let hint=Some(MENU_INK);let one=|button,caption,left|with_hint(button_face(button),caption,hint,left);
     let pair=|a,b,caption|with_hint(button_pair(a,b),caption,hint,false);
-    let mut out=vec![one(ButtonLegend::B,if save {"Save & close"}else{"Back"},true)];
+    let mut out=vec![one(ButtonLegend::B,if root {"Close"}else{"Back"},true)];
     match mode {
         0 if adjustable=>out.push(pair(ButtonLegend::Left,ButtonLegend::Right,"Change")),
         0|2=>out.push(one(ButtonLegend::A,"Open",false)),
+        6=>out.push(one(ButtonLegend::A,"Save",false)),
+        7=>out.push(one(ButtonLegend::A,"Choose",false)),
         1=>out.push(one(ButtonLegend::A,"Apply",false)),
         3=>out.extend([pair(ButtonLegend::Left,ButtonLegend::Right,"Change"),one(ButtonLegend::X,"Reset",false),one(ButtonLegend::Y,"Hex",false)]),
         4=>out.extend([pair(ButtonLegend::Left,ButtonLegend::Right,"Move"),pair(ButtonLegend::Up,ButtonLegend::Down,"Change"),one(ButtonLegend::X,"Reset",false)]),

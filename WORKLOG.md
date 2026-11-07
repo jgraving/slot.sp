@@ -1,5 +1,11 @@
 # Development recovery log
 
+## Cart Studio motion and affordances — 2026-11-07
+
+Separate branch `fix/studio-motion-affordances` from main `50a9c233`; Wi-Fi/OTA is independently published as PR #215. User explicitly requests separate PRs and authorizes push, PR creation and merge only after green checks. Add directional Finish/Shape chevrons and opening chevrons, anchor cartridge/title across submenus, separate rising card from the moving/shrinking highlighted cartridge, let only side cartridges retreat downward, improve printer spring motion and caption spacing. Next: separate cached layers, add motion regressions/native captures and validate exact source in CI. Hardware testing remains pending.
+
+Scope refinements: the option card occupies only the right column; the cartridge and title float on the left. Add an explicit Save row that stays in the editor. Root B closes clean edits immediately, otherwise asks Save and close / Discard changes / Keep editing. Preserve pending-label completion and automatic saving on power/suspend paths. Added independent full-resolution cart texture and a shelf fallback so worker timing cannot make the cartridge pop into existence.
+
 ## Upstream on-device Studio integration — 2026-11-07
 
 ### Device scanned-label follow-up

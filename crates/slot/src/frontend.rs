@@ -41,6 +41,7 @@ pub struct Frontend {
     network_meter_tex:Option<TexId>,network_meter_key:Option<(String,u64,u64,bool)>,
     studio_gallery_tex:Option<TexId>,
     studio_art_tex:Option<TexId>,
+    studio_cart_tex:Option<TexId>,
     studio_tex: Option<TexId>,
     studio_old_tex: Option<TexId>,
     studio_page: Option<u64>,
@@ -218,7 +219,7 @@ impl Frontend {
             .set_power(Power::new(platform, DOZE_TIMEOUT));
         Frontend {
             menu_chrome_cache:Vec::new(),kid_meter_tex:None,kid_meter_key:None,hud_meter_tex:[None;2],hud_meter_key:None,
-            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_gallery_tex:None,studio_old_tex:None,studio_page:None,
+            network_meter_tex:None,network_meter_key:None,network_tex: None,studio_tex:None,studio_art_tex:None,studio_cart_tex:None,studio_gallery_tex:None,studio_old_tex:None,studio_page:None,
             network_old_tex: None,
             network_page: None,
             bluetooth_tex: None,
@@ -819,6 +820,9 @@ impl Frontend {
             }
             if let Some(face) = menu.take_gallery_pixels() {
                 menu.gallery_tex=Some(upload_rgba(compositor,&mut self.studio_gallery_tex,face.w,face.h,&face.rgba));
+            }
+            if let Some(face)=menu.take_cart_pixels() {
+                menu.cart_face=Some(upload_rgba(compositor,&mut self.studio_cart_tex,face.w,face.h,&face.rgba));
             }
             if menu.face.is_none() {menu.face=Some(upload_menu_face(compositor,&mut self.studio_tex,&mut self.menu_chrome_cache,menu.screen_face(sound_canvas),&mut chrome_updates));
                 let face=menu.artwork_face(sound_canvas);menu.art_face=Some(upload_rgba(compositor,&mut self.studio_art_tex,face.w,face.h,&face.rgba));}

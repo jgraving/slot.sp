@@ -11,6 +11,7 @@ pub enum Row {
     Color,
     Finish,
     Shape,
+    Save,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -56,6 +57,7 @@ pub enum Screen {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Effect {
     Close,
+    Save,
     Fetch,
     Apply(LabelKind),
 }
@@ -167,6 +169,7 @@ impl Studio {
         if matches!(self.cart.platform, Platform::Gb | Platform::Gbc) {
             rows.push(Row::Shape);
         }
+        rows.push(Row::Save);
         rows
     }
 
@@ -412,6 +415,7 @@ impl Studio {
             (Btn::Up, _) => self.screen = Screen::List { row: (row + count - 1) % count },
             (Btn::Down, _) => self.screen = Screen::List { row: (row + 1) % count },
             (Btn::B, _) => return Some(Effect::Close),
+            (Btn::A, Row::Save) => return Some(Effect::Save),
             (Btn::A, Row::Label) => {
                 self.screen = Screen::Sheet { at: 0 };
                 return Some(Effect::Fetch);

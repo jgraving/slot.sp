@@ -439,6 +439,21 @@ impl Shelf {
         (self.centre(canvas, 0) - w * scale / 2.0, scale)
     }
 
+    /// Current carousel pose, including a still-settling horizontal spring.
+    pub fn selected_rect(&self, canvas: Canvas) -> [f32;4] {
+        let Some(cart)=self.carts.get(self.index) else {return [0.0;4]};
+        let (cw,ch)=cart_box(cart.platform);
+        let (x,scale)=self.selected_at(canvas);
+        let full_h=ch as f32*shelf_scale(cart.platform);
+        let h=ch as f32*scale;
+        let centre=self.centre(canvas,0);
+        let y=rest_y(ch as f32)+(full_h-h)/2.0+if self.wheel {wheel_drop(centre-canvas.w/2.0)}else{0.0};
+        [x,y,cw as f32*scale,h]
+    }
+    pub fn draw_selected(&self, canvas: Canvas, out: &mut Vec<Draw>) {
+        self.draw_row_departure(canvas,None,0.0,0.0,1.0,None,true,out);
+    }
+
     fn slot_width(&self, slot: i32) -> (f32, bool) {
         match self.cart_at_offset(slot).map(|i| self.carts[i].platform) {
             Some(Platform::Gba) | None => (CART_W as f32, true),
@@ -541,7 +556,7 @@ impl Shelf {
         dim: f32,
         out: &mut Vec<Draw>,
     ) {
-        self.draw_row_departure(canvas, hidden, shake, recede, dim, None, out);
+        self.draw_row_departure(canvas, hidden, shake, recede, dim, None, false, out);
     }
 
     /// Reuse the cartridge layers and insertion easing, travelling out above the panel.
@@ -552,7 +567,7 @@ impl Shelf {
         slot: Option<(TexId, TexId)>,
         out: &mut Vec<Draw>,
     ) {
-        self.draw_row_departure(canvas, None, 0.0, 0.0, 1.0, Some(progress), out);
+        self.draw_row_departure(canvas, None, 0.0, 0.0, 1.0, Some(progress), false, out);
         draw_empty_slot(canvas, slot, out);
     }
 
@@ -564,6 +579,7 @@ impl Shelf {
         recede: f32,
         dim: f32,
         departure: Option<f32>,
+        selected_only: bool,
         out: &mut Vec<Draw>,
     ) {
         let recede = recede.clamp(0.0, 1.0);
@@ -584,6 +600,7 @@ impl Shelf {
             row
         });
         for slot in -SLOTS..=SLOTS {
+            if selected_only && slot!=0 {continue;}
             let Some(i) = self.cart_at_offset(slot) else {
                 continue;
             };

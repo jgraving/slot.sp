@@ -5,7 +5,8 @@ use slot_ui::{Canvas, Draw, MenuFrame, TexId, UndoFace};
 
 pub const CELL_W: u32 = 160;
 pub const CELL_H: u32 = 96;
-pub const APPLY_MS: u64 = 520;
+pub const APPLY_MS: u64 = 760;
+pub const SHEET_PITCH: f32 = 120.0;
 
 pub struct Gallery {
     pub pixels: Option<UndoFace>,
@@ -30,9 +31,9 @@ impl Gallery {
     pub fn rect(canvas: Canvas, index: usize, w: u32, h: u32) -> [f32; 4] {
         let x = canvas.w * 0.47 + 12.0;
         let width = canvas.w - 76.0 - x;
-        let scale = (width / w as f32).min(1.0).min(76.0 / h as f32);
+        let scale = (width / w as f32).min(1.0).min(60.0 / h as f32);
         [x + (width - w as f32 * scale) / 2.0,
-            112.0 + index as f32 * 110.0 + (76.0 - h as f32 * scale) / 2.0,
+            116.0 + index as f32 * SHEET_PITCH + (60.0 - h as f32 * scale) / 2.0,
             w as f32 * scale, h as f32 * scale]
     }
     pub fn draw(&self, tex: TexId, kind: LabelKind, rect: [f32; 4], alpha: f32, out: &mut Vec<Draw>) {
@@ -52,13 +53,46 @@ pub fn transform(canvas: Canvas, frame: MenuFrame, out: &mut Vec<Draw>, begin: u
     slot_ui::clip_menu_body(out, begin, canvas);
 }
 
-/// Lift, travel, then settle, without rebuilding text or artwork per frame.
+/// Closed-form damped spring: deterministic at any frame rate, with a quiet settle.
+pub fn spring(elapsed: u64, stiffness: f32, damping: f32, finish: u64) -> f32 {
+    if elapsed >= finish { return 1.0; }
+    let t = elapsed as f32 / 1000.0;
+    let omega = stiffness.sqrt();
+    let frequency = omega * (1.0 - damping * damping).sqrt();
+    1.0 - (-damping * omega * t).exp()
+        * ((frequency * t).cos() + damping * omega / frequency * (frequency * t).sin())
+}
+
+pub fn entry_rect(from: [f32; 4], to: [f32; 4], progress: f32) -> [f32; 4] {
+    std::array::from_fn(|i| from[i] + (to[i] - from[i]) * progress)
+}
+
+/// Peel from the sheet, carry on an arc, then spring into the label well.
 pub fn application_rect(from: [f32;4], to: [f32;4], elapsed: u64) -> [f32;4] {
-    let p = (elapsed as f32 / APPLY_MS as f32).clamp(0.0,1.0);
-    let ease = p * p * (3.0 - 2.0 * p);
-    let mut rect = std::array::from_fn(|i| from[i] + (to[i] - from[i]) * ease);
-    rect[1] -= (p * std::f32::consts::PI).sin() * 24.0;
+    let p = spring(elapsed.saturating_sub(60), 360.0, 0.78, APPLY_MS - 60);
+    let mut rect = entry_rect(from, to, p);
+    let lift = (p.clamp(0.0,1.0) * std::f32::consts::PI).sin() * 30.0;
+    rect[1] -= lift;
     rect
+}
+
+/// Only the option column participates in submenu travel. Left-hand title,
+/// cartridge and outer chrome have independent, stable ownership.
+pub fn draw_menu(canvas: Canvas, tex: TexId, frame: MenuFrame, out: &mut Vec<Draw>) {
+    let begin = out.len();
+    let edge = canvas.w * 0.47;
+    let dx = frame.page_shift * (canvas.w - 2.0 * slot_ui::expressive::MENU_INSET);
+    let top = slot_ui::expressive::CARD_TOP;
+    let h = slot_ui::expressive::CARD_BOTTOM - top;
+    out.push(Draw::Part { x: edge + dx, y: top, w: canvas.w - edge, h, tex,
+        alpha: frame.opacity, uv: [edge / canvas.w, top / canvas.h, 1.0 - edge / canvas.w, h / canvas.h] });
+    slot_ui::clip_menu_body(out, begin, canvas);
+    if !frame.outgoing {
+        let h = slot_ui::expressive::TITLE_H;
+        out.push(Draw::Part { x:0.0,y:0.0,w:canvas.w,h,tex,alpha:1.0,uv:[0.0,0.0,1.0,h/canvas.h] });
+        let y = slot_ui::expressive::FOOTER_Y;
+        out.push(Draw::Part { x:0.0,y,w:canvas.w,h:44.0,tex,alpha:1.0,uv:[0.0,y/canvas.h,1.0,44.0/canvas.h] });
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
-# Upstream on-device Studio integration
+# Cart Studio motion and affordances
 
-Active branch: `feat/upstream-device-studio`, based on main `9d36c36`.
+Active branch: `fix/studio-motion-affordances`, based on main `50a9c233`.
 
-Read WORKLOG.md for scope and verification. Compare original project `slot-cfw/slot` at `0fe8f5cf`; adapt Studio visual label choices, duplicate suppression and apply feedback to our native UI. Preserve offline editing, artwork cleanup and saving/sharing safeguards. Targeted OS fixes follow the audit; Collections/emulator migrations need separate compatibility work. No physical device result is claimed.
+Read WORKLOG.md. Keep this PR separate from Wi-Fi/OTA PR #215. User authorizes pushing both PRs and merging each only after checks pass. Fix affordances, anchored submenu cartridge/title, coordinated rising card and moving/shrinking cart, printer springs and option spacing. Physical device checks remain pending.

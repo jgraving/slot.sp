@@ -24,7 +24,7 @@ Existing custom PNGs on the card remain available. Rounded scan corners are clea
 
 ## Save your changes
 
-Choose **Save & close** to save the changes and update the carousel. If saving fails, the editor stays open so you can retry.
+Choose **Save** on the options card to save changes and keep editing. **B** closes the editor immediately when everything is saved. With unsaved changes, choose **Save and close**, **Discard changes**, or **Keep editing**. A failed save keeps the editor open for retry.
 
 Labels use the game's filename:
 

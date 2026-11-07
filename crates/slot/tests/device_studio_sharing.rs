@@ -148,7 +148,7 @@ fn changing_shape_reflows_a_saved_title_with_its_original_color() {
 }
 
 #[test]
-fn studio_is_modal_saves_on_exit_and_is_not_opened_in_kid_mode() {
+fn studio_is_modal_confirms_save_on_exit_and_is_not_opened_in_kid_mode() {
     let root = common::tmp_root_with_carts(&["Fusion", "Emerald"]);
     slot_store::write_slot_state(
         root.path(),
@@ -176,6 +176,8 @@ fn studio_is_modal_saves_on_exit_and_is_not_opened_in_kid_mode() {
     );
     app.studio.as_mut().unwrap().model.screen = Screen::List { row: 0 };
     app.apply(Action::GbaDown(Btn::B));
+    assert!(app.studio.as_ref().unwrap().confirming_close());
+    app.apply(Action::GbaDown(Btn::A));
     let until = Instant::now() + Duration::from_secs(10);
     while app.studio.is_some() {
         app.tick_ms(app.now() + 17);
