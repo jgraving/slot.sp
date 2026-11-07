@@ -35,6 +35,13 @@ for css in bundle.glob('*.css'):
 for name in ['wordmark.png']:
     assert (source / 'web' / name).read_bytes() == (ROOT / 'site/docs/assets' / name).read_bytes(), f'Shared website asset differs: {name}'
 html = (source / 'web/index.html').read_text()
+html = html.replace('Find game artwork, design labels and choose cartridge colors for slot.sp.',
+                    'Design labels and choose cartridge colors for slot.sp.')
+html = html.replace('Only game information and artwork are downloaded from the internet.',
+                    'Game information is downloaded; artwork comes from your selected files.')
+html = html.replace('Cart Studio will look up art for your games.',
+                    'Choose your own PNG labels or logos.')
+
 # Keep the same inner width, centered tabs and fixed brand as every site page.
 assert html.count('<header class="mast">') == 1
 html = html.replace('<header class="mast">', '<header class="mast"><div class="mast-inner">')
@@ -56,6 +63,7 @@ for name in ['navigation.css', 'navigation.js']:
     matches = list((ROOT / 'site/docs/assets/generated').glob(f'{stem}.*.{suffix}'))
     assert len(matches) == 1, f'Prepare the shared {name} asset first'
     html = html.replace(f'"{name}"', f'"/slot.sp/assets/generated/{matches[0].name}"')
+html = html.replace('</head>', '<meta name="robots" content="noindex,nofollow">\n</head>')
 html = html.replace('</head>', '<link rel="preload" href="/slot.sp/assets/fonts/google-sans-flex.woff2" as="font" type="font/woff2" crossorigin>\n</head>')
 page_motion = (ROOT / 'site/overrides/partials/page-motion.js').read_text()
 html = html.replace('</head>', f'<script>{page_motion}</script>\n</head>')

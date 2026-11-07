@@ -97,6 +97,14 @@ assert studio_info['renderer_repository'] == 'jgraving/slot.sp'
 assert studio_info['assets_base'] == f"assets/{studio_info['source_commit'][:12]}/"
 assert (ROOT / 'studio' / studio_info['assets_base'] / 'pkg/slot_cart_studio_bg.wasm').read_bytes()[:8] == b'\0asm\x01\0\0\0'
 assert (ROOT / 'studio/LICENSE').is_file()
+assert 'const REMOTE_ARTWORK = false;' in (ROOT/'studio'/studio_info['assets_base']/'studio.js').read_text()
+for source, page in pages.items():
+    if source.is_relative_to(ROOT/'studio'):
+        continue
+    for _, link in page.links:
+        destination = urlsplit(urljoin('https://'+ORIGIN+BASE+str(source.relative_to(ROOT)), link))
+        assert not (destination.netloc == ORIGIN and destination.path.startswith(BASE+'studio/')), f'Public editor link in {source}'
+
 hero_durations = []
 hero_manifest = json.loads((ROOT / 'media/fork/homepage/provenance.json').read_text())
 hero_revision = hero_manifest.get('capture_source_commit',hero_manifest['source_commit'])[:12]

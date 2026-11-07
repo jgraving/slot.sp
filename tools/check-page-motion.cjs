@@ -212,7 +212,7 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Update',exact:true}).click(),'updating/','forward',`${width}-forward`,width===980);
    await transition(page,()=>page.goBack({waitUntil:'domcontentloaded'}),'installing/','back',`${width}-back`);
    await transition(page,()=>page.goForward({waitUntil:'domcontentloaded'}),'updating/','forward',`${width}-history-forward`);
-   await transition(page,()=>page.locator('header').getByRole('link',{name:'Install',exact:true}).click(),'installing/','forward',`${width}-studio`,width===980);
+   await transition(page,()=>page.locator('header').getByRole('link',{name:'Install',exact:true}).click(),'installing/','back',`${width}-install`,width===980);
    await transition(page,()=>page.locator('header').getByRole('link',{name:'About',exact:true}).click(),'questions/','forward',`${width}-about`);
    await transition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','back',`${width}-guide`);
    const reveals=await page.evaluate(()=>window.__pageReveals);
@@ -238,7 +238,7 @@ frames[0].save(p.with_suffix('.gif'),save_all=True,append_images=frames[1:],dura
    await fallbackTransition(page,()=>page.locator('header').getByRole('link',{name:'Update',exact:true}).click(),'updating/','forward',`${width}-fallback-forward`,width===980);
    await fallbackTransition(page,()=>page.goBack({waitUntil:'domcontentloaded'}),'installing/','back',`${width}-fallback-back`);
    await fallbackTransition(page,()=>page.goForward({waitUntil:'domcontentloaded'}),'updating/','forward',`${width}-fallback-history-forward`);
-   await fallbackTransition(page,()=>page.locator('header').getByRole('link',{name:'Install',exact:true}).click(),'installing/','forward',`${width}-fallback-studio`,width===980);
+   await fallbackTransition(page,()=>page.locator('header').getByRole('link',{name:'Install',exact:true}).click(),'installing/','back',`${width}-fallback-install`,width===980);
    await fallbackTransition(page,()=>page.locator('header').getByRole('link',{name:'About',exact:true}).click(),'questions/','forward',`${width}-fallback-about`);
    await fallbackTransition(page,()=>page.locator('header').getByRole('link',{name:'Guide',exact:true}).click(),'features/guide/','back',`${width}-fallback-guide`);
    const before=await page.evaluate(()=>window.__pageReveals);
