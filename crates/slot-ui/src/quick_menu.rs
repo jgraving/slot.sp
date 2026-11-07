@@ -1199,10 +1199,6 @@ pub fn reference_binding_face(value:&str,max_w:f32)->UndoFace {
     unreachable!()
 }
 
-pub fn quick_controls_legends()->Vec<UndoFace> {
-    vec![with_hint(button_face(ButtonLegend::B),"Close",Some(MENU_INK),true),with_hint(button_face(ButtonLegend::A),"Tap toggle · Hold settings",Some(MENU_INK),false)]
-}
-
 pub fn carousel_name_face(label:&str,jump:bool)->UndoFace {
     let h=if jump {48}else{36};
     let px=if jump {36.0}else{26.0};

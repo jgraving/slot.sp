@@ -262,6 +262,15 @@ impl Studio {
         }
     }
 
+    /// A failed lookup is retryable by returning to the label sheet.
+    pub fn retry_art(&mut self) {
+        self.art_failed = false;
+        self.art_ready = false;
+        self.duplicates = false;
+        self.sheet = vec![LabelKind::Real, LabelKind::Logo];
+        if let Screen::Sheet { .. } = self.screen { self.screen = Screen::Sheet { at: 0 }; }
+    }
+
     pub fn row(&self) -> Option<Row> {
         match self.screen {
             Screen::List { row } => self.rows().get(row).copied(),

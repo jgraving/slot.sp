@@ -108,12 +108,7 @@ fn main() {
         a.settle();
     }
     assert!(matches!(a.f.app().phase(), Phase::Shelf));
-    a.tap(Btn::Start);
-    a.settle();
-    assert!(a.f.app().quick_menu().is_none());
-    assert!(a.f.app().core_picker().is_some());
-    a.save("cart-studio-picker-footer");
-    a.tap(Btn::X);
+    a.tap(Btn::Select);
     assert!(a.f.app().studio.is_some());
     a.save("studio-offline");
     a.tap(Btn::A);

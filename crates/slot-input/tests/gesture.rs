@@ -1018,13 +1018,13 @@ fn a_press_seen_during_a_capture_leaves_nothing_behind() {
 }
 
 #[test]
-fn select_tap_is_dormant_on_the_shelf_and_chords_still_win() {
+fn select_opens_studio_on_the_shelf_and_chords_still_win() {
     let mut g=on_shelf(vec![entry(Some(Mod::Select),X,Favorite,slot_input::Contexts::SHELF)]);
     assert!(g.feed(Down(Select),0).is_empty());
-    assert!(g.feed(Up(Select),60).is_empty());
+    assert_eq!(g.feed(Up(Select),60),vec![CartStudio]);
     assert!(g.feed(Down(Select),100).is_empty());
     assert!(g.feed(Down(X),120).contains(&Favorite));
-    assert!(!g.feed(Up(Select),150).contains(&QuickControls));
+    assert!(!g.feed(Up(Select),150).contains(&CartStudio));
     g.feed(Up(X),160);
     g.set_context(slot_input::Context::Game);
     g.feed(Down(Select),200);

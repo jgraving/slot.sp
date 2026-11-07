@@ -81,6 +81,7 @@ pub mod sntp;
 
 pub mod studio;
 pub mod studio_menu;
+mod studio_gallery;
 pub mod art;
 
 pub mod sharing;
