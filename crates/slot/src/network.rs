@@ -736,6 +736,7 @@ impl Menu {
                     return;
                 }
                 if self.selected == 5 || self.selected == 6 {
+                    if self.selected == 6 && btn == Btn::A { return; }
                     if self.selected == 5 { self.prefs.achievement_artwork = !self.prefs.achievement_artwork; }
                     else {
                         use slot_achievements::ArtworkScope::*;
@@ -870,7 +871,7 @@ impl Menu {
                     slot_achievements::ArtworkScope::Played => "Current game",
                     slot_achievements::ArtworkScope::FavoritesRecents => "Favorites & recents",
                     slot_achievements::ArtworkScope::Library => "Entire library",
-                }.into(), false),
+                }.into(), true),
                 ("Browse current game".into(), "›".into(), false),
             ],
         };
@@ -1695,7 +1696,7 @@ mod tests {
                 ("up-to-date",900,900,800,slot_achievements::SyncStatus::Ready,"",0)] {
                 for _ in 0..60 {
                 review_tick+=17;f.advance_at(&mut Empty,review_tick,1.0/60.0);
-                let m=f.app_mut_for_review().network.as_mut().unwrap();m.last_sync=slot_achievements::SyncDetail{catalog_ready:true,artwork_ready:true,authenticated:true,games_done:done,games_total:total,badges_done:badges,badges_total:800,status,problem,retry_seconds:retry,..Default::default()};m.face=None;m.notice.clear();
+                let m=f.app_mut_for_review().network.as_mut().unwrap();m.prefs.artwork_scope=match shot {"artwork-downloading"=>slot_achievements::ArtworkScope::FavoritesRecents,"artwork-retry"=>slot_achievements::ArtworkScope::Library,_=>slot_achievements::ArtworkScope::Played};m.last_sync=slot_achievements::SyncDetail{catalog_ready:true,artwork_ready:true,authenticated:true,games_done:done,games_total:total,badges_done:badges,badges_total:800,status,problem,retry_seconds:retry,..Default::default()};m.face=None;m.notice.clear();
                 f.compose(&mut g);
                 }
                 let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
@@ -1709,8 +1710,20 @@ mod tests {
         menu.open_achievements();assert!(!menu.prefs.achievement_artwork);
         assert_eq!(menu.rows()[5],("Achievement artwork".into(),"Off".into(),true));
         menu.selected=5;menu.input(Action::GbaDown(Btn::A));assert!(menu.prefs.achievement_artwork);
-        for expected in [slot_achievements::ArtworkScope::FavoritesRecents,slot_achievements::ArtworkScope::Library,slot_achievements::ArtworkScope::Played] {
-            menu.selected=6;menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.prefs.artwork_scope,expected);
+        menu.selected=6;assert!(menu.rows()[6].2,"scope must show paired adjustment chevrons");
+        for (button,scopes) in [
+            (Btn::Right,[slot_achievements::ArtworkScope::FavoritesRecents,slot_achievements::ArtworkScope::Library,slot_achievements::ArtworkScope::Played]),
+            (Btn::Left,[slot_achievements::ArtworkScope::Library,slot_achievements::ArtworkScope::FavoritesRecents,slot_achievements::ArtworkScope::Played]),
+        ] {
+            for expected in scopes {
+                let before=std::fs::read(root.path().join("Config/network.json")).unwrap();let revision=menu.revision;
+                let scope=menu.prefs.artwork_scope;
+                menu.input(Action::GbaDown(Btn::A));
+                assert_eq!(menu.prefs.artwork_scope,scope);assert_eq!(menu.revision,revision);
+                assert_eq!(std::fs::read(root.path().join("Config/network.json")).unwrap(),before,"A must not save or change the scope");
+                menu.input(Action::GbaDown(button));assert_eq!(menu.prefs.artwork_scope,expected);
+                assert_eq!(Menu::new(root.path().into()).prefs.artwork_scope,expected);
+            }
         }
         let saved=Menu::new(root.path().into());assert!(saved.prefs.achievement_artwork);
         assert_eq!(saved.prefs.artwork_scope,slot_achievements::ArtworkScope::Played);

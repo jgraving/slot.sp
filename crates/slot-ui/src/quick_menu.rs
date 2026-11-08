@@ -1528,6 +1528,11 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
                 let available = (right - QUICK_LABEL_X - label_face.w as f32 - 16.0).max(1.0);
                 let (ink, role) = if lit { (MENU_INK, text::Role::Focus) } else { (DIM_INK, text::Role::Menu) };
                 quick_text_face_within(value, ink, role, available)
+            } else if lit && *adjustable && label == "Download for" {
+                // Reserve a real gap after the label and room for both chevrons.
+                let available=(right-QUICK_LABEL_X-label_face.w as f32+2.0*pad
+                    -2.0*quick_caret_face(true).w as f32-2.0*CARET_GAP-16.0).max(80.0);
+                quick_text_face_within(value,MENU_INK,text::Role::Focus,available)
             } else { quick_value_face(value, lit) };
         if toggle {
             parent_blit(&mut face, &value, right + pad - value.w as f32, y);
