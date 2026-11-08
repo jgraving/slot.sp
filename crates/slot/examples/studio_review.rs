@@ -133,11 +133,16 @@ fn main() {
     a.save("studio-title-applied");
     a.tap(Btn::B);
     for _ in 0..3 {a.tap(Btn::Down);}
-    a.tap(Btn::Right);a.save("studio-clear-shell");
+    let before=a.f.app().studio.as_ref().unwrap().model.current_shell().finish;
+    a.tap(Btn::A);a.save("studio-clear-shell");
+    assert_ne!(a.f.app().studio.as_ref().unwrap().model.current_shell().finish,before,"A must change finish");
     a.tap(Btn::Right);a.save("studio-glitter-shell");
     for _ in 0..2 {a.tap(Btn::Up);}
     a.tap(Btn::A);
     a.save("studio-label-palette");
+    for _ in 0..4 {a.tap(Btn::Down);}
+    a.save("studio-palette-scrolled");
+    for _ in 0..4 {a.tap(Btn::Up);}
     a.tap(Btn::Right);
     a.tap(Btn::Right);
     a.tap(Btn::A);
