@@ -909,3 +909,6 @@ Publication blocked: automatic approval review rejected git push -u origin fix/s
 
 
 User explicitly approved pushing fix/studio-controls-alignment to jgraving/slot.sp and opening a PR. Shell git push failed because this checkout has no HTTPS credentials. Publish the same verified files through the authenticated GitHub connector; do not merge. Runtime changes remain the locally tested source.
+
+
+Published as PR #218 on `fix/studio-controls-alignment` at `02257f45c962ba1aea67b06264108415f76335ec`. The connector-created tree `c1368d390f37787f4a6e13694bcfce805540c095` exactly equals local validated HEAD, including all eight changed files. User approval covers publishing and PR creation; do not merge. CI has been requested by the PR; remote and hardware results are not yet claimed. This follow-up changes recovery Markdown only.
