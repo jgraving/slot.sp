@@ -930,3 +930,37 @@ fn healthy_artwork_requests_are_serial_and_paced() {
     assert_eq!(requests.try_iter().count(),1,"healthy requests must still be paced");
     assert_eq!(queue.counts(),(1,2));
 }
+
+#[test]
+fn achievement_browser_unions_server_and_offline_unlocks_without_writing_or_downloads() {
+    let root=configured();let rom=root.path().join("Games/GBA/Test.gba");std::fs::write(&rom,b"browser ROM").unwrap();
+    let mut store=Store::open(root.path(),"Player").unwrap();let hash=library::hash(&store.dir,&rom).unwrap();
+    let mut data=game();let mut second=data.achievements[0].clone();second.id=8;second.title="Offline unlock".into();
+    let mut unofficial=second.clone();unofficial.id=9;unofficial.flags=5;data.achievements.extend([second,unofficial]);
+    storage::write(&store.dir.join(format!("{hash}.json")),&(data,BTreeSet::from([7]))).unwrap();
+    store.record(Unlock{id:8,hash:hash.clone(),earned_at:1000,synced:false}).unwrap();
+    let ledger=std::fs::read(store.dir.join("unlocks.json")).unwrap();
+    let list=cached_achievements(root.path(),"PLAYER",&rom).unwrap();
+    assert_eq!(list.title,"Test game");assert_eq!(list.entries.len(),2);assert!(list.entries.iter().all(|a|a.earned));
+    assert_eq!(list.entries[0].badge,badges::path(&store.dir,"12345"));
+    assert_eq!(std::fs::read(store.dir.join("unlocks.json")).unwrap(),ledger);
+    assert!(!store.dir.join("badges").exists());
+    let other=storage::account_dir(root.path(),"OtherPlayer");assert!(!other.exists());
+    assert!(cached_achievements(root.path(),"OtherPlayer",&rom).is_err());assert!(!other.exists());
+    let moved=root.path().join("Games/GBA/Renamed.gba");std::fs::rename(&rom,&moved).unwrap();
+    assert_eq!(cached_achievements(root.path(),"Player",&moved).unwrap().entries.len(),2);
+    std::fs::write(&moved,b"different ROM bytes").unwrap();assert!(cached_achievements(root.path(),"Player",&moved).is_err());
+}
+
+#[test]
+fn browser_missing_cache_empty_account_and_corrupt_ledger_are_explicit() {
+    let root=configured();let rom=root.path().join("Games/GBA/Test.gba");std::fs::write(&rom,b"browser ROM").unwrap();
+    assert_eq!(cached_achievements(root.path(),"",&rom).unwrap_err(),"Sign in to browse achievements");
+    assert!(cached_achievements(root.path(),"Player",&rom).unwrap_err().contains("Prepare"));
+    let store=Store::open(root.path(),"Player").unwrap();let hash=library::hash(&store.dir,&rom).unwrap();
+    storage::write(&store.dir.join(format!("{hash}.json")),&(game(),BTreeSet::<u32>::new())).unwrap();
+    assert!(!cached_achievements(root.path(),"Player",&rom).unwrap().entries[0].earned);
+    std::fs::write(store.dir.join("unlocks.json"),b"corrupt ledger").unwrap();
+    assert_eq!(cached_achievements(root.path(),"Player",&rom).unwrap_err(),"Cannot read earned achievements");
+    assert_eq!(std::fs::read(store.dir.join("unlocks.json")).unwrap(),b"corrupt ledger");
+}

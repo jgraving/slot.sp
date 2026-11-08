@@ -35,6 +35,7 @@ jobs:
         id: renders
         run: |
           cargo test --locked -p slot --no-default-features --lib network::tests::native_ra_progress_review -- --ignored --exact
+          cargo test --locked -p slot --no-default-features --lib network::tests::native_ra_browser_review -- --ignored --exact
           cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-light-gles" gles 640 light
           cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-dark-gl" gl 720 dark
           cargo run --locked -p slot --no-default-features --example studio_review -- "$SLOT_QOL_PREVIEW/studio-gb-light-gles" gles 640 light gb

@@ -1,6 +1,8 @@
 //! Optional, softcore RetroAchievements. Emulator threads only copy RAM into a bounded,
 //! nonblocking queue; evaluation/storage and HTTPS each have their own worker.
 mod badges;
+mod browser;
+pub use browser::{cached_achievements, AchievementEntry, AchievementList};
 mod core;
 mod library;
 mod network;

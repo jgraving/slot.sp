@@ -141,3 +141,9 @@ Date & Time changes made in Settings apply immediately; Start/Done only closes t
 Enabled artwork appears beside the achievement title, points and description in the unlock pill. Images are decoded off the UI thread, fitted without cropping or stretching, and reduced with alpha-aware filtering; small images are not enlarged. Missing/corrupt/uncached artwork falls back to a text notification immediately. A badge downloaded after an unlock is available for future notifications; earning achievements never waits for images.
 
 Only the chosen scope is discovered and validated in bounded worker batches. Duplicate unchanged badges are not decoded for each referencing game. Successful badge downloads are serial and paced at one per second, independently of the three-second game-data queue. Failures retain backoff, and server Retry-After cooldowns survive reconnects and scope changes. Retry feedback distinguishes artwork-server, invalid-image and card-write failures. A retry countdown does not erase progress.
+
+### Browse the current game's achievements
+
+While a GBA game is loaded, open **Settings → Gameplay → Achievements → Browse current game**. The list uses that account's cached game definitions and combines server unlocks with locally earned unlocks waiting to upload, so it also works offline. No images or game data are downloaded just because the list is opened. Cached badges are reused; missing images show a lock or earned checkmark.
+
+Use Up/Down to browse, Left/Right to filter All / Locked / Earned, and L/R to move a page. A opens the selected achievement's full title, points, earned state and description; long descriptions scroll with Up/Down or L/R. Left/Right moves between achievements in the detail view. B returns to the list, then to the RetroAchievements settings. A game without cached data explains that it must be prepared online first; opening the browser never enables Wi-Fi or starts a game session.

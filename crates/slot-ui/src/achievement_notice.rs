@@ -40,7 +40,7 @@ pub fn achievement_notice_face(title: &str, detail: &str, badge: Option<(&[u8], 
     face
 }
 
-fn fitted(value: &str, role: text::Role, width: u32, count: usize, max: f32, min: f32) -> text::Layout {
+pub(crate) fn fitted(value: &str, role: text::Role, width: u32, count: usize, max: f32, min: f32) -> text::Layout {
     let font = text::font(role).expect("bundled notification font");
     let mut layout = text::fit_preserving_case(font, value, width as f32, count, max, min);
     if layout.lines.join(" ").split_whitespace().collect::<String>() != value.split_whitespace().collect::<String>() {
@@ -56,7 +56,7 @@ fn fitted(value: &str, role: text::Role, width: u32, count: usize, max: f32, min
     layout
 }
 
-fn lines(face: &mut UndoFace, layout: &text::Layout, x: u32, y: u32, pitch: u32, ink: [u8;3]) {
+pub(crate) fn lines(face: &mut UndoFace, layout: &text::Layout, x: u32, y: u32, pitch: u32, ink: [u8;3]) {
     let font = text::font(layout.role).unwrap();
     for (i, line) in layout.lines.iter().enumerate() {
         let width = (text::line_width(font, line, layout.px, layout.tracking).ceil() as u32 + 4).min(face.w-x-24);

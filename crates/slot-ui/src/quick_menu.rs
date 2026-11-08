@@ -1065,7 +1065,7 @@ const POINTER_BLEED: u32 = 4;
 
 const TYPE_DROP: f32 = 1.0;
 const CARET_GAP: f32 = 14.0;
-const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
+pub(crate) const LEGEND_Y: f32 = OUT_H as f32 - MOUTH_H - MENU_HINT_H as f32 - 12.0;
 const DIM_INK: [u8; 3] = [0x9a, 0x9a, 0xa4];
 const DESCRIPTION_PX: f32 = 16.0;
 const DESCRIPTION_GAP: f32 = 8.0;
@@ -1507,7 +1507,7 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
         let y = top + (i - start) as f32 * QUICK_PITCH + TYPE_DROP;
         let label_face = parent_label_face(label, lit, !value.is_empty(), width);
         parent_blit(&mut face, &label_face, QUICK_LABEL_X - pad, y);
-        if label=="Change Device code" && value.is_empty() {
+        if (label=="Change Device code" && value.is_empty()) || value=="›" {
             let caret=quick_caret_face(true);
             parent_blit(&mut face,&caret,right-caret.w as f32,y);continue;
         }
@@ -1732,7 +1732,7 @@ pub fn prompt_legends(ink: [u8; 3], no: &str, yes: &str) -> [UndoFace; 2] {
 }
 
 /// `hint_on_right` puts the word after the button, for a legend parked on the left of the footer.
-fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right: bool) -> UndoFace {
+pub(crate) fn with_hint(button: UndoFace, label: &str, ink: Option<[u8; 3]>, hint_on_right: bool) -> UndoFace {
     let word = match ink {
         Some(ink) => word_ink(label, ink),
         None => word_face(label),
@@ -1815,7 +1815,7 @@ pub(crate) fn controller_button_face(which: ButtonLegend, h: u32) -> UndoFace {
     UndoFace{rgba,w,h}
 }
 
-fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
+pub(crate) fn button_pair(left: ButtonLegend, right: ButtonLegend) -> UndoFace {
     let a = button_face(left);
     let b = button_face(right);
     let (aw, ah, bw, bh) = (a.w, a.h, b.w, b.h);

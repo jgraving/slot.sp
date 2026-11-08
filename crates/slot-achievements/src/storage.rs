@@ -117,10 +117,14 @@ pub(crate) struct Store {
     pub unlocks: BTreeMap<u32, Unlock>,
 }
 
+pub(crate) fn account_dir(root: &Path, username: &str) -> PathBuf {
+    let account = format!("{:x}", md5::compute(username.to_lowercase()));
+    root.join("Saves/RetroAchievements").join(account)
+}
+
 impl Store {
     pub fn open(root: &Path, username: &str) -> Result<Self, String> {
-        let account = format!("{:x}", md5::compute(username.to_lowercase()));
-        let dir = root.join("Saves/RetroAchievements").join(account);
+        let dir = account_dir(root, username);
         std::fs::create_dir_all(&dir).map_err(|_| "Cannot create achievement cache")?;
         #[cfg(unix)]
         {
