@@ -892,3 +892,12 @@ The old placeholder generator interpolated across a broad horizontal rectangle, 
 Next: run exact-source CI and inspect native GBA/GB/GBC light/dark root, Save, wordmark and picker/entry captures. Do not claim success or merge before those results. Physical handheld checks remain pending.
 
 All five workflows passed on c302b9f2 (scaling 42425264269, blending 42425264287, shortcuts 42425264279, ARM64/package 42425264271, native 42425264295). Downloaded artifact 13595472326 and verified SHA-256. Native GBA light/dark and GB/GBC roots, Save focus/stay-open, picker return and label submenu show the requested spacing, single-line names and unbacked wordmarks. Review caught a remaining caret alignment issue: arrow ink centres were 11px below text ink centres (measured on the native 640px frame). Shift only root-row caret quads up 11px; no layout or input semantics change. Re-run exact-head CI and inspect final captures before merge.
+
+
+### Final cleanup validation and merge handoff — 2026-11-08
+
+Resumed after the chat crash and verified live PR #217 at runtime source `84d6245d59a327996adbd468bfda2ededbed51a4`. All five workflows passed: scaling 42426603053, blending 42426603067, shortcuts 42426603043, ARM64 network/device/package 42426603083, and launcher/native 42426603052. Downloaded native artifact 13595973353; its SHA-256 matches `3ff636aed8e2352afeac62851166a86362a3d04ec2ecc95db67e7867f3f55977`. Independently inspected final GBA light/640 and dark/720, GB light, GBC dark, Save focus/stay-open, label submenu and picker-return PNGs. The corrected arrows align with text, Save has bottom padding, the floating cartridge/card gap is clear, and shell lettering has no rectangular backing. No further runtime changes were needed. Physical handheld testing remains pending.
+
+Device test build: https://github.com/jgraving/slot.sp/actions/runs/42426603083/artifacts/13596036784 (one-day retention). Native captures: https://github.com/jgraving/slot.sp/actions/runs/42426603052/artifacts/13595973353 . PR body now records final-source validation.
+
+Attempted expected-head merge of #217 was rejected by automatic approval review: it requires explicit user authorization for the default-branch mutation. No merge occurred; do not bypass the rejection. Ask the user to authorize merging #217, then verify live head and source equivalence before merging. This recovery checkpoint changes Markdown only; attribute CI/native results to 84d6245, not this documentation commit.
