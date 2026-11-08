@@ -485,6 +485,12 @@ impl Manager {
                     }
                 }
             }
+            Action::GbaDown(Btn::Right)
+                if self.page == Page::Home && self.bluetooth_available && self.selected == self.pair_row() =>
+            {
+                self.open(Page::Pair);
+                if !bluetooth_enabled(&self.root) { self.ask("on", None); }
+            }
             Action::GbaDown(Btn::A) => match self.page.clone() {
                 Page::Home => {
                     if self.bluetooth_available && self.selected == 1 {
@@ -1054,7 +1060,12 @@ fn render_face(lines: &[String], footer_ink: [u8;3], canvas:slot_ui::Canvas, swi
         } else {
             slot_ui::QUICK_LABEL_X as u32
         };
-        let label_w = label_w - if device { 36 } else { 0 };
+        let disclosure = row && label == "Pair audio device";
+        let label_w = label_w - if device { 36 } else if disclosure { 44 } else { 0 };
+        if disclosure {
+            let next = slot_ui::quick_value_face("›", highlight);
+            blit(&mut rgba, &next, screen_w - slot_ui::QUICK_EDGE as u32 + slot_ui::MENU_PAD - next.w, top);
+        }
         if device {
             let icon = slot_ui::sound_device_icon(
                 if speaker {
@@ -1198,6 +1209,32 @@ mod menu_tests {
             forget_confirmation: None,
         }
     }
+    #[test]
+    fn pairing_disclosure_opens_with_a_or_right_only() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(root.path().join("Config")).unwrap();
+        std::fs::write(root.path().join("Config/bluetooth-enabled"), b"").unwrap();
+        for button in [Btn::A, Btn::Right] {
+            let mut m = menu();
+            m.root = root.path().into();
+            m.selected = m.pair_row();
+            m.input(Action::GbaDown(Btn::Left));
+            assert_eq!(m.page, Page::Home);
+            m.input(Action::GbaDown(button));
+            assert_eq!(m.page, Page::Pair);
+            assert!(!m.busy(), "opening an enabled radio must not start discovery");
+            m.input(Action::GbaDown(Btn::Right));
+            assert!(!m.busy(), "Right must not activate the scan action");
+            m.input(Action::GbaDown(Btn::B));
+            assert_eq!(m.page, Page::Home);
+        }
+        let mut m = menu();
+        m.selected = m.local_row();
+        m.input(Action::GbaDown(Btn::Right));
+        assert_eq!(m.page, Page::Home);
+        assert!(!m.busy(), "Right must not switch an output");
+    }
+
     #[test]
     fn error_pills_explain_the_reported_busy_and_unreachable_cases_concisely() {
         for (raw,want) in [

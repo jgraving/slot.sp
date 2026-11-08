@@ -94,6 +94,13 @@ fn main() {
     );
     let sound_lines=vec!["Sound".into(),"".into(),"COMPACT".into(),"SELECTED VOLUME 100%".into(),"ROW ACTIVE SPEAKER_DEVICE Internal speaker".into(),"ROW DISCONNECT 100%".into(),"ROW PAUSE_DISCONNECT Off".into(),"B Back · Change".into()];
     save("sound-sliders",slot::bluetooth::screen_face_on(&sound_lines,footer_ink(false),canvas),vec![],None);
+    // Use the production Sound face and compositor for the submenu disclosure.
+    // Capture both focus states at each native canvas size used by CI.
+    for selected in [false, true] {
+        let pair = if selected { "SELECTED Pair audio device" } else { "ROW Pair audio device" };
+        let lines = ["Sound", "", "COMPACT", "ROW VOLUME 100%", "ROW BLUETOOTH On", "ROW ACTIVE SPEAKER_DEVICE Internal speaker", pair, "B Back · A Select"].map(str::to_owned);
+        save(if selected { "sound-pair-selected" } else { "sound-pair" }, slot::bluetooth::screen_face_on(&lines,footer_ink(false),canvas),vec![],None);
+    }
     for (i,(title,rows)) in slot::reference::pages(false,true,slot_store::Platform::Gba,Default::default(),Default::default(),Default::default()).into_iter().enumerate() {
         save(&format!("reference-{i}"),reference_face(canvas,&title,&rows,i,10),vec![],None);
     }

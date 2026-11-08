@@ -1,3 +1,3 @@
-# RA Download for selector in progress
+# Sound pairing disclosure in progress
 
-Branch fix/ra-download-selector from main e2db62bd. Read WORKLOG.md. User asks Download for to use paired chevrons and D-pad Left/Right only, not A; explicitly authorizes merge after passing checks. Preserve artwork toggle, scope semantics and request pacing/backoff. Update focused tests and native RA settings captures; publish PR and merge only after passing CI. Physical device testing remains pending.
+Branch fix/sound-pair-disclosure starts at #221 head 3386b4d5. Read WORKLOG.md. Finish authorized #221 merge after checks pass. User requests a single submenu chevron for Pair device in Sound. Added shared disclosure glyph, reserved label space and Right entry matching A. Exact-source CI required; local Rust unavailable. Physical handheld checks pending.
