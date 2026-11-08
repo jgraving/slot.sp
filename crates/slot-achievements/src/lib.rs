@@ -1,6 +1,8 @@
 //! Optional, softcore RetroAchievements. Emulator threads only copy RAM into a bounded,
 //! nonblocking queue; evaluation/storage and HTTPS each have their own worker.
 mod badges;
+mod browser;
+pub use browser::{cached_achievements, AchievementEntry, AchievementList};
 mod core;
 mod library;
 mod network;
@@ -17,7 +19,7 @@ use std::time::{Duration, Instant};
 
 pub use badges::{load_badge, BadgeImage};
 use slot_retro::RetroCore;
-pub use storage::Config;
+pub use storage::{ArtworkScope, Config};
 use storage::{Store, Unlock};
 
 const RAM_SIZE: usize = 0x58000;
@@ -75,6 +77,7 @@ impl SyncDetail {
 #[derive(Default)]
 struct Status {
     stopped: AtomicBool,
+    artwork: AtomicU8,
     auth: Mutex<Option<storage::Auth>>,
     network: AtomicU8,
     unsaved: AtomicBool,
@@ -237,6 +240,11 @@ impl Service {
         }
     }
 
+    /// Changes artwork work without restarting the evaluator or losing a playing game.
+    pub fn set_artwork_preferences(&self, enabled: bool, scope: ArtworkScope) {
+        self.status.artwork.store(if enabled {scope as u8} else {0}, Ordering::Release);
+    }
+
     pub fn sync_detail(&self) -> Option<SyncDetail> {
         self.status.detail.try_lock().ok().map(|d| *d)
     }
@@ -352,6 +360,7 @@ fn run(
     let network_store = store.clone();
     let network_notices = notices.clone();
     let cached_prepared = prepared_tx.clone();
+    status.artwork.store(if config.artwork {config.artwork_scope as u8} else {0}, Ordering::Release);
     let network_status = status.clone();
     status.set(SyncStatus::Syncing);
     if std::thread::Builder::new()

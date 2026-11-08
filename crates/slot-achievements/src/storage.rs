@@ -3,11 +3,26 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+/// Limits optional badge downloads; game rules and awards always sync independently.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
+pub enum ArtworkScope {
+    #[default]
+    Played = 1,
+    FavoritesRecents = 2,
+    Library = 3,
+}
+
 #[derive(Clone, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub enabled: bool,
+    #[serde(default)]
+    pub artwork: bool,
+    #[serde(default)]
+    pub artwork_scope: ArtworkScope,
     #[serde(default)]
     pub username: String,
     #[serde(default)]
@@ -102,10 +117,14 @@ pub(crate) struct Store {
     pub unlocks: BTreeMap<u32, Unlock>,
 }
 
+pub(crate) fn account_dir(root: &Path, username: &str) -> PathBuf {
+    let account = format!("{:x}", md5::compute(username.to_lowercase()));
+    root.join("Saves/RetroAchievements").join(account)
+}
+
 impl Store {
     pub fn open(root: &Path, username: &str) -> Result<Self, String> {
-        let account = format!("{:x}", md5::compute(username.to_lowercase()));
-        let dir = root.join("Saves/RetroAchievements").join(account);
+        let dir = account_dir(root, username);
         std::fs::create_dir_all(&dir).map_err(|_| "Cannot create achievement cache")?;
         #[cfg(unix)]
         {

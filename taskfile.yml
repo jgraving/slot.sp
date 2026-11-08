@@ -6,6 +6,7 @@ vars:
   MGBA_COMMIT: e31759b24e7a4e3899285ff720d7b573ac328ae7
   GPSP_COMMIT: 7b2dd37394e2822110cacef321e9bb291a305b77
   EXFATPROGS_VERSION: 1.4.3
+  EXFATPROGS_ASSET_ID: 513924582
   EXFATPROGS_SHA256: 4b5052cba6ff9f6dcb1c63eeeac328620472c5b0b3caf3d38e4ada50e75469d3
   SLOT_IN_PROCESS: >-
     --test bios --test core --test core_options --test e2e --test emu --test gb_palette_recolour --test gpsp
@@ -291,8 +292,14 @@ tasks:
         set -euo pipefail
         mkdir -p vendor
         rm -f vendor/fsck.exfat vendor/exfatprogs-*.tar.gz
-        curl -fsSL -o vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz \
-          "https://github.com/exfatprogs/exfatprogs/releases/download/{{.EXFATPROGS_VERSION}}/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz"
+        if ! curl --fail --location --silent --show-error --retry 1 --connect-timeout 15 --max-time 90 \
+          -o vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz \
+          "https://github.com/exfatprogs/exfatprogs/releases/download/{{.EXFATPROGS_VERSION}}/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz"; then
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 15 --max-time 90 \
+            -H 'Accept: application/octet-stream' \
+            "https://api.github.com/repos/exfatprogs/exfatprogs/releases/assets/{{.EXFATPROGS_ASSET_ID}}" \
+            -o vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz
+        fi
         echo "{{.EXFATPROGS_SHA256}}  vendor/exfatprogs-{{.EXFATPROGS_VERSION}}.tar.gz" | shasum -a 256 -c -
       - task: device:sh
         vars:

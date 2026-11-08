@@ -23,5 +23,5 @@ if ! curl --fail --location --silent --show-error --retry 1 --connect-timeout 15
 fi
 printf '%s  %s\n' "$task_sha" "$task_download/$task_archive" | sha256sum --check
 mkdir -p "$task_destination"
-tar -xzf "$task_download/$task_archive" -C "$task_destination" task
+tar --no-same-owner -xzf "$task_download/$task_archive" -C "$task_destination" task
 "$task_destination/task" --version

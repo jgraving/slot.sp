@@ -3486,8 +3486,9 @@ impl App {
             }
             QuickRow::Wifi | QuickRow::Achievements
             | QuickRow::SecurityPin | QuickRow::Updates => {
+                let achievement_rom=self.seated_cart().map(|cart|cart.rom.clone());
                 if let Some(menu) = &mut self.network {
-                    if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements(); }
+                    if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements_for(achievement_rom); }
                 }
             }
             QuickRow::CartStudio => self.open_studio(),
@@ -5658,7 +5659,8 @@ impl App {
             },
             2001=>slot_ui::expressive::draw_kid_grid_focus(self.canvas(),frame,out),
             2009|2010=>slot_ui::expressive::draw_kid_settings_focus(self.canvas(),frame,out),
-            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4005=>{
+            1000..=1999|2000|2002|2011|2012|3000|3001|4000..=4006=>{
+                if key==4006 && self.network.as_ref().is_some_and(|m|m.rows().is_empty()) {return;}
                 let width=self.canvas().w-168.0;let x=self.canvas().centred(width)+if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
                 slot_ui::expressive::rounded(out,x,frame.focus_y.clamp(slot_ui::expressive::ROW_TOP-2.0,slot_ui::expressive::CARD_BOTTOM-slot_ui::expressive::ROW_H),width,slot_ui::expressive::ROW_H,12.0,slot_ui::expressive::SELECTED);
             },_=>{}
@@ -5710,7 +5712,7 @@ impl App {
         if let Some(art)=self.studio.as_ref().and_then(|m|m.art_face) {crate::studio_gallery::draw_menu(self.canvas(),art,frame,out);}
         slot_ui::draw_menu_switches(self.canvas(),&self.current_custom_switches,&self.switch_motion,frame,out);
         slot_ui::draw_menu_sliders(self.canvas(),&self.current_custom_sliders,&self.slider_motion,frame,out);
-        let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|{let (selected,start)=m.focus_info();(selected,m.rows().len(),start,5)}).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
+        let scroll=self.network.as_ref().filter(|m|m.visible && !m.is_keyboard()).map(|m|m.scroll_info()).or_else(||self.bluetooth.as_ref().map(|m|m.scroll_info())).or_else(||self.kid_menu.as_ref().and_then(|m|m.scroll_info()));
         if let Some((_,total,_,visible))=scroll {slot_ui::expressive::draw_scrollbar(self.canvas(),slot_ui::expressive::ROW_TOP,visible,total,frame.window_start,out);}
         if let Some(menu)=&self.studio {
             // The option card rises independently, behind the floating cartridge.
@@ -7684,8 +7686,8 @@ impl App {
         if let Some(at)=self.charging_notice_at.filter(|at|self.now().saturating_sub(*at)<2400) {
             if let Some(b)=self.battery {return Some((0xC0000000 ^ at,format!("Charging: {}%",b.percent)));}
         }
-        if let Some(menu)=self.network.as_ref().filter(|m|!m.visible) {
-            if let Some(message)=menu.take_toast() {return Some((0xA0000000,message.into()));}
+        if let Some(menu)=self.network.as_ref() {
+            if let Some(message)=menu.take_toast().filter(|message| !menu.visible || menu.achievement_toast(message).is_some()) {return Some((0xA0000000 ^ menu.toast_key(),message.into()));}
         }
         if let Some(menu)=&self.studio {return menu.notice_text().map(|s|(menu.page_key(),s.into()));}
         if self.capture.is_some() {return Some((0xB0000000 ^ self.settings_notice_revision,"Press a button or chord".into()));}
