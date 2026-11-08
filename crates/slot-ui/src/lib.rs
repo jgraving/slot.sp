@@ -28,7 +28,7 @@ mod hud;
 mod meter;
 pub use meter::{filled_meter_face,METER_W,METER_H};
 mod achievement_browser;
-pub use achievement_browser::{achievement_browser_face, achievement_description_lines, achievement_detail_face, AchievementRow};
+pub use achievement_browser::{achievement_browser_face, achievement_description_lines, achievement_detail_face, draw_achievement_sheet, AchievementRow, ACHIEVEMENT_VISIBLE, ACHIEVEMENT_DETAIL_LINES};
 mod achievement_notice;
 pub use achievement_notice::achievement_notice_face;
 mod settings_notice;

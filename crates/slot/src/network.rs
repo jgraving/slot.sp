@@ -94,6 +94,7 @@ pub struct Menu {
     toast_revision: u64,
     browser_game: Option<PathBuf>,
     browser: Option<crate::achievement_browser::Browser>,
+    browser_from_pause: bool,
 }
 impl Menu {
     pub fn new(root: PathBuf) -> Self {
@@ -120,7 +121,7 @@ impl Menu {
             migrating_plain, migration_saving:false, upgrade_pin:false, short_pin:false,
             notice_tone:slot_ui::NoticeTone::Neutral,toast_tone:slot_ui::NoticeTone::Neutral,
             startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false,parent_cancelled:false,pin_rejected:None, notice: String::new(),
-            wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None, achievement_toast:None,badge_reply:None,toast_revision:0,browser_game:None,browser:None,
+            wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None, achievement_toast:None,badge_reply:None,toast_revision:0,browser_game:None,browser:None,browser_from_pause:false,
         }
     }
     pub fn requires_startup_lock(&self)->bool {self.encrypted && self.prefs.lock_device}
@@ -139,7 +140,18 @@ impl Menu {
         self.browser_game=rom;
         self.open_achievements();
     }
+    pub fn achievements_enabled(&self)->bool {self.prefs.achievements}
+    pub fn open_current_achievements(&mut self, rom: Option<PathBuf>) {
+        self.open_achievements_for(rom);
+        self.browser_from_pause=true;
+        self.open_browser();
+    }
+    fn open_browser(&mut self) {
+        self.browser=Some(crate::achievement_browser::Browser::open(self.root.clone(),self.secrets.username.clone(),self.browser_game.clone()));
+        self.notice.clear();self.changed();
+    }
     pub fn open_achievements(&mut self) {
+        self.browser_from_pause=false;
         self.browser=None;
         self.visible = true; self.page = Page::Achievements; self.selected = 0; self.notice.clear(); self.changed();
     }
@@ -578,7 +590,7 @@ impl Menu {
     }
     pub fn input(&mut self, action: Action) {
         if let Some(browser)=&mut self.browser {
-            if browser.input(action) {self.browser=None;self.selected=7;}
+            if browser.input(action) {self.browser=None;self.selected=7;if self.browser_from_pause {self.visible=false;self.browser_from_pause=false;}}
             self.changed();return;
         }
         if self.report_shortcut(action) { return; }
@@ -743,8 +755,7 @@ impl Menu {
                     return;
                 }
                 if self.selected==7 {
-                    self.browser=Some(crate::achievement_browser::Browser::open(self.root.clone(),self.secrets.username.clone(),self.browser_game.clone()));
-                    self.notice.clear();self.changed();return;
+                    self.open_browser();return;
                 }
                 if self.selected>=8 {return;}
                 if !self.unlocked() { return; }
@@ -1749,38 +1760,108 @@ mod tests {
     }
 
     #[test]
+    fn pause_browser_visibility_follows_the_toggle_and_back_returns_to_its_origin() {
+        use slot_ui::QuickRow;
+        let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+        std::fs::write(root.path().join("Games/GBA/Browser.gba"),vec![0u8;0x100]).unwrap();
+        let mut state=slot_store::SlotState::default();state.clock_set=true;state.cart=Some("Browser".into());
+        slot_store::write_slot_state(root.path(),&state).unwrap();
+        let mut app=crate::app::App::boot(root.path());app.on_core_ready();for _ in 0..120 {app.update(1.0/60.0);}
+        assert!(matches!(app.phase(),crate::app::Phase::Playing{..}));
+        assert!(app.in_game_hidden().contains(&QuickRow::PlayAchievements));
+        app.network.as_mut().unwrap().prefs.achievements=true;
+        assert!(!app.in_game_hidden().contains(&QuickRow::PlayAchievements));
+        assert!(!app.network.as_ref().unwrap().wifi_on,"offline access must remain available");
+        app.apply(Action::QuickMenu);
+        // The pause grid is Resume / Settings / Achievements on its first row.
+        app.apply(Action::GbaDown(Btn::Right));app.apply(Action::GbaDown(Btn::Right));
+        assert_eq!(app.in_game_menu(),Some(QuickRow::PlayAchievements));
+        app.apply(Action::GbaDown(Btn::A));assert_eq!(app.network.as_ref().unwrap().page_key(),4006);
+        app.apply(Action::GbaDown(Btn::B));assert!(!app.network.as_ref().unwrap().visible);
+        assert_eq!(app.in_game_menu(),Some(QuickRow::PlayAchievements));assert!(matches!(app.phase(),crate::app::Phase::Playing{..}));
+        let menu=app.network.as_mut().unwrap();menu.open_achievements();menu.selected=0;menu.input(Action::GbaDown(Btn::A));
+        assert!(!menu.achievements_enabled());assert!(app.in_game_hidden().contains(&QuickRow::PlayAchievements));
+        let mut reloaded=crate::app::App::boot(root.path());assert!(reloaded.in_game_hidden().contains(&QuickRow::PlayAchievements));
+        reloaded.network.as_mut().unwrap().prefs.achievements=true;
+        // Unsupported platforms do not offer the pause shortcut even with the toggle on.
+        std::fs::remove_file(root.path().join("Games/GBA/Browser.gba")).unwrap();
+        std::fs::write(root.path().join("Games/GB/Browser.gb"),vec![0u8;0x150]).unwrap();
+        let mut gb=crate::app::App::boot(root.path());gb.network.as_mut().unwrap().prefs.achievements=true;
+        gb.on_core_ready();for _ in 0..120 {gb.update(1.0/60.0);}
+        assert_eq!(gb.playing_platform(),slot_store::Platform::Gb);assert!(gb.in_game_hidden().contains(&QuickRow::PlayAchievements));
+    }
+
+    #[test]
     #[ignore = "requires Mesa EGL; produces current-game achievement browser review captures"]
     fn native_ra_browser_review() {
         use slot_gfx::Compositor;
         use slot_input::{InputSource,RawEvent,Millis};
         struct Empty;impl InputSource for Empty {fn poll(&mut self,_:Millis)->Vec<RawEvent>{vec![]}}
         let dir=PathBuf::from(std::env::var_os("SLOT_QOL_PREVIEW").expect("preview directory"));
-        let badge=std::env::var_os("SLOT_RA_PREVIEW_BADGE").map(PathBuf::from);
+        std::fs::create_dir_all(&dir).unwrap();
+        let sample=dir.join("browser-badge.png");
+        let mut rgba=vec![0u8;64*64*4];
+        for y in 0..64 {for x in 0..64 {let pixel=if x<4||y<4||x>=60||y>=60 {[235,186,68,255]}else if (x/8+y/8)%2==0 {[43,134,124,255]}else{[74,185,160,255]};rgba[(y*64+x)*4..(y*64+x+1)*4].copy_from_slice(&pixel);}}
+        let mut encoder=png::Encoder::new(std::fs::File::create(&sample).unwrap(),64,64);encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);encoder.write_header().unwrap().write_image_data(&rgba).unwrap();
+        let badge=Some(std::env::var_os("SLOT_RA_PREVIEW_BADGE").map(PathBuf::from).unwrap_or(sample));
         for (width,light) in [(640,true),(640,false),(720,true),(720,false)] {
             let output=dir.join(format!("ra-browser-{width}-{}",if light {"light"}else{"dark"}));std::fs::create_dir_all(&output).unwrap();
             let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            for name in ["Aurora","Borealis"] {std::fs::write(root.path().join(format!("Games/GBA/{name}.gba")),vec![0u8;0x150]).unwrap();}
+            std::fs::write(root.path().join("Config/network.json"),br#"{"achievements":true}"#).unwrap();
             let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
             let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
             let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
             let mut tick=0;for _ in 0..180 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            f.app_mut_for_review().network.as_mut().unwrap().prefs.achievements=true;
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));f.app_mut_for_review().apply(Action::GbaUp(Btn::A));
+            for _ in 0..300 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            assert!(matches!(f.app().phase(),crate::app::Phase::Playing{..}));
+            f.app_mut_for_review().apply(Action::QuickMenu);
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-entry.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));f.app_mut_for_review().apply(Action::GbaUp(Btn::Right));f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));f.app_mut_for_review().apply(Action::GbaUp(Btn::Right));
+            assert_eq!(f.app().in_game_menu(),Some(slot_ui::QuickRow::PlayAchievements));
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));f.app_mut_for_review().apply(Action::GbaUp(Btn::A));
             let mut browser=crate::achievement_browser::Browser::empty("");
             browser.data=Some(slot_achievements::AchievementList{title:"Metroid Fusion — a long game title".into(),entries:(0..40).map(|id|slot_achievements::AchievementEntry{
                 id,title:if id==0 {"An extraordinarily long achievement title that needs several readable lines".into()}else{format!("Explore sector {}",id+1)},
                 description:if id==0 {"Complete this challenging objective without taking damage or using any continues. ".repeat(10)}else{"Explore the sector and collect every hidden upgrade before defeating the boss.".into()},
                 points:if id==0{25}else{5},earned:id%3==0,badge:badge.clone().filter(|_|id%4!=3),
             }).collect()});
-            let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.open_achievements();menu.browser=Some(browser);menu.face=None;
+            let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.browser=Some(browser);menu.face=None;
             for (shot,actions) in [
                 ("all",vec![]),("detail",vec![Btn::A]),("detail-scrolled",vec![Btn::R1]),
+                ("detail-next-unseen",vec![Btn::Right;8]),("detail-missing-badge",vec![Btn::Left]),
                 ("locked",vec![Btn::B,Btn::Right]),("earned",vec![Btn::Right]),("paged",vec![Btn::Right,Btn::R1,Btn::R1]),
             ] {
                 for btn in actions {f.app_mut_for_review().network.as_mut().unwrap().input(Action::GbaDown(btn));}
                 for _ in 0..45 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);std::thread::sleep(Duration::from_millis(1));}
+                let browser=f.app().network.as_ref().unwrap().browser.as_ref().unwrap();
+                match shot {
+                    "all"=>{assert_eq!(browser.indices().len(),40);assert_eq!(browser.selected,0);},
+                    "detail"|"detail-scrolled"=>{assert_eq!(browser.selected,0);assert!(browser.detail.is_some());},
+                    "detail-next-unseen"=>assert_eq!(browser.selected,8),
+                    "detail-missing-badge"=>assert_eq!(browser.selected,7),
+                    "locked"=>assert_eq!(browser.indices().len(),26),
+                    "earned"=>assert_eq!(browser.indices().len(),14),
+                    "paged"=>assert_eq!(browser.selected,10),
+                    _=>{},
+                }
                 let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
             let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.browser=Some(crate::achievement_browser::Browser::empty("Prepare this game's achievements online first"));menu.face=None;
             for _ in 0..45 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
             let mut e=png::Encoder::new(std::fs::File::create(output.join("missing.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            f.app_mut_for_review().network.as_mut().unwrap().input(Action::GbaDown(Btn::B));
+            assert!(!f.app().network.as_ref().unwrap().visible);assert_eq!(f.app().in_game_menu(),Some(slot_ui::QuickRow::PlayAchievements));
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-return.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            f.app_mut_for_review().network.as_mut().unwrap().prefs.achievements=false;
+            f.app_mut_for_review().apply(Action::QuickMenu);f.app_mut_for_review().apply(Action::QuickMenu);
+            assert!(f.app().in_game_hidden().contains(&slot_ui::QuickRow::PlayAchievements));
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-disabled.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
         }
     }
 

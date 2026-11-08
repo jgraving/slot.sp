@@ -62,6 +62,7 @@ pub fn tile_face_label(row:QuickRow,lit:bool,label_override:Option<&str>)->UndoF
         QuickRow::Resume=>("Resume",r##"<path d="M15 6q-3-2-3 2v32q0 4 3 2l27-16q3-2 0-4z"/>"##),
         QuickRow::ExitGame=>("Exit game",r##"<path d="M7 5h18v5H12v28h13v5H7zM30 13l13 11-13 11v-8H18v-6h12z"/>"##),
         QuickRow::States|QuickRow::UndoSave|QuickRow::UndoLoad=>("Save states",r##"<path fill-rule="evenodd" d="M8 3h27l8 8v32H5V6z M13 7v13h19V7z M13 29v10h22V29z"/>"##),
+        QuickRow::PlayAchievements=>("Achievements",r##"<path d="M13 5h22v13q0 13-11 15-11-2-11-15zM20 32h8v8h8v4H12v-4h8z"/><path fill-rule="evenodd" d="M4 9h9v5H9v4q0 6 8 7v5Q4 29 4 18zM35 9h9v9q0 11-13 12v-5q8-1 8-7v-4h-4z"/>"##),
         QuickRow::Screenshots=>("Screenshots",r##"<path fill-rule="evenodd" d="M6 12h8l4-6h12l4 6h8a4 4 0 0 1 4 4v24H2V16a4 4 0 0 1 4-4z M33 26a9 9 0 1 0-18 0 9 9 0 0 0 18 0"/>"##),
         QuickRow::PlayReference=>("Shortcuts",r##"<path d="M7 7h34v34H7z"/><path fill="#192125" d="M13 15h6v6h-6zM23 15h6v6h-6zM33 15h3v6h-3zM13 27h23v5H13z"/>"##),
         _=>("About",r##"<path fill-rule="evenodd" d="M24 4a20 20 0 1 0 0 40 20 20 0 0 0 0-40z M22 21v14h4V21z M24 12a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>"##),

@@ -1237,6 +1237,7 @@ impl App {
         if self.single_cart() {
             hidden.push(QuickRow::ExitGame);
         }
+        if self.playing_platform() != Platform::Gba || !self.network.as_ref().is_some_and(|m|m.achievements_enabled()) {hidden.push(QuickRow::PlayAchievements);}
         if self.playing_platform() != Platform::Gba {
             hidden.extend([QuickRow::GameL, QuickRow::GameR]);
         }
@@ -1442,7 +1443,7 @@ impl App {
             | QuickRow::DateTime
             | QuickRow::About
             | QuickRow::Wifi | QuickRow::CartStudio
-            | QuickRow::Achievements
+            | QuickRow::Achievements | QuickRow::PlayAchievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
@@ -3393,7 +3394,7 @@ impl App {
             QuickRow::ExitGame => self.eject(),
             QuickRow::Screen => {self.in_game_menu=Some(QuickRow::PlayBrightness);},
             QuickRow::PlaySound => self.open_quick_row(QuickRow::Bluetooth),
-            QuickRow::Wifi|QuickRow::Achievements|QuickRow::Updates|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
+            QuickRow::Wifi|QuickRow::Achievements|QuickRow::PlayAchievements|QuickRow::Updates|QuickRow::SecurityPin|QuickRow::Bluetooth|QuickRow::Kids|QuickRow::DisplaySchedule|QuickRow::SleepNow|QuickRow::ShutDown => self.open_quick_row(row),
             QuickRow::DateTime|QuickRow::TimeZone|QuickRow::About => {
                 if row == QuickRow::DateTime && self.network.as_ref().is_some_and(|m| m.automatic_time_enabled()) {
                     self.open_quick_row(row);
@@ -3484,11 +3485,11 @@ impl App {
             QuickRow::DisplaySchedule => {
                 self.display_schedule = Some(crate::display_schedule::Menu::new(self.display_settings));
             }
-            QuickRow::Wifi | QuickRow::Achievements
+            QuickRow::Wifi | QuickRow::Achievements | QuickRow::PlayAchievements
             | QuickRow::SecurityPin | QuickRow::Updates => {
                 let achievement_rom=self.seated_cart().map(|cart|cart.rom.clone());
                 if let Some(menu) = &mut self.network {
-                    if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements_for(achievement_rom); }
+                    if row == QuickRow::PlayAchievements {menu.open_current_achievements(achievement_rom);}else if row == QuickRow::Updates {menu.open_updates();}else if row == QuickRow::Wifi { menu.open_wifi(); } else if row == QuickRow::SecurityPin {menu.open_security();} else { menu.open_achievements_for(achievement_rom); }
                 }
             }
             QuickRow::CartStudio => self.open_studio(),
@@ -3778,7 +3779,7 @@ impl App {
             | QuickRow::Bluetooth
             | QuickRow::About
             | QuickRow::Wifi | QuickRow::CartStudio
-            | QuickRow::Achievements
+            | QuickRow::Achievements | QuickRow::PlayAchievements
             | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone | QuickRow::AutomaticTime
             | QuickRow::DisplaySchedule
             | QuickRow::GameDetails
@@ -5103,7 +5104,7 @@ impl App {
                 out.retain(|d|!matches!(d,Draw::Tex{tex,..}|Draw::Part{tex,..} if *tex==back||*tex==front));
             }
             let mut hardware = Vec::new();
-            self.draw_menu_hardware(&mut hardware);
+            if !custom.is_some_and(|k|matches!(k,4006|4007)) {self.draw_menu_hardware(&mut hardware);}
             if matches!(self.phase, Phase::Playing { .. } | Phase::Ejecting { .. })
                 && !self.about_motion.active()
             {
@@ -5119,7 +5120,7 @@ impl App {
             let chrome=out.len();
             self.menu_title_motion.borrow_mut().present(page,title,out);
             let title_end=out.len();
-            if matches!(self.phase,Phase::Playing{..}) {
+            if matches!(self.phase,Phase::Playing{..}) && !custom.is_some_and(|k|matches!(k,4006|4007)) {
                 let kid=custom.or_else(||self.menu_motion.current_custom_key()).is_some_and(|key|(2000..3000).contains(&key));
                 let (compact,top)=if kid {(self.kid_surface.value(),slot_ui::menu_grid::pause_rect(self.canvas(),3)[1])}
                     else {let row=row.or_else(||self.menu_motion.closing_row()).unwrap_or(QuickRow::Resume);let hidden=self.in_game_hidden();(self.menu_motion.frame(row,&hidden).focus_compact,slot_ui::menu_grid::pause_rect(self.canvas(),QuickRow::Resume.shown(&hidden).len())[1])};
@@ -5168,7 +5169,7 @@ impl App {
                 self.draw_menu_shelf(out);
                 self.draw_cached_overlay(tex, out);
                 self.draw_network_progress(out);
-                draw_empty_slot(self.canvas(), self.slot_faces, out);
+                if !self.custom_menu_key().is_some_and(|k|matches!(k,4006|4007)) {draw_empty_slot(self.canvas(), self.slot_faces, out);}
                 self.draw_status_bar(out);
                 return;
             }
@@ -5675,6 +5676,9 @@ impl App {
             } else if self.menu_motion.outgoing_is_custom() {
                 if let Some((_,tex))=self.previous_custom_face {
                     let frame=self.menu_motion.outgoing_frame(previous,&[]);
+                    if self.menu_motion.outgoing_custom_key().is_some_and(|k|matches!(k,4006|4007)) {
+                        slot_ui::draw_achievement_sheet(self.canvas(),tex,frame,None,out);return;
+                    }
                     if let Some(key)=self.menu_motion.outgoing_custom_key(){self.draw_custom_focus(key,frame,out);}
                     if self.menu_motion.outgoing_custom_key().is_some_and(|k|(4100..=4105).contains(&k)) {
                         crate::studio_gallery::draw_menu(self.canvas(),tex,frame,out);
@@ -5691,6 +5695,12 @@ impl App {
         let row=self.quick_menu().or_else(||self.in_game_menu_shown()).unwrap_or(QuickRow::Kids);
         let mut frame=self.menu_motion.frame_page(row,&[],self.custom_menu_key());
         frame.entry=1.0;
+        if self.custom_menu_key().is_some_and(|k|matches!(k,4006|4007)) {
+            self.draw_outgoing_menu(over_game,out);
+            let scroll=self.network.as_ref().map(|m|m.scroll_info());
+            slot_ui::draw_achievement_sheet(self.canvas(),tex,frame,scroll,out);
+            return;
+        }
         if !over_game {slot_ui::draw_menu_ground(self.canvas(),self.menu_ground(),out);}
         if over_game {
             let mut surface=frame;
