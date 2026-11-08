@@ -123,7 +123,7 @@ pub use quick_menu::{
     reference_face, reference_binding_face, menu_sentence_case, quick_value_face, quick_binding_face, quick_heading_face, carousel_name_face, quick_warning_value_face, quick_window, quick_window_start, repair_legends,
     kid_time_text, kid_time_meter, kid_time_meter_on, parent_settings_face, parent_settings_face_on, parent_settings_face_animated_on, parent_settings_face_with_space, parent_footer_face, parent_footer_face_on, parent_button_legends, sound_button_legends, sound_forget_confirmation, wifi_settings_face_on, wifi_signal_face, wifi_connecting_face, QuickMenu, QuickMenuFaces, QuickRow,
     QuickScroll, QuickValue, MENU_HINT_H, QUICK_EDGE, QUICK_LABEL_X, QUICK_PITCH, QUICK_VISIBLE,
-    QUICK_VISIBLE_ROWS, SHOW_PASSWORD_FOOTER, HIDE_PASSWORD_FOOTER,
+    QUICK_VISIBLE_ROWS, SHOW_PASSWORD_FOOTER, HIDE_PASSWORD_FOOTER, SELECTOR_FOOTER,
 };
 pub use rebuild::{rebuild_count_face, rebuild_title_face, RebuildScreen};
 pub use refusal::Refusal;

@@ -1368,11 +1368,20 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 
 pub const SHOW_PASSWORD_FOOTER: u8 = 13;
 pub const HIDE_PASSWORD_FOOTER: u8 = 14;
+pub const SELECTOR_FOOTER: u8 = 15;
 
 /// Settings share the production bitmap legends and footer typography.
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        SELECTOR_FOOTER => {
+            // Keep the D-pad visible beside the centred download progress pill.
+            let pair=button_pair(ButtonLegend::Left,ButtonLegend::Right);
+            let w=pair.w+HINT_EDGE;let h=MENU_HINT_H;
+            let mut rgba=vec![0;(w*h*4)as usize];
+            blit(&mut rgba,w,&pair.rgba,pair.w,pair.h,0,h.saturating_sub(pair.h)/2);
+            vec![with_hint(button_face(ButtonLegend::B),"Back",hint,true),UndoFace{rgba,w,h}]
+        },
         SHOW_PASSWORD_FOOTER | HIDE_PASSWORD_FOOTER => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
             with_hint(button_face(ButtonLegend::A),

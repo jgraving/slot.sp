@@ -945,7 +945,8 @@ impl Menu {
             let signals: Vec<_> = self.last_wifi.networks.iter().map(|n| n.bars()).collect();
             slot_ui::wifi_settings_face_on(canvas, &rows, selected, 5, &signals)
         } else {
-            let footer = if self.page == Page::Sharing && selected == 4 && !self.locked
+            let footer = if self.page == Page::Achievements && selected == 6 {slot_ui::SELECTOR_FOOTER}
+            else if self.page == Page::Sharing && selected == 4 && !self.locked
                 && !self.secrets.sharing_password.is_empty()
             {
                 if self.sharing_reveal { slot_ui::HIDE_PASSWORD_FOOTER } else { slot_ui::SHOW_PASSWORD_FOOTER }
