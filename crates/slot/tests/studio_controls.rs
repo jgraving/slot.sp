@@ -171,3 +171,23 @@ fn power_close_during_explicit_save_closes_after_the_existing_write() {
     assert!(menu.busy());menu.finish();wait_for_save(&mut menu);
     assert!(!menu.visible);assert!(menu.take_saved().is_some());
 }
+
+
+#[test]
+fn studio_root_labels_share_a_left_edge_and_adjustment_arrows_precede_finish() {
+    let (root,_)=app();let cart=slot_store::scan(root.path()).unwrap().remove(0);
+    let menu=Menu::new(root.path().into(),cart,false);
+    for width in [640,720] {
+        let face=menu.screen_face(slot_ui::Canvas{w:width as f32,h:480.0});
+        let x=(width as f32*0.47+52.0) as u32;
+        for i in 0..menu.model.rows().len() {
+            let y=(86.0+i as f32*menu.option_pitch()) as u32;
+            let first=(x-2..width-100).find(|&xx|(y..y+26).any(|yy|face.rgba[((yy*width+xx)*4+3)as usize]>100)).unwrap();
+            assert!((first as i32-x as i32).abs()<=3,"row {i} at width {width}: text starts at {first}, wanted {x}");
+        }
+        let finish=menu.model.rows().iter().position(|r|*r==slot::studio::Row::Finish).unwrap();
+        let y=(86.0+finish as f32*menu.option_pitch()) as u32;
+        let arrows=(x-40..x-6).filter(|&xx|(y..y+26).any(|yy|face.rgba[((yy*width+xx)*4+3)as usize]>100)).count();
+        assert!(arrows>8,"Finish needs both arrows immediately left of its label");
+    }
+}

@@ -1,5 +1,8 @@
-# Studio layout cleanup
+# Studio controls and alignment — PR #218
 
-Active branch: fix/studio-layout-cleanup, based on main 97fb96d (#216 merged).
+Active PR: https://github.com/jgraving/slot.sp/pull/218
+Branch: `fix/studio-controls-alignment`, based on main `41a8774` (merged #217). Read WORKLOG.md.
 
-Read WORKLOG.md. Simplify the Studio root into single-line rows, increase cartridge/card spacing, inset Save and remove rectangular placeholder-wordmark backing. Implementation is ready for CI/native visual review. Preserve anchored submenu artwork, Save/close semantics, Select picker transition and prior status/settings behavior. Physical handheld checks remain pending.
+Implementation published at `02257f45c962ba1aea67b06264108415f76335ec` with tree identical to local validated HEAD. Fixes Finish/Shape A cycling, left-aligned menu labels, palette confirmation/finish preservation, scrolling, and RGB/hex presentation. 112 focused local Rust tests and 2 artwork checks pass. Native light/GLES640 and dark/GL720 walkthroughs passed; final scroll adjustment was clean-built and visually checked in light. A broader Unix-socket test was sandbox-blocked.
+
+User approved publishing and opening the PR. Shell HTTPS credentials were unavailable, so the authenticated connector published the same files. Remote CI is pending; inspect exact-source workflows and uploaded native captures before any merge. Physical handheld testing remains pending. User now authorizes merging PRs #218 and #219 once tests pass. Fix CI label-reset regression before merging #218.

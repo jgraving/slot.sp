@@ -327,6 +327,11 @@ impl Menu {
             },
             _ => {}
         }
+        if before.row()==Some(Row::Finish) && before.current_shell().finish!=self.model.current_shell().finish {
+            self.notice=match self.model.current_shell().finish {
+                slot_store::ShellFinish::Solid=>"Solid finish",slot_store::ShellFinish::Clear=>"Clear finish",slot_store::ShellFinish::Glitter=>"Glitter finish",
+            }.into();
+        }
         if before.shell != self.model.shell || before.ground != self.model.ground
             || before.wearing != self.model.wearing { self.rebuild(); }
         else { self.face = None; }
@@ -406,40 +411,24 @@ impl Menu {
             w: canvas.w as u32,
             h: 480,
         };
-        let left = 76.0;
-        let edge = canvas.w * 0.47;
         if let Screen::Chips { at, .. } = self.model.screen {
             use slot_ui::palette::{chip_grid, Chip};
-            let grid = chip_grid(0.0, 0.0);
-            let x = edge + 12.0;
-            let w = canvas.w - 76.0 - x;
-            let top = (grid[at].y - 108.0).max(0.0);
-            let scale = (w / 264.0).min(0.86);
-            for p in &grid {
-                let yy = 119.0 + (p.y - top) * scale;
-                if !(113.0..=298.0).contains(&yy) {
-                    continue;
-                }
-                let xx = x + p.x * scale;
-                let sz = 42.0 * scale;
-                if let Chip::Preset(n) = p.chip {
-                    let c = slot_ui::shell_presets()[n].1.colour;
-                    slot_ui::expressive::raster_round(
-                        &mut face,
-                        xx,
-                        yy,
-                        sz,
-                        sz,
-                        sz / 2.0,
-                        [
-                            c[0] as f32 / 255.0,
-                            c[1] as f32 / 255.0,
-                            c[2] as f32 / 255.0,
-                            1.0,
-                        ],
-                    );
+            for (i,p) in chip_grid(0.0,0.0).iter().enumerate().skip(3) {
+                let Some([x,y,w,h])=palette_rect(canvas,at,i) else {continue};
+                if let Chip::Preset(n)=p.chip {
+                    let c=slot_ui::shell_presets()[n].1.colour;
+                    slot_ui::expressive::raster_round(&mut face,x,y,w,h,w/2.0,
+                        [c[0] as f32/255.0,c[1] as f32/255.0,c[2] as f32/255.0,1.0]);
                 }
             }
+        }
+        if let Screen::Custom {rgb,..} | Screen::Hex {digits:_,start:rgb,..}=self.model.screen {
+            let color=if let Screen::Hex {digits,..}=self.model.screen {
+                [digits[0]*16+digits[1],digits[2]*16+digits[3],digits[4]*16+digits[5]]
+            }else{rgb};
+            let x=canvas.w*0.47+16.0;
+            slot_ui::expressive::raster_round(&mut face,x,314.0,24.0,24.0,8.0,
+                [color[0] as f32/255.0,color[1] as f32/255.0,color[2] as f32/255.0,1.0]);
         }
         face
     }
@@ -485,7 +474,7 @@ impl Menu {
         let left = 60.0;
         let edge = canvas.w * 0.47;
         let right = canvas.w - 76.0;
-        text(
+        text_centred(
             &mut face,
             &slot_ui::label_text(&self.model.cart),
             left,
@@ -518,7 +507,7 @@ impl Menu {
                     };
                     let y = 86.0 + i as f32 * pitch;
                     if *item==Row::Save {
-                        text(&mut face,"Save",x,y,w,24.0,i==row);continue;
+                        text(&mut face,"Save",x+40.0,y,w-44.0,23.0,i==row);continue;
                     }
                     let adjustable=matches!(item,Row::Finish|Row::Shape);
                     // Keep the row name on one line; the cartridge shows its current appearance.
@@ -565,38 +554,29 @@ impl Menu {
                     24.0,
                     true,
                 );
-                let selected_y = grid[at].y;
-                let top = (selected_y - 108.0).max(0.0);
-                let scale = (w / 264.0).min(0.86);
-                for (i, p) in grid.iter().enumerate() {
-                    let yy = 119.0 + (p.y - top) * scale;
-                    if !(113.0..=298.0).contains(&yy) {
-                        continue;
+                for (i,p) in grid.iter().enumerate() {
+                    let Some([xx,yy,ww,hh])=palette_rect(canvas,at,i) else {continue};
+                    if i<3 {
+                        highlight(&mut face,xx-3.0,yy-2.0,ww+6.0,hh+4.0,i==at);
+                        text(&mut face,match p.chip {Chip::Current=>"Reset",Chip::Auto=>"Auto",_=>"Custom"},xx+2.0,yy+2.0,ww-4.0,18.0,i==at);
+                    }else{
+                        slot_ui::expressive::raster_round(&mut face,xx-3.0,yy-3.0,ww+6.0,hh+6.0,(ww+6.0)/2.0,
+                            if i==at {slot_ui::expressive::ACCENT}else{slot_ui::expressive::SELECTED});
                     }
-                    let xx = x + p.x * scale;
-                    let sz = 42.0 * scale;
-                    highlight(&mut face, xx - 3.0, yy - 3.0, sz + 6.0, sz + 6.0, i == at);
-                    if !matches!(p.chip, Chip::Preset(_)) {
-                        text(
-                            &mut face,
-                            match p.chip {
-                                Chip::Current => "O",
-                                Chip::Auto => "A",
-                                _ => "+",
-                            },
-                            xx,
-                            yy + 2.0,
-                            sz,
-                            22.0,
-                            i == at,
-                        );
-                    }
+                }
+                let total=grid.last().unwrap().y-grid[3].y;
+                if total>108.0 {
+                    let scroll=palette_scroll(&grid,at);
+                    slot_ui::expressive::raster_round(&mut face,right+6.0,160.0,2.0,140.0,1.0,slot_ui::expressive::SELECTED);
+                    let thumb=140.0*(108.0/total).min(1.0);
+                    let yy=160.0+(140.0-thumb)*(scroll/(total-108.0)).clamp(0.0,1.0);
+                    slot_ui::expressive::raster_round(&mut face,right+6.0,yy,2.0,thumb,1.0,slot_ui::expressive::ACCENT);
                 }
                 let name = match grid[at].chip {
                     Chip::Preset(n) => slot_ui::shell_presets()[n].0,
-                    Chip::Current => "Original",
+                    Chip::Current => "Original color",
                     Chip::Auto => "Automatic",
-                    Chip::Custom => "Custom…",
+                    Chip::Custom => "Custom color",
                 };
                 text(&mut face, name, x, 324.0, w, 22.0, true);
             }
@@ -608,18 +588,13 @@ impl Menu {
             } => {
                 text(&mut face, "Custom color", x, 80.0, w, 24.0, true);
                 for i in 0..3 {
-                    let y = 132.0 + i as f32 * 52.0;
-                    text(
-                        &mut face,
-                        &format!("{}  ‹ {} ›", ["R", "G", "B"][i], rgb[i]),
-                        x,
-                        y,
-                        w,
-                        26.0,
-                        i == channel,
-                    );
+                    let y=132.0+i as f32*52.0;
+                    text(&mut face,["Red","Green","Blue"][i],x+8.0,y,w-78.0,22.0,i==channel);
+                    text(&mut face,&rgb[i].to_string(),right-52.0,y,52.0,22.0,i==channel);
+                    slot_ui::expressive::raster_round(&mut face,x+8.0,y+30.0,w-16.0,3.0,1.5,slot_ui::expressive::SELECTED);
+                    slot_ui::expressive::raster_round(&mut face,x+8.0,y+30.0,((w-16.0)*rgb[i] as f32/255.0).max(3.0),3.0,1.5,slot_ui::expressive::ACCENT);
                 }
-                text(&mut face, &self::rgb(rgb), x, 310.0, w, 22.0, false);
+                text(&mut face,&self::rgb(rgb),x+38.0,310.0,w-38.0,22.0,false);
             }
             Screen::Hex { digits, pos, .. } => {
                 text(&mut face, "Hex color", x, 98.0, w, 26.0, true);
@@ -627,7 +602,7 @@ impl Menu {
                 for (i, d) in digits.iter().enumerate() {
                     let xx = x + i as f32 * step;
                     highlight(&mut face, xx, 166.0, step - 3.0, 52.0, i == pos);
-                    text(
+                    text_centred(
                         &mut face,
                         &format!("{d:X}"),
                         xx,
@@ -637,10 +612,33 @@ impl Menu {
                         i == pos,
                     );
                 }
+                let rgb=[digits[0]*16+digits[1],digits[2]*16+digits[3],digits[4]*16+digits[5]];
+                text(&mut face,&self::rgb(rgb),x+38.0,310.0,w-38.0,22.0,false);
             }
         }
         face
     }
+}
+// Scroll by complete rows, keeping the selected chip visible without an empty clipped band.
+fn palette_scroll(grid:&[slot_ui::palette::Placed],selected:usize)->f32 {
+    let first=grid[3].y;
+    let needed=(grid[selected].y-first-128.0).max(0.0);
+    grid.iter().skip(3).map(|p|p.y-first).find(|offset|*offset>=needed).unwrap_or(0.0)
+}
+fn palette_rect(canvas:Canvas,selected:usize,index:usize)->Option<[f32;4]> {
+    let grid=slot_ui::palette::chip_grid(0.0,0.0);
+    let x=canvas.w*0.47+16.0;
+    let width=canvas.w-76.0-x;
+    if index<3 {
+        let step=width/3.0;
+        return Some([x+index as f32*step,114.0,step-8.0,30.0]);
+    }
+    let scale=(width/264.0).min(0.82);
+    let first=grid[3].y;
+    let scroll=palette_scroll(&grid,selected);
+    let y=160.0+(grid[index].y-first-scroll)*scale;
+    let size=36.0*scale;
+    (y>=155.0 && y+size<=301.0).then_some([x+grid[index].x*scale,y,size,size])
 }
 fn rgb(c: [u8; 3]) -> String {
     format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2])
@@ -651,12 +649,19 @@ fn highlight(face: &mut UndoFace, x: f32, y: f32, w: f32, h: f32, on: bool) {
     }
 }
 fn text(dst: &mut UndoFace, value: &str, x: f32, y: f32, w: f32, px: f32, lit: bool) {
+    text_aligned(dst,value,x,y,w,px,lit,false);
+}
+fn text_centred(dst: &mut UndoFace, value: &str, x: f32, y: f32, w: f32, px: f32, lit: bool) {
+    text_aligned(dst,value,x,y,w,px,lit,true);
+}
+fn text_aligned(dst: &mut UndoFace, value: &str, x: f32, y: f32, w: f32, px: f32, lit: bool, centred: bool) {
     if let Some(font) = slot_ui::text::font(if lit {
         slot_ui::text::Role::Focus
     } else {
         slot_ui::text::Role::Menu
     }) {
-        let layout = slot_ui::text::fit_preserving_case(font, value, w, 2, px, px - 2.0);
+        let layout = slot_ui::text::fit_preserving_case(font, value, w, 1, px, px - 2.0);
+        let w=if centred {w}else{layout.lines.first().map_or(1.0,|line|slot_ui::text::line_width(font,line,layout.px,layout.tracking).ceil().min(w).max(1.0))};
         let mut src = UndoFace {
             rgba: vec![0; (w as u32 * 52 * 4) as usize],
             w: w as u32,
@@ -783,7 +788,11 @@ pub fn save(
         None
     };
     let original = original.or(recovered.as_deref());
-    let png = label(model, art, original);
+    // Automatic title labels are rendered by the library itself. Keep the
+    // resolved preview color out of persistence so Auto removes an old scan.
+    let png = if model.shown_label() == LabelKind::Title && model.ground.is_none() {
+        None
+    } else { label(model, art, original) };
     if let Some(png) = &png {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
@@ -830,4 +839,22 @@ fn gallery(model: &Studio, art: &Artwork, original: Option<&[u8]>) -> Gallery {
         }
     }
     Gallery::new(faces)
+}
+
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    #[test]
+    fn every_palette_selection_is_visible_inside_the_viewport() {
+        let grid=slot_ui::palette::chip_grid(0.0,0.0);
+        for width in [640.0,720.0] {
+            let canvas=Canvas{w:width,h:480.0};
+            for selected in 0..grid.len() {
+                let [x,y,w,h]=palette_rect(canvas,selected,selected).expect("selected color clipped");
+                assert!(x>=width*0.47 && x+w<width-56.0);
+                assert!(y>=110.0 && y+h<=301.0,"selected color overlaps caption");
+            }
+        }
+    }
 }
