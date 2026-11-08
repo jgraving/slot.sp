@@ -1,5 +1,5 @@
-# Studio layout cleanup
+# RetroAchievements artwork downloads
 
-Active branch: fix/studio-layout-cleanup, based on main 97fb96d (#216 merged).
+Active branch: fix/ra-unused-artwork, based on main 41a87741. PR #218 is separate Studio work; do not modify or merge it.
 
-Read WORKLOG.md. Simplify the Studio root into single-line rows, increase cartridge/card spacing, inset Save and remove rectangular placeholder-wordmark backing. Implementation is ready for CI/native visual review. Preserve anchored submenu artwork, Save/close semantics, Select picker transition and prior status/settings behavior. Physical handheld checks remain pending.
+Issue #182 comment 6718974752 reports ~4,000 badges for 80 ROMs over 5–6 hours. Fixed with default-off Achievement artwork and Current game / Favorites & recents (+ current) / Entire library scopes. Notifications now consume cached badges, decode off UI thread, fit entire images with filtered reduction, and keep title/description readable in both themes. Serial one-second success pacing and Retry-After-aware backoff remain. 38 achievement tests, 47 network tests, 4 settings-notice tests and 3 image layout tests pass; native production-compositor review passes all four theme/width combinations and corrected captures were visually inspected. Device-feature compilation is running. Read WORKLOG.md for checkpoints. Physical handheld testing pending. User authorized replying to #182 after the fix is published. Shell push lacks HTTPS credentials; use GitHub connector publication and verify tree identity before opening PR.

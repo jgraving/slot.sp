@@ -47,7 +47,7 @@ pub(crate) fn cover_rgba(src: &[u8], sw: u32, sh: u32, w: u32, h: u32) -> Option
     Some(out)
 }
 
-fn box_average(src: &[u8], sw: u32, sh: u32, x0: f32, y0: f32, x1: f32, y1: f32) -> [u8; 4] {
+pub(crate) fn box_average(src: &[u8], sw: u32, sh: u32, x0: f32, y0: f32, x1: f32, y1: f32) -> [u8; 4] {
     let xa = (x0.floor().max(0.0) as u32).min(sw - 1);
     let ya = (y0.floor().max(0.0) as u32).min(sh - 1);
     let xb = ((x1.ceil() as u32).max(xa + 1)).min(sw);

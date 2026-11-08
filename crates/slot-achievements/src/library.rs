@@ -86,7 +86,6 @@ pub(crate) fn scan(root:&Path,dir:&Path,now:u64)->(usize,VecDeque<PathBuf>) {
             // Refresh definitions and server unlocks weekly, and reconsider unknown ROMs.
             fingerprint(path).ok() != Some((entry.size, entry.modified_ns))
                 || entry.checked_at == 0
-                || entry.badge_version < 2
                 || now.saturating_sub(entry.checked_at) >= 7 * 86400
                 || !dir.join(format!("{}.json", entry.hash)).exists()
         })

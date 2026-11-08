@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::BTreeSet;
 use serde_json::{json, Value};
 use slot_retro::{AvInfo, ButtonMask, CoreError};
 use std::path::Path;
@@ -247,7 +248,7 @@ fn badge_cache_survives_restart_and_repairs_corrupt_images() {
 }
 
 #[test]
-fn a_badge_failure_does_not_hold_up_awards_or_cached_game_data() {
+fn disabled_artwork_does_not_download_or_hold_up_awards_or_cached_game_data() {
     struct NoBadges(Server);
     impl network::Transport for NoBadges {
         fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, network::Failure> {
@@ -267,7 +268,7 @@ fn a_badge_failure_does_not_hold_up_awards_or_cached_game_data() {
         .unwrap();
     let (calls, _) = mpsc::channel();
     let service = Service::start_with(root.path().into(), NoBadges(Server { calls }));
-    wait_for(|| service.sync_status() == SyncStatus::Attention);
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
     let store = Store::open(root.path(), "Player").unwrap();
     assert!(store.unlocks[&7].synced);
     let hash = format!("{:x}", md5::compute(b"fixture"));
@@ -442,16 +443,14 @@ fn an_unopened_library_is_prepared_automatically_without_starting_sessions() {
     wait_for(|| store.dir.join(format!("{hash}.json")).exists());
     wait_for(|| service.sync_status() == SyncStatus::Ready);
     let badge = badges::path(&store.dir, "12345").unwrap();
-    assert_eq!(
-        load_badge(&badge).unwrap().rgba,
-        [40, 120, 200, 255].repeat(4)
-    );
+    assert!(!badge.exists(), "unopened games must not download optional artwork");
     let (cached, _): (Game, std::collections::BTreeSet<u32>) =
         storage::read(&store.dir.join(format!("{hash}.json"))).unwrap();
     assert_eq!(cached.achievements[0].id, 7);
     let calls: Vec<_> = requests.try_iter().collect();
     assert!(calls.iter().any(|c| c == "unlocks"));
     assert!(!calls.iter().any(|c| c == "startsession"));
+    assert!(!calls.iter().any(|c| c.starts_with("badge:")));
     wait_for(|| library::pending(root.path(), &store.dir, network::now()).is_empty());
     std::fs::write(&rom, b"changed content, different size").unwrap();
     assert_eq!(
@@ -797,6 +796,8 @@ fn ram_credentials_prepare_games_without_creating_plaintext_account_files() {
         Server { calls },
         Some(Config {
             enabled: true,
+            artwork: false,
+            artwork_scope: Default::default(),
             username: "Player".into(),
             password: "fixture-password".into(),
             token: String::new(),
@@ -856,4 +857,76 @@ fn cached_games_still_count_after_worker_restart() {
     storage::write(&store.dir.join(format!("{hash}.json")),&(&game(),&std::collections::BTreeSet::<u32>::new())).unwrap();
     library::checked(&store.dir,&rom,network::now());
     let (total,pending)=library::scan(root.path(),&store.dir,network::now());assert_eq!(total,1);assert!(pending.is_empty());
+}
+
+#[test]
+fn artwork_scope_limits_an_eighty_game_four_thousand_badge_library() {
+    let root = configured();
+    let store = Store::open(root.path(), "Player").unwrap();
+    for n in 0..80 {
+        let rom = root.path().join(format!("Games/GBA/Game{n}.gba"));
+        std::fs::write(&rom, format!("ROM {n}")).unwrap();
+        let hash = library::hash(&store.dir, &rom).unwrap();
+        let mut data = game();
+        data.achievements = (0..50).map(|a| {
+            let mut achievement = achievement("0xH000000=1");
+            achievement.badge = format!("{}", n*50+a);
+            achievement
+        }).collect();
+        storage::write(&store.dir.join(format!("{hash}.json")), &(data, BTreeSet::<u32>::new())).unwrap();
+        library::checked(&store.dir, &rom, network::now());
+    }
+    std::fs::write(root.path().join("Config/favorites.txt"), "gba/Game3\ngb/Game4\ngba/Missing\n").unwrap();
+    std::fs::write(root.path().join("Config/recents.txt"), "gba/Game3\ngba/Game7\n").unwrap();
+    for (scope, total) in [(0,0), (ArtworkScope::Played as u8,0),
+        (ArtworkScope::FavoritesRecents as u8,100), (ArtworkScope::Library as u8,4000)] {
+        let mut queue = badges::Queue::new(&store.dir);
+        queue.select(root.path(), scope);
+        while queue.discovery_pending() { queue.maintain(); }
+        assert_eq!(queue.counts(), (0,total));
+    }
+    let (calls, requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server {calls});
+    wait_for(|| service.sync_status() == SyncStatus::Ready);
+    assert_eq!(service.sync_detail().unwrap().badges_total,0);
+    assert!(!service.sync_pending());
+    assert_eq!(requests.try_iter().collect::<Vec<_>>(), ["login2"]);
+    service.set_artwork_preferences(true, ArtworkScope::FavoritesRecents);
+    wait_for(|| service.sync_detail().is_some_and(|d| d.badges_total==100));
+    wait_for(|| requests.try_iter().any(|r|r.starts_with("badge:")));
+    service.set_artwork_preferences(false, ArtworkScope::Library);
+    wait_for(|| service.sync_detail().is_some_and(|d|d.badges_total==0));
+    wait_for(|| service.sync_status()==SyncStatus::Ready);
+    assert!(!service.sync_pending());
+}
+
+#[test]
+fn current_game_artwork_toggle_keeps_tracking_and_cached_offline_rules() {
+    let root = configured();
+    let rom = root.path().join("Games/GBA/Current.gba");
+    std::fs::write(&rom,b"current ROM").unwrap();
+    let (calls, requests) = mpsc::channel();
+    let service = Service::start_with(root.path().into(), Server{calls});
+    let mut core = service.wrap(Box::<TestCore>::default());
+    core.load(&rom).unwrap();
+    wait_for(|| service.sync_detail().is_some_and(|d|d.game_status=="Ready"));
+    assert!(!requests.try_iter().any(|r|r.starts_with("badge:")));
+    service.set_artwork_preferences(true, ArtworkScope::Played);
+    wait_for(|| service.sync_detail().is_some_and(|d|d.badges_done==1));
+    assert!(requests.try_iter().any(|r|r=="badge:12345"));
+    service.set_artwork_preferences(false, ArtworkScope::Played);
+    core.run_frame(ButtonMask(0));core.run_frame(ButtonMask(1));
+    wait_for(|| service.take_notice().is_some_and(|n|n.kind==NoticeKind::Earned));
+    assert!(Store::open(root.path(),"Player").unwrap().unlocks.contains_key(&7));
+}
+
+#[test]
+fn healthy_artwork_requests_are_serial_and_paced() {
+    let root=configured();let store=Store::open(root.path(),"Player").unwrap();
+    let mut data=game();let mut second=data.achievements[0].clone();second.badge="67890".into();data.achievements.push(second);
+    let mut queue=badges::Queue::new(&store.dir);queue.enqueue(&data);
+    let (calls,requests)=mpsc::channel();let mut http=Server{calls};
+    queue.step(&mut http);queue.step(&mut http);
+    assert_eq!(requests.try_iter().count(),1,"healthy requests must still be paced");
+    assert_eq!(queue.counts(),(1,2));
 }

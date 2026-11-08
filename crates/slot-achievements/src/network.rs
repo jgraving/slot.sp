@@ -34,6 +34,7 @@ pub(crate) enum Failure {
 }
 
 pub(crate) trait Transport {
+    fn badge_retry_after(&self) -> Option<Duration> { None }
     fn network_problem(&self)->&'static str {"RA server unavailable"}
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure>;
     fn badge(&mut self, _name: &str) -> Result<Vec<u8>, Failure> {
@@ -49,6 +50,7 @@ struct WhileActive<T> {
     status: Arc<Status>,
 }
 impl<T: Transport> Transport for WhileActive<T> {
+    fn badge_retry_after(&self) -> Option<Duration> { self.inner.badge_retry_after() }
     fn network_problem(&self)->&'static str {self.inner.network_problem()}
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
         if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
@@ -62,11 +64,13 @@ impl<T: Transport> Transport for WhileActive<T> {
         response
     }
     fn badge(&mut self, name: &str) -> Result<Vec<u8>, Failure> {
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.artwork.load(std::sync::atomic::Ordering::Acquire) == 0 {
             return Err(Failure::Network);
         }
         let response = self.inner.badge(name);
-        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire) {
+        if self.status.stopped.load(std::sync::atomic::Ordering::Acquire)
+            || self.status.artwork.load(std::sync::atomic::Ordering::Acquire) == 0 {
             return Err(Failure::Network);
         }
         response
@@ -88,7 +92,7 @@ fn send_sensitive(http: &mut impl Transport, mut fields: Vec<(&str, String)>) ->
     result
 }
 
-pub(crate) struct Http(ureq::Agent, &'static str);
+pub(crate) struct Http(ureq::Agent, &'static str, Option<Duration>);
 fn transport_problem(error:&ureq::Error)->&'static str {
     match error {
         ureq::Error::HostNotFound=>"DNS lookup failed",
@@ -115,25 +119,31 @@ impl Http {
                 .build()
                 .into(),
             "Network connection failed",
+            None,
         )
     }
 }
 
 impl Transport for Http {
+    fn badge_retry_after(&self) -> Option<Duration> { self.2 }
     fn network_problem(&self)->&'static str {self.1}
     fn badge(&mut self, name: &str) -> Result<Vec<u8>, Failure> {
         crate::badges::path(std::path::Path::new(""), name).ok_or(Failure::Invalid)?;
-        self.0
-            .get(format!(
-                "https://media.retroachievements.org/Badge/{name}.png"
-            ))
-            .call()
-            .map_err(|_| Failure::Network)?
-            .body_mut()
-            .with_config()
-            .limit(crate::badges::MAX_BYTES)
-            .read_to_vec()
-            .map_err(|_| Failure::Invalid)
+        self.2 = None;
+        let mut response = self.0
+            .get(format!("https://media.retroachievements.org/Badge/{name}.png"))
+            .config().http_status_as_error(false).build()
+            .call().map_err(|error| { self.1=transport_problem(&error); Failure::Network })?;
+        let code = response.status().as_u16();
+        if !(200..300).contains(&code) {
+            self.1 = if code == 429 {"Artwork rate limit · retrying"} else {"Artwork server unavailable"};
+            self.2 = response.headers().get("Retry-After").and_then(|h| h.to_str().ok())
+                .and_then(|value| retry_after(value, std::time::SystemTime::now()));
+            if code == 429 { self.2 = Some(self.2.unwrap_or(Duration::from_secs(60)).max(Duration::from_secs(60))); }
+            return Err(Failure::Network);
+        }
+        response.body_mut().with_config().limit(crate::badges::MAX_BYTES)
+            .read_to_vec().map_err(|_| Failure::Invalid)
     }
     fn call(&mut self, fields: &[(&str, String)]) -> Result<Value, Failure> {
         let form: Vec<_> = fields.iter().map(|(k, v)| (*k, v.as_str())).collect();
@@ -149,6 +159,11 @@ impl Transport for Http {
             .read_json()
             .map_err(|_| Failure::Invalid)
     }
+}
+
+fn retry_after(value: &str, now: std::time::SystemTime) -> Option<Duration> {
+    value.trim().parse::<u64>().ok().map(Duration::from_secs).or_else(||
+        httpdate::parse_http_date(value).ok().map(|date| date.duration_since(now).unwrap_or_default()))
 }
 
 fn success(value: Value) -> Result<Value, Failure> {
@@ -353,15 +368,31 @@ pub(crate) fn run(
     let mut problem = "";
     let mut rescanned = Instant::now();
     let mut badges = crate::badges::Queue::new(&dir);
+    let mut artwork = u8::MAX;
     loop {
         if status.stopped.load(std::sync::atomic::Ordering::Acquire) {
             return;
+        }
+        let enabled = status.artwork.load(std::sync::atomic::Ordering::Acquire);
+        if enabled != artwork {
+            artwork = enabled;
+            badges.reset();
+            badges.select(&root, artwork);
+            if artwork != 0 {
+                if let Some(game) = &active {
+                    if let Ok((data, _)) = storage::read::<(Game, BTreeSet<u32>)>(&dir.join(format!("{}.json", game.hash))) {
+                        badges.enqueue(&data);
+                    }
+                }
+            }
         }
         match loads.recv_timeout(Duration::from_millis(200)) {
             Ok(mut load) => {
                 while let Ok(newer) = loads.try_recv() {
                     load = newer;
                 }
+                badges.reset();
+                badges.select(&root, artwork);
                 active = load.and_then(|load| {
                     // GBA identification is the MD5 of the complete uncompressed ROM.
                     // File I/O and hashing happen here, never on the emulator/UI threads.
@@ -380,7 +411,7 @@ pub(crate) fn run(
                         let cache = dir.join(format!("{}.json", game.hash));
                         if let Ok((data, ids)) = storage::read::<(Game, BTreeSet<u32>)>(&cache) {
                             if crate::tracked_console(data.console) {
-                                badges.enqueue(&data);
+                                if artwork != 0 { badges.enqueue(&data); }
                                 let _ = prepared.send(Prepared {
                                     generation: game.generation,
                                     hash: game.hash.clone(),
@@ -422,13 +453,18 @@ pub(crate) fn run(
             }
         }
         if Instant::now() < next_attempt {
+            // Optional artwork has its own retry clock. Healthy serial downloads
+            // need not wait for the paced game/API queue.
+            if verified && status.artwork.load(std::sync::atomic::Ordering::Acquire) != 0 {
+                badges.step(&mut http);
+            }
             continue;
         }
         if should_rescan(rescanned.elapsed(), library.len()) {
             let (total,pending)=crate::library::scan(&root,&dir,now());
             library_total=total;
             if !pending.is_empty() {library=pending;library_failed=0;}
-            badges.scan();
+            badges.select(&root, artwork);
             rescanned = Instant::now();
         }
         if !verified
@@ -530,7 +566,7 @@ pub(crate) fn run(
                             let ids = unlocked(&session)?;
                             storage::write(&dir.join(format!("{}.json", game.hash)), &(&data, &ids))
                                 .map_err(|_| Failure::Invalid)?;
-                            badges.enqueue(&data);
+                            if artwork != 0 { badges.enqueue(&data); }
                             ping(&mut http, auth, &status, game, &data)?;
                             let _ = prepared.send(Prepared {
                                 generation: game.generation,
@@ -571,7 +607,7 @@ pub(crate) fn run(
                     match prefetch(&mut http, auth, &dir, &hash) {
                         Ok(game) => {
                             crate::library::checked(&dir, path, now());
-                            badges.enqueue(&game);
+                            if crate::badges::selected(&root, path, artwork) { badges.enqueue(&game); }
                         }
                         Err(Failure::Network) => return Err(Failure::Network),
                         Err(error) => {
@@ -588,7 +624,9 @@ pub(crate) fn run(
                     let _ = notices.send(Notice::status(0, "Offline achievement cache ready"));
                 }
             }
-            badges.step(&mut http);
+            if status.artwork.load(std::sync::atomic::Ordering::Acquire) != 0 {
+                badges.step(&mut http);
+            }
             deferred_error.map_or(Ok(()), Err)
         })();
         if status.stopped.load(std::sync::atomic::Ordering::Acquire) { return; }
@@ -674,7 +712,7 @@ mod tests {
         let username=std::env::var("RA_TEST_USERNAME").expect("RA_TEST_USERNAME is required");
         let password=std::env::var("RA_TEST_PASSWORD").expect("RA_TEST_PASSWORD is required");
         assert!(!username.is_empty() && !password.is_empty(),"RA test secrets are missing");
-        let mut config=Config{enabled:true,username,password,token:String::new()};
+        let mut config=Config{enabled:true,username,password,token:String::new(),..Default::default()};
         let mut http=Http::new();
         let result=login(&mut http,&config,None);config.password.zeroize();
         let Ok(mut auth)=result else {panic!("RA login failed (response and credentials withheld)");};
@@ -869,6 +907,16 @@ mod progress_tests {
         assert!(!should_rescan(Duration::from_secs(900), 850));
         assert!(!should_rescan(Duration::from_secs(299), 0));
         assert!(should_rescan(Duration::from_secs(300), 0));
+    }
+    #[test]
+    fn server_retry_after_accepts_seconds_and_http_dates() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now=UNIX_EPOCH+Duration::from_secs(784111777);
+        assert_eq!(retry_after("900",now),Some(Duration::from_secs(900)));
+        let date=httpdate::fmt_http_date(now+Duration::from_secs(1200));
+        assert_eq!(retry_after(&date,now),Some(Duration::from_secs(1200)));
+        assert_eq!(retry_after(&date,SystemTime::now()),Some(Duration::ZERO));
+        assert_eq!(retry_after("not a date",now),None);
     }
     #[test]
     fn game_counts_do_not_depend_on_newly_discovered_artwork() {

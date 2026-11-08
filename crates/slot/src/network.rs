@@ -12,6 +12,8 @@ use zeroize::{Zeroize, Zeroizing};
 #[derive(Serialize, Deserialize)]
 struct Preferences {
     #[serde(default)] achievements: bool,
+    #[serde(default)] achievement_artwork: bool,
+    #[serde(default)] artwork_scope: slot_achievements::ArtworkScope,
     #[serde(default)] sharing_enabled:bool,
     #[serde(default)] sharing_keep:bool,
     #[serde(default)] wifi_enabled: bool,
@@ -19,7 +21,7 @@ struct Preferences {
     #[serde(default="default_time")] automatic_time: bool,
 }
 fn default_time()->bool {false}
-impl Default for Preferences {fn default()->Self {Self{sharing_enabled:false,sharing_keep:false,achievements:false,wifi_enabled:false,lock_device:false,automatic_time:false}}}
+impl Default for Preferences {fn default()->Self {Self{achievement_artwork:false,artwork_scope:Default::default(),sharing_enabled:false,sharing_keep:false,achievements:false,wifi_enabled:false,lock_device:false,automatic_time:false}}}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Page { Wifi, Achievements, Security, Updates, Sharing }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,6 +89,9 @@ pub struct Menu {
     last_sync: slot_achievements::SyncDetail,
     pub service: Option<slot_achievements::Service>,
     toast: Option<(String, Instant)>,
+    achievement_toast: Option<(u64, String, String, Option<slot_achievements::BadgeImage>)>,
+    badge_reply: Option<(u64, std::sync::mpsc::Receiver<Option<slot_achievements::BadgeImage>>)>,
+    toast_revision: u64,
 }
 impl Menu {
     pub fn new(root: PathBuf) -> Self {
@@ -113,7 +118,7 @@ impl Menu {
             migrating_plain, migration_saving:false, upgrade_pin:false, short_pin:false,
             notice_tone:slot_ui::NoticeTone::Neutral,toast_tone:slot_ui::NoticeTone::Neutral,
             startup_pending: true, return_to_shelf: false,parent_unlock:false,parent_authenticated:false,parent_cancelled:false,pin_rejected:None, notice: String::new(),
-            wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None,
+            wifi_on: false, last_wifi: Default::default(), last_sync: Default::default(), service: None, toast: None, achievement_toast:None,badge_reply:None,toast_revision:0,
         }
     }
     pub fn requires_startup_lock(&self)->bool {self.encrypted && self.prefs.lock_device}
@@ -281,6 +286,28 @@ impl Menu {
     pub fn take_toast(&self) -> Option<&str> {
         self.toast.as_ref().filter(|(_, at)| at.elapsed() < Duration::from_secs(4)).map(|(s, _)| s.as_str())
     }
+    pub fn achievement_toast(&self, message: &str) -> Option<(u64, &str, &str, Option<&slot_achievements::BadgeImage>)> {
+        let (id, title, detail, badge) = self.achievement_toast.as_ref()?;
+        if self.take_toast()? != message || message != format!("{title} · {detail}") { return None; }
+        Some((*id, title, detail, badge.as_ref().filter(|_| self.prefs.achievement_artwork)))
+    }
+    pub fn toast_key(&self) -> u64 { self.toast_revision }
+
+    fn earned(&mut self, notice: slot_achievements::Notice) {
+        self.toast_revision = self.toast_revision.wrapping_add(1);
+        let id = self.toast_revision;
+        self.toast_tone = slot_ui::NoticeTone::Neutral;
+        self.toast = Some((format!("{} · {}", notice.title, notice.detail), Instant::now()));
+        self.achievement_toast = Some((id, notice.title, notice.detail, None));
+        self.badge_reply = None;
+        if let Some(path) = notice.badge.filter(|_| self.prefs.achievement_artwork) {
+            let (send, receive) = std::sync::mpsc::channel();
+            if std::thread::Builder::new().name("slot-ra-notice".into()).spawn(move || {
+                let _ = send.send(slot_achievements::load_badge(&path));
+            }).is_ok() { self.badge_reply = Some((id, receive)); }
+        }
+    }
+
     fn store_preferences(&mut self) {
         if serde_json::to_vec(&self.prefs).ok().and_then(|b| slot_store::atomic_write(&self.root.join("Config/network.json"), &b).ok()).is_none() {
             self.say("Could not save network settings");
@@ -310,7 +337,7 @@ impl Menu {
         self.service = None; self.last_sync = Default::default();
         if self.credentials_ready() && self.prefs.achievements && !self.secrets.username.is_empty() {
             self.service = Some(slot_achievements::Service::configured(self.root.clone(), slot_achievements::Config {
-                enabled: true, username: self.secrets.username.clone(), password: self.secrets.password.clone(), token: self.secrets.token.clone(),
+                enabled: true, artwork:self.prefs.achievement_artwork, artwork_scope:self.prefs.artwork_scope, username: self.secrets.username.clone(), password: self.secrets.password.clone(), token: self.secrets.token.clone(),
             }));
         }
     }
@@ -321,6 +348,14 @@ impl Menu {
     }
     pub fn update(&mut self) {
         self.take_update_events();
+        if let Some((id, receive)) = &self.badge_reply {
+            if let Ok(badge) = receive.try_recv() {
+                if let Some((shown, _, _, image)) = &mut self.achievement_toast {
+                    if shown == id { *image = badge; }
+                }
+                self.badge_reply = None;
+            }
+        }
         if let Some(since)=self.pin_rejected {self.face=None;if since.elapsed().as_secs_f32()>=0.36 {self.pin_rejected=None;}}
 
         while let Ok(reply) = self.worker.results.try_recv() {
@@ -398,7 +433,7 @@ impl Menu {
         if let Some(service) = &self.service {
             if let Some(notice) = service.take_notice() {
                 if notice.kind == slot_achievements::NoticeKind::Earned {
-                    self.toast = Some((format!("{} · {}", notice.title, notice.detail), Instant::now()));
+                    self.earned(notice);
                 } else if self.visible && self.page == Page::Achievements && !self.is_keyboard()
                     && notice.generation == 0
                 { self.say(notice.title); }
@@ -620,7 +655,7 @@ impl Menu {
         }
         let disclosure=btn==Btn::Right && ((self.page==Page::Security && self.selected==1 && self.encrypted && !self.locked)
             || (self.page==Page::Wifi && self.selected==4));
-        if btn != Btn::A && !disclosure && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1)) && matches!(btn, Btn::Left | Btn::Right)) { return; }
+        if btn != Btn::A && !disclosure && !((self.selected == 0 || (self.page==Page::Security && self.selected==2) || (self.page==Page::Sharing && self.selected==1) || (self.page==Page::Achievements && matches!(self.selected,5|6))) && matches!(btn, Btn::Left | Btn::Right)) { return; }
         match self.page {
             Page::Security => match self.selected {
                 0 => { self.creating_method = match self.creating_method {Method::Buttons=>Method::Passphrase,Method::Passphrase=>Method::Buttons}; self.changed(); }
@@ -669,7 +704,26 @@ impl Menu {
                     else { self.enable_achievements(); }
                     return;
                 }
-                if self.selected>=5 {return;}
+                if self.selected == 5 || self.selected == 6 {
+                    if self.selected == 5 { self.prefs.achievement_artwork = !self.prefs.achievement_artwork; }
+                    else {
+                        use slot_achievements::ArtworkScope::*;
+                        self.prefs.artwork_scope = match self.prefs.artwork_scope {
+                            Played => if btn==Btn::Left {Library}else{FavoritesRecents},
+                            FavoritesRecents => if btn==Btn::Left {Played}else{Library},
+                            Library => if btn==Btn::Left {FavoritesRecents}else{Played},
+                        };
+                    }
+                    self.store_preferences();
+                    if let Some(service) = &self.service {
+                        service.set_artwork_preferences(self.prefs.achievement_artwork, self.prefs.artwork_scope);
+                    }
+                    self.say(if !self.prefs.achievement_artwork {"Artwork off · achievements still sync"}
+                        else if self.prefs.artwork_scope == slot_achievements::ArtworkScope::Library {"Downloads badges for every GBA game"}
+                        else {"Badges appear in unlock notifications"});
+                    return;
+                }
+                if self.selected>=7 {return;}
                 if !self.unlocked() { return; }
                 match self.selected {
                     1 => { let name = self.secrets.username.clone(); self.edit(Field::Username, "RetroAchievements username", &name, false, 1, 64); }
@@ -776,6 +830,12 @@ impl Menu {
                 ("Account".into(), if self.secrets.username.is_empty() {"Not signed in".into()} else {self.secrets.username.chars().take(16).collect()}, false),
                 ("Password".into(), if !self.secrets.token.is_empty() {"Signed in"} else if self.secrets.password.is_empty() {"Enter password"} else {"Entered"}.into(), false),
                 ("Sign in / sync".into(), status, false), ("Sign out".into(), String::new(), false),
+                ("Achievement artwork".into(), if self.prefs.achievement_artwork {"On"} else {"Off"}.into(), true),
+                ("Download for".into(), match self.prefs.artwork_scope {
+                    slot_achievements::ArtworkScope::Played => "Current game",
+                    slot_achievements::ArtworkScope::FavoritesRecents => "Favorites & recents",
+                    slot_achievements::ArtworkScope::Library => "Entire library",
+                }.into(), false),
             ],
         };
         if self.page == Page::Achievements && self.service.is_some() {
@@ -1605,6 +1665,52 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn artwork_preferences_persist_and_do_not_restart_tracking() {
+        let root=tempfile::tempdir().unwrap();let mut menu=Menu::new(root.path().into());
+        std::fs::create_dir_all(root.path().join("Config")).unwrap();
+        menu.open_achievements();assert!(!menu.prefs.achievement_artwork);
+        assert_eq!(menu.rows()[5],("Achievement artwork".into(),"Off".into(),true));
+        menu.selected=5;menu.input(Action::GbaDown(Btn::A));assert!(menu.prefs.achievement_artwork);
+        for expected in [slot_achievements::ArtworkScope::FavoritesRecents,slot_achievements::ArtworkScope::Library,slot_achievements::ArtworkScope::Played] {
+            menu.selected=6;menu.input(Action::GbaDown(Btn::A));assert_eq!(menu.prefs.artwork_scope,expected);
+        }
+        let saved=Menu::new(root.path().into());assert!(saved.prefs.achievement_artwork);
+        assert_eq!(saved.prefs.artwork_scope,slot_achievements::ArtworkScope::Played);
+        menu.selected=5;menu.input(Action::GbaDown(Btn::A));assert!(!Menu::new(root.path().into()).prefs.achievement_artwork);
+    }
+
+    #[test]
+    #[ignore = "requires Mesa EGL; produces production-compositor achievement captures"]
+    fn native_ra_notice_review() {
+        use slot_gfx::Compositor;
+        use slot_input::{InputSource,RawEvent,Millis};
+        struct Empty;impl InputSource for Empty {fn poll(&mut self,_:Millis)->Vec<RawEvent>{vec![]}}
+        let dir=PathBuf::from(std::env::var_os("SLOT_QOL_PREVIEW").expect("preview directory"));
+        let badge=PathBuf::from(std::env::var_os("SLOT_RA_PREVIEW_BADGE").expect("badge file"));
+        for (width,light) in [(640,true),(640,false),(720,true),(720,false)] {
+            let output=dir.join(format!("ra-notice-{width}-{}",if light {"light"}else{"dark"}));std::fs::create_dir_all(&output).unwrap();
+            let root=tempfile::tempdir().unwrap();crate::root::ensure(root.path());
+            let mut state=slot_store::SlotState::default();state.clock_set=true;state.appearance=if light {slot_store::Appearance::Light}else{slot_store::Appearance::Dark};slot_store::write_slot_state(root.path(),&state).unwrap();
+            let surface=super::review_surface::Egl::new(light);let mut g=Compositor::new(&surface).unwrap();g.fit((width,480));
+            let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
+            let mut tick=0;for _ in 0..90 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            for (shot,title,detail,path) in [
+                ("short","First steps (+5)","Complete the first stage.",Some(badge.clone())),
+                ("long","A remarkably long achievement name that needs two comfortable lines (+25)","Finish the challenge without taking damage, using a continue, or collecting any power-ups along the way.",Some(badge.clone())),
+                ("missing","Offline achievement (+10)","Missing artwork never delays your unlock.",Some(output.join("missing.png"))),
+            ] {
+                let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.visible=false;menu.prefs.achievement_artwork=true;
+                menu.earned(slot_achievements::Notice{badge:path,generation:1,title:title.into(),detail:detail.into(),kind:slot_achievements::NoticeKind::Earned});
+                for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);std::thread::sleep(Duration::from_millis(1));}
+                let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            }
+            let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.open_achievements();menu.prefs.artwork_scope=slot_achievements::ArtworkScope::FavoritesRecents;menu.notice.clear();menu.toast=None;menu.face=None;menu.selected=5;
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("settings.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+        }
+    }
+
     #[test]
     fn general_network_tools_route_to_wifi_and_return_without_enabling_it() {
         let root=tempfile::tempdir().unwrap();let mut app=crate::app::App::new(vec![]);app.network=Some(Menu::new(root.path().into()));

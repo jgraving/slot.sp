@@ -975,9 +975,14 @@ impl Frontend {
         if source.is_some() {self.settings_notice.set_tone(app.settings_notice_tone());}
         self.settings_notice.observe(source,now);
         if let Some(message)=self.settings_notice.text() {
-            let key=format!("{light}:{:?}:{message}",self.settings_notice.tone());
+            let achievement = app.network.as_ref().and_then(|menu| menu.achievement_toast(message));
+            let key=format!("{light}:{:?}:{message}:{:?}",self.settings_notice.tone(),
+                achievement.as_ref().map(|(id, _, _, badge)| (*id, badge.is_some())));
             if key!=self.settings_notice_text {
-                let face=slot_ui::settings_notice_face_toned_on(message,canvas,light,self.settings_notice.tone());
+                let face=if let Some((_, title, detail, badge)) = achievement {
+                    slot_ui::achievement_notice_face(title, detail,
+                        badge.map(|b| (b.rgba.as_slice(), b.width, b.height)), canvas, light)
+                } else {slot_ui::settings_notice_face_toned_on(message,canvas,light,self.settings_notice.tone())};
                 let (w,h)=(face.w,face.h);
                 let tex=upload_rgba(compositor,&mut self.settings_notice_tex,face.w,face.h,&face.rgba);
                 self.settings_notice_face=Some((tex,w,h));

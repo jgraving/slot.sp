@@ -69,6 +69,15 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<BadgeImage> {
     })
 }
 
+pub(crate) fn selected(root: &Path, rom: &Path, scope: u8) -> bool {
+    if scope == crate::ArtworkScope::Library as u8 { return true; }
+    if scope != crate::ArtworkScope::FavoritesRecents as u8 { return false; }
+    let state = slot_store::read_slot_state(root);
+    state.favorites.iter().chain(&state.recents).any(|recent|
+        recent.platform == slot_store::Platform::Gba &&
+        rom.file_stem().and_then(|s| s.to_str()) == Some(recent.stem.as_str()))
+}
+
 fn stamp(path:&Path)->Option<(u64,std::time::SystemTime)> {let m=path.metadata().ok()?;Some((m.len(),m.modified().ok()?))}
 
 pub(crate) struct Queue {
@@ -77,9 +86,10 @@ pub(crate) struct Queue {
     known: BTreeSet<String>,
     pending: VecDeque<String>,
     checking:VecDeque<String>,
-    discovery:VecDeque<PathBuf>,
+    discovery: VecDeque<PathBuf>,
     validated:BTreeMap<String,(u64,std::time::SystemTime)>,
     retry: Instant,
+    server_retry: Instant,
     pub waiting: bool,
     pub problem:&'static str,
     retry_delay:u64,
@@ -87,16 +97,21 @@ pub(crate) struct Queue {
 
 impl Queue {
     pub fn new(dir: &Path) -> Self {
-        let mut queue = Self {
+        Self {
             dir: dir.into(),
             names: BTreeSet::new(),
             known: BTreeSet::new(),
             pending: VecDeque::new(),checking:VecDeque::new(),discovery:VecDeque::new(),validated:BTreeMap::new(),
-            retry: Instant::now(),
+            retry: Instant::now(), server_retry: Instant::now(),
             waiting: false,problem:"",retry_delay:30,
-        };
-        queue.scan();
-        queue
+        }
+    }
+
+    pub fn reset(&mut self) {
+        let (retry, server_retry) = (self.retry, self.server_retry);
+        *self = Self::new(&self.dir);
+        self.retry = retry;
+        self.server_retry = server_retry;
     }
 
     pub fn enqueue(&mut self, game: &Game) {
@@ -116,16 +131,23 @@ impl Queue {
         }
     }
 
-    pub fn scan(&mut self) {
-        for entry in std::fs::read_dir(&self.dir).into_iter().flatten().flatten() {
-            let path = entry.path();
-            let hash = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-            if hash.len() == 32
-                && hash.bytes().all(|b| b.is_ascii_hexdigit())
-                && path.extension().is_some_and(|e| e == "json")
-            {
-                if !self.discovery.contains(&path) {self.discovery.push_back(path);}
-            }
+    pub fn select(&mut self, root: &Path, scope: u8) {
+        if scope < crate::ArtworkScope::FavoritesRecents as u8 { return; }
+        let index: BTreeMap<PathBuf, serde_json::Value> =
+            storage::read(&self.dir.join("library.json")).unwrap_or_default();
+        let state = slot_store::read_slot_state(root);
+        for (rom, entry) in index {
+            if !rom.is_file() { continue; }
+            let selected = scope == crate::ArtworkScope::Library as u8 ||
+                (scope == crate::ArtworkScope::FavoritesRecents as u8 &&
+                    state.favorites.iter().chain(&state.recents).any(|recent|
+                        recent.platform == slot_store::Platform::Gba &&
+                        rom.file_stem().and_then(|s| s.to_str()) == Some(recent.stem.as_str())));
+            if !selected { continue; }
+            let Some(hash) = entry["hash"].as_str().filter(|hash|
+                hash.len() == 32 && hash.bytes().all(|b| b.is_ascii_hexdigit())) else { continue; };
+            let path = self.dir.join(format!("{hash}.json"));
+            if !self.discovery.contains(&path) { self.discovery.push_back(path); }
         }
     }
 
@@ -134,8 +156,8 @@ impl Queue {
     pub fn maintain(&mut self) {
         let until=Instant::now()+Duration::from_millis(4);
         while Instant::now()<until {
-            if let Some(path)=self.discovery.pop_front() {
-                if let Ok((game,_))=storage::read::<(Game,BTreeSet<u32>)>(&path) {self.enqueue(&game);}
+            if let Some(path) = self.discovery.pop_front() {
+                if let Ok((game, _)) = storage::read::<(Game, BTreeSet<u32>)>(&path) { self.enqueue(&game); }
             } else if let Some(name)=self.checking.pop_front() {
                 if path(&self.dir,&name).and_then(|p|load_badge(&p)).is_none() {
                     self.pending.push_back(name);
@@ -146,12 +168,13 @@ impl Queue {
             } else {break;}
         }
     }
-    pub fn discovery_pending(&self)->bool {!self.discovery.is_empty()}
+    pub fn discovery_pending(&self) -> bool { !self.discovery.is_empty() }
     pub fn counts(&self) -> (usize, usize) {
         (self.known.len().saturating_sub(self.pending.len()+self.checking.len()), self.known.len())
     }
-    pub fn network_available(&mut self) {self.retry=Instant::now();self.waiting=false;self.retry_delay=30;}
+    pub fn network_available(&mut self) {self.retry=Instant::now().max(self.server_retry);self.waiting=self.retry>Instant::now();self.retry_delay=30;}
     pub fn retry_seconds(&self)->u64 {if self.waiting {self.retry.saturating_duration_since(Instant::now()).as_secs()}else{0}}
+    #[cfg(test)]
     pub fn percent(&self) -> u8 {
         if self.known.is_empty() {
             return 100;
@@ -183,16 +206,21 @@ impl Queue {
             })
         };
         if result.is_ok() {
-            self.waiting=false;self.problem="";self.retry_delay=30;self.retry=Instant::now()+Duration::from_secs(3);
+            self.waiting=false;self.problem="";self.retry_delay=30;self.retry=Instant::now()+Duration::from_secs(1);
             if let Some(value)=stamp(&target) {self.validated.insert(name.clone(),value);}
             self.names.remove(&name);
             if self.pending.is_empty() {
                 self.waiting = false;
             }
         } else {
+            if let Some(delay) = http.badge_retry_after() {
+                self.server_retry = Instant::now().checked_add(delay)
+                    .unwrap_or_else(|| Instant::now()+Duration::from_secs(86400));
+            }
             self.problem=result.unwrap_err();self.pending.push_back(name);
             self.waiting = true;
-            self.retry = Instant::now() + Duration::from_secs(self.retry_delay);
+            self.retry = Instant::now().checked_add(http.badge_retry_after().unwrap_or_default().max(Duration::from_secs(self.retry_delay)))
+                .unwrap_or_else(|| Instant::now() + Duration::from_secs(86400));
             self.retry_delay=(self.retry_delay*2).min(300);
         }
     }
@@ -224,6 +252,21 @@ mod tests {
         q.retry=Instant::now();q.step(&mut http);assert_eq!(http.0,2);assert!(q.retry_seconds()>=59);
         // A restored connection must wake artwork as well as the main RA queue.
         q.network_available();assert!(!q.waiting);q.step(&mut http);assert_eq!(http.0,3);assert!(q.retry_seconds()<=30);
+    }
+    #[test]
+    fn server_cooldown_survives_reconnect_and_scope_changes() {
+        struct Limited(usize);
+        impl Transport for Limited {
+            fn call(&mut self,_:&[(&str,String)])->Result<serde_json::Value,Failure>{unreachable!()}
+            fn badge(&mut self,_:&str)->Result<Vec<u8>,Failure>{self.0+=1;Err(Failure::Network)}
+            fn badge_retry_after(&self)->Option<Duration>{Some(Duration::from_secs(900))}
+        }
+        let root=tempfile::tempdir().unwrap();let mut q=Queue::new(root.path());
+        q.pending.push_back("25000".into());q.known.insert("25000".into());
+        let mut http=Limited(0);q.step(&mut http);assert_eq!(http.0,1);assert!(q.retry_seconds()>=899);
+        q.network_available();q.step(&mut http);assert_eq!(http.0,1);
+        q.reset();q.pending.push_back("25000".into());q.known.insert("25000".into());
+        q.network_available();q.step(&mut http);assert_eq!(http.0,1);
     }
     #[test]
     #[ignore = "fetches one public RA badge; no account or award request"]

@@ -3,11 +3,26 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+/// Limits optional badge downloads; game rules and awards always sync independently.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[repr(u8)]
+pub enum ArtworkScope {
+    #[default]
+    Played = 1,
+    FavoritesRecents = 2,
+    Library = 3,
+}
+
 #[derive(Clone, Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     #[serde(default)]
     pub enabled: bool,
+    #[serde(default)]
+    pub artwork: bool,
+    #[serde(default)]
+    pub artwork_scope: ArtworkScope,
     #[serde(default)]
     pub username: String,
     #[serde(default)]

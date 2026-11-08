@@ -7684,8 +7684,8 @@ impl App {
         if let Some(at)=self.charging_notice_at.filter(|at|self.now().saturating_sub(*at)<2400) {
             if let Some(b)=self.battery {return Some((0xC0000000 ^ at,format!("Charging: {}%",b.percent)));}
         }
-        if let Some(menu)=self.network.as_ref().filter(|m|!m.visible) {
-            if let Some(message)=menu.take_toast() {return Some((0xA0000000,message.into()));}
+        if let Some(menu)=self.network.as_ref() {
+            if let Some(message)=menu.take_toast().filter(|message| !menu.visible || menu.achievement_toast(message).is_some()) {return Some((0xA0000000 ^ menu.toast_key(),message.into()));}
         }
         if let Some(menu)=&self.studio {return menu.notice_text().map(|s|(menu.page_key(),s.into()));}
         if self.capture.is_some() {return Some((0xB0000000 ^ self.settings_notice_revision,"Press a button or chord".into()));}
