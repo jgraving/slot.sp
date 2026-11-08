@@ -121,8 +121,11 @@ fn label_color_only_on_logo() {
 }
 
 #[test]
-fn a_preset_sets_the_finish() {
+fn a_color_preset_preserves_the_chosen_finish() {
     let mut s = gba();
+    to_row(&mut s, Row::Finish);
+    s.press(Btn::Left);
+    let finish=s.current_shell().finish;
     to_row(&mut s, Row::Color);
     s.press(Btn::A);
     assert!(matches!(s.screen, Screen::Chips { target: Target::Shell, .. }));
@@ -136,7 +139,7 @@ fn a_preset_sets_the_finish() {
         })
         .unwrap();
     s.chips_jump(clear);
-    assert_eq!(s.shell.unwrap().finish, ShellFinish::Clear);
+    assert_eq!(s.shell.unwrap().finish, finish);
     assert_eq!(s.shell.unwrap().colour, [0xec, 0x94, 0xb4]);
 }
 
@@ -730,4 +733,51 @@ fn a_failed_label_lookup_can_restart_without_losing_the_edited_shell() {
     assert!(!s.art_ready());
     assert_eq!(s.sheet,vec![LabelKind::Real,LabelKind::Logo]);
     assert_eq!(s.shell,shell);
+}
+
+
+#[test]
+fn finish_cycles_with_a_and_dpad_in_both_directions() {
+    let mut s=gba();to_row(&mut s,Row::Finish);
+    let start=s.current_shell();
+    for _ in 0..3 {s.press(Btn::A);}
+    assert_eq!(s.current_shell(),start);
+    s.press(Btn::Right);let next=s.current_shell();assert_ne!(next.finish,start.finish);
+    s.press(Btn::Left);assert_eq!(s.current_shell(),start);
+    s.press(Btn::A);assert_eq!(s.current_shell(),next);
+    assert_eq!(s.row(),Some(Row::Finish));
+}
+
+#[test]
+fn a_confirms_palette_and_custom_colors_without_losing_the_choice() {
+    let mut s=gba();to_row(&mut s,Row::Color);s.press(Btn::A);
+    s.chips_jump(chip_at(slot_ui::palette::Chip::Preset(7)));
+    let chosen=s.current_shell();s.press(Btn::A);
+    assert_eq!(s.row(),Some(Row::Color));assert_eq!(s.current_shell(),chosen);
+    custom(&mut s);s.press(Btn::Right);s.press(Btn::Y);s.press(Btn::Up);
+    let chosen=s.current_shell();s.press(Btn::A);
+    assert!(matches!(s.screen,Screen::Custom{..}));
+    s.press(Btn::A);assert!(matches!(s.screen,Screen::Chips{..}));
+    assert_eq!(s.current_shell(),chosen);
+}
+
+#[test]
+fn automatic_text_color_has_a_preview_and_custom_starts_from_it() {
+    let mut s=Studio::new(cart(Platform::Gba,false),false);
+    to_row(&mut s,Row::LabelColor);s.press(Btn::A);
+    s.chips_jump(chip_at(slot_ui::palette::Chip::Auto));
+    let effective=s.preview_ground().expect("automatic color must still produce a title label");
+    s.chips_jump(chip_at(slot_ui::palette::Chip::Custom));s.press(Btn::A);
+    assert!(matches!(s.screen,Screen::Custom{rgb,..} if rgb==effective));
+}
+
+
+#[test]
+fn automatic_and_original_colors_preserve_finish_too() {
+    let mut s=gba();to_row(&mut s,Row::Finish);s.press(Btn::Right);
+    let finish=s.current_shell().finish;
+    to_row(&mut s,Row::Color);s.press(Btn::A);
+    for chip in [slot_ui::palette::Chip::Auto,slot_ui::palette::Chip::Current] {
+        s.chips_jump(chip_at(chip));assert_eq!(s.current_shell().finish,finish);
+    }
 }

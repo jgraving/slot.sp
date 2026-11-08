@@ -226,7 +226,7 @@ impl Studio {
     }
 
     pub fn preview_ground(&self) -> Option<[u8; 3]> {
-        self.ground.filter(|_| self.tinted())
+        self.ground.or_else(|| self.wearing_text().then(|| slot_ui::label_colour(&slot_ui::label_text(&self.cart)))).filter(|_| self.tinted())
     }
 
     pub fn recolored(&self) -> bool {
@@ -321,9 +321,11 @@ impl Studio {
         let at = at.min(grid.len() - 1);
         self.screen = Screen::Chips { target, at };
         let outline = self.current_shell().outline;
+        let finish=self.current_shell().finish;
         let shaped = |base: Option<ShellChoice>, auto: ShellChoice| match base {
-            Some(choice) => Some(ShellChoice { outline, ..choice }),
-            None => (outline != Outline::Auto).then_some(ShellChoice { outline, ..auto }),
+            Some(choice) => Some(ShellChoice { outline, finish, ..choice }),
+            None => (outline != Outline::Auto || finish != auto.finish)
+                .then_some(ShellChoice { outline, finish, ..auto }),
         };
         match (target, grid[at].chip) {
             (_, Chip::Custom) => {}
@@ -334,7 +336,7 @@ impl Studio {
                 self.shell = Some(ShellChoice {
                     outline: self.current_shell().outline,
                     colour: preset.colour,
-                    finish: finish_of(preset),
+                    finish: self.current_shell().finish,
                 });
             }
             (Target::Label, Chip::Current) => self.ground = self.opened_ground,
@@ -362,7 +364,7 @@ impl Studio {
     fn color_of(&self, target: Target) -> [u8; 3] {
         match target {
             Target::Shell => self.current_shell().colour,
-            Target::Label => self.ground.unwrap_or([0x80, 0x80, 0x80]),
+            Target::Label => self.ground.unwrap_or_else(|| slot_ui::label_colour(&slot_ui::label_text(&self.cart))),
         }
     }
 
@@ -432,8 +434,8 @@ impl Studio {
                     at: self.chip_in_use(Target::Label),
                 }
             }
-            (Btn::Left | Btn::Right, Row::Finish) => self.step_finish(btn == Btn::Right),
-            (Btn::Left | Btn::Right, Row::Shape) => self.step_shape(btn == Btn::Right),
+            (Btn::A | Btn::Left | Btn::Right, Row::Finish) => self.step_finish(btn != Btn::Left),
+            (Btn::A | Btn::Left | Btn::Right, Row::Shape) => self.step_shape(btn != Btn::Left),
             _ => {}
         }
         None
@@ -491,6 +493,10 @@ impl Studio {
                 };
                 return;
             }
+            Btn::A => {
+                self.chips_jump(at);
+                return self.back_to_list(match target {Target::Shell => Row::Color, Target::Label => Row::LabelColor});
+            }
             _ => return,
         };
         self.chips_jump(step(&grid, at, dir));
@@ -542,7 +548,7 @@ impl Studio {
                         start,
                     }
                 }
-                Btn::B => {
+                Btn::A | Btn::B => {
                     let at = Self::grid()
                         .iter()
                         .position(|p| p.chip == Chip::Custom)
@@ -586,7 +592,7 @@ impl Studio {
                     };
                     self.undo_custom();
                 }
-                Btn::B => {
+                Btn::A | Btn::B => {
                     self.screen = Screen::Custom {
                         target,
                         rgb: rgb_of(digits),

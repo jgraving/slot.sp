@@ -2191,8 +2191,9 @@ pub fn cart_studio_legends(root:bool,mode:u8,adjustable:bool)->Vec<UndoFace> {
     let pair=|a,b,caption|with_hint(button_pair(a,b),caption,hint,false);
     let mut out=vec![one(ButtonLegend::B,if root {"Close"}else{"Back"},true)];
     match mode {
-        0 if adjustable=>out.push(pair(ButtonLegend::Left,ButtonLegend::Right,"Change")),
+        0 if adjustable=>out.push(one(ButtonLegend::A,"Next",false)),
         0|2=>out.push(one(ButtonLegend::A,"Open",false)),
+        5=>out.push(one(ButtonLegend::A,"Choose",false)),
         6=>out.push(one(ButtonLegend::A,"Save",false)),
         7=>out.push(one(ButtonLegend::A,"Choose",false)),
         1=>out.push(one(ButtonLegend::A,"Apply",false)),
