@@ -976,3 +976,18 @@ Recovered live #221 at 3386b4d5: five workflows passed; launcher native review s
 ### Native Sound disclosure coverage — 2026-11-08
 
 Verified original #222 815f91f1 passes launcher test step including routing regression; native rendering/build still running. Existing automatic accessibility captures do not expose the Bluetooth-only Pair row. Add selected/unselected Pair audio device fixtures to the existing production control_preview compositor walkthrough, automatically rendered at GLES/640 and GL/720. This changes only review coverage, not runtime behavior; git diff --check passes. Local Rust unavailable. Publish this checkpoint and require fresh exact-head six-workflow verification plus inspection of the new native images before reporting visual readiness. #221 remains 3386b4d5, five workflows pass, launcher motion review pending. Merge only #221 after six successes; #222 stays unmerged. Physical handheld checks pending.
+
+
+### Final selector merge and Sound readiness — 2026-11-08
+
+#221 merged as a7306c161074a77e8691632c8c2bdd86e54afaa1 using expected head 3386b4d589f52549cca5e2bfbf4dc9069f4828e4 after all six workflows passed. Verified merge tree ca52846b9b4be2bafd08cf6f310f27095ed622b2 equals tested head tree. Inspected downloaded native RA artifact 13622451960 (SHA-256 32472812924f484e8e187fe2e92c42c2ffc183c1fed87dd331d22cdf7e781216): 640/light Favorites & recents and Entire library, 720/dark Current game. Paired chevrons/values fit; progress clears B and D-pad footer. No automatic merge or check bypass used.
+
+#222 is ready, remains OPEN and UNMERGED at 6ff991a37516ad8fbf1c8b2ad820946a30dd4ead. Runtime matches original 815f91f1; follow-up adds only native capture coverage and recovery notes. All six exact-head workflows passed:
+- Scaling regression checks: https://github.com/jgraving/slot.sp/actions/runs/42493464933
+- Blending regression checks: https://github.com/jgraving/slot.sp/actions/runs/42493464961
+- Shortcut guide regression checks: https://github.com/jgraving/slot.sp/actions/runs/42493465001
+- pages: https://github.com/jgraving/slot.sp/actions/runs/42493464992
+- Network and achievements test build: https://github.com/jgraving/slot.sp/actions/runs/42493465098
+- Launcher quality of life checks: https://github.com/jgraving/slot.sp/actions/runs/42493465036
+
+Launcher suite includes pairing_disclosure_opens_with_a_or_right_only and Sound style tests. Device workflow passed checks, optimized build, both bundled cores and packaging. Test System + corresponding sources: https://github.com/jgraving/slot.sp/actions/runs/42493465098/artifacts/13622298061 (expires 2026-11-09 15:17 UTC; System ZIP is update, source archive separate). Downloaded native artifact 13623450822, SHA-256 6e16a24eab1cf664b289244b7d0b1b6c29870b8aa034aae203cf742a4ba532cc. Independently inspected controls-gles and controls-gl sound-pair.png and sound-pair-selected.png: visible single value-edge chevron in both focus states, clear label spacing and footer. These are production face/compositor fixtures, not a physical device or live Bluetooth test. Physical handheld checks remain pending. #222 merge requires separate authorization. Final status saved on this separate checkpoint branch so the verified source head is unchanged and CI is not restarted. Follow-up can now be disabled.
