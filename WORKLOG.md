@@ -971,3 +971,8 @@ Local native review passes and confirms all three values fit with complete chevr
 ### Crash recovery and Sound pairing disclosure — 2026-11-08
 
 Recovered live #221 at 3386b4d5: five workflows passed; launcher native review still running. #220/#219/#218 already merged. User additionally requests a submenu chevron on Sound's Pair device row. Continue on fix/sound-pair-disclosure from #221 so the test build includes the pending selector correction. Add the same single disclosure glyph and value-edge placement used by settings, reserve label space, and allow Right to open pairing consistently with other disclosures. A and Bluetooth enable-on-entry stay intact. No local Rust toolchain is present and direct GitHub clone is unavailable in this workspace; use authenticated connector publication and exact-source CI for verification. Physical handheld checks remain pending. Finish #221 merge after all checks pass, then verify this follow-up.
+
+
+### Exact-source follow-up checkpoint — 2026-11-08
+
+Verified live PR heads: #221 3386b4d589f52549cca5e2bfbf4dc9069f4828e4; #222 815f91f117d42d20e1452456248b3af2895ae215. Read branch AGENTS/CURRENT_WORK/WORKLOG and reviewed Sound input/render/test diff. Next: await all six existing workflows, download and inspect actual native artifacts; merge only #221 using a head lease after six successes. #222 merge is not authorized. At this checkpoint #221 has five successes and launcher motion review running; #222 scaling/blending/shortcut pass, website/launcher/device running without reported failures. No reruns or source edits made. Preserve original tested PR heads; status-only checkpoints live on this separate branch and do not restart CI. Physical handheld checks remain pending.
