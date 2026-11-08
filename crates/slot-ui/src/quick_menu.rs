@@ -1368,11 +1368,20 @@ pub fn sound_button_legends(ink: [u8; 3]) -> [UndoFace; 5] {
 
 pub const SHOW_PASSWORD_FOOTER: u8 = 13;
 pub const HIDE_PASSWORD_FOOTER: u8 = 14;
+pub const SELECTOR_FOOTER: u8 = 15;
 
 /// Settings share the production bitmap legends and footer typography.
 pub fn parent_button_legends(page: u8, ink: [u8; 3]) -> Vec<UndoFace> {
     let hint = Some(ink);
     match page {
+        SELECTOR_FOOTER => {
+            // Keep the D-pad visible beside the centred download progress pill.
+            let pair=button_pair(ButtonLegend::Left,ButtonLegend::Right);
+            let w=pair.w+HINT_EDGE;let h=MENU_HINT_H;
+            let mut rgba=vec![0;(w*h*4)as usize];
+            blit(&mut rgba,w,&pair.rgba,pair.w,pair.h,0,h.saturating_sub(pair.h)/2);
+            vec![with_hint(button_face(ButtonLegend::B),"Back",hint,true),UndoFace{rgba,w,h}]
+        },
         SHOW_PASSWORD_FOOTER | HIDE_PASSWORD_FOOTER => vec![
             with_hint(button_face(ButtonLegend::B), "Back", hint, true),
             with_hint(button_face(ButtonLegend::A),
@@ -1528,6 +1537,11 @@ fn parent_settings_face_render(canvas: Canvas, rows: &[(String,String,bool)], se
                 let available = (right - QUICK_LABEL_X - label_face.w as f32 - 16.0).max(1.0);
                 let (ink, role) = if lit { (MENU_INK, text::Role::Focus) } else { (DIM_INK, text::Role::Menu) };
                 quick_text_face_within(value, ink, role, available)
+            } else if lit && *adjustable && label == "Download for" {
+                // Reserve a real gap after the label and room for both chevrons.
+                let available=(right-QUICK_LABEL_X-label_face.w as f32+2.0*pad
+                    -2.0*quick_caret_face(true).w as f32-2.0*CARET_GAP-16.0).max(80.0);
+                quick_text_face_within(value,MENU_INK,text::Role::Focus,available)
             } else { quick_value_face(value, lit) };
         if toggle {
             parent_blit(&mut face, &value, right + pad - value.w as f32, y);
