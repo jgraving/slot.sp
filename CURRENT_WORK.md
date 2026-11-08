@@ -1,9 +1,11 @@
-# RA Download for selector: CI running
+# Completed: RA Download for selector merged
 
-PR #221, fix/ra-download-selector, head 3386b4d589f52549cca5e2bfbf4dc9069f4828e4, tree ca52846b9b4be2bafd08cf6f310f27095ed622b2. Recovery branch checkpoint/ra-download-selector-3386b4d5. Read WORKLOG.md.
+Recovery branch checkpoint/ra-download-selector-3386b4d5. Read WORKLOG.md.
 
-User explicitly requests paired chevrons and D-pad Left/Right on RA Download for, A must not change it; merge after passing checks. Implemented adjustable row, A no-op without writes/service updates, fitted long value and compact D-pad footer beside download progress. Artwork toggle still supports A. Scope/download pacing unchanged.
+PR #221 merged as a7306c161074a77e8691632c8c2bdd86e54afaa1 after all six workflows passed on head 3386b4d589f52549cca5e2bfbf4dc9069f4828e4 (tree ca52846b9b4be2bafd08cf6f310f27095ed622b2). Merge independently confirmed. User explicitly authorized merge when passing.
 
-49 network tests pass, with both-direction persistence/wrap and A preserving scope/config/revision. Dedicated clean-built native RA review passes; inspected light640 longest selector with progress, complete chevrons and visible footer controls. 68 UI library, 31 UI-menu and five legend tests pass. Final dark720 Entire library capture also inspected. Scaling, blending, shortcuts and pages CI pass; device/package also passes; only native launcher remains in progress. Device artifact 13621837550 is ready (metadata verified, not downloaded). Physical device verification pending.
+RA Download for now shows paired value chevrons and uses D-pad Left/Right only. A does nothing and causes no save/service update. The longest value fits beside both chevrons at 640px. Compact footer D-pad controls stay clear of active progress. Artwork toggle A behavior, download scopes and pacing/backoff are unchanged.
 
-CI: native 42491467754, device/package 42491467776, pages 42491467796, scaling 42491467869, shortcuts 42491467809, blending 42491467837. Next: finish local UI checks, verify all CI, inspect uploaded selector captures, merge #221 using expected head 3386b4d5, and record completion. Do not ask again for merge permission or move feature head for status-only docs. #218/#219/#220 already merged.
+49 network tests and 104 UI tests pass locally. Dedicated clean-built native review passes. Final native CI artifact 13622451960 downloaded and SHA-256 verified; inspected uploaded Current game/Favorites & recents/Entire library captures at light640/dark720, including active progress. All CI passed: native 42491467754, device/package 42491467776, pages 42491467796, scaling 42491467869, shortcuts 42491467809, blending 42491467837. Physical handheld verification pending. Optional device artifact 13621837550 is present (metadata verified; not downloaded locally).
+
+No implementation, CI or merge work remains. No new issue reply requested/sent for this minor selector correction. This checkpoint changes recovery notes only; feature branch fix/ra-download-selector retains the tested head.
