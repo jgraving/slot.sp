@@ -54,7 +54,7 @@ fn badge(face:&mut UndoFace,row:&AchievementRow<'_>,x:u32,y:u32,size:u32,ink:[u8
 fn browser_footer(canvas:Canvas,detail:bool,has_items:bool)->UndoFace {
     use crate::{quick_menu::{button_face,button_pair,with_hint},bitmaps::ButtonLegend as B};
     let mut face=UndoFace{w:canvas.w as u32,h:canvas.h as u32,rgba:vec![0;(canvas.w*canvas.h*4.0)as usize]};
-    let ink=Some([246,244,239]);let back=with_hint(button_face(B::B),"Back",ink,false);
+    let ink=Some([246,244,239]);let back=with_hint(button_face(B::B),"Back",ink,true);
     crate::plate::blit(&mut face.rgba,face.w,&back.rgba,back.w,back.h,16,FOOTER);
     if !has_items {return face;}
     let mut hints=vec![with_hint(button_pair(B::Left,B::Right),if detail {"Previous / next"}else{"Filter"},ink,false)];

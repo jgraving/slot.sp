@@ -1814,15 +1814,15 @@ mod tests {
             let mut f=crate::frontend::Frontend::boot(Box::new(slot_power::SimPlatform::at(root.path().into())));f.upload_faces(&mut g);f.render(&mut g,(width,480));
             let mut tick=0;for _ in 0..180 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
             f.app_mut_for_review().network.as_mut().unwrap().prefs.achievements=true;
-            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));f.app_mut_for_review().apply(Action::GbaUp(Btn::A));
             for _ in 0..300 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
             assert!(matches!(f.app().phase(),crate::app::Phase::Playing{..}));
             f.app_mut_for_review().apply(Action::QuickMenu);
             for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
             let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-entry.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
-            f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));f.app_mut_for_review().apply(Action::GbaUp(Btn::Right));f.app_mut_for_review().apply(Action::GbaDown(Btn::Right));f.app_mut_for_review().apply(Action::GbaUp(Btn::Right));
             assert_eq!(f.app().in_game_menu(),Some(slot_ui::QuickRow::PlayAchievements));
-            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));
+            f.app_mut_for_review().apply(Action::GbaDown(Btn::A));f.app_mut_for_review().apply(Action::GbaUp(Btn::A));
             let mut browser=crate::achievement_browser::Browser::empty("");
             browser.data=Some(slot_achievements::AchievementList{title:"Metroid Fusion — a long game title".into(),entries:(0..40).map(|id|slot_achievements::AchievementEntry{
                 id,title:if id==0 {"An extraordinarily long achievement title that needs several readable lines".into()}else{format!("Explore sector {}",id+1)},
@@ -1837,11 +1837,31 @@ mod tests {
             ] {
                 for btn in actions {f.app_mut_for_review().network.as_mut().unwrap().input(Action::GbaDown(btn));}
                 for _ in 0..45 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);std::thread::sleep(Duration::from_millis(1));}
+                let browser=f.app().network.as_ref().unwrap().browser.as_ref().unwrap();
+                match shot {
+                    "all"=>{assert_eq!(browser.indices().len(),40);assert_eq!(browser.selected,0);},
+                    "detail"|"detail-scrolled"=>{assert_eq!(browser.selected,0);assert!(browser.detail.is_some());},
+                    "detail-next-unseen"=>assert_eq!(browser.selected,8),
+                    "detail-missing-badge"=>assert_eq!(browser.selected,7),
+                    "locked"=>assert_eq!(browser.indices().len(),26),
+                    "earned"=>assert_eq!(browser.indices().len(),14),
+                    "paged"=>assert_eq!(browser.selected,10),
+                    _=>{},
+                }
                 let mut e=png::Encoder::new(std::fs::File::create(output.join(format!("{shot}.png"))).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
             }
             let menu=f.app_mut_for_review().network.as_mut().unwrap();menu.browser=Some(crate::achievement_browser::Browser::empty("Prepare this game's achievements online first"));menu.face=None;
             for _ in 0..45 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
             let mut e=png::Encoder::new(std::fs::File::create(output.join("missing.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            f.app_mut_for_review().network.as_mut().unwrap().input(Action::GbaDown(Btn::B));
+            assert!(!f.app().network.as_ref().unwrap().visible);assert_eq!(f.app().in_game_menu(),Some(slot_ui::QuickRow::PlayAchievements));
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-return.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
+            f.app_mut_for_review().network.as_mut().unwrap().prefs.achievements=false;
+            f.app_mut_for_review().apply(Action::QuickMenu);f.app_mut_for_review().apply(Action::QuickMenu);
+            assert!(f.app().in_game_hidden().contains(&slot_ui::QuickRow::PlayAchievements));
+            for _ in 0..60 {tick+=17;f.advance_at(&mut Empty,tick,1.0/60.0);f.compose(&mut g);}
+            let mut e=png::Encoder::new(std::fs::File::create(output.join("pause-disabled.png")).unwrap(),width,480);e.set_color(png::ColorType::Rgba);e.set_depth(png::BitDepth::Eight);e.write_header().unwrap().write_image_data(&g.read_frame()).unwrap();
         }
     }
 
