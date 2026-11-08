@@ -912,3 +912,9 @@ User explicitly approved pushing fix/studio-controls-alignment to jgraving/slot.
 
 
 Published as PR #218 on `fix/studio-controls-alignment` at `02257f45c962ba1aea67b06264108415f76335ec`. The connector-created tree `c1368d390f37787f4a6e13694bcfce805540c095` exactly equals local validated HEAD, including all eight changed files. User approval covers publishing and PR creation; do not merge. CI has been requested by the PR; remote and hardware results are not yet claimed. This follow-up changes recovery Markdown only.
+
+
+### PR #218 merge readiness — 2026-11-08
+User now authorizes merging #218/#219 if tests pass. Live #218 CI failed device_studio_sharing::studio_replaces_and_removes_the_scanned_label_filename: resolved automatic preview color leaked into persisted title PNGs, preventing removal of an old scan. Keep resolved color for previews, but let saving an automatic Title remove the existing label so the shelf renders its normal automatic title. Preserve other controls and color/finish fixes. Re-run focused Studio and integration tests, then exact-head CI before merging.
+
+Studio state/control/integration suites now pass (62 + 13 + 10). Preserve automatic preview colors without persisting automatic Title PNGs. Added the same pinned Task installer as #219 with an official release-asset API fallback; the ARM64 archive fetched through that API matches the published SHA-256. This unblocks the device build from GitHub download-URL 504s. Fresh exact-source CI required; user authorized merge only after passing checks.

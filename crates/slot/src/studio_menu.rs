@@ -788,7 +788,11 @@ pub fn save(
         None
     };
     let original = original.or(recovered.as_deref());
-    let png = label(model, art, original);
+    // Automatic title labels are rendered by the library itself. Keep the
+    // resolved preview color out of persistence so Auto removes an old scan.
+    let png = if model.shown_label() == LabelKind::Title && model.ground.is_none() {
+        None
+    } else { label(model, art, original) };
     if let Some(png) = &png {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
