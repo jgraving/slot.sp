@@ -901,3 +901,10 @@ Resumed after the chat crash and verified live PR #217 at runtime source `84d624
 Device test build: https://github.com/jgraving/slot.sp/actions/runs/42426603083/artifacts/13596036784 (one-day retention). Native captures: https://github.com/jgraving/slot.sp/actions/runs/42426603052/artifacts/13595973353 . PR body now records final-source validation.
 
 Attempted expected-head merge of #217 was rejected by automatic approval review: it requires explicit user authorization for the default-branch mutation. No merge occurred; do not bypass the rejection. Ask the user to authorize merging #217, then verify live head and source equivalence before merging. This recovery checkpoint changes Markdown only; attribute CI/native results to 84d6245, not this documentation commit.
+
+
+### Live merge reconciliation — 2026-11-08
+
+Concurrent recovery notes above were written while this session completed its merge. Rechecked the live GitHub PR: #217 is closed and merged as 41a8774132dd882d92b340acfc01296121325b1a, with tree 46cab1f79fff7c0af7c3ec451e0d761b76598395 identical to tested runtime 84d6245d59a327996adbd468bfda2ededbed51a4. This session's expected-head merge returned success, and the merge commit was retrieved and verified. Therefore the earlier open/awaiting-merge statements are superseded by the live merged state; do not attempt another merge. All five final-source workflows and final native review passed as recorded above. No runtime changes followed validation. Physical handheld testing remains pending.
+
+Preserved concurrent recovery history while updating routing to completed. This checkpoint changes documentation only on fix/studio-layout-cleanup.
