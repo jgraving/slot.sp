@@ -124,6 +124,7 @@ pub enum QuickRow {
     AutomaticTime,
     TimeZone,
     CartStudio,
+    PlayAchievements,
 }
 
 impl QuickRow {
@@ -133,7 +134,7 @@ impl QuickRow {
             | Self::LeftStick | Self::GbaColourCorrection | Self::GbColourCorrection
             | Self::GbcColourCorrection | Self::ColourCorrection | Self::Recents | Self::AutomaticTime)
     }
-    pub const ALL: [QuickRow; 113] = [
+    pub const ALL: [QuickRow; 114] = [
         QuickRow::FastForward,
         QuickRow::FastForwardSound,
         QuickRow::Screen,
@@ -247,6 +248,7 @@ impl QuickRow {
         QuickRow::AutomaticTime,
         QuickRow::TimeZone,
         QuickRow::CartStudio,
+        QuickRow::PlayAchievements,
     ];
 
 
@@ -378,7 +380,7 @@ impl QuickRow {
         QuickRow::EjectSave,
     ];
 
-    pub const PLAY: [QuickRow; 7] = [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
+    pub const PLAY: [QuickRow; 8] = [QuickRow::Resume,QuickRow::Settings,QuickRow::PlayAchievements,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots];
 
     pub const SETTINGS: [QuickRow; 5] = [
         QuickRow::PlayScreen,
@@ -450,6 +452,7 @@ impl QuickRow {
             | QuickRow::States
             | QuickRow::Screenshots
             | QuickRow::Settings
+            | QuickRow::PlayAchievements
             | QuickRow::ExitGame => &QuickRow::PLAY,
             QuickRow::PlayScreen
             | QuickRow::PlaySound
@@ -577,6 +580,7 @@ impl QuickRow {
             QuickRow::Wifi => "Network",
             QuickRow::CartStudio => "Cart Studio",
             QuickRow::Achievements => "RetroAchievements",
+            QuickRow::PlayAchievements => "Achievements",
             QuickRow::SecurityPin => "Device code",
             QuickRow::Updates => "Updates",
             QuickRow::AutomaticTime => "Automatic time",
@@ -680,7 +684,7 @@ impl QuickRow {
                 | QuickRow::PlaySound
                 | QuickRow::About
                 | QuickRow::Wifi
-                | QuickRow::Achievements | QuickRow::CartStudio
+                | QuickRow::Achievements | QuickRow::PlayAchievements | QuickRow::CartStudio
                 | QuickRow::SecurityPin | QuickRow::Updates | QuickRow::TimeZone
                 | QuickRow::Reference
                 | QuickRow::PlayReference

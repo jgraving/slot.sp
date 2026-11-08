@@ -2,7 +2,7 @@
 use std::{collections::{BTreeMap,BTreeSet}, path::PathBuf, sync::mpsc};
 use slot_achievements::{AchievementList, BadgeImage};
 use slot_input::{Action,Btn};
-use slot_ui::{Canvas,UndoFace};
+use slot_ui::{Canvas,UndoFace,ACHIEVEMENT_VISIBLE,ACHIEVEMENT_DETAIL_LINES};
 
 type Loaded=Result<AchievementList,&'static str>;
 type Images=Vec<(u32,Option<BadgeImage>)>;
@@ -37,7 +37,7 @@ impl Browser {
     pub fn scroll_info(&self)->(usize,usize,usize,usize) {
         if self.detail.is_some() {return(0,0,0,0);}
         let n=self.indices().len();let at=self.selected.min(n.saturating_sub(1));
-        (at,n,at.saturating_sub(1).min(n.saturating_sub(3)),3)
+        (at,n,at.saturating_sub(2).min(n.saturating_sub(ACHIEVEMENT_VISIBLE)),ACHIEVEMENT_VISIBLE)
     }
     pub fn update(&mut self)->bool {
         let mut changed=false;
@@ -55,9 +55,11 @@ impl Browser {
                 Err(mpsc::TryRecvError::Empty)=>{},
             }
         }
-        // Only the three visible badges are read. Bound decoded memory for long lists.
+        // Read visible list badges, or the current detail badge, including previous/next.
+        // Both paths reuse cached files and bound decoded memory for long lists.
         if self.images.is_none() {
             let indices=self.indices();let (_,_,start,visible)=self.scroll_info();
+            let (start,visible)=if self.detail.is_some(){(self.selected,1)}else{(start,visible)};
             let wanted:Vec<_>=self.data.as_ref().map(|data|indices.iter().skip(start).take(visible)
                 .filter_map(|i|{let a=&data.entries[*i];a.badge.clone().map(|path|(a.id,path))})
                 .filter(|(id,_)|!self.requested.contains(id)).collect()).unwrap_or_default();
@@ -79,7 +81,7 @@ impl Browser {
                 Action::QuickMenu|Action::GbaDown(Btn::B)=>self.detail=None,
                 Action::GbaDown(Btn::Up)=>*scroll=scroll.saturating_sub(1),
                 Action::GbaDown(Btn::Down)=>*scroll=(*scroll+1).min(self.detail_max.get()),
-                Action::GbaDown(Btn::L1)=>*scroll=scroll.saturating_sub(8),
+                Action::GbaDown(Btn::L1)=>*scroll=scroll.saturating_sub(ACHIEVEMENT_DETAIL_LINES),
                 Action::GbaDown(Btn::R1)=>*scroll=(*scroll+8).min(self.detail_max.get()),
                 Action::GbaDown(Btn::Left)=>{self.selected=self.selected.saturating_sub(1);*scroll=0;},
                 Action::GbaDown(Btn::Right)=>{self.selected=(self.selected+1).min(self.indices().len().saturating_sub(1));self.detail=Some(0);},
@@ -97,8 +99,8 @@ impl Browser {
             },
             Action::GbaDown(Btn::Up)=>self.selected=self.selected.saturating_sub(1),
             Action::GbaDown(Btn::Down)=>self.selected=(self.selected+1).min(n.saturating_sub(1)),
-            Action::GbaDown(Btn::L1)=>self.selected=self.selected.saturating_sub(3),
-            Action::GbaDown(Btn::R1)=>self.selected=(self.selected+3).min(n.saturating_sub(1)),
+            Action::GbaDown(Btn::L1)=>self.selected=self.selected.saturating_sub(ACHIEVEMENT_VISIBLE),
+            Action::GbaDown(Btn::R1)=>self.selected=(self.selected+ACHIEVEMENT_VISIBLE).min(n.saturating_sub(1)),
             _=>{},
         }
         false
@@ -107,8 +109,8 @@ impl Browser {
         let indices=self.indices();
         if let Some(scroll)=self.detail {
             if let Some((data,entry))=self.data.as_ref().and_then(|data|indices.get(self.selected).map(|i|(data,&data.entries[*i]))) {
-                self.detail_max.set(slot_ui::achievement_description_lines(&entry.description,canvas).len().saturating_sub(8));
-                return slot_ui::achievement_detail_face(canvas,light,&data.title,&slot_ui::AchievementRow{title:&entry.title,points:entry.points,earned:entry.earned,badge:None},&entry.description,scroll);
+                self.detail_max.set(slot_ui::achievement_description_lines(&entry.description,canvas).len().saturating_sub(ACHIEVEMENT_DETAIL_LINES));
+                return slot_ui::achievement_detail_face(canvas,light,&data.title,&slot_ui::AchievementRow{title:&entry.title,points:entry.points,earned:entry.earned,badge:self.badges.get(&entry.id).map(|b|(b.rgba.as_slice(),b.width,b.height))},&entry.description,scroll);
             }
         }
         let (_,_,start,visible)=self.scroll_info();
@@ -118,14 +120,13 @@ impl Browser {
                 badge:self.badges.get(&entry.id).map(|b|(b.rgba.as_slice(),b.width,b.height)),
             }
         }).collect()).unwrap_or_default();
-        let selected=self.data.as_ref().and_then(|data|indices.get(self.selected).map(|i|&data.entries[*i]));
         let earned=self.data.as_ref().map_or(0,|d|d.entries.iter().filter(|a|a.earned).count());
         let total=self.data.as_ref().map_or(0,|d|d.entries.len());
         let filter=["All","Locked","Earned"][self.filter as usize];
         let summary=format!("{earned}/{total} earned · {filter}");
         let empty=if self.data.is_some() && !indices.is_empty(){""}else if self.data.as_ref().is_some_and(|d|!d.entries.is_empty()) {"No achievements in this filter"}else{self.message};
         slot_ui::achievement_browser_face(canvas,light,self.data.as_ref().map_or("Achievements",|d|d.title.as_str()),&summary,
-            &rows,selected.map(|a|(a.title.as_str(),a.description.as_str())),empty)
+            &rows,empty)
     }
 }
 
@@ -141,7 +142,7 @@ mod tests {
     #[test]
     fn filters_paging_bounds_and_back_preserve_the_list() {
         let mut browser=fixture();assert_eq!(browser.indices().len(),80);
-        browser.input(Action::GbaDown(Btn::R1));assert_eq!(browser.selected,3);assert_eq!(browser.scroll_info(),(3,80,2,3));
+        browser.input(Action::GbaDown(Btn::R1));assert_eq!(browser.selected,5);assert_eq!(browser.scroll_info(),(5,80,3,5));
         browser.input(Action::GbaDown(Btn::Right));assert_eq!(browser.indices().len(),40);assert_eq!(browser.selected,0);
         assert!(browser.indices().iter().all(|i|!browser.data.as_ref().unwrap().entries[*i].earned));
         browser.input(Action::GbaDown(Btn::Right));assert!(browser.indices().iter().all(|i|browser.data.as_ref().unwrap().entries[*i].earned));
@@ -160,6 +161,26 @@ mod tests {
         assert_eq!(browser.detail,Some(browser.detail_max.get()));
         assert!(!browser.input(Action::GbaDown(Btn::B)));assert_eq!(browser.detail,None);assert_eq!(browser.selected,4);
         assert!(browser.input(Action::GbaDown(Btn::B)));
+    }
+    #[test]
+    fn detail_navigation_loads_uncached_visible_badges_off_thread() {
+        let dir=tempfile::tempdir().unwrap();let path=dir.path().join("badge.png");
+        let mut encoder=png::Encoder::new(std::fs::File::create(&path).unwrap(),32,16);
+        encoder.set_color(png::ColorType::Rgba);encoder.set_depth(png::BitDepth::Eight);
+        encoder.write_header().unwrap().write_image_data(&[220,80,40,255].repeat(32*16)).unwrap();
+        let mut browser=fixture();for entry in &mut browser.data.as_mut().unwrap().entries {entry.badge=Some(path.clone());}
+        browser.selected=10;browser.detail=Some(0);
+        for selected in [10,11,12] {
+            let deadline=std::time::Instant::now()+std::time::Duration::from_secs(2);
+            while !browser.badges.contains_key(&(selected as u32)) {
+                browser.update();assert!(std::time::Instant::now()<deadline,"badge worker did not finish");std::thread::yield_now();
+            }
+            assert_eq!(browser.selected,selected);
+            assert!(!browser.requested.contains(&0),"detail must not load unrelated list artwork");
+            let face=browser.face(Canvas::FRAMED,false);
+            assert_eq!(&face.rgba[((136*face.w+56)*4)as usize..][..4],&[220,80,40,255]);
+            browser.input(Action::GbaDown(Btn::Right));
+        }
     }
     #[test]
     fn empty_filters_and_missing_games_remain_browsable_and_closable() {

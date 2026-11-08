@@ -170,7 +170,7 @@ fn the_rows_run_in_the_order_the_user_chose() {
             QuickRow::DisplaySchedule,
             QuickRow::Wifi,
             QuickRow::Achievements,
-            QuickRow::SecurityPin, QuickRow::Updates, QuickRow::TimeZone, QuickRow::CartStudio
+            QuickRow::SecurityPin, QuickRow::Updates, QuickRow::TimeZone, QuickRow::CartStudio, QuickRow::PlayAchievements
         ]
     );
     for page in [
@@ -357,7 +357,7 @@ fn a_label_is_grey_until_its_row_is_in_hand() {
 fn the_in_game_pages_hold_their_rows_in_order() {
     assert_eq!(
         QuickRow::PLAY,
-        [QuickRow::Resume,QuickRow::Settings,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots]
+        [QuickRow::Resume,QuickRow::Settings,QuickRow::PlayAchievements,QuickRow::ExitGame,QuickRow::UndoSave,QuickRow::UndoLoad,QuickRow::States,QuickRow::Screenshots]
     );
     assert_eq!(QuickRow::SETTINGS,[QuickRow::PlayScreen,QuickRow::PlaySound,QuickRow::PlayGameplay,QuickRow::PlayControls,QuickRow::PlayReference]);
     assert_eq!(QuickRow::PLAY_SCREEN,[QuickRow::PlayBrightness,QuickRow::PlayBlueLight,QuickRow::Shader,QuickRow::Bezel,QuickRow::Palette,QuickRow::ColourCorrection,QuickRow::Scaling,QuickRow::FrameBlending]);
