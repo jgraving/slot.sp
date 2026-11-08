@@ -5644,15 +5644,11 @@ impl App {
         match key {
             4100|4101|4103=>{
                 let edge=self.canvas().w*0.47;let x=edge+4.0;let w=self.canvas().w-76.0-edge+4.0;
-                let pitch=if key==4100 {self.studio.as_ref().map_or(60.0,|m|m.option_pitch())}else if key==4101 {crate::studio_gallery::SHEET_PITCH}else{52.0};
-                let top=if key==4100 {74.0}else if key==4101 {108.0}else{128.0};
+                let pitch=if key==4100 {self.studio.as_ref().map_or(52.0,|m|m.option_pitch())}else if key==4101 {crate::studio_gallery::SHEET_PITCH}else{52.0};
+                let top=if key==4100 {80.0}else if key==4101 {108.0}else{128.0};
                 let offset=(frame.focus_y-slot_ui::expressive::ROW_TOP)/slot_ui::QUICK_PITCH;
                 let dx=if frame.outgoing {frame.page_shift*(self.canvas().w-2.0*slot_ui::expressive::MENU_INSET)}else{0.0};
-                let (y,h)=if key==4100 {
-                    let last=self.studio.as_ref().map_or(0,|m|m.model.rows().len().saturating_sub(1)) as f32;
-                    let end=(offset-(last-1.0)).clamp(0.0,1.0);
-                    (top+offset*pitch+(326.0-top-last*pitch)*end,pitch-4.0+(34.0-(pitch-4.0))*end)
-                }else{(top+offset*pitch,pitch-4.0)};
+                let (y,h)=(top+offset*pitch,pitch-4.0);
                 slot_ui::expressive::rounded(out,x+dx,y,w,h,12.0,slot_ui::expressive::SELECTED);
             },
             4105=>{
